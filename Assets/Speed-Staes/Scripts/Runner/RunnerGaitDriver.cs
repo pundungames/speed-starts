@@ -207,8 +207,8 @@ namespace SpeedStars.Runner
         [Tooltip("Trunk lean while running, by speed (m/s → deg): deep while accelerating, less at top speed. " +
                  "Tilts the trunk over the pelvis only, so the feet stay under the body. Upright when stopped.")]
         public AnimationCurve runLeanBySpeed = new AnimationCurve(
-            new Keyframe(0f, 25f),
-            new Keyframe(11.5f, 12f));
+            new Keyframe(0f, 35f),
+            new Keyframe(11.5f, 25f));
         public float maxForwardLean = 85f;
         public float maxBackLean = 35f;
         [Tooltip("Lean is this many times slower than a stride (time constant = factor × strideDuration), " +
