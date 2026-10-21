@@ -52,8 +52,6 @@ namespace SpeedStars.Runner
         public bool AtMid => State == LegState.Ready || State == LegState.Grounded;
         /// <summary>The current Return started ahead of Mid (front → Mid on the ground).</summary>
         public bool FromFront => _from > Mid;
-        /// <summary>Foot is on the ground carrying weight (not reaching forward, not swinging back to Mid).</summary>
-        public bool Supporting => State != LegState.Reach && !(State == LegState.Return && !FromFront);
 
         public const float Mid = 0.5f;
 

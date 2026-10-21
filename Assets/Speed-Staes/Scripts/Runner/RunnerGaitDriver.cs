@@ -190,10 +190,10 @@ namespace SpeedStars.Runner
         [Header("Pelvis")]
         public float runCrouch = 0.04f;
         [Tooltip("Extra pelvis drop so the knees stay bent with the feet together at Mid, ready to run (m).")]
-        public float readyCrouch = 0.1f;
-        [Tooltip("Pelvis drop while a foot is on the ground vs. rise when none is (m).")]
-        public float bobAmplitude = 0.03f;
-        public float bobSharpness = 14f;
+        public float readyCrouch = 0.13f;
+        [Tooltip("Hop ceiling (m): a full-power press lifts the pelvis this far; well-timed presses keep it up here, " +
+                 "weaker ones lift it by their power share. Rises over the step, falls over the return.")]
+        public float hopHeight = 0.04f;
         public float pelvisForward = 0.04f;
         public float pelvisTilt = 6f;
 
@@ -204,6 +204,14 @@ namespace SpeedStars.Runner
             new Keyframe(0f, 0f),
             new Keyframe(0.5f, 0f),
             new Keyframe(1f, 85f));
+        [Tooltip("X: tap rate (presses per second). Y: body lean (deg). Faster tapping leans further forward, " +
+                 "slowing down brings the body back. The body takes the larger of this and the feet lean, " +
+                 "so holding a foot back still goes all the way forward.")]
+        public AnimationCurve leanByTapRate = new AnimationCurve(
+            new Keyframe(0f, 0f),
+            new Keyframe(2f, 8f),
+            new Keyframe(5f, 20f),
+            new Keyframe(8f, 28f));
         public float maxForwardLean = 85f;
         public float maxBackLean = 35f;
         [Tooltip("Lean is this many times slower than a foot step (time constant = factor × stepDuration), " +
@@ -275,7 +283,9 @@ namespace SpeedStars.Runner
 
         Vector3 _restHip;
         Quaternion _restHipRot, _restSpineRoot, _restSpineTip;
-        float _bob, _lean, _bodyLean, _run, _midZ, _restMidZ, _wBoth, _legReach, _footRestAngle, _profileW;
+        int _hopTaps;
+        double _hopTime;
+        float _hop, _hopFrom, _hopPeak, _lean, _bodyLean, _run, _midZ, _restMidZ, _wBoth, _legReach, _footRestAngle, _profileW;
         MultiAimConstraint _headAim;
         bool _bound;
 
@@ -413,7 +423,7 @@ namespace SpeedStars.Runner
             Bind();
             double now = Time.timeAsDouble;
             float dt = Time.deltaTime;
-            // Stopped is not a separate pose: the runner stays in the Front pose (feet and arms).
+            // Stopped is not a separate pose: the runner stays in the Mid pose (feet and arms).
             const float run = 1f;
             float profileTarget = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(accelProfileSpeed, maxProfileSpeed, movement.Speed));
             _profileW = Mathf.Lerp(_profileW, profileTarget, 1f - Mathf.Exp(-4f * dt));
@@ -421,11 +431,7 @@ namespace SpeedStars.Runner
             ComputeLeg(0, leftLeg, now);
             ComputeLeg(1, rightLeg, now);
 
-            // Pelvis height: drops while a foot is down, rises when both are returning.
-            bool supported = controller.Legs[0].Supporting || controller.Legs[1].Supporting;
-            float bobTarget = supported ? -bobAmplitude : bobAmplitude;
-            _bob = Mathf.Lerp(_bob, bobTarget, 1f - Mathf.Exp(-bobSharpness * dt));
-
+            UpdateHop(now);
             UpdateLean(dt);
 
             // Hold poses: one foot held = plane (other foot supports), both held = prone.
@@ -439,7 +445,7 @@ namespace SpeedStars.Runner
 
             // Running: roll the pelvis over the feet midpoint so feet → pelvis → trunk stay one line.
             Quaternion rootRot = transform.rotation;
-            Vector3 hip0 = _restHip + new Vector3(0f, -(runCrouch + readyCrouch) * run + _bob, pelvisForward * run);
+            Vector3 hip0 = _restHip + new Vector3(0f, -(runCrouch + readyCrouch) * run + _hop, pelvisForward * run);
             float ground = (GroundY(leftLeg) + GroundY(rightLeg)) * 0.5f;
             float radius = hip0.y - ground;
             float pivotZ = _midZ + (hip0.z - _restMidZ);
@@ -639,17 +645,54 @@ namespace SpeedStars.Runner
         }
 
         /// <summary>
+        /// Pelvis hop. Each press lifts the pelvis by its push power share of hopHeight on top of where it
+        /// is, never above hopHeight: rising over stepDuration, then falling back over returnDuration
+        /// (scaled by how high it got). Well-timed presses catch it before it falls and keep it at the top.
+        /// </summary>
+        void UpdateHop(double now)
+        {
+            if (!controller.Started)
+            {
+                _hop = _hopFrom = _hopPeak = 0f;
+                _hopTaps = controller.Taps;
+                return;
+            }
+            if (controller.Taps != _hopTaps)
+            {
+                _hopTaps = controller.Taps;
+                float power = controller.Last.Result == RunnerStepController.TapResult.Start ? 1f : controller.Last.Efficiency;
+                _hopFrom = _hop;
+                _hopPeak = Mathf.Min(hopHeight, _hop + power * hopHeight);
+                _hopTime = now;
+            }
+
+            float rise = Mathf.Max(0.001f, controller.stepDuration);
+            float t = (float)(now - _hopTime);
+            if (t < rise)
+            {
+                _hop = Mathf.Lerp(_hopFrom, _hopPeak, Mathf.SmoothStep(0f, 1f, t / rise));
+                return;
+            }
+            // Falls like a dropped weight: slow off the top, fastest as it lands.
+            float fall = Mathf.Max(0.001f, controller.returnDuration * (hopHeight > 0f ? _hopPeak / hopHeight : 0f));
+            float u = Mathf.Clamp01((t - rise) / fall);
+            _hop = _hopPeak * (1f - u * u);
+        }
+
+        /// <summary>
         /// Lean follows where the feet are: the average of both feet along Front (0) → Back (1),
         /// or 1 as soon as any foot is held back. Both front = sit back, one front one back = upright,
-        /// back = full forward. The lean (and the feet midpoint the body rolls over) trail the feet by
-        /// leanLag × stepDuration so the other foot's quick moves do not shake the body.
-        /// Stopped: both feet stay at Front, so the body keeps the Front lean.
+        /// back = full forward. Running adds the tap-rate lean (faster tapping = further forward); the body
+        /// takes the larger of the two, so holding a foot back still goes all the way forward.
+        /// The lean (and the feet midpoint the body rolls over) trail the feet by leanLag × stepDuration
+        /// so the other foot's quick moves do not shake the body.
         /// </summary>
         void UpdateLean(float dt)
         {
             bool held = controller.Legs[0].State == LegState.Hold || controller.Legs[1].State == LegState.Hold;
             float r = held ? 1f : (FootBack(leftLeg) + FootBack(rightLeg)) * 0.5f;
-            float target = leanByFootBack.Evaluate(r);
+            float tapLean = controller.Started ? leanByTapRate.Evaluate(controller.TapRate) : 0f;
+            float target = Mathf.Max(leanByFootBack.Evaluate(r), tapLean);
             float midZ = (leftLeg.baseBall.z + rightLeg.baseBall.z) * 0.5f;
 
             float k = 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, leanLag * controller.stepDuration));

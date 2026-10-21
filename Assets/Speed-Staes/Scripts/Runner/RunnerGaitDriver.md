@@ -18,6 +18,8 @@ Hızı, gücü veya zamanlamayı **değiştirmez**. Onlar `RunnerStepController`
 | Öne gelen ayak çok yükseğe kalkıyor | `Loop Height` ↓ |
 | Ayak hep çok erken / geç tepe yapıyor | `Loop Skew` |
 | Adımlar çok hızlı / yavaş | **`RunnerStepController`** → `Step Duration`, `Reach Duration`, `Return Duration`, `Front Return Duration` |
+| Koşarken gövde çok dik / çok eğik | `Lean By Tap Rate` |
+| Karakter "süzülüyor", zıplama yok / çok fazla | `Hop Height` |
 | Tutunca gövde yeterince öne eğilmiyor | `Lean By Foot Back` (X=1 noktası), `Max Forward Lean` |
 | Gövde eğilmesi geç / sallantılı | `Lean Lag` |
 | Uçak pozunda gövde çok yüksek / alçak | `Plane Hip Height` |
@@ -125,31 +127,40 @@ Bu sınırlar her şeyin üstündedir: profiller ne derse desin bilek bunları a
 | Ayar | Şu an | Ne yapar | ↑ artırınca |
 |---|---|---|---|
 | `Run Crouch` | 0.04 m | Koşarken kalçanın alçalması | Gövde aşağı iner |
-| `Ready Crouch` | 0.1 m | Ek alçalma: ayaklar Mid'de birleşince dizler kırık kalsın, koşuya hazır dursun | Gövde daha aşağı, dizler daha bükük |
-| `Bob Amplitude` | 0.03 m | Ayak yerdeyken kalça bu kadar iner, hiçbir ayak yerde değilken bu kadar kalkar | İnip kalkma artar |
-| `Bob Sharpness` | 14 | İnip kalkmanın hızı | Daha sert, ani geçiş |
+| `Ready Crouch` | 0.13 m | Ek alçalma: ayaklar Mid'de birleşince dizler kırık kalsın, koşuya hazır dursun | Gövde daha aşağı, dizler daha bükük |
+| `Hop Height` | 0.04 m | Hop tavanı: basışla kalçanın en fazla ne kadar kalkacağı | Zıplama daha belirgin |
 | `Pelvis Forward` | 0.04 m | Kalçanın öne kayması | Kalça daha önde |
 | `Pelvis Tilt` | 6° | Kalçanın öne devrilmesi | Kalça daha çok öne yatar |
 
-> **Not:** `Run Crouch` ve `Ready Crouch` **toplanır** ve ikisi de her zaman uygulanır. Toplam alçalma şu an 0.14 m.
+> **Not:** `Run Crouch` ve `Ready Crouch` **toplanır** ve ikisi de her zaman uygulanır. Toplam alçalma şu an 0.17 m.
 > Gövdeyi alçaltmak/yükseltmek için ikisinden birini değiştirmen yeter.
->
-> **Not:** Ayaklar bağlı hareket ettiği için koşarken neredeyse her an bir ayak yerde. Bu yüzden
-> `Bob Amplitude` şu an pratikte **sabit bir ek alçalma** gibi çalışıyor, belirgin bir inip kalkma yapmıyor.
+
+### Hop nasıl çalışır
+
+- Her basış kalçayı **gücü kadar** kaldırır: Front'ta basış (tam güç) = `Hop Height` kadar,
+  Mid'de basış (0.38) = tavanın 0.38'i kadar, Back'te basış = hiç.
+- Kalkış `Step Duration` sürer, düşüş `Return Duration` sürer (ayağın Mid'e dönüşüyle aynı).
+  Daha alçaktan düşüyorsa o oranda kısa sürer. Düşüş tepede yavaş, yere yakın hızlıdır.
+- Kalça düşerken yeni basış gelirse **o anki yükseklikten** tekrar kalkar ama **tavanı geçmez**.
+  Doğru anlarda basılırsa kalça tavanda kalır; basılmazsa veya zayıf basılırsa iner.
+- Hop sadece görseldir, hızı etkilemez.
 
 ## Lean (Gövde eğilmesi)
 
-Eğilme **ayakların ne kadar geride olduğuna** bağlı. Ayak Back'te **tutuluyorsa** değer direkt 1 sayılır.
+Eğilme iki kaynaktan gelir, gövde **büyük olanı** alır:
+- **Basma sıklığı:** hızlı bastıkça gövde öne gider, yavaşlayınca geri gelir.
+- **Ayakların konumu:** ayak Back'te **tutuluyorsa** değer direkt 1 sayılır, gövde en öne gider (uçak / yüzüstü).
 
 | Ayar | Şu an | Ne yapar |
 |---|---|---|
+| `Lean By Tap Rate` | (0→0°), (2→8°), (5→20°), (8→28°) | **X:** saniyedeki basış sayısı (HUD'daki "Sıklık"). **Y:** eğilme açısı. Basmayı bırakınca sıklık düşer, gövde yavaşça geri gelir |
 | `Lean By Foot Back` | (0→0°), (0.5→0°), (1→85°) | **X:** iki ayağın ortalama geride olma oranı (0 = ikisi Front'ta, 0.5 = biri önde biri arkada, 1 = ikisi Back'te / biri tutuluyor). **Y:** eğilme açısı |
 | `Max Forward Lean` | 80° | Öne eğilmenin üst sınırı (eğri daha fazlasını söylese de bunu geçmez) |
 | `Max Back Lean` | 35° | Geriye eğilmenin üst sınırı |
 | `Lean Lag` | 1.75 | Eğilmenin ayakları ne kadar gecikmeyle takip ettiği (× `Step Duration`). Büyük = daha yumuşak ama geç |
 
-> Normal koşuda (biri önde biri arkada veya ikisi Mid'de) X ≈ 0.3–0.5 olduğu için eğri 0° verir.
-> Gövde asıl **tutunca** eğilir. Koşarken de hafif eğilme istiyorsan eğride 0.5'teki değeri yükselt.
+> Normal koşuda `Lean By Foot Back` 0° verir (X ≈ 0.3–0.5). Koşarken eğilmeyi `Lean By Tap Rate` belirler,
+> tutunca `Lean By Foot Back` devreye girip gövdeyi en öne götürür.
 
 ## Hold poses (Tutma pozları)
 
