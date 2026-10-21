@@ -16,7 +16,7 @@ namespace SpeedStars.Runner
     /// are; leaning forward the pelvis rolls over the feet midpoint, leaning back it stays over the feet (see Update).
     /// Hold poses: one foot held = plane (held leg straight back in line with the trunk, the other
     /// foot planted as support with the body coming over it); both held = prone (dive, lie flat,
-    /// hands by the head). See FinishLeg / UpdateSupport.
+    /// arms stay in their back swing). See FinishLeg / UpdateSupport.
     /// Feet: leg IK places the ankle only; the foot angle is applied after IK relative to the shin and
     /// clamped to the ankle's range (see PoseAnkle).
     /// Arms: hand IK is off; each arm is a pendulum from the shoulder joint (X only) with an elbow
@@ -59,6 +59,8 @@ namespace SpeedStars.Runner
             [HideInInspector] public Vector3 supportWorld;
             [HideInInspector] public Vector3 supportLocal;
             [HideInInspector] public Quaternion restToeInFoot;   // toe relative to the foot at rest
+            [HideInInspector] public Vector3 restHingeInThigh;   // knee hinge axis (runner right at rest), thigh space
+            [HideInInspector] public Vector3 restHingeInShin;    // same, shin space
             [HideInInspector] public float toeRoll;              // toes rolling over their tips (deg, end of stance)
             [HideInInspector] public float swingAnkle;           // ankle bend relative to the shin in the air (deg)
             [HideInInspector] public float swingW;               // 1 = ankle follows swingAnkle, 0 = foot pitch
@@ -69,14 +71,17 @@ namespace SpeedStars.Runner
         /// <summary>
         /// Foot motion over one gait cycle, as a function of phase (0..1).
         /// Stance = Step (front → back on the ground), swing = Return (back → front in the air).
-        /// Shapes follow sprint kinematics: forefoot touchdown, heel settles toward the ground while
-        /// loading, late fast heel rise, toes bend at the ball and roll over their tips at toe-off;
-        /// in the air the ankle plantarflexes after toe-off, then pulls the toes up before touchdown.
+        /// Heel-strike running: the foot lands toes up on the heel and rolls down flat (Ready), stays flat
+        /// while loaded, then the heel rises late and fast and the toes roll over their tips at toe-off;
+        /// in the air the ankle plantarflexes after toe-off (heel kicks up), then pulls the toes up for the
+        /// next heel strike.
         /// </summary>
         [System.Serializable]
         public sealed class FootProfile
         {
-            [Tooltip("Stance: foot angle to the ground (deg, + = heel up). 0 = touchdown, 1 = toe-off.")]
+            [Tooltip("Foot angle at heel strike (deg, − = toes up, heel first).")]
+            public float touchdownPitch = -12f;
+            [Tooltip("Stance: foot angle to the ground (deg, + = heel up). 0 = push starts (foot flat), 1 = toe-off.")]
             public AnimationCurve stancePitch;
             [Tooltip("Stance: toes roll over their tips, lifting the ball (deg).")]
             public AnimationCurve toeRoll;
@@ -134,17 +139,19 @@ namespace SpeedStars.Runner
         [Header("Foot motion (blended by speed: acceleration → max velocity)")]
         public FootProfile accelProfile = new FootProfile
         {
-            stancePitch = Curve(0f, 16f, 0.25f, 10f, 0.5f, 14f, 0.75f, 32f, 1f, 55f),
+            touchdownPitch = -8f,
+            stancePitch = Curve(0f, 0f, 0.35f, 3f, 0.6f, 14f, 0.8f, 32f, 1f, 52f),
             toeRoll = Curve(0f, 0f, 0.7f, 0f, 1f, 22f),
-            swingAnkle = Curve(0f, 26f, 0.15f, 28f, 0.45f, 12f, 0.75f, 2f, 1f, 8f),
-            swingToe = Curve(0f, 32f, 0.3f, 10f, 0.7f, 10f, 1f, 5f),
+            swingAnkle = Curve(0f, 24f, 0.15f, 28f, 0.4f, 14f, 0.65f, -4f, 0.85f, -12f, 1f, -10f),
+            swingToe = Curve(0f, 30f, 0.3f, 8f, 0.7f, 14f, 1f, 12f),
         };
         public FootProfile maxSpeedProfile = new FootProfile
         {
-            stancePitch = Curve(0f, 10f, 0.2f, 4f, 0.4f, 3f, 0.6f, 10f, 0.8f, 28f, 1f, 50f),
+            touchdownPitch = -12f,
+            stancePitch = Curve(0f, 0f, 0.4f, 2f, 0.6f, 9f, 0.8f, 26f, 1f, 48f),
             toeRoll = Curve(0f, 0f, 0.75f, 0f, 1f, 18f),
-            swingAnkle = Curve(0f, 22f, 0.12f, 26f, 0.35f, 14f, 0.6f, -4f, 0.85f, -6f, 1f, 4f),
-            swingToe = Curve(0f, 30f, 0.25f, 8f, 0.6f, 14f, 0.9f, 10f, 1f, 4f),
+            swingAnkle = Curve(0f, 22f, 0.12f, 28f, 0.35f, 16f, 0.6f, -2f, 0.85f, -14f, 1f, -12f),
+            swingToe = Curve(0f, 28f, 0.25f, 8f, 0.6f, 14f, 1f, 14f),
         };
         [Tooltip("Speed (m/s) at which the acceleration profile is fully used.")]
         public float accelProfileSpeed = 2f;
@@ -214,10 +221,6 @@ namespace SpeedStars.Runner
         public float proneHipHeight = 0.15f;
         [Tooltip("Prone pose: the body dives this far forward (m).")]
         public float proneForward = 0.4f;
-        [Tooltip("Prone pose: arm swing (deg, hands go up by the head).")]
-        public float armProneSwing = 150f;
-        [Tooltip("Prone pose: elbow bend (deg).")]
-        public float elbowProne = 130f;
 
         [Header("Arms (pendulum, X only; + = forward)")]
         [Tooltip("Upper arm swing when the controlling foot is at Front (deg).")]
@@ -232,15 +235,37 @@ namespace SpeedStars.Runner
         public float elbowStanding = 15f;
         [Tooltip("Hanging arm tilted out from the body (deg).")]
         public float armOutward = 8f;
-        [Tooltip("Shoulder (clavicle) moves forward with the arm and back with it (deg, at full swing).")]
+        [Tooltip("Shoulder (clavicle) comes forward with the arm (deg, at full forward swing).")]
         public float shoulderSwing = 10f;
+        [Tooltip("Shoulder (clavicle) pulls back with the arm (deg, at full back swing).")]
+        public float shoulderSwingBack = 22f;
         [Tooltip("Shoulder lifts when the arm is forward (deg, at full forward swing).")]
         public float shoulderLift = 4f;
+        [Tooltip("Shoulder lifts as it pulls back with the arm (deg, at full back swing).")]
+        public float shoulderLiftBack = 3f;
+
+        [Header("Hands (pose comes from the scene)")]
+        [Tooltip("0 = the hand and finger pose set up on the bones in the scene (running fist). " +
+                 "1 = flat hand: fingers straight (model bind pose), palm facing the ground. For the start pose.")]
+        [Range(0f, 1f)] public float flatHand = 0f;
+
+        sealed class HandRig
+        {
+            public Transform hand;
+            public Transform[] fingers;
+            public Quaternion[] flatLocal;   // straight fingers, from the mesh bind pose
+            public Vector3 palmInHand;       // palm normal in hand space (palm faces down in the bind T-pose)
+        }
+
+        HandRig[] _hands;
 
         // Anatomy of the lean (fixed; see Update).
         const float PelvisShareForward = 0.5f;
         const float PelvisShareBack = 0.25f;
         const float BackLeanHipForward = 0.2f;
+        // Heel strike (see ComputeLeg).
+        const float HeelBehindAnkle = 0.05f;   // heel contact point behind the ankle joint (m)
+        const float HeelRollTime = 0.1f;       // heel strike → foot flat (s)
 
         Vector3 _restHip;
         Quaternion _restHipRot, _restSpineRoot, _restSpineTip;
@@ -276,7 +301,46 @@ namespace SpeedStars.Runner
             if (aimRig) _headAim = aimRig.GetComponent<MultiAimConstraint>();
             BindArm(leftArm, -1f, "B-upperArm.L", "B-forearm.L");
             BindArm(rightArm, 1f, "B-upperArm.R", "B-forearm.R");
+            _hands = new[] { BindHand("L"), BindHand("R") };
             _bound = true;
+        }
+
+        /// <summary>
+        /// The running hand is whatever pose the hand/finger bones have in the scene (the Animator keeps it
+        /// every frame). Straight fingers are read from the skinned mesh bind pose, so bending the fingers in
+        /// the scene does not lose the flat hand.
+        /// </summary>
+        HandRig BindHand(string side)
+        {
+            var hand = FindDeep(transform, "B-hand." + side);
+            if (!hand) return null;
+
+            SkinnedMeshRenderer skin = null;
+            foreach (var smr in GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (smr.sharedMesh && System.Array.IndexOf(smr.bones, hand) >= 0) { skin = smr; break; }
+
+            var fingers = new System.Collections.Generic.List<Transform>();
+            foreach (var t in hand.GetComponentsInChildren<Transform>(true))
+                if (t != hand && !t.name.Contains("Prop")) fingers.Add(t);
+
+            var rig = new HandRig { hand = hand, fingers = fingers.ToArray(), flatLocal = new Quaternion[fingers.Count] };
+            Quaternion handBind = BindRotation(skin, hand, hand.rotation);
+            rig.palmInHand = Quaternion.Inverse(handBind) * -transform.up;
+            for (int i = 0; i < fingers.Count; i++)
+            {
+                var f = fingers[i];
+                rig.flatLocal[i] = Quaternion.Inverse(BindRotation(skin, f.parent, f.parent.rotation)) * BindRotation(skin, f, f.rotation);
+            }
+            return rig;
+        }
+
+        /// <summary>World rotation a bone had when the mesh was bound (falls back to its current rotation).</summary>
+        static Quaternion BindRotation(SkinnedMeshRenderer skin, Transform bone, Quaternion fallback)
+        {
+            if (!skin) return fallback;
+            int i = System.Array.IndexOf(skin.bones, bone);
+            if (i < 0 || i >= skin.sharedMesh.bindposes.Length) return fallback;
+            return (skin.transform.localToWorldMatrix * skin.sharedMesh.bindposes[i].inverse).rotation;
         }
 
         void BindArm(Arm arm, float side, string upperName, string foreName)
@@ -331,6 +395,8 @@ namespace SpeedStars.Runner
                 leg.restFootRunner = Quaternion.Inverse(transform.rotation) * leg.footBone.rotation;
                 leg.toeInFoot = Quaternion.Inverse(leg.footBone.rotation) * (leg.toeBone.position - leg.footBone.position);
                 leg.restToeInFoot = Quaternion.Inverse(leg.footBone.rotation) * leg.toeBone.rotation;
+                leg.restHingeInThigh = Quaternion.Inverse(leg.shinBone.parent.rotation) * transform.right;
+                leg.restHingeInShin = Quaternion.Inverse(leg.shinBone.rotation) * transform.right;
             }
             leg.ball = leg.fromBall = leg.baseBall = leg.RestBall;
             leg.lastState = LegState.Grounded;
@@ -489,10 +555,51 @@ namespace SpeedStars.Runner
             if (!_bound) return;
             PoseArm(leftArm, rightLeg);  // right foot drives the left arm
             PoseArm(rightArm, leftLeg);  // left foot drives the right arm
+            FixLegTwist(leftLeg);
+            FixLegTwist(rightLeg);
             PoseAnkle(leftLeg);
             PoseAnkle(rightLeg);
             PoseToes(leftLeg);
             PoseToes(rightLeg);
+            if (_hands != null) foreach (var h in _hands) PoseHand(h);
+        }
+
+        /// <summary>Blend from the scene hand pose to a flat hand with the palm on the ground (flatHand).</summary>
+        void PoseHand(HandRig h)
+        {
+            if (h == null || flatHand <= 0f) return;
+            Vector3 palm = h.hand.rotation * h.palmInHand;
+            Quaternion palmDown = Quaternion.FromToRotation(palm, -transform.up) * h.hand.rotation;
+            h.hand.rotation = Quaternion.Slerp(h.hand.rotation, palmDown, flatHand);
+            for (int i = 0; i < h.fingers.Length; i++)
+                h.fingers[i].localRotation = Quaternion.Slerp(h.fingers[i].localRotation, h.flatLocal[i], flatHand);
+        }
+
+        /// <summary>
+        /// Leg IK gets the knee and ankle where they belong but spins the thigh and shin about their own
+        /// length, turning the knee hinge (and with it the foot) inward. Spin both back so the hinge lies
+        /// across the leg's bend plane, as a real knee does; hip, knee and ankle positions stay put.
+        /// </summary>
+        void FixLegTwist(Leg leg)
+        {
+            if (!leg.shinBone || !leg.footBone) return;
+
+            Transform thigh = leg.shinBone.parent, shin = leg.shinBone;
+            Vector3 hip = thigh.position, knee = shin.position, ankle = leg.footBone.position;
+            Vector3 hinge = Vector3.Cross(knee - hip, ankle - knee);
+            if (hinge.sqrMagnitude < 1e-6f) hinge = transform.right; // straight leg: no bend plane
+            else if (Vector3.Dot(hinge, transform.right) < 0f) hinge = -hinge;
+
+            Untwist(thigh, knee - hip, thigh.rotation * leg.restHingeInThigh, hinge);
+            // Spinning the thigh swung the shin: point it back at the ankle, then untwist it too.
+            shin.rotation = Quaternion.FromToRotation(leg.footBone.position - knee, ankle - knee) * shin.rotation;
+            Untwist(shin, ankle - knee, shin.rotation * leg.restHingeInShin, hinge);
+        }
+
+        static void Untwist(Transform bone, Vector3 axis, Vector3 hinge, Vector3 wanted)
+        {
+            float angle = Vector3.SignedAngle(Vector3.ProjectOnPlane(hinge, axis), Vector3.ProjectOnPlane(wanted, axis), axis);
+            bone.rotation = Quaternion.AngleAxis(angle, axis) * bone.rotation;
         }
 
         /// <summary>
@@ -576,15 +683,16 @@ namespace SpeedStars.Runner
             Vector3 front = Local(leg.front), back = Local(leg.back);
             Vector3 ball;
             float pitch;
-            float touchdownPitch = Profile(p => p.stancePitch, 0f);
+            float touchdownPitch = Mathf.Lerp(accelProfile.touchdownPitch, maxSpeedProfile.touchdownPitch, _profileW);
             leg.toeRoll = 0f;
             leg.swingW = 0f;
 
             switch (c.State)
             {
                 case LegState.Ready:
+                    // Just landed on the heel: the foot rolls down flat over the heel.
                     ball = front;
-                    pitch = touchdownPitch;
+                    pitch = Mathf.Lerp(leg.fromPitch, 0f, Mathf.SmoothStep(0f, 1f, t / HeelRollTime));
                     break;
                 case LegState.Hold:
                     ball = back;
@@ -593,7 +701,7 @@ namespace SpeedStars.Runner
                     break;
                 case LegState.Step:
                 {
-                    // Stance: forefoot touchdown, heel settles, late heel rise, toes roll at toe-off.
+                    // Stance (push): foot flat, late heel rise, toes roll at toe-off.
                     float s = Mathf.Clamp01(t / Mathf.Max(0.001f, controller.stepDuration));
                     // Lower arc: the return arc mirrored below the Front–Back line, cut at the ground.
                     ball = EllipseLoop(back, leg.fromBall, 1f - s, -loopHeight);
@@ -604,8 +712,8 @@ namespace SpeedStars.Runner
                 }
                 case LegState.Return:
                 {
-                    // Swing: the ankle follows its own curve relative to the shin, handing back to the
-                    // touchdown foot angle just before the foot lands.
+                    // Swing: the ankle follows its own curve relative to the shin (heel kicks up, then
+                    // toes pull up), handing over to the heel-strike angle just before the foot lands.
                     float s = Mathf.Clamp01(t / Mathf.Max(0.001f, controller.returnDuration));
                     ball = EllipseLoop(leg.fromBall, front, s, loopHeight);
                     pitch = Mathf.Lerp(leg.fromPitch, touchdownPitch, 0.5f - 0.5f * Mathf.Cos(Mathf.PI * s));
@@ -618,7 +726,7 @@ namespace SpeedStars.Runner
                 {
                     float s = Mathf.SmoothStep(0f, 1f, t / Mathf.Max(0.001f, groundBlendTime));
                     ball = Vector3.Lerp(leg.fromBall, front, s);
-                    pitch = Mathf.Lerp(leg.fromPitch, touchdownPitch, s);
+                    pitch = Mathf.Lerp(leg.fromPitch, 0f, s);
                     break;
                 }
             }
@@ -632,10 +740,16 @@ namespace SpeedStars.Runner
 
             // Never below the ground: the clipped bottom of the loop is the ground contact.
             if (c.State != LegState.Grounded) ball.y = Mathf.Max(ball.y, GroundY(leg));
+            // Toes up: the heel would dip under the ground, so the foot stands on its heel instead.
+            float heelY = ball.y + (Quaternion.Euler(pitch, 0f, 0f) * HeelFromBall(leg)).y;
+            if (heelY < GroundY(leg)) ball.y += GroundY(leg) - heelY;
 
             leg.baseBall = ball;
             leg.basePitch = pitch;
         }
+
+        /// <summary>Heel contact point relative to the ball, flat foot (runner space).</summary>
+        Vector3 HeelFromBall(Leg leg) => new Vector3(0f, 0f, -(leg.ballOffset.z + HeelBehindAnkle));
 
         /// <summary>A foot-profile curve at phase s, blended between the acceleration and max-speed profiles.</summary>
         float Profile(System.Func<FootProfile, AnimationCurve> curve, float s)
@@ -653,15 +767,13 @@ namespace SpeedStars.Runner
             float p = FootBack(foot);
             float swing = Mathf.Lerp(0f, Mathf.Lerp(armSwingFront, armSwingBack, p), _run);
             float elbow = Mathf.Lerp(elbowStanding, Mathf.Lerp(elbowFront, elbowBack, p), _run);
-            // Prone (both feet held): hands come up by the head.
-            swing = Mathf.Lerp(swing, armProneSwing, _wBoth);
-            elbow = Mathf.Lerp(elbow, elbowProne, _wBoth);
 
-            // Shoulder follows the swing: forward (about Y) and up when the arm is in front (about Z).
+            // Shoulder follows the swing (about Y) and lifts a little (about Z); forward and back have
+            // their own amounts so the shoulder can pull back further than it comes forward.
             float s = Mathf.Lerp(1f, -1f, p) * _run; // +1 arm front, −1 arm back
-            Quaternion shoulderRot = Quaternion.Euler(0f,
-                -arm.side * shoulderSwing * s,
-                arm.side * shoulderLift * Mathf.Max(0f, s));
+            float swingDeg = s >= 0f ? shoulderSwing * s : shoulderSwingBack * s;
+            float liftDeg = s >= 0f ? shoulderLift * s : shoulderLiftBack * -s;
+            Quaternion shoulderRot = Quaternion.Euler(0f, -arm.side * swingDeg, arm.side * liftDeg);
             if (arm.shoulder)
             {
                 Quaternion cInv = Quaternion.Inverse(arm.chestRest);
