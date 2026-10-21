@@ -4,7 +4,7 @@ namespace SpeedStars.Runner
 {
     /// <summary>
     /// Prototype measurement overlay (IMGUI). Shows speed/distance and the push graph:
-    /// the power-by-foot-position curve with the last taps plotted on it (blue = left, orange = right).
+    /// the power-by-readiness curve with the last taps plotted on it (blue = left, orange = right).
     /// </summary>
     public sealed class RunnerDebugHUD : MonoBehaviour
     {
@@ -50,7 +50,7 @@ namespace SpeedStars.Runner
                 $"Hız: <b>{movement.Speed:F2}</b> m/s\n" +
                 $"Mesafe: {movement.Distance:F1} m   Süre: {controller.RaceTime:F2} s\n" +
                 $"Sol: {controller.Legs[0].State}   Sağ: {controller.Legs[1].State}\n" +
-                $"Son: {side} {last.Result}  güç={last.Efficiency:F2}  konum={last.Frontness:F2}\n" +
+                $"Son: {side} {last.Result}  güç={last.Efficiency:F2}  hazırlık={last.Readiness:F2}\n" +
                 $"Dokunuş: {controller.Taps}   Sıklık: {controller.TapRate:F1}/s   Eğim: {(visual ? visual.Lean : 0f):+0;-0;0}°   FPS: {_fps:F0}\n" +
                 "<size=12>← sol ayak, → sağ ayak, dokunmatik: sol/sağ yarı, R: sıfırla</size>";
             GUI.Box(new Rect(10, 10, 470, 135), text, _box);
@@ -67,10 +67,10 @@ namespace SpeedStars.Runner
             var push = controller.push;
             Rect plot = new Rect(r.x + 8, r.y + 18, r.width - 16, r.height - 34);
 
-            GUI.Label(new Rect(r.x + 6, r.y, r.width, 18), "İtiş grafiği  (X: basıştaki ayak konumu, 0 = arka, 1 = ön; Y: güç)", _small);
+            GUI.Label(new Rect(r.x + 6, r.y, r.width, 18), "İtiş grafiği  (X: basıştaki hazırlık, 0 = adım yeni başladı, 1 = ayaklar yerde; Y: güç)", _small);
             Fill(new Rect(plot.x, plot.yMax, plot.width, 1), new Color(1, 1, 1, 0.35f));
-            GUI.Label(new Rect(plot.x - 4, plot.yMax, 60, 16), "arka", _small);
-            GUI.Label(new Rect(plot.xMax - 20, plot.yMax, 60, 16), "ön", _small);
+            GUI.Label(new Rect(plot.x - 4, plot.yMax, 60, 16), "0", _small);
+            GUI.Label(new Rect(plot.xMax - 10, plot.yMax, 60, 16), "1", _small);
 
             const int samples = 120;
             for (int i = 0; i <= samples; i++)
@@ -83,7 +83,7 @@ namespace SpeedStars.Runner
             {
                 var rec = controller.History[i];
                 if (rec.Result == RunnerStepController.TapResult.Start) continue;
-                float px = Mathf.Lerp(plot.x, plot.xMax, Mathf.Clamp01(rec.Frontness));
+                float px = Mathf.Lerp(plot.x, plot.xMax, Mathf.Clamp01(rec.Readiness));
                 float py = Mathf.Lerp(plot.yMax, plot.y, rec.Efficiency);
                 Color c = rec.Leg == 0 ? LeftColor : RightColor;
                 c.a = i == 0 ? 1f : Mathf.Lerp(0.9f, 0.3f, i / (float)RunnerStepController.HistorySize);

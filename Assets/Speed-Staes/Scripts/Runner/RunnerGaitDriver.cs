@@ -9,14 +9,17 @@ namespace SpeedStars.Runner
     ///
     /// Each foot is placed by its ball point (toe joint) using two editable step points
     /// (children of the runner, positions in runner space):
-    ///   Front – foot brought forward on the ground, ready to step
-    ///   Back  – where a step ends
-    /// Step: front → back on the ground. Hold: stays at back. Return: back → front in a straight line.
+    ///   Front – where the reaching foot lands
+    ///   Back  – where the driving foot pushes off
+    ///   Mid   – between them (midAlong): both feet together under the body, waiting on the ground
+    /// One press = one stride: the driving foot pushes Mid → Back on the ground, then swings back to Mid;
+    /// the reaching foot swings Mid → Front, lands on the heel and comes back to Mid under the body.
+    /// The pelvis runs crouched (runHeight) so the knees stay bent, lowest with the feet together and
+    /// highest at the open split mid-stride.
     /// The body only pitches around X; Y and Z rotations stay 0. Lean follows how far back the feet
     /// are; leaning forward the pelvis rolls over the feet midpoint, leaning back it stays over the feet (see Update).
-    /// Hold poses: one foot held = plane (held leg straight back in line with the trunk, the other
-    /// foot planted as support with the body coming over it); both held = prone (dive, lie flat,
-    /// arms stay in their back swing). See FinishLeg / UpdateSupport.
+    /// Hold poses (plane / prone, see FinishLeg / UpdateSupport) are kept but have no trigger in the
+    /// stride model: holding a key does nothing.
     /// Feet: leg IK places the ankle only; the foot angle is applied after IK relative to the shin and
     /// clamped to the ankle's range (see PoseAnkle).
     /// Arms: hand IK is off; each arm is a pendulum from the shoulder joint (X only) with an elbow
@@ -47,6 +50,7 @@ namespace SpeedStars.Runner
             [HideInInspector] public Quaternion restFootRunner;  // flat standing foot in runner space
             [HideInInspector] public Vector3 toeInFoot;          // ankle → ball in foot space
             [HideInInspector] public LegState lastState;
+            [HideInInspector] public double lastStateTime;
             [HideInInspector] public Vector3 fromBall;
             [HideInInspector] public float fromPitch;
             [HideInInspector] public Vector3 ball;        // final (after hold poses), written to IK
@@ -132,9 +136,11 @@ namespace SpeedStars.Runner
         public Arm leftArm = new Arm();
         public Arm rightArm = new Arm();
 
-        [Header("Foot")]
-        [Tooltip("Foot angle while a foot is held back (deg).")]
-        public float pitchBack = 50f;
+        [Header("Stride")]
+        [Tooltip("Mid (feet together under the body) along Front (0) → Back (1).")]
+        [Range(0f, 1f)] public float midAlong = 0.5f;
+        [Tooltip("Stride phase at which the driving foot leaves the ground and the reaching foot lands.")]
+        [Range(0.2f, 0.8f)] public float strideSplit = 0.5f;
 
         [Header("Foot motion (blended by speed: acceleration → max velocity)")]
         public FootProfile accelProfile = new FootProfile
@@ -182,8 +188,10 @@ namespace SpeedStars.Runner
         public float ankleDownMax = 50f;
 
         [Header("Pelvis")]
-        public float runCrouch = 0.04f;
-        [Tooltip("Pelvis drop while a foot is on the ground vs. rise when none is (m).")]
+        [Tooltip("Running pelvis height as a fraction of the standing height above the ground; < 1 keeps the knees bent " +
+                 "so both feet reach the ground at Front and Back.")]
+        [Range(0.6f, 1f)] public float runHeight = 0.82f;
+        [Tooltip("Pelvis rise at the open split mid-stride over the feet-together height (m).")]
         public float bobAmplitude = 0.03f;
         public float bobSharpness = 14f;
         public float pelvisForward = 0.04f;
@@ -198,7 +206,7 @@ namespace SpeedStars.Runner
             new Keyframe(1f, 85f));
         public float maxForwardLean = 85f;
         public float maxBackLean = 35f;
-        [Tooltip("Lean is this many times slower than a foot step (time constant = factor × stepDuration), " +
+        [Tooltip("Lean is this many times slower than a stride (time constant = factor × strideDuration), " +
                  "so the other foot's quick moves do not shake the body.")]
         [Range(1f, 4f)] public float leanLag = 1.75f;
 
@@ -266,6 +274,8 @@ namespace SpeedStars.Runner
         // Heel strike (see ComputeLeg).
         const float HeelBehindAnkle = 0.05f;   // heel contact point behind the ankle joint (m)
         const float HeelRollTime = 0.1f;       // heel strike → foot flat (s)
+        // Mid is part-way through a full Front → Back stance: the drive picks the stance profile up here.
+        const float DriveStanceFrom = 0.4f;
 
         Vector3 _restHip;
         Quaternion _restHipRot, _restSpineRoot, _restSpineTip;
@@ -415,9 +425,10 @@ namespace SpeedStars.Runner
             ComputeLeg(0, leftLeg, now);
             ComputeLeg(1, rightLeg, now);
 
-            // Pelvis height: drops while a foot is down, rises when both are returning.
-            bool supported = controller.Legs[0].Supporting || controller.Legs[1].Supporting;
-            float bobTarget = supported ? -bobAmplitude : bobAmplitude;
+            // Pelvis height: lowest with the feet together, rising to the open split mid-stride.
+            var stride = controller.Legs[0];
+            bool striding = stride.State == LegState.Drive || stride.State == LegState.Reach;
+            float bobTarget = striding ? bobAmplitude * Mathf.Sin(Mathf.PI * stride.Phase(now, controller.strideDuration)) : 0f;
             _bob = Mathf.Lerp(_bob, bobTarget, 1f - Mathf.Exp(-bobSharpness * dt));
 
             UpdateLean(dt);
@@ -433,8 +444,9 @@ namespace SpeedStars.Runner
 
             // Running: roll the pelvis over the feet midpoint so feet → pelvis → trunk stay one line.
             Quaternion rootRot = transform.rotation;
-            Vector3 hip0 = _restHip + new Vector3(0f, -runCrouch * run + _bob, pelvisForward * run);
             float ground = (GroundY(leftLeg) + GroundY(rightLeg)) * 0.5f;
+            Vector3 hip0 = new Vector3(_restHip.x, ground + (_restHip.y - ground) * runHeight + _bob,
+                _restHip.z + pelvisForward * run);
             float radius = hip0.y - ground;
             float pivotZ = _midZ + (hip0.z - _restMidZ);
             // Forward lean: the pelvis rolls over the feet, feet → pelvis → trunk stay one line.
@@ -474,15 +486,14 @@ namespace SpeedStars.Runner
             _run = run;
         }
 
-        /// <summary>Smoothed per-leg "held back" weight; same lag as the lean.</summary>
+        /// <summary>
+        /// Smoothed per-leg "held back" weight; same lag as the lean. The stride model has no hold,
+        /// so the plane / prone poses fade out and stay off until something triggers them again.
+        /// </summary>
         void UpdateHoldWeights(float k)
         {
-            for (int i = 0; i < 2; i++)
-            {
-                var leg = i == 0 ? leftLeg : rightLeg;
-                float target = controller.Started && controller.Legs[i].State == LegState.Hold ? 1f : 0f;
-                leg.holdW = Mathf.Lerp(leg.holdW, target, k);
-            }
+            leftLeg.holdW = Mathf.Lerp(leftLeg.holdW, 0f, k);
+            rightLeg.holdW = Mathf.Lerp(rightLeg.holdW, 0f, k);
         }
 
         /// <summary>A support foot is planted in world space where it was when the other foot got held.</summary>
@@ -646,20 +657,18 @@ namespace SpeedStars.Runner
         }
 
         /// <summary>
-        /// Lean follows where the feet are: the average of both feet along Front (0) → Back (1),
-        /// or 1 as soon as any foot is held back. Both front = sit back, one front one back = upright,
-        /// back = full forward. The lean (and the feet midpoint the body rolls over) trail the feet by
-        /// leanLag × stepDuration so the other foot's quick moves do not shake the body.
-        /// Stopped: both feet stay at Front, so the body keeps the Front lean.
+        /// Lean follows where the feet are: the average of both feet along Front (0) → Back (1).
+        /// Both front = sit back, one front one back or both at Mid = upright, back = full forward.
+        /// The lean (and the feet midpoint the body rolls over) trail the feet by
+        /// leanLag × strideDuration so the feet's quick moves do not shake the body.
         /// </summary>
         void UpdateLean(float dt)
         {
-            bool held = controller.Legs[0].State == LegState.Hold || controller.Legs[1].State == LegState.Hold;
-            float r = held ? 1f : (FootBack(leftLeg) + FootBack(rightLeg)) * 0.5f;
+            float r = (FootBack(leftLeg) + FootBack(rightLeg)) * 0.5f;
             float target = leanByFootBack.Evaluate(r);
             float midZ = (leftLeg.baseBall.z + rightLeg.baseBall.z) * 0.5f;
 
-            float k = 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, leanLag * controller.stepDuration));
+            float k = 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, leanLag * controller.strideDuration));
             _lean = Mathf.Clamp(Mathf.Lerp(_lean, target, k), -maxBackLean, maxForwardLean);
             _midZ = Mathf.Lerp(_midZ, midZ, k);
             UpdateHoldWeights(k);
@@ -672,15 +681,19 @@ namespace SpeedStars.Runner
         void ComputeLeg(int index, Leg leg, double now)
         {
             var c = controller.Legs[index];
-            if (c.State != leg.lastState)
+            // A press mid-stride starts a new stride in the same state: restart from where the foot is.
+            if (c.State != leg.lastState || c.StateTime != leg.lastStateTime)
             {
                 leg.fromBall = leg.ball;
                 leg.fromPitch = leg.pitch;
                 leg.lastState = c.State;
+                leg.lastStateTime = c.StateTime;
             }
 
+            float stride = controller.strideDuration;
+            float s = c.Phase(now, stride);
             float t = (float)(now - c.StateTime);
-            Vector3 front = Local(leg.front), back = Local(leg.back);
+            Vector3 front = Local(leg.front), back = Local(leg.back), mid = Mid(leg);
             Vector3 ball;
             float pitch;
             float touchdownPitch = Mathf.Lerp(accelProfile.touchdownPitch, maxSpeedProfile.touchdownPitch, _profileW);
@@ -690,43 +703,47 @@ namespace SpeedStars.Runner
             switch (c.State)
             {
                 case LegState.Ready:
-                    // Just landed on the heel: the foot rolls down flat over the heel.
-                    ball = front;
+                    // Landed under the body: the foot rolls down flat over the heel and waits there.
+                    ball = mid;
                     pitch = Mathf.Lerp(leg.fromPitch, 0f, Mathf.SmoothStep(0f, 1f, t / HeelRollTime));
                     break;
-                case LegState.Hold:
-                    ball = back;
-                    pitch = pitchBack;
-                    leg.toeRoll = Profile(p => p.toeRoll, 1f);
+                case LegState.Drive:
+                    if (s < strideSplit)
+                    {
+                        // Push Mid → Back on the ground: foot flat, late heel rise, toes roll at toe-off.
+                        float u = s / strideSplit;
+                        float p = Mathf.Lerp(DriveStanceFrom, 1f, u);
+                        ball = EllipseLoop(leg.fromBall, back, u, -loopHeight);
+                        // A stride can start anywhere (e.g. mid-swing): ease from there onto the curve.
+                        pitch = Mathf.Lerp(leg.fromPitch, Profile(x => x.stancePitch, p), Mathf.SmoothStep(0f, 1f, u / 0.3f));
+                        leg.toeRoll = Profile(x => x.toeRoll, p);
+                    }
+                    else
+                    {
+                        // Swing Back → Mid, landing on the heel under the body.
+                        float u = (s - strideSplit) / (1f - strideSplit);
+                        ball = Swing(leg, back, mid, u, Profile(x => x.stancePitch, 1f), touchdownPitch, out pitch);
+                    }
                     break;
-                case LegState.Step:
-                {
-                    // Stance (push): foot flat, late heel rise, toes roll at toe-off.
-                    float s = Mathf.Clamp01(t / Mathf.Max(0.001f, controller.stepDuration));
-                    // Lower arc: the return arc mirrored below the Front–Back line, cut at the ground.
-                    ball = EllipseLoop(back, leg.fromBall, 1f - s, -loopHeight);
-                    // A step can start anywhere (e.g. mid-return): ease from there onto the curve.
-                    pitch = Mathf.Lerp(leg.fromPitch, Profile(p => p.stancePitch, s), Mathf.SmoothStep(0f, 1f, s / 0.3f));
-                    leg.toeRoll = Profile(p => p.toeRoll, s);
+                case LegState.Reach:
+                    if (s < strideSplit)
+                    {
+                        // Swing Mid → Front, reaching out ahead of the body.
+                        ball = Swing(leg, leg.fromBall, front, s / strideSplit, leg.fromPitch, touchdownPitch, out pitch);
+                    }
+                    else
+                    {
+                        // Landed at Front on the heel: rolls flat while the body comes over it, Front → Mid.
+                        float u = (s - strideSplit) / (1f - strideSplit);
+                        ball = EllipseLoop(front, mid, u, -loopHeight);
+                        pitch = Mathf.Lerp(touchdownPitch, 0f, Mathf.SmoothStep(0f, 1f, (s - strideSplit) * stride / HeelRollTime));
+                    }
                     break;
-                }
-                case LegState.Return:
+                default: // Grounded (stopped): settle into the feet-together pose, same as Ready.
                 {
-                    // Swing: the ankle follows its own curve relative to the shin (heel kicks up, then
-                    // toes pull up), handing over to the heel-strike angle just before the foot lands.
-                    float s = Mathf.Clamp01(t / Mathf.Max(0.001f, controller.returnDuration));
-                    ball = EllipseLoop(leg.fromBall, front, s, loopHeight);
-                    pitch = Mathf.Lerp(leg.fromPitch, touchdownPitch, 0.5f - 0.5f * Mathf.Cos(Mathf.PI * s));
-                    leg.swingAnkle = Profile(p => p.swingAnkle, s);
-                    leg.swingToe = Profile(p => p.swingToe, s);
-                    leg.swingW = Mathf.SmoothStep(0f, 1f, s / 0.15f) * (1f - Mathf.SmoothStep(0f, 1f, (s - 0.75f) / 0.25f));
-                    break;
-                }
-                default: // Grounded (stopped): settle into the Front pose, same as Ready.
-                {
-                    float s = Mathf.SmoothStep(0f, 1f, t / Mathf.Max(0.001f, groundBlendTime));
-                    ball = Vector3.Lerp(leg.fromBall, front, s);
-                    pitch = Mathf.Lerp(leg.fromPitch, 0f, s);
+                    float g = Mathf.SmoothStep(0f, 1f, t / Mathf.Max(0.001f, groundBlendTime));
+                    ball = Vector3.Lerp(leg.fromBall, mid, g);
+                    pitch = Mathf.Lerp(leg.fromPitch, 0f, g);
                     break;
                 }
             }
@@ -746,6 +763,25 @@ namespace SpeedStars.Runner
 
             leg.baseBall = ball;
             leg.basePitch = pitch;
+        }
+
+        /// <summary>Feet-together point under the body, between Front and Back (midAlong).</summary>
+        Vector3 Mid(Leg leg) => Vector3.Lerp(Local(leg.front), Local(leg.back), midAlong);
+
+        /// <summary>
+        /// Swing through the air: the ankle follows its own curve relative to the shin (heel kicks up,
+        /// then toes pull up), handing over to the heel-strike angle just before the foot lands.
+        /// The arc height scales with the distance, so a half swing is a lower arc than Back → Front.
+        /// </summary>
+        Vector3 Swing(Leg leg, Vector3 from, Vector3 to, float u, float fromPitch, float touchdownPitch, out float pitch)
+        {
+            float full = Mathf.Max(0.001f, Vector3.Distance(Local(leg.back), Local(leg.front)));
+            float height = loopHeight * Mathf.Clamp01(Vector3.Distance(from, to) / full);
+            pitch = Mathf.Lerp(fromPitch, touchdownPitch, 0.5f - 0.5f * Mathf.Cos(Mathf.PI * u));
+            leg.swingAnkle = Profile(p => p.swingAnkle, u);
+            leg.swingToe = Profile(p => p.swingToe, u);
+            leg.swingW = Mathf.SmoothStep(0f, 1f, u / 0.15f) * (1f - Mathf.SmoothStep(0f, 1f, (u - 0.75f) / 0.25f));
+            return EllipseLoop(from, to, u, height);
         }
 
         /// <summary>Heel contact point relative to the ball, flat foot (runner space).</summary>
@@ -816,6 +852,7 @@ namespace SpeedStars.Runner
             if (!leg.front || !leg.back) return;
             Gizmos.color = Color.green; Gizmos.DrawWireSphere(leg.front.position, 0.035f);
             Gizmos.color = Color.red; Gizmos.DrawWireSphere(leg.back.position, 0.035f);
+            Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(Vector3.Lerp(leg.front.position, leg.back.position, midAlong), 0.03f);
             Gizmos.color = c;
             // Preview: upper arc = return, lower arc = step, clipped at the ground (contact).
             Vector3 a = Local(leg.back), b = Local(leg.front);

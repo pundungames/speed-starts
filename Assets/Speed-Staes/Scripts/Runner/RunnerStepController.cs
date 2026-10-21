@@ -3,13 +3,16 @@ using UnityEngine;
 namespace SpeedStars.Runner
 {
     /// <summary>
-    /// Ties Input → Timing → Movement and owns the two logical leg cycles.
-    /// Left key drives the left foot, right key the right foot: press steps front → back,
-    /// holding keeps the foot back, release returns it to front (a quick press-release still
-    /// completes the step). Every press takes a step from wherever that foot is; its push power
-    /// comes only from where that foot is at the tap (the same timers the rig visual reads, so
-    /// what you see is what you get). The legs are independent: both pressed together push twice.
-    /// Step and return durations are fixed, tuned by hand. The rig visual only reads this.
+    /// Ties Input → Push power → Movement and owns the two logical leg cycles.
+    /// Every press is one stride: the pressed leg drives back, the other reaches forward, and after
+    /// strideDuration both feet are together under the body again, waiting with no penalty.
+    /// Holding a key does nothing; only the press counts.
+    /// Push power comes from readiness = the lower of
+    ///   stride: how far the current stride has come (1 = feet together again), what you see;
+    ///   charge: time since this key's own last press over two strides, so alternating at the stride
+    ///           rhythm is full power and the same key twice in a row is not.
+    /// Both keys pressed together (within simultaneousWindow) are one stride and push twice, each by
+    /// its own charge. Stride duration is fixed, tuned by hand. The rig visual only reads this.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public sealed class RunnerStepController : MonoBehaviour
@@ -19,8 +22,8 @@ namespace SpeedStars.Runner
         public struct TapRecord
         {
             public int Leg;
-            /// <summary>Foot position at the tap: 0 = back point, 1 = front point.</summary>
-            public float Frontness;
+            /// <summary>Readiness at the tap (0..1): the lower of stride progress and this key's charge.</summary>
+            public float Readiness;
             public float Efficiency;
             public TapResult Result;
         }
@@ -29,11 +32,11 @@ namespace SpeedStars.Runner
         public RunnerMovement movement;
         public PushEvaluator push = new PushEvaluator();
 
-        [Header("Leg cycle (fixed, seconds)")]
-        [Tooltip("Front → back, started by the tap.")]
-        public float stepDuration = 0.12f;
-        [Tooltip("Back → front, automatic.")]
-        public float returnDuration = 0.25f;
+        [Header("Stride (fixed, seconds)")]
+        [Tooltip("One press: feet together → apart → together again.")]
+        public float strideDuration = 0.18f;
+        [Tooltip("Presses of both keys closer than this count as pressed together (one stride, two pushes).")]
+        public float simultaneousWindow = 0.05f;
 
         [Header("Tap rate")]
         [Tooltip("Smoothing of the measured tap rate (0..1, higher = faster response).")]
@@ -50,6 +53,10 @@ namespace SpeedStars.Runner
         public readonly TapRecord[] History = new TapRecord[HistorySize];
         public int HistoryCount { get; private set; }
 
+        readonly double[] _lastPress = { double.NegativeInfinity, double.NegativeInfinity };
+        int _strideLeg = -1;
+        double _strideStart;
+        float _strideBefore;
         double _lastTapTime;
         float _avgInterval = float.PositiveInfinity;
 
@@ -64,6 +71,10 @@ namespace SpeedStars.Runner
             }
         }
 
+        /// <summary>0 = this key was just pressed, 1 = rested for two strides (full power).</summary>
+        public float Charge(int leg, double time) =>
+            Mathf.Clamp01((float)((time - _lastPress[leg]) / Mathf.Max(0.001f, 2f * strideDuration)));
+
         void Start() => ResetRun();
 
         void Update()
@@ -72,14 +83,11 @@ namespace SpeedStars.Runner
             double now = Time.timeAsDouble;
 
             while (input.TryDequeue(out var tap))
-            {
-                if (tap.Pressed) Tap(tap.Leg, tap.Time, now);
-                else Legs[tap.Leg].Release(tap.Time);
-            }
+                if (tap.Pressed) Tap(tap.Leg, tap.Time);
 
             movement.Tick(dt);
-            Legs[0].Tick(now, stepDuration, returnDuration);
-            Legs[1].Tick(now, stepDuration, returnDuration);
+            Legs[0].Tick(now, strideDuration);
+            Legs[1].Tick(now, strideDuration);
 
             if (!Started) return;
             RaceTime += dt;
@@ -90,10 +98,9 @@ namespace SpeedStars.Runner
 
         static bool IsResting(LegCycle c) => c.State == LegState.Ready || c.State == LegState.Grounded;
 
-        void Tap(int leg, double t, double now)
+        void Tap(int leg, double t)
         {
             Taps++;
-            var c = Legs[leg];
 
             if (Started)
             {
@@ -102,10 +109,23 @@ namespace SpeedStars.Runner
             }
             _lastTapTime = t;
 
-            // Bring the leg up to the tap moment so a return that ended earlier this frame counts.
-            c.Tick(t, stepDuration, returnDuration);
-            float frontness = c.Frontness(t, stepDuration, returnDuration);
-            c.StartStep(now, frontness);
+            // Bring the stride up to the tap moment so one that ended earlier this frame counts.
+            Legs[0].Tick(t, strideDuration);
+            Legs[1].Tick(t, strideDuration);
+
+            // The other key right after a press joins that stride and is judged as it stood before it.
+            bool together = _strideLeg >= 0 && leg != _strideLeg && t - _strideStart <= simultaneousWindow;
+            float stride = together ? _strideBefore : Legs[leg].Phase(t, strideDuration);
+            float charge = Charge(leg, t);
+            _lastPress[leg] = t;
+            if (!together)
+            {
+                _strideBefore = stride;
+                _strideStart = t;
+                _strideLeg = leg;
+                Legs[leg].Begin(LegState.Drive, t);
+                Legs[1 - leg].Begin(LegState.Reach, t);
+            }
 
             if (!Started)
             {
@@ -115,15 +135,16 @@ namespace SpeedStars.Runner
                 return;
             }
 
-            float eff = push.Evaluate(frontness);
-            TapResult result = frontness >= 1f ? TapResult.Perfect : eff >= 0.5f ? TapResult.Good : TapResult.Early;
+            float readiness = Mathf.Min(stride, charge);
+            float eff = push.Evaluate(readiness);
+            TapResult result = readiness >= 1f ? TapResult.Perfect : eff >= 0.5f ? TapResult.Good : TapResult.Early;
             movement.Push(eff);
-            Record(leg, frontness, eff, result);
+            Record(leg, readiness, eff, result);
         }
 
-        void Record(int leg, float frontness, float eff, TapResult result)
+        void Record(int leg, float readiness, float eff, TapResult result)
         {
-            Last = new TapRecord { Leg = leg, Frontness = frontness, Efficiency = eff, Result = result };
+            Last = new TapRecord { Leg = leg, Readiness = readiness, Efficiency = eff, Result = result };
             for (int i = HistorySize - 1; i > 0; i--) History[i] = History[i - 1];
             History[0] = Last;
             HistoryCount = Mathf.Min(HistoryCount + 1, HistorySize);
@@ -134,6 +155,8 @@ namespace SpeedStars.Runner
             Started = false;
             Legs[0].SetGrounded(now);
             Legs[1].SetGrounded(now);
+            _lastPress[0] = _lastPress[1] = double.NegativeInfinity;
+            _strideLeg = -1;
             _avgInterval = float.PositiveInfinity;
         }
 

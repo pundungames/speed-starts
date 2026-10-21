@@ -3,10 +3,10 @@ using UnityEngine;
 namespace SpeedStars.Runner
 {
     /// <summary>
-    /// Push graph: X = where the pressed foot is at the tap (0 = back point, 1 = front point),
-    /// Y = push power 0..1. The foot waiting on its front point is always X = 1, so waiting
-    /// there costs nothing but the push you are not making. The default line sags a little
-    /// below straight so an early tap costs a bit more than its distance (0.5 → ~0.38).
+    /// Push graph: X = readiness at the tap (0 = stride just started / key just pressed,
+    /// 1 = feet together on the ground and the key rested), Y = push power 0..1. Waiting with the
+    /// feet together is always X = 1, so it costs nothing but the push you are not making.
+    /// The default line sags a little below straight so an early tap costs a bit more (0.5 → ~0.38).
     /// </summary>
     [System.Serializable]
     public sealed class PushEvaluator
