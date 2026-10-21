@@ -78,6 +78,10 @@ namespace SpeedStars.Runner
         public void Tick(double now, float strideDuration, float strideSplit, bool partnerHolding)
         {
             double push = strideSplit * strideDuration, rest = (1f - strideSplit) * strideDuration;
+            // While the other foot is held back this one belongs at Front, e.g. after its own release
+            // from a both-held prone: head there from wherever it is.
+            if (partnerHolding && (State == LegState.Recover || State == LegState.Land || State == LegState.Ready))
+                Enter(LegState.Reach, System.Math.Max(now, StateTime));
             if (State == LegState.Drive && now >= StateTime + push)
                 Enter(Held ? LegState.Hold : LegState.Recover, StateTime + push);
             if (State == LegState.Reach && now >= StateTime + push)

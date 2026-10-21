@@ -20,7 +20,7 @@ namespace SpeedStars.Runner
     /// The body only pitches around X; Y and Z rotations stay 0. Lean follows how far back the feet
     /// are; leaning forward the pelvis rolls over the feet midpoint, leaning back it stays over the feet (see Update).
     /// Hold poses: one foot held = plane (held leg straight back in line with the trunk, the other
-    /// foot planted as support with the body coming over it); both held = prone (dive, lie flat,
+    /// foot waiting at Front as support with the body coming over it); both held = prone (dive, lie flat,
     /// arms stay in their back swing). See FinishLeg / UpdateSupport.
     /// Feet: leg IK places the ankle only; the foot angle is applied after IK relative to the shin and
     /// clamped to the ankle's range (see PoseAnkle).
@@ -61,8 +61,6 @@ namespace SpeedStars.Runner
             [HideInInspector] public float basePitch;
             [HideInInspector] public float holdW;         // smoothed "held back" weight
             [HideInInspector] public float supportW;      // this foot carries the body (other foot held)
-            [HideInInspector] public bool supportLocked;
-            [HideInInspector] public Vector3 supportWorld;
             [HideInInspector] public Vector3 supportLocal;
             [HideInInspector] public Quaternion restToeInFoot;   // toe relative to the foot at rest
             [HideInInspector] public Vector3 restHingeInThigh;   // knee hinge axis (runner right at rest), thigh space
@@ -223,8 +221,6 @@ namespace SpeedStars.Runner
         public float planeHipHeight = 0.5f;
         [Tooltip("Plane pose: the support foot ends up this far ahead of the pelvis, under the chest (m).")]
         public float supportAheadOfHip = 0.3f;
-        [Tooltip("A planted support foot may fall this far behind the pelvis before it slides along (m).")]
-        public float supportMaxBehind = 0.4f;
         [Tooltip("Support knee follows the trunk lean this much (0 = knee points forward, 1 = turns with the trunk).")]
         [Range(0f, 1f)] public float supportKneeFollow = 0.3f;
         [Tooltip("Prone pose: trunk angle (deg, 90 = flat).")]
@@ -502,27 +498,14 @@ namespace SpeedStars.Runner
             }
         }
 
-        /// <summary>A support foot is planted in world space where it was when the other foot got held.</summary>
+        /// <summary>
+        /// The support foot is the one waiting at Front while the other is held: it stays at its own
+        /// step-cycle point on the ground (Front), and the body comes forward over it.
+        /// </summary>
         void UpdateSupport(Leg leg, float ground)
         {
-            if (leg.supportW < 0.01f)
-            {
-                leg.supportLocked = false;
-                return;
-            }
-            if (!leg.supportLocked)
-            {
-                leg.supportWorld = transform.TransformPoint(new Vector3(leg.ball.x, ground, leg.ball.z));
-                leg.supportLocked = true;
-            }
-            Vector3 l = transform.InverseTransformPoint(leg.supportWorld);
-            if (l.z < -supportMaxBehind)
-            {
-                l.z = -supportMaxBehind;
-                leg.supportWorld = transform.TransformPoint(l);
-            }
-            l.y = ground;
-            leg.supportLocal = l;
+            if (leg.supportW < 0.01f) return;
+            leg.supportLocal = new Vector3(leg.baseBall.x, ground, leg.baseBall.z);
         }
 
         /// <summary>
