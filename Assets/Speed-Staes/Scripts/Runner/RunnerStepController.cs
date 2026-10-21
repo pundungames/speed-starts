@@ -4,39 +4,51 @@ namespace SpeedStars.Runner
 {
     /// <summary>
     /// Ties Input → Timing → Movement and owns the two logical leg cycles.
-    /// Left key drives the left foot, right key the right foot: press steps front → back,
-    /// holding keeps the foot back, release returns it to front (a quick press-release still
-    /// completes the step). Every press takes a step from wherever that foot is; its efficiency
-    /// comes only from the timing graph (error against the moment the foot is back on its
-    /// front point) and feeds Movement.
-    /// Step and return durations are fixed, tuned by hand. The rig visual only reads this.
+    /// Left key drives the left foot, right key the right foot, and the feet move as a pair:
+    /// a press steps that foot back while the other comes forward, arriving first.
+    /// Holding keeps the pressed foot back and the other at front. On release the back foot
+    /// returns to Mid while the front one waits; then the front one comes to Mid too (feet together
+    /// on the ground, waiting). Holding both keeps both back.
+    /// Every press takes a step from wherever that foot is; its push power comes only from where
+    /// that foot is at the tap (front = full, Mid = part, back = none; the same timers the rig visual
+    /// reads, so what you see is what you get). Both pressed together push twice.
+    /// Move durations are fixed, tuned by hand. The rig visual only reads this.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public sealed class RunnerStepController : MonoBehaviour
     {
-        public enum TapResult { None, Start, Perfect, Good, Late, Early, SameLeg }
+        public enum TapResult { None, Start, Perfect, Good, Early }
 
         public struct TapRecord
         {
             public int Leg;
-            public float Error;
+            /// <summary>Foot position at the tap: 0 = back point, 0.5 = Mid, 1 = front point.</summary>
+            public float Frontness;
             public float Efficiency;
             public TapResult Result;
         }
 
         public RunnerInput input;
         public RunnerMovement movement;
-        public TimingEvaluator timing = new TimingEvaluator();
+        public PushEvaluator push = new PushEvaluator();
 
         [Header("Leg cycle (fixed, seconds)")]
-        [Tooltip("Front → back, started by the tap.")]
+        [Tooltip("Pressed foot → back, started by the tap.")]
         public float stepDuration = 0.12f;
-        [Tooltip("Back → front, automatic.")]
+        [Tooltip("Other foot → front, started by the same tap. Shorter than the step: it arrives first.")]
+        public float reachDuration = 0.08f;
+        [Tooltip("Back foot → Mid after release.")]
         public float returnDuration = 0.25f;
+        [Tooltip("Front foot → Mid, starting once the back foot has reached Mid.")]
+        public float frontReturnDuration = 0.15f;
 
-        [Header("Rules")]
-        [Tooltip("Efficiency multiplier when the same foot steps twice in a row.")]
-        [Range(0f, 1f)] public float sameLegFactor = 0.3f;
+        public LegTimings Timings => new LegTimings
+        {
+            Step = stepDuration,
+            Reach = reachDuration,
+            Return = returnDuration,
+            FrontReturn = frontReturnDuration,
+        };
 
         [Header("Tap rate")]
         [Tooltip("Smoothing of the measured tap rate (0..1, higher = faster response).")]
@@ -53,7 +65,6 @@ namespace SpeedStars.Runner
         public readonly TapRecord[] History = new TapRecord[HistorySize];
         public int HistoryCount { get; private set; }
 
-        int _lastSteppedLeg = -1;
         double _lastTapTime;
         float _avgInterval = float.PositiveInfinity;
 
@@ -78,12 +89,11 @@ namespace SpeedStars.Runner
             while (input.TryDequeue(out var tap))
             {
                 if (tap.Pressed) Tap(tap.Leg, tap.Time, now);
-                else Legs[tap.Leg].Release(tap.Time);
+                else Release(tap.Leg, tap.Time);
             }
 
             movement.Tick(dt);
-            Legs[0].Tick(now, stepDuration, returnDuration);
-            Legs[1].Tick(now, stepDuration, returnDuration);
+            TickLegs(now);
 
             if (!Started) return;
             RaceTime += dt;
@@ -94,10 +104,28 @@ namespace SpeedStars.Runner
 
         static bool IsResting(LegCycle c) => c.State == LegState.Ready || c.State == LegState.Grounded;
 
+        void TickLegs(double time)
+        {
+            var d = Timings;
+            // Twice: the front foot's wait ends on the other foot reaching Mid in the same tick.
+            for (int pass = 0; pass < 2; pass++)
+            {
+                Legs[0].Tick(time, d, Legs[1]);
+                Legs[1].Tick(time, d, Legs[0]);
+            }
+        }
+
+        void Release(int leg, double t)
+        {
+            TickLegs(t);
+            Legs[leg].Release(t, Timings);
+        }
+
         void Tap(int leg, double t, double now)
         {
             Taps++;
             var c = Legs[leg];
+            var other = Legs[1 - leg];
 
             if (Started)
             {
@@ -106,35 +134,31 @@ namespace SpeedStars.Runner
             }
             _lastTapTime = t;
 
+            // Bring the legs up to the tap moment so a move that ended earlier this frame counts.
+            TickLegs(t);
+            var d = Timings;
+            float frontness = c.Frontness(t, d);
+            c.Press(t, d);
+            // The other foot comes forward, unless it is held back too (both back).
+            if (!other.Holding) other.StartReach(t, d);
+
             if (!Started)
             {
                 Started = true;
-                c.StartStep(now);
                 movement.Push(1f);
-                _lastSteppedLeg = leg;
-                Record(leg, 0f, 1f, TapResult.Start);
+                Record(leg, 1f, 1f, TapResult.Start);
                 return;
             }
 
-            float error = c.State == LegState.Grounded ? 0f : (float)(t - c.ReadyTime(stepDuration, returnDuration));
-            c.StartStep(now);
-
-            float eff = timing.Evaluate(error);
-            TapResult result = eff >= 0.85f ? TapResult.Perfect : eff >= 0.5f ? TapResult.Good
-                : error < 0f ? TapResult.Early : TapResult.Late;
-            if (_lastSteppedLeg == leg)
-            {
-                eff *= sameLegFactor;
-                result = TapResult.SameLeg;
-            }
-            _lastSteppedLeg = leg;
+            float eff = push.Evaluate(frontness);
+            TapResult result = frontness >= 1f ? TapResult.Perfect : eff >= 0.5f ? TapResult.Good : TapResult.Early;
             movement.Push(eff);
-            Record(leg, error, eff, result);
+            Record(leg, frontness, eff, result);
         }
 
-        void Record(int leg, float error, float eff, TapResult result)
+        void Record(int leg, float frontness, float eff, TapResult result)
         {
-            Last = new TapRecord { Leg = leg, Error = error, Efficiency = eff, Result = result };
+            Last = new TapRecord { Leg = leg, Frontness = frontness, Efficiency = eff, Result = result };
             for (int i = HistorySize - 1; i > 0; i--) History[i] = History[i - 1];
             History[0] = Last;
             HistoryCount = Mathf.Min(HistoryCount + 1, HistorySize);
@@ -145,7 +169,6 @@ namespace SpeedStars.Runner
             Started = false;
             Legs[0].SetGrounded(now);
             Legs[1].SetGrounded(now);
-            _lastSteppedLeg = -1;
             _avgInterval = float.PositiveInfinity;
         }
 
