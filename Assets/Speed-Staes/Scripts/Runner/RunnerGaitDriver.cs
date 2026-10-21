@@ -13,8 +13,9 @@ namespace SpeedStars.Runner
     ///   Back  – where a step ends
     ///   Mid   – between them (midAlong), on the ground: feet together, waiting
     /// The feet move as a pair: Step (pressed foot → back on the ground) while the other Reaches
-    /// (→ front through the air), arriving together. Hold: stays at back, the other waits at front.
-    /// Return: both to Mid (from back through the air, from front on the ground). The pelvis sits
+    /// (→ front through the air), arriving first. Hold: stays at back, the other waits at front.
+    /// Return: the back foot swings to Mid through the air while the front one waits; then the front
+    /// one comes to Mid on the ground. The pelvis sits
     /// lower (readyCrouch) so the knees stay bent with the feet together at Mid.
     /// The body only pitches around X; Y and Z rotations stay 0. Lean follows how far back the feet
     /// are; leaning forward the pelvis rolls over the feet midpoint, leaning back it stays over the feet (see Update).
@@ -689,13 +690,13 @@ namespace SpeedStars.Runner
                     pitch = Mathf.Lerp(leg.fromPitch, 0f, Mathf.SmoothStep(0f, 1f, t / HeelRollTime));
                     break;
                 case LegState.FrontWait:
-                    // Landed on the heel at Front while the other foot is held back: rolls flat and waits.
+                    // Landed on the heel at Front: rolls flat and waits until the other foot is at Mid.
                     ball = front;
                     pitch = Mathf.Lerp(leg.fromPitch, 0f, Mathf.SmoothStep(0f, 1f, t / HeelRollTime));
                     break;
                 case LegState.Reach:
-                    // The other foot steps back: this one swings forward to Front in the same time.
-                    ball = Swing(leg, front, Mathf.Clamp01(t / Mathf.Max(0.001f, controller.stepDuration)), touchdownPitch, out pitch);
+                    // The other foot steps back: this one swings forward to Front, arriving first.
+                    ball = Swing(leg, front, Mathf.Clamp01(t / Mathf.Max(0.001f, controller.reachDuration)), touchdownPitch, out pitch);
                     break;
                 case LegState.Hold:
                     ball = back;
@@ -715,10 +716,11 @@ namespace SpeedStars.Runner
                 }
                 case LegState.Return:
                 {
-                    float s = Mathf.Clamp01(t / Mathf.Max(0.001f, controller.returnDuration));
-                    if (leg.fromBall.z > mid.z)
+                    float s = Mathf.Clamp01(t / Mathf.Max(0.001f, c.ReturnDuration(controller.Timings)));
+                    if (c.FromFront)
                     {
-                        // From Front: stays on the ground, rolling flat as the body comes over it.
+                        // From Front (after the other foot is at Mid): stays on the ground, rolling flat
+                        // as the body comes over it.
                         ball = EllipseLoop(leg.fromBall, mid, s, -loopHeight);
                         pitch = Mathf.Lerp(leg.fromPitch, 0f, Mathf.SmoothStep(0f, 1f, t / HeelRollTime));
                     }

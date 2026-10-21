@@ -17,7 +17,7 @@ Hızı, gücü veya zamanlamayı **değiştirmez**. Onlar `RunnerStepController`
 | Ayakların birleştiği yer çok önde / arkada | `Mid Along` |
 | Öne gelen ayak çok yükseğe kalkıyor | `Loop Height` ↓ |
 | Ayak hep çok erken / geç tepe yapıyor | `Loop Skew` |
-| Adımlar çok hızlı / yavaş | **`RunnerStepController`** → `Step Duration`, `Return Duration` |
+| Adımlar çok hızlı / yavaş | **`RunnerStepController`** → `Step Duration`, `Reach Duration`, `Return Duration`, `Front Return Duration` |
 | Tutunca gövde yeterince öne eğilmiyor | `Lean By Foot Back` (X=1 noktası), `Max Forward Lean` |
 | Gövde eğilmesi geç / sallantılı | `Lean Lag` |
 | Uçak pozunda gövde çok yüksek / alçak | `Plane Hip Height` |
@@ -42,9 +42,12 @@ Her ayağın **ayak topu (parmak eklemi)** üç noktadan birine gider:
 
 Hareket sırası:
 
-1. **Sola bas:** sol ayak Mid → Back (yerden), sağ ayak Mid → Front (havadan). İkisi aynı anda varır (`Step Duration`).
+1. **Sola bas:** sol ayak Mid → Back (yerden, `Step Duration`), sağ ayak Mid → Front (havadan, `Reach Duration`).
+   Sağ daha kısa sürede gittiği için **önce varır**.
 2. **Tutmaya devam:** sol Back'te, sağ Front'ta bekler. Gövde öne eğilir (uçak pozu).
-3. **Bırak:** ikisi Mid'e döner (`Return Duration`). Arkadaki havadan, öndeki yerden gelir.
+3. **Bırak:** önce sol havadan Mid'e gelir (`Return Duration`), sağ bu sırada Front'ta yerde bekler.
+   Sol Mid'e varınca sağ da yerden Mid'e gelir (`Front Return Duration`).
+   Sağ Front'ta beklerken sağa basarsan tam güç alırsın; geç kalırsan sağ Mid'e iner, güç düşer.
 4. **İki tuş birden tutulursa:** ikisi de Back'te, yüzüstü (dalış) pozu.
 
 Front ve Back noktalarını sahnede taşıyarak adım uzunluğunu doğrudan değiştirebilirsin.
@@ -58,8 +61,10 @@ Bunlar görseli de etkiler ama **gücü/mekaniği de** değiştirir.
 
 | Ayar | Şu an | Ne yapar |
 |---|---|---|
-| `Step Duration` | 0.12 s | Basılan ayağın Back'e, diğerinin Front'a gitme süresi |
-| `Return Duration` | 0.25 s | Bırakınca iki ayağın Mid'e dönme süresi |
+| `Step Duration` | 0.12 s | Basılan ayağın Back'e gitme süresi |
+| `Reach Duration` | 0.08 s | Diğer ayağın Front'a gitme süresi (Step'ten kısa = önce varır) |
+| `Return Duration` | 0.25 s | Bırakınca arkadaki ayağın Mid'e dönme süresi |
+| `Front Return Duration` | 0.15 s | Arkadaki Mid'e vardıktan sonra öndeki ayağın Mid'e gelme süresi |
 
 ---
 
