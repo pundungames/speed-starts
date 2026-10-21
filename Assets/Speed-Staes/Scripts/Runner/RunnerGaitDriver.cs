@@ -765,8 +765,16 @@ namespace SpeedStars.Runner
             leg.basePitch = pitch;
         }
 
-        /// <summary>Feet-together point under the body, between Front and Back (midAlong).</summary>
-        Vector3 Mid(Leg leg) => Vector3.Lerp(Local(leg.front), Local(leg.back), midAlong);
+        /// <summary>
+        /// Feet-together point under the body, between Front and Back (midAlong), always on the ground:
+        /// Back sits up where the foot kicks off, so a plain midpoint would leave the waiting feet in the air.
+        /// </summary>
+        Vector3 Mid(Leg leg)
+        {
+            Vector3 m = Vector3.Lerp(Local(leg.front), Local(leg.back), midAlong);
+            m.y = GroundY(leg);
+            return m;
+        }
 
         /// <summary>
         /// Swing through the air: the ankle follows its own curve relative to the shin (heel kicks up,
@@ -852,7 +860,7 @@ namespace SpeedStars.Runner
             if (!leg.front || !leg.back) return;
             Gizmos.color = Color.green; Gizmos.DrawWireSphere(leg.front.position, 0.035f);
             Gizmos.color = Color.red; Gizmos.DrawWireSphere(leg.back.position, 0.035f);
-            Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(Vector3.Lerp(leg.front.position, leg.back.position, midAlong), 0.03f);
+            Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(transform.TransformPoint(Mid(leg)), 0.03f);
             Gizmos.color = c;
             // Preview: upper arc = return, lower arc = step, clipped at the ground (contact).
             Vector3 a = Local(leg.back), b = Local(leg.front);
