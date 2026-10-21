@@ -17,8 +17,10 @@ namespace SpeedStars.Runner
     /// Return: the back foot swings to Mid through the air while the front one waits; then the front
     /// one comes to Mid on the ground. The pelvis sits
     /// lower (readyCrouch) so the knees stay bent with the feet together at Mid.
-    /// The body only pitches around X; Y and Z rotations stay 0. Lean follows how far back the feet
-    /// are; leaning forward the pelvis rolls over the feet midpoint, leaning back it stays over the feet (see Update).
+    /// The body only pitches around X; Y and Z rotations stay 0. Running, the trunk bends forward at the
+    /// waist by tap rate (pelvis and legs untouched); the head goes with the trunk. A foot held back past the
+    /// hip extension limit pitches the whole body (pelvis rolls over the feet midpoint) - see UpdateLean.
+    /// Each press lifts the pelvis (and all above it) in a capped hop - see UpdateHop.
     /// Hold poses: one foot held = plane (held leg straight back in line with the trunk, the other
     /// foot waiting at front as support with the body coming over it); both held = prone (dive, lie flat,
     /// arms stay in their back swing). See FinishLeg / UpdateSupport.
@@ -198,15 +200,13 @@ namespace SpeedStars.Runner
         public float pelvisTilt = 6f;
 
         [Header("Lean (X rotation only, + forward / − back)")]
-        [Tooltip("X: how far back the feet are (0 = both at Front, 0.5 = one front one back, 1 = back). " +
-                 "A foot held at Back counts as 1. Y: body lean (deg).")]
-        public AnimationCurve leanByFootBack = new AnimationCurve(
-            new Keyframe(0f, 0f),
-            new Keyframe(0.5f, 0f),
-            new Keyframe(1f, 85f));
-        [Tooltip("X: tap rate (presses per second). Y: body lean (deg). Faster tapping leans further forward, " +
-                 "slowing down brings the body back. The body takes the larger of this and the feet lean, " +
-                 "so holding a foot back still goes all the way forward.")]
+        [Tooltip("Hip extension limit (deg): how far a leg can reach back behind the trunk line. A foot held back " +
+                 "further than this pitches the whole body forward until the leg is within it (plane / prone). " +
+                 "A real hip manages about 20–30°.")]
+        [Range(0f, 60f)] public float hipExtensionLimit = 25f;
+        [Tooltip("Waist lean while running (deg) by tap rate (presses per second): bends the trunk forward at the " +
+                 "waist only; the pelvis and legs stay as they are. Faster tapping leans further, slowing down " +
+                 "brings it back.")]
         public AnimationCurve leanByTapRate = new AnimationCurve(
             new Keyframe(0f, 0f),
             new Keyframe(2f, 8f),
@@ -277,6 +277,7 @@ namespace SpeedStars.Runner
         const float PelvisShareForward = 0.5f;
         const float PelvisShareBack = 0.25f;
         const float BackLeanHipForward = 0.2f;
+        const float HeadFollowLean = 15f;      // trunk lean (deg) from which the head fully follows the trunk
         // Heel strike (see ComputeLeg).
         const float HeelBehindAnkle = 0.05f;   // heel contact point behind the ankle joint (m)
         const float HeelRollTime = 0.1f;       // heel strike → foot flat (s)
@@ -285,12 +286,12 @@ namespace SpeedStars.Runner
         Quaternion _restHipRot, _restSpineRoot, _restSpineTip;
         int _hopTaps;
         double _hopTime;
-        float _hop, _hopFrom, _hopPeak, _lean, _bodyLean, _run, _midZ, _restMidZ, _wBoth, _legReach, _footRestAngle, _profileW;
+        float _hop, _hopFrom, _hopPeak, _lean, _waistLean, _bodyLean, _run, _midZ, _restMidZ, _wBoth, _legReach, _footRestAngle, _profileW;
         MultiAimConstraint _headAim;
         bool _bound;
 
-        /// <summary>Current trunk lean (deg, + forward / − back), including hold poses.</summary>
-        public float Lean => _bodyLean;
+        /// <summary>Current trunk lean (deg, + forward / − back): whole body (hold poses) plus waist.</summary>
+        public float Lean => _bodyLean + _waistLean;
 
         Vector3 Local(Transform t) => transform.InverseTransformPoint(t.position);
 
@@ -475,11 +476,12 @@ namespace SpeedStars.Runner
             // than the trunk (lumbar extension).
             float pelvisLean = _bodyLean * (_bodyLean >= 0f ? PelvisShareForward : PelvisShareBack);
             hipTarget.rotation = rootRot * Quaternion.Euler(pelvisTilt * run + pelvisLean, 0f, 0f) * _restHipRot;
-            spineRootTarget.rotation = rootRot * Quaternion.Euler(Mathf.Lerp(pelvisLean, _bodyLean, 0.6f), 0f, 0f) * _restSpineRoot;
-            spineTipTarget.rotation = rootRot * Quaternion.Euler(_bodyLean, 0f, 0f) * _restSpineTip;
+            // The waist lean bends only the spine, above the pelvis.
+            spineRootTarget.rotation = rootRot * Quaternion.Euler(Mathf.Lerp(pelvisLean, _bodyLean, 0.6f) + 0.5f * _waistLean, 0f, 0f) * _restSpineRoot;
+            spineTipTarget.rotation = rootRot * Quaternion.Euler(_bodyLean + _waistLean, 0f, 0f) * _restSpineTip;
 
-            // Head: looks ahead when upright, follows the trunk down to the ground at full forward lean.
-            if (_headAim) _headAim.weight = 1f - leanT;
+            // Head: looks ahead when upright, goes down with the trunk as soon as it leans.
+            if (_headAim) _headAim.weight = 1f - Mathf.SmoothStep(0f, 1f, (_bodyLean + _waistLean) / HeadFollowLean);
 
             FinishLeg(leftLeg, hip, ground, leanT);
             FinishLeg(rightLeg, hip, ground, leanT);
@@ -680,25 +682,38 @@ namespace SpeedStars.Runner
         }
 
         /// <summary>
-        /// Lean follows where the feet are: the average of both feet along Front (0) → Back (1),
-        /// or 1 as soon as any foot is held back. Both front = sit back, one front one back = upright,
-        /// back = full forward. Running adds the tap-rate lean (faster tapping = further forward); the body
-        /// takes the larger of the two, so holding a foot back still goes all the way forward.
-        /// The lean (and the feet midpoint the body rolls over) trail the feet by leanLag × stepDuration
-        /// so the other foot's quick moves do not shake the body.
+        /// Two leans:
+        ///   whole body (pelvis rolls over the feet, trunk in line): only from the hip extension limit. A foot
+        ///   held back further behind the hip than hipExtensionLimit pitches the body forward by the excess
+        ///   (one foot = plane, both = prone, see the hold poses);
+        ///   waist (spine only, above the pelvis): from the tap rate while running.
+        /// Both trail their targets by leanLag × stepDuration so quick foot moves do not shake the body.
         /// </summary>
         void UpdateLean(float dt)
         {
-            bool held = controller.Legs[0].State == LegState.Hold || controller.Legs[1].State == LegState.Hold;
-            float r = held ? 1f : (FootBack(leftLeg) + FootBack(rightLeg)) * 0.5f;
-            float tapLean = controller.Started ? leanByTapRate.Evaluate(controller.TapRate) : 0f;
-            float target = Mathf.Max(leanByFootBack.Evaluate(r), tapLean);
+            float target = 0f;
+            for (int i = 0; i < 2; i++)
+                if (controller.Legs[i].State == LegState.Hold)
+                    target = Mathf.Max(target, LegBehindHip(i == 0 ? leftLeg : rightLeg) - hipExtensionLimit);
+            float waistTarget = controller.Started ? leanByTapRate.Evaluate(controller.TapRate) : 0f;
             float midZ = (leftLeg.baseBall.z + rightLeg.baseBall.z) * 0.5f;
 
             float k = 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, leanLag * controller.stepDuration));
             _lean = Mathf.Clamp(Mathf.Lerp(_lean, target, k), -maxBackLean, maxForwardLean);
+            _waistLean = Mathf.Lerp(_waistLean, waistTarget, k);
             _midZ = Mathf.Lerp(_midZ, midZ, k);
             UpdateHoldWeights(k);
+        }
+
+        /// <summary>
+        /// Angle of the leg behind straight down from the (crouched) hip, to where its step cycle puts the
+        /// ankle (deg, + = foot behind).
+        /// </summary>
+        float LegBehindHip(Leg leg)
+        {
+            float hipY = _restHip.y - (runCrouch + readyCrouch);
+            Vector3 ankle = leg.baseBall - leg.ballOffset;
+            return Mathf.Atan2(_restHip.z - ankle.z, Mathf.Max(0.01f, hipY - ankle.y)) * Mathf.Rad2Deg;
         }
 
         /// <summary>0 = foot at its Front point, 1 = at its Back point (step cycle position).</summary>

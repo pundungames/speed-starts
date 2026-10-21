@@ -18,9 +18,9 @@ Hızı, gücü veya zamanlamayı **değiştirmez**. Onlar `RunnerStepController`
 | Öne gelen ayak çok yükseğe kalkıyor | `Loop Height` ↓ |
 | Ayak hep çok erken / geç tepe yapıyor | `Loop Skew` |
 | Adımlar çok hızlı / yavaş | **`RunnerStepController`** → `Step Duration`, `Reach Duration`, `Return Duration`, `Front Return Duration` |
-| Koşarken gövde çok dik / çok eğik | `Lean By Tap Rate` |
+| Koşarken belden çok dik / çok eğik | `Lean By Tap Rate` |
 | Karakter "süzülüyor", zıplama yok / çok fazla | `Hop Height` |
-| Tutunca gövde yeterince öne eğilmiyor | `Lean By Foot Back` (X=1 noktası), `Max Forward Lean` |
+| Tutunca gövde yeterince öne eğilmiyor | `Hip Extension Limit` ↓, Back noktası daha geride, `Max Forward Lean` |
 | Gövde eğilmesi geç / sallantılı | `Lean Lag` |
 | Uçak pozunda gövde çok yüksek / alçak | `Plane Hip Height` |
 | Uçak pozunda öndeki ayak gövdeye göre yanlış yerde | `Support Ahead Of Hip` |
@@ -147,20 +147,27 @@ Bu sınırlar her şeyin üstündedir: profiller ne derse desin bilek bunları a
 
 ## Lean (Gövde eğilmesi)
 
-Eğilme iki kaynaktan gelir, gövde **büyük olanı** alır:
-- **Basma sıklığı:** hızlı bastıkça gövde öne gider, yavaşlayınca geri gelir.
-- **Ayakların konumu:** ayak Back'te **tutuluyorsa** değer direkt 1 sayılır, gövde en öne gider (uçak / yüzüstü).
+İki ayrı eğilme var:
+
+- **Bel eğilmesi (koşarken):** basma sıklığına göre. Sadece **belden yukarısı** (omurga) eğilir;
+  kalça ve bacaklar koşuya devam eder. Hızlı bastıkça öne gider, yavaşlayınca geri gelir.
+- **Bütün beden eğilmesi (tutunca):** kalça limiti. Bacak gövdeye göre ancak `Hip Extension Limit`
+  kadar geriye gidebilir (gerçek insan ~20–30°). Back'te **tutulan** ayak bundan fazla gerideyse,
+  aradaki fark kadar bütün beden (kalça dahil) öne yatar. Bir ayak = uçak, iki ayak = yüzüstü.
+
+Kafa gövdeyle birlikte eğilir: gövde dikken ileri bakar, ~15° eğilince tamamen gövdeyi takip eder.
 
 | Ayar | Şu an | Ne yapar |
 |---|---|---|
-| `Lean By Tap Rate` | (0→0°), (2→8°), (5→20°), (8→28°) | **X:** saniyedeki basış sayısı (HUD'daki "Sıklık"). **Y:** eğilme açısı. Basmayı bırakınca sıklık düşer, gövde yavaşça geri gelir |
-| `Lean By Foot Back` | (0→0°), (0.5→0°), (1→85°) | **X:** iki ayağın ortalama geride olma oranı (0 = ikisi Front'ta, 0.5 = biri önde biri arkada, 1 = ikisi Back'te / biri tutuluyor). **Y:** eğilme açısı |
-| `Max Forward Lean` | 80° | Öne eğilmenin üst sınırı (eğri daha fazlasını söylese de bunu geçmez) |
+| `Hip Extension Limit` | 25° | Bacağın gövdenin gerisine en fazla açılabileceği açı. **Küçültürsen** tutunca gövde **daha çok** öne yatar |
+| `Lean By Tap Rate` | (0→0°), (2→8°), (5→20°), (8→28°) | Bel eğilmesi. **X:** saniyedeki basış sayısı (HUD'daki "Sıklık"). **Y:** açı |
+| `Max Forward Lean` | 80° | Bütün beden öne eğilmesinin üst sınırı |
 | `Max Back Lean` | 35° | Geriye eğilmenin üst sınırı |
-| `Lean Lag` | 1.75 | Eğilmenin ayakları ne kadar gecikmeyle takip ettiği (× `Step Duration`). Büyük = daha yumuşak ama geç |
+| `Lean Lag` | 1.75 | Eğilmelerin ne kadar gecikmeyle takip ettiği (× `Step Duration`). Büyük = daha yumuşak ama geç |
 
-> Normal koşuda `Lean By Foot Back` 0° verir (X ≈ 0.3–0.5). Koşarken eğilmeyi `Lean By Tap Rate` belirler,
-> tutunca `Lean By Foot Back` devreye girip gövdeyi en öne götürür.
+> Tutunca ne kadar eğileceğini iki şey belirler: `Hip Extension Limit` ve sahnedeki **Back** noktasının yeri
+> (Back ne kadar geride / yüksekse bacak o kadar geride, gövde o kadar öne yatar).
+> İki ayak tutulunca yüzüstü pozu `Prone Lean` açısına gider.
 
 ## Hold poses (Tutma pozları)
 
