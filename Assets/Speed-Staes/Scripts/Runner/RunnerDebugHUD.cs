@@ -3,8 +3,8 @@ using UnityEngine;
 namespace SpeedStars.Runner
 {
     /// <summary>
-    /// Prototype measurement overlay (IMGUI). Shows speed/distance and the timing graph:
-    /// the efficiency curve with the last taps plotted on it (blue = left, orange = right).
+    /// Prototype measurement overlay (IMGUI). Shows speed/distance and the push graph:
+    /// the power-by-foot-position curve with the last taps plotted on it (blue = left, orange = right).
     /// </summary>
     public sealed class RunnerDebugHUD : MonoBehaviour
     {
@@ -50,38 +50,32 @@ namespace SpeedStars.Runner
                 $"Hız: <b>{movement.Speed:F2}</b> m/s\n" +
                 $"Mesafe: {movement.Distance:F1} m   Süre: {controller.RaceTime:F2} s\n" +
                 $"Sol: {controller.Legs[0].State}   Sağ: {controller.Legs[1].State}\n" +
-                $"Son: {side} {last.Result}  verim={last.Efficiency:F2}  hata={last.Error * 1000f:F0} ms\n" +
+                $"Son: {side} {last.Result}  güç={last.Efficiency:F2}  konum={last.Frontness:F2}\n" +
                 $"Dokunuş: {controller.Taps}   Sıklık: {controller.TapRate:F1}/s   Eğim: {(visual ? visual.Lean : 0f):+0;-0;0}°   FPS: {_fps:F0}\n" +
                 "<size=12>← sol ayak, → sağ ayak, dokunmatik: sol/sağ yarı, R: sıfırla</size>";
             GUI.Box(new Rect(10, 10, 470, 135), text, _box);
 
-            DrawTimingGraph(new Rect(10, 152, 470, 130));
+            DrawPushGraph(new Rect(10, 152, 470, 130));
 
             if (!controller.Started)
                 GUI.Label(new Rect(0, Screen.height * 0.3f, Screen.width, 50), "Koşmak için sol/sağ dokun", _big);
         }
 
-        void DrawTimingGraph(Rect r)
+        void DrawPushGraph(Rect r)
         {
             GUI.Box(r, GUIContent.none);
-            var timing = controller.timing;
-            float x0 = timing.EarliestError, x1 = timing.LatestError;
-            if (x1 <= x0) return;
+            var push = controller.push;
             Rect plot = new Rect(r.x + 8, r.y + 18, r.width - 16, r.height - 34);
 
-            GUI.Label(new Rect(r.x + 6, r.y, r.width, 18), "Zamanlama grafiği  (X: hazır olma anına göre ms, Y: verim)", _small);
+            GUI.Label(new Rect(r.x + 6, r.y, r.width, 18), "İtiş grafiği  (X: basıştaki ayak konumu, 0 = arka, 1 = ön; Y: güç)", _small);
             Fill(new Rect(plot.x, plot.yMax, plot.width, 1), new Color(1, 1, 1, 0.35f));
-            float zeroX = Mathf.Lerp(plot.x, plot.xMax, Mathf.InverseLerp(x0, x1, 0f));
-            Fill(new Rect(zeroX, plot.y, 1, plot.height), new Color(1, 1, 1, 0.35f));
-            GUI.Label(new Rect(plot.x - 4, plot.yMax, 60, 16), $"{x0 * 1000f:F0}", _small);
-            GUI.Label(new Rect(zeroX - 4, plot.yMax, 40, 16), "0", _small);
-            GUI.Label(new Rect(plot.xMax - 30, plot.yMax, 60, 16), $"{x1 * 1000f:F0}", _small);
+            GUI.Label(new Rect(plot.x - 4, plot.yMax, 60, 16), "arka", _small);
+            GUI.Label(new Rect(plot.xMax - 20, plot.yMax, 60, 16), "ön", _small);
 
             const int samples = 120;
             for (int i = 0; i <= samples; i++)
             {
-                float e = Mathf.Lerp(x0, x1, i / (float)samples);
-                float y = Mathf.Lerp(plot.yMax, plot.y, timing.Evaluate(e));
+                float y = Mathf.Lerp(plot.yMax, plot.y, push.Evaluate(i / (float)samples));
                 Fill(new Rect(Mathf.Lerp(plot.x, plot.xMax, i / (float)samples) - 1, y - 1, 2, 2), new Color(0.6f, 1f, 0.6f));
             }
 
@@ -89,7 +83,7 @@ namespace SpeedStars.Runner
             {
                 var rec = controller.History[i];
                 if (rec.Result == RunnerStepController.TapResult.Start) continue;
-                float px = Mathf.Lerp(plot.x, plot.xMax, Mathf.InverseLerp(x0, x1, Mathf.Clamp(rec.Error, x0, x1)));
+                float px = Mathf.Lerp(plot.x, plot.xMax, Mathf.Clamp01(rec.Frontness));
                 float py = Mathf.Lerp(plot.yMax, plot.y, rec.Efficiency);
                 Color c = rec.Leg == 0 ? LeftColor : RightColor;
                 c.a = i == 0 ? 1f : Mathf.Lerp(0.9f, 0.3f, i / (float)RunnerStepController.HistorySize);
