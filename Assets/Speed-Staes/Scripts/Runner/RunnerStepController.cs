@@ -6,13 +6,14 @@ namespace SpeedStars.Runner
     /// Ties Input → Push power → Movement and owns the two logical leg cycles.
     /// Every press is one stride: the pressed leg drives back, the other reaches forward, and after
     /// strideDuration both feet are together under the body again, waiting with no penalty.
-    /// Holding a key does nothing; only the press counts.
+    /// Holding the key keeps the pressed foot back (the other waits at Front); releasing brings both
+    /// to Mid. Holding both = both feet back (prone). Holding does not change the push.
     /// Push power comes from readiness = the lower of
-    ///   stride: how far the current stride has come (1 = feet together again), what you see;
+    ///   stride: how far the pressed foot's stride has come (1 = together again or waiting), what you see;
     ///   charge: time since this key's own last press over two strides, so alternating at the stride
     ///           rhythm is full power and the same key twice in a row is not.
-    /// Both keys pressed together (within simultaneousWindow) are one stride and push twice, each by
-    /// its own charge. Stride duration is fixed, tuned by hand. The rig visual only reads this.
+    /// Both keys pressed together (within simultaneousWindow) push twice, each judged as its foot stood
+    /// before the first of the two. Stride duration is fixed, tuned by hand. The rig visual only reads this.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public sealed class RunnerStepController : MonoBehaviour
@@ -35,7 +36,10 @@ namespace SpeedStars.Runner
         [Header("Stride (fixed, seconds)")]
         [Tooltip("One press: feet together → apart → together again.")]
         public float strideDuration = 0.18f;
-        [Tooltip("Presses of both keys closer than this count as pressed together (one stride, two pushes).")]
+        [Tooltip("Stride phase at which the feet are fully apart: the drive / reach take this share, " +
+                 "the way back to Mid the rest.")]
+        [Range(0.2f, 0.8f)] public float strideSplit = 0.5f;
+        [Tooltip("Presses of both keys closer than this count as pressed together (two pushes).")]
         public float simultaneousWindow = 0.05f;
 
         [Header("Tap rate")]
@@ -56,7 +60,7 @@ namespace SpeedStars.Runner
         readonly double[] _lastPress = { double.NegativeInfinity, double.NegativeInfinity };
         int _strideLeg = -1;
         double _strideStart;
-        float _strideBefore;
+        float _otherBefore;
         double _lastTapTime;
         float _avgInterval = float.PositiveInfinity;
 
@@ -83,11 +87,13 @@ namespace SpeedStars.Runner
             double now = Time.timeAsDouble;
 
             while (input.TryDequeue(out var tap))
+            {
                 if (tap.Pressed) Tap(tap.Leg, tap.Time);
+                else Legs[tap.Leg].Release(tap.Time);
+            }
 
             movement.Tick(dt);
-            Legs[0].Tick(now, strideDuration);
-            Legs[1].Tick(now, strideDuration);
+            TickLegs(now);
 
             if (!Started) return;
             RaceTime += dt;
@@ -97,6 +103,13 @@ namespace SpeedStars.Runner
         }
 
         static bool IsResting(LegCycle c) => c.State == LegState.Ready || c.State == LegState.Grounded;
+
+        void TickLegs(double time)
+        {
+            bool hold0 = Legs[0].Holding, hold1 = Legs[1].Holding;
+            Legs[0].Tick(time, strideDuration, strideSplit, hold1);
+            Legs[1].Tick(time, strideDuration, strideSplit, hold0);
+        }
 
         void Tap(int leg, double t)
         {
@@ -109,23 +122,25 @@ namespace SpeedStars.Runner
             }
             _lastTapTime = t;
 
-            // Bring the stride up to the tap moment so one that ended earlier this frame counts.
-            Legs[0].Tick(t, strideDuration);
-            Legs[1].Tick(t, strideDuration);
+            // Bring the legs up to the tap moment so a stride that ended earlier this frame counts.
+            TickLegs(t);
+            var c = Legs[leg];
+            var other = Legs[1 - leg];
 
-            // The other key right after a press joins that stride and is judged as it stood before it.
+            // The other key right after a press is judged as its foot stood before that press.
             bool together = _strideLeg >= 0 && leg != _strideLeg && t - _strideStart <= simultaneousWindow;
-            float stride = together ? _strideBefore : Legs[leg].Phase(t, strideDuration);
+            float stride = together ? _otherBefore : c.Progress(t, strideDuration, strideSplit);
             float charge = Charge(leg, t);
             _lastPress[leg] = t;
             if (!together)
             {
-                _strideBefore = stride;
+                _otherBefore = other.Progress(t, strideDuration, strideSplit);
                 _strideStart = t;
                 _strideLeg = leg;
-                Legs[leg].Begin(LegState.Drive, t);
-                Legs[1 - leg].Begin(LegState.Reach, t);
             }
+            c.Press(t);
+            // The other foot comes forward, unless it is held back too (both back = prone).
+            if (!together && !other.Holding) other.StartReach(t);
 
             if (!Started)
             {
