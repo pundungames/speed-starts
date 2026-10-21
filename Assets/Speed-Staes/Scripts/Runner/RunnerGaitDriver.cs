@@ -204,6 +204,11 @@ namespace SpeedStars.Runner
             new Keyframe(0f, 0f),
             new Keyframe(0.5f, 0f),
             new Keyframe(1f, 85f));
+        [Tooltip("Trunk lean while running, by speed (m/s → deg): deep while accelerating, less at top speed. " +
+                 "Tilts the trunk over the pelvis only, so the feet stay under the body. Upright when stopped.")]
+        public AnimationCurve runLeanBySpeed = new AnimationCurve(
+            new Keyframe(0f, 25f),
+            new Keyframe(11.5f, 12f));
         public float maxForwardLean = 85f;
         public float maxBackLean = 35f;
         [Tooltip("Lean is this many times slower than a stride (time constant = factor × strideDuration), " +
@@ -279,12 +284,12 @@ namespace SpeedStars.Runner
 
         Vector3 _restHip;
         Quaternion _restHipRot, _restSpineRoot, _restSpineTip;
-        float _bob, _lean, _bodyLean, _run, _midZ, _restMidZ, _wBoth, _legReach, _footRestAngle, _profileW;
+        float _bob, _lean, _bodyLean, _runLean, _run, _midZ, _restMidZ, _wBoth, _legReach, _footRestAngle, _profileW;
         MultiAimConstraint _headAim;
         bool _bound;
 
         /// <summary>Current trunk lean (deg, + forward / − back), including hold poses.</summary>
-        public float Lean => _bodyLean;
+        public float Lean => _bodyLean + _runLean;
 
         Vector3 Local(Transform t) => transform.InverseTransformPoint(t.position);
 
@@ -473,10 +478,12 @@ namespace SpeedStars.Runner
             hipTarget.position = transform.TransformPoint(hip);
             // The pelvis takes part of the lean, the spine the rest; leaning back the pelvis tilts less
             // than the trunk (lumbar extension).
-            float pelvisLean = _bodyLean * (_bodyLean >= 0f ? PelvisShareForward : PelvisShareBack);
+            // The running lean only tilts the trunk; the pelvis position above stays over the feet.
+            float trunkLean = _bodyLean + _runLean;
+            float pelvisLean = trunkLean * (trunkLean >= 0f ? PelvisShareForward : PelvisShareBack);
             hipTarget.rotation = rootRot * Quaternion.Euler(pelvisTilt * run + pelvisLean, 0f, 0f) * _restHipRot;
-            spineRootTarget.rotation = rootRot * Quaternion.Euler(Mathf.Lerp(pelvisLean, _bodyLean, 0.6f), 0f, 0f) * _restSpineRoot;
-            spineTipTarget.rotation = rootRot * Quaternion.Euler(_bodyLean, 0f, 0f) * _restSpineTip;
+            spineRootTarget.rotation = rootRot * Quaternion.Euler(Mathf.Lerp(pelvisLean, trunkLean, 0.6f), 0f, 0f) * _restSpineRoot;
+            spineTipTarget.rotation = rootRot * Quaternion.Euler(trunkLean, 0f, 0f) * _restSpineTip;
 
             // Head: looks ahead when upright, follows the trunk down to the ground at full forward lean.
             if (_headAim) _headAim.weight = 1f - leanT;
@@ -670,6 +677,8 @@ namespace SpeedStars.Runner
 
             float k = 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, leanLag * controller.strideDuration));
             _lean = Mathf.Clamp(Mathf.Lerp(_lean, target, k), -maxBackLean, maxForwardLean);
+            float runTarget = controller.Started ? runLeanBySpeed.Evaluate(movement.Speed) : 0f;
+            _runLean = Mathf.Lerp(_runLean, runTarget, k);
             _midZ = Mathf.Lerp(_midZ, midZ, k);
             UpdateHoldWeights(k);
         }
