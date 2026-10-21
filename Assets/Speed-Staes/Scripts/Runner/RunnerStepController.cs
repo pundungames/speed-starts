@@ -4,11 +4,13 @@ namespace SpeedStars.Runner
 {
     /// <summary>
     /// Ties Input → Timing → Movement and owns the two logical leg cycles.
-    /// Left key drives the left foot, right key the right foot: press steps front → back,
-    /// holding keeps the foot back, release returns it to front (a quick press-release still
-    /// completes the step). Every press takes a step from wherever that foot is; its push power
-    /// comes only from where that foot is at the tap (the same timers the rig visual reads, so
-    /// what you see is what you get). The legs are independent: both pressed together push twice.
+    /// Left key drives the left foot, right key the right foot, and the feet move as a pair:
+    /// a press steps that foot back while the other comes forward, both arriving together.
+    /// Holding keeps the pressed foot back and the other at front; release brings both to Mid
+    /// (feet together on the ground, waiting). Holding both keeps both back.
+    /// Every press takes a step from wherever that foot is; its push power comes only from where
+    /// that foot is at the tap (front = full, Mid = part, back = none; the same timers the rig visual
+    /// reads, so what you see is what you get). Both pressed together push twice.
     /// Step and return durations are fixed, tuned by hand. The rig visual only reads this.
     /// </summary>
     [DefaultExecutionOrder(-100)]
@@ -19,7 +21,7 @@ namespace SpeedStars.Runner
         public struct TapRecord
         {
             public int Leg;
-            /// <summary>Foot position at the tap: 0 = back point, 1 = front point.</summary>
+            /// <summary>Foot position at the tap: 0 = back point, 0.5 = Mid, 1 = front point.</summary>
             public float Frontness;
             public float Efficiency;
             public TapResult Result;
@@ -30,9 +32,9 @@ namespace SpeedStars.Runner
         public PushEvaluator push = new PushEvaluator();
 
         [Header("Leg cycle (fixed, seconds)")]
-        [Tooltip("Front → back, started by the tap.")]
+        [Tooltip("Pressed foot → back and the other foot → front, together, started by the tap.")]
         public float stepDuration = 0.12f;
-        [Tooltip("Back → front, automatic.")]
+        [Tooltip("Both feet back to Mid after release, together.")]
         public float returnDuration = 0.25f;
 
         [Header("Tap rate")]
@@ -74,12 +76,11 @@ namespace SpeedStars.Runner
             while (input.TryDequeue(out var tap))
             {
                 if (tap.Pressed) Tap(tap.Leg, tap.Time, now);
-                else Legs[tap.Leg].Release(tap.Time);
+                else Release(tap.Leg, tap.Time);
             }
 
             movement.Tick(dt);
-            Legs[0].Tick(now, stepDuration, returnDuration);
-            Legs[1].Tick(now, stepDuration, returnDuration);
+            TickLegs(now);
 
             if (!Started) return;
             RaceTime += dt;
@@ -90,10 +91,26 @@ namespace SpeedStars.Runner
 
         static bool IsResting(LegCycle c) => c.State == LegState.Ready || c.State == LegState.Grounded;
 
+        void TickLegs(double time)
+        {
+            bool hold0 = Legs[0].Holding, hold1 = Legs[1].Holding;
+            Legs[0].Tick(time, stepDuration, returnDuration, hold1);
+            Legs[1].Tick(time, stepDuration, returnDuration, hold0);
+        }
+
+        void Release(int leg, double t)
+        {
+            TickLegs(t);
+            Legs[leg].Release(t, stepDuration, returnDuration);
+            // The foot waiting at front goes back to Mid together with the released one.
+            Legs[1 - leg].PartnerReleased(t, stepDuration, returnDuration);
+        }
+
         void Tap(int leg, double t, double now)
         {
             Taps++;
             var c = Legs[leg];
+            var other = Legs[1 - leg];
 
             if (Started)
             {
@@ -102,10 +119,12 @@ namespace SpeedStars.Runner
             }
             _lastTapTime = t;
 
-            // Bring the leg up to the tap moment so a return that ended earlier this frame counts.
-            c.Tick(t, stepDuration, returnDuration);
+            // Bring the legs up to the tap moment so a move that ended earlier this frame counts.
+            TickLegs(t);
             float frontness = c.Frontness(t, stepDuration, returnDuration);
-            c.StartStep(now, frontness);
+            c.Press(t, stepDuration, returnDuration);
+            // The other foot comes forward, unless it is held back too (both back).
+            if (!other.Holding) other.StartReach(t, stepDuration, returnDuration);
 
             if (!Started)
             {
