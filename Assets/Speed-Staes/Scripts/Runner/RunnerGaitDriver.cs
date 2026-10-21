@@ -476,8 +476,9 @@ namespace SpeedStars.Runner
             // than the trunk (lumbar extension).
             float pelvisLean = _bodyLean * (_bodyLean >= 0f ? PelvisShareForward : PelvisShareBack);
             hipTarget.rotation = rootRot * Quaternion.Euler(pelvisTilt * run + pelvisLean, 0f, 0f) * _restHipRot;
-            // The waist lean bends only the spine, above the pelvis.
-            spineRootTarget.rotation = rootRot * Quaternion.Euler(Mathf.Lerp(pelvisLean, _bodyLean, 0.6f) + 0.5f * _waistLean, 0f, 0f) * _restSpineRoot;
+            // The waist lean turns the whole spine chain at its root (B-spine), above the pelvis: root and tip
+            // targets both take all of it, so the trunk bends at the waist instead of the neck.
+            spineRootTarget.rotation = rootRot * Quaternion.Euler(Mathf.Lerp(pelvisLean, _bodyLean, 0.6f) + _waistLean, 0f, 0f) * _restSpineRoot;
             spineTipTarget.rotation = rootRot * Quaternion.Euler(_bodyLean + _waistLean, 0f, 0f) * _restSpineTip;
 
             // Head: looks ahead when upright, goes down with the trunk as soon as it leans.
