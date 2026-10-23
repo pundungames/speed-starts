@@ -30,7 +30,7 @@ koddakini **ezer**, bu yüzden sahnede farklı görebilirsin.
                                                       │ sadece okur                   ▼
  RaceController (Race objesi) ◄── okur ───────────────┤                    ┌──────────────────┐
  RunnerBodyHUD  ◄── okur ─────────────────────────────┘                    │ RunnerPoseDriver │
-                                                                           │  └ LegCycle × 2  │
+                                                                           │  └ FootCycle × 2 │
                                                                            └────────┬─────────┘
                                          IK hedeflerini yazar (Hip/Spine/Leg target, hint…)
                                                                                     ▼
@@ -132,7 +132,7 @@ Her karede dört katman üst üste konur:
 | Sıra | Katman | Kaynak | Ne yapar |
 |---|---|---|---|
 | 1 | **Pozlar** | `Physical/Poses/*.asset` | **Ready** → (hızlandıkça) **Run** → (çok eğilince) **Stumble**; sonra tutma köşeleri: sol tutulu = **LungeLeft**, sağ = **LungeRight**, ikisi = **Dive**. |
-| 2 | **Adım döngüsü** (ayaklar) | Eski sistemin `LegCycle` mantığı | Basılan ayak alt yaydan Back'e iter (Step), diğeri üst yaydan havada Front'a gelir ve önce varır (Reach). Bırakınca iki ayak da **Rest** (bekleme) noktasına döner. Koşarken ayak tabana iner; beklerken Rest'te durur. Tutma başlayınca ayaklar döngüden tutma pozuna geçer. |
+| 2 | **Adım döngüsü** (ayaklar) | `FootCycle` + sürücüdeki eşli adım kuralları | Ayaklar hep **eşli** ve **aynı hızda** hareket eder; süre sabit değil, yol ÷ hız. Basılan ayak alt yaydan Back'e iter (Step), diğeri aynı anda üst yaydan havada Front'a gelir (Reach); yolu kısa olan önce varır. Tuş bırakılınca **iki ayak aynı anda** eve döner (önde olan yerden geriye, arkada olan havadan öne); yakın olan önce varır, kimse kimseyi beklemez. **Ev hıza bağlı:** dururken Rest (çömelme), koşarken taban (koşu yüksekliği); yavaşladıkça Rest'e kayar, gövde de yavaşça çöker. Tutma başlayınca ayaklar döngüden tutma pozuna geçer. |
 | 3 | **Eğim** | `RunnerSim.Lean` | Bütün gövde yerdeki ayağın etrafında öne/geri döner; tutulan ayak gövdeyle birlikte döner. |
 | 4 | **Gövde yüksekliği** | Ayakların yere teması | Yerdeki ayak gövdeyi taşır. Hiç basılmıyorken iki ayak **Rest** noktasında yere basar; Rest gövdeye göre yukarıda olduğu için gövde o kadar **çöker**. İlk basışta ayaklar döngüye geçip yerden kesilir, gövde zıplar gibi kalkar; iki ayak Rest'te buluşunca tekrar iner. Koşarken sadece **tabandaki** ayak yerdedir. Önde (Front) ya da arkada bekleyen ayak **havada kalır**, gövdeyi aşağı çekmez. Tabandan itişe başlayan ayak gövdeye göre yükseldikçe gövde onun üstüne iner; `stanceCompression` kadar yükselince kalkar ve itiş gövdeyi yukarı atar (iyi basış = daha yüksek). Hiçbir ayak yerde değilken kısa bir uçuş olabilir. Ayrı bir zıplama yok. |
 
@@ -147,7 +147,7 @@ sonunda yuvarlanma, havada eğri).
 | **Rig** | Hip/Spine target'ları, iki bacak (target, hint, kemikler, **Front/Back** adım noktaları), iki kol. Kurulum aracı doldurur. |
 | **Key poses** | 6 poz asset'i. Boş bırakılırsa koddaki varsayılan kullanılır. |
 | **Blend** | `runPoseSpeed`: Ready→Run geçişinin tamamlandığı hız. `stumbleBlendRange`: sendeleme pozunun devreye girme aralığı. |
-| **Step cycle** | `stepDuration` 0.12, `reachDuration` 0.08, `returnDuration` 0.25, `frontReturnDuration` 0.15 (sn). |
+| **Step cycle** | `strideSpeed` (6 m/s: basılan ayak geriye, diğeri öne — ikisi aynı hızda), `returnSpeed` (2.5 m/s: tuş yokken iki ayak birlikte eve), `minMoveTime` (çok kısa yolda ani sıçramayı önler), `restToBaseSpeed` (bu hızların altında ev = Rest/çömelme, üstünde ev = taban/koşu yüksekliği; arası kayar). |
 | **Foot** / **Foot motion** / **Toes** | Tutulan ayağın açısı; hızlanma ↔ max hız ayak profilleri (topukla iniş, itişte topuk kalkışı, havada bilek ve parmak eğrileri); parmak sınırları. |
 | **Foot loop** | `loopHeight` (üst yay yüksekliği), `loopSkew` (tepe erken/geç), `kneeHintOffset` (koşarken diz yönü), `groundBlendTime`. Alt yayın derinliği **otomatik**: zemine tek noktada (taban) değecek kadar. |
 | **Body height** | `stanceCompression` (itişte gövdenin ayağın üstüne ne kadar ineceği, sonra ayak kalkar), `contactSpring` (yerdeki ayağı yerde tutar), `bodySpring` (kalkıştan sonra gövde), `liftKick` (itişin gövdeye verdiği yukarı hız). |
@@ -250,7 +250,10 @@ Döngü sahnede **play'e girmeden de** çizilir: yeşil = Front, kırmızı = Ba
 | Hamle / dalış pozu yanlış | `Poses/LungeLeft`, `LungeRight`, `Dive` |
 | Adım çok uzun / kısa, arka ayak çok yüksek | Sahnede **Step Points** Front/Back objeleri |
 | Öne gelen ayak çok yükseğe kalkıyor | `RunnerPoseDriver → loopHeight` |
-| Adımlar hızlı / yavaş | `RunnerPoseDriver → stepDuration`, `reachDuration`, `returnDuration`, `frontReturnDuration` |
+| Adımlar hızlı / yavaş | `RunnerPoseDriver → strideSpeed` |
+| Tuş bırakınca ayaklar eve çok hızlı / yavaş dönüyor | `RunnerPoseDriver → returnSpeed` |
+| Durunca çömelmeye geçiş ani / çok yavaş | `RunnerPoseDriver → restToBaseSpeed` (aralığı genişlet = daha yumuşak) |
+| Koşarken her adımda gövde çömeliyor | `restToBaseSpeed.y` çok yüksek: koşu hızının altına çek |
 | Diz yanlış yöne bakıyor | `kneeHintOffset` (koşu), pozdaki `knee` (tutma), `kneeLeanFollow` |
 | Bacak gerilip "çıtlıyor" | `maxLegReach` ↓ |
 | Ayak bileği / parmak açısı garip | `ankleUpMax/DownMax`, ayak profilleri, `toeUpMax/DownMax` |
@@ -264,9 +267,9 @@ Döngü sahnede **play'e girmeden de** çizilir: yeşil = Front, kırmızı = Ba
 
 | Dosya | Klasör | Not |
 |---|---|---|
-| `RunnerInput.cs`, `LegCycle.cs`, `SideFollowCamera.cs` | `Scripts/Runner/` | Eski sistemden **kullanılmaya devam eden** üç parça. Değiştirirsen eski TestScene de etkilenir. |
+| `RunnerInput.cs`, `SideFollowCamera.cs` | `Scripts/Runner/` | Eski sistemden **kullanılmaya devam eden** iki parça. Değiştirirsen eski TestScene de etkilenir. (`LegCycle.cs` artık yeni sistemde kullanılmıyor; yerine `Physical/FootCycle.cs`.) |
 | `RunnerGaitDriver.cs`, `RunnerStepController.cs`, `RunnerMovement.cs`, `RunnerDebugHUD.cs` … | `Scripts/Runner/` | Eski sistem; **PhysicalTest'te kullanılmıyor** (sadece TestScene'de). |
-| `Spring`, `RunnerSim`, `RunnerBody`, `RunnerPose`, `RunnerPoseDefaults`, `RunnerPoseDriver`, `RaceController`, `RunnerReplay`, `ReferenceSequences`, `RunnerBodyHUD`, `DebugKeys` | `Scripts/Physical/` | Yeni sistem. |
+| `Spring`, `FootCycle`, `RunnerSim`, `RunnerBody`, `RunnerPose`, `RunnerPoseDefaults`, `RunnerPoseDriver`, `RaceController`, `RunnerReplay`, `ReferenceSequences`, `RunnerBodyHUD`, `DebugKeys` | `Scripts/Physical/` | Yeni sistem. |
 | `PhysicalSetup.cs` | `Scripts/Physical/Editor/` | **Tools → Speed Stars → Set Up PhysicalTest Scene**: eksik bileşenleri ekler, eski sistemin bileşenlerini kaldırır, referansları (rig hedefleri, Step Points, pozlar) yeniden atar. Tuning ve diğer ayar değerlerine dokunmaz. |
 | Poz asset'leri | `Physical/Poses/` | Ready, Run, LungeLeft, LungeRight, Dive, Stumble |
 

@@ -1,4 +1,3 @@
-using SpeedStars.Runner;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 
@@ -11,10 +10,12 @@ namespace SpeedStars.Physical
     ///   1. Key poses are blended: Ready → Run by speed, → Stumble by lean beyond the pose's own, then the
     ///      hold corners bilinearly by the two hold springs (left held = LungeLeft, right = LungeRight,
     ///      both = Dive).
-    ///   2. Feet: the step cycle of the earlier procedural driver (faded out by holding). Each press runs a
-    ///      LegCycle pair: the pressed foot Steps back along the ground (lower arc of the Front–Back loop,
-    ///      heel up at toe-off) while the other Reaches forward through the air and lands on its heel first;
-    ///      release returns the back foot home through the air, then the front one along the ground.
+    ///   2. Feet: a step cycle (faded out by holding). The feet always move as a pair and at a speed, not
+    ///      in a fixed time: a press sends that foot back along the ground (lower arc of the Front–Back loop,
+    ///      heel up at toe-off) while the other comes forward through the air, both at strideSpeed, so the
+    ///      one with less way to go arrives first. With no key down both go home together at returnSpeed —
+    ///      the front one back along the ground, the back one forward through the air — nobody waits for
+    ///      the other; the nearer one is home first. See OnTapped / BeginReturn / TickLegs.
     ///      The loop through Front and Back dips just far enough to touch the ground at one point, the base
     ///      (taban), where a running foot lands. With no input the feet stand on their Rest points instead:
     ///      Rest sits higher in the body's frame, so standing on it the body crouches; the first press takes
@@ -51,13 +52,14 @@ namespace SpeedStars.Physical
 
             [HideInInspector] public Vector3 restAnkle, restHintFromHip, ballOffset, toeInFoot, restHingeInThigh, restHingeInShin;
             [HideInInspector] public Quaternion restFootInShin, restFootRunner, restToeInFoot;
-            public readonly LegCycle cycle = new LegCycle();
-            [HideInInspector] public LegState lastState;
+            public readonly FootCycle cycle = new FootCycle();
+            [HideInInspector] public FootState lastState;
             [HideInInspector] public double lastStateTime;
             [HideInInspector] public Vector3 fromBall, baseBall;
             [HideInInspector] public Vector3 midBall;   // home: the Rest point (or the loop's base), on the ground
             [HideInInspector] public float height;      // ball height above the ground in the body's frame (m)
             [HideInInspector] public bool contact;      // this foot is planted and carries the body
+            [HideInInspector] public float support;     // how much of its height the body sinks onto (0..1)
             [HideInInspector] public bool liftedOff;    // pushed off during the current step
             [HideInInspector] public float fromPitch, basePitch;
             [HideInInspector] public float pitch;       // final foot pitch (deg), applied after IK
@@ -143,15 +145,18 @@ namespace SpeedStars.Physical
         [Tooltip("Lean beyond the pose's own (deg) over which Stumble comes in, ending at the sim's stumbleLean.")]
         public float stumbleBlendRange = 15f;
 
-        [Header("Step cycle (s) — the feet move as a pair")]
-        [Tooltip("Pressed foot → back, started by the press.")]
-        public float stepDuration = 0.12f;
-        [Tooltip("Other foot → front, started by the same press. Shorter than the step: it arrives first.")]
-        public float reachDuration = 0.08f;
-        [Tooltip("Back foot → Mid after release.")]
-        public float returnDuration = 0.25f;
-        [Tooltip("Front foot → Mid, starting once the back foot has reached Mid.")]
-        public float frontReturnDuration = 0.15f;
+        [Header("Step cycle — the feet move as a pair, at a speed (nearer foot arrives first)")]
+        [Tooltip("Speed (m/s) of the pressed foot going back and of the other coming forward. The same for " +
+                 "both, so the one with less way to go arrives first.")]
+        public float strideSpeed = 6f;
+        [Tooltip("Speed (m/s) both feet go home at when no key is down. They start together; the nearer one " +
+                 "(usually the front one) is home first.")]
+        public float returnSpeed = 2.5f;
+        [Tooltip("Shortest move (s), so a very short way is not a snap.")]
+        public float minMoveTime = 0.05f;
+        [Tooltip("Where the feet go home: Rest (crouch) below x m/s, the loop's base (running height) above y. " +
+                 "In between it slides, so slowing down sinks the body into the crouch gradually.")]
+        public Vector2 restToBaseSpeed = new Vector2(0.5f, 3f);
 
         [Header("Foot")]
         [Tooltip("Foot angle while a foot is held back (deg).")]
@@ -244,18 +249,10 @@ namespace SpeedStars.Physical
 
         Vector3 _restHip;
         Quaternion _restHipRot, _restSpineRoot, _restSpineTip;
-        float _ground, _legLength, _profileW;
+        float _ground, _legLength, _profileW, _runHome;
         Spring _bodyY;
         bool _supported = true, _bound;
         MultiAimConstraint _headAim;
-
-        LegTimings Timings => new LegTimings
-        {
-            Step = stepDuration,
-            Reach = reachDuration,
-            Return = returnDuration,
-            FrontReturn = frontReturnDuration,
-        };
 
         Vector3 Local(Transform t) => transform.InverseTransformPoint(t.position);
 
@@ -313,8 +310,8 @@ namespace SpeedStars.Physical
             if (!leg.toeBone) leg.toeBone = FindDeep(transform, "B-toe." + side);
             leg.ballOffset = leg.toeBone ? Local(leg.toeBone) - leg.restAnkle : new Vector3(0f, -0.1f, 0.15f);
             leg.fromBall = leg.baseBall = leg.midBall = leg.RestBall;
-            leg.lastState = LegState.Grounded;
-            leg.cycle.SetGrounded(0.0);
+            leg.lastState = FootState.Grounded;
+            leg.cycle.Enter(FootState.Grounded, 0.0);
             if (!leg.shinBone || !leg.footBone) return;
             leg.restFootInShin = Quaternion.Inverse(leg.shinBone.rotation) * leg.footBone.rotation;
             leg.restFootRunner = Quaternion.Inverse(transform.rotation) * leg.footBone.rotation;
@@ -361,41 +358,103 @@ namespace SpeedStars.Physical
             return null;
         }
 
-        // ---- Step cycle: the same pair logic the earlier step controller ran, on the sim's clock. ----
+        // ---- Step cycle: pair rules on the sim's clock. ----
 
+        /// <summary>
+        /// A press sends that foot back to Back and the other forward to Front (unless that one is held back
+        /// too), both from wherever they are, at the same speed. A release of a foot held back sends the free
+        /// feet home.
+        /// </summary>
         void OnTapped(int leg, bool pressed, double time)
         {
             Bind();
             TickLegs(time);
-            var c = Legs(leg).cycle;
+            var l = Legs(leg);
             if (!pressed)
             {
-                c.Release(time, Timings);
+                l.cycle.Held = false;
+                if (l.cycle.State == FootState.Hold) BeginReturn(time);
                 return;
             }
-            c.Press(time, Timings);
-            // The other foot comes forward, unless it is held back too (both back).
-            var other = Legs(1 - leg).cycle;
-            if (!other.Holding) other.StartReach(time, Timings);
+            l.cycle.Held = true;
+            Move(l, FootState.Step, time, StepPoint(l, false), strideSpeed);
+            var other = Legs(1 - leg);
+            if (!other.cycle.Holding) Move(other, FootState.Reach, time, StepPoint(other, true), strideSpeed);
         }
 
         void OnRunReset()
         {
-            leftLeg.cycle.SetGrounded(0.0);
-            rightLeg.cycle.SetGrounded(0.0);
+            leftLeg.cycle.Enter(FootState.Grounded, 0.0);
+            rightLeg.cycle.Enter(FootState.Grounded, 0.0);
         }
 
         Leg Legs(int i) => i == 0 ? leftLeg : rightLeg;
 
+        /// <summary>Start a move to <paramref name="to"/>: its time is the way there over the speed.</summary>
+        void Move(Leg leg, FootState state, double time, Vector3 to, float speed, bool fromFront = false)
+        {
+            float way = Vector3.Distance(leg.baseBall, to);
+            leg.cycle.Enter(state, time, Mathf.Max(minMoveTime, way / Mathf.Max(0.01f, speed)), fromFront);
+        }
+
+        /// <summary>
+        /// No key down any more: every foot that is not held back and not home sets off home now, together,
+        /// at returnSpeed — a foot ahead of home comes back along the ground, one behind swings through the
+        /// air. The nearer one is home first; nobody waits for the other.
+        /// </summary>
+        void BeginReturn(double time)
+        {
+            foreach (var leg in new[] { leftLeg, rightLeg })
+            {
+                var c = leg.cycle;
+                if (c.Holding || c.AtHome || c.State == FootState.Return) continue;
+                Move(leg, FootState.Return, time, leg.midBall, returnSpeed, leg.baseBall.z > leg.midBall.z);
+            }
+        }
+
+        /// <summary>
+        /// Moves that have run their time: a step ends held back (Hold) or, with the key up, sends both feet
+        /// home; a reach ends at Front, waiting there only while the other foot is still pushing or held back;
+        /// a return ends home.
+        /// </summary>
         void TickLegs(double time)
         {
-            var d = Timings;
-            // Twice: the front foot's wait ends on the other foot reaching Mid in the same tick.
-            for (int pass = 0; pass < 2; pass++)
+            for (int pass = 0; pass < 3; pass++)
             {
-                leftLeg.cycle.Tick(time, d, rightLeg.cycle);
-                rightLeg.cycle.Tick(time, d, leftLeg.cycle);
+                foreach (var leg in new[] { leftLeg, rightLeg })
+                {
+                    var c = leg.cycle;
+                    var partner = (leg == leftLeg ? rightLeg : leftLeg).cycle;
+                    if (c.State == FootState.FrontWait && !partner.Holding && partner.State != FootState.Step)
+                    {
+                        BeginReturn(System.Math.Max(c.StateTime, partner.StateTime));
+                        continue;
+                    }
+                    if (!c.Moving || time < c.EndTime) continue;
+                    double end = c.EndTime;
+                    switch (c.State)
+                    {
+                        case FootState.Step:
+                            if (c.Held) c.Enter(FootState.Hold, end);
+                            else BeginReturnFrom(leg, end);
+                            break;
+                        case FootState.Reach:
+                            c.Enter(FootState.FrontWait, end);
+                            break;
+                        case FootState.Return:
+                            c.Enter(FootState.Ready, end);
+                            break;
+                    }
+                }
             }
+        }
+
+        /// <summary>A step just ended with its key up: that foot is at Back now, then both go home.</summary>
+        void BeginReturnFrom(Leg stepped, double time)
+        {
+            // Leaves from Back (the frame may not have drawn the very end of the step yet).
+            stepped.baseBall = StepPoint(stepped, false);
+            BeginReturn(time);
         }
 
         void Update()
@@ -434,6 +493,7 @@ namespace SpeedStars.Physical
             // 2. Feet: step cycle.
             double now = sim.Time;
             TickLegs(now);
+            _runHome = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(restToBaseSpeed.x, restToBaseSpeed.y, sim.Speed));
             float profileTarget = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(accelProfileSpeed, maxProfileSpeed, sim.Speed));
             _profileW = Mathf.Lerp(_profileW, profileTarget, 1f - Mathf.Exp(-4f * dt));
             ComputeLeg(leftLeg, now);
@@ -492,8 +552,8 @@ namespace SpeedStars.Physical
         float UpdateBodyHeight(RunnerSim sim, float dt)
         {
             float support = float.MaxValue;
-            if (leftLeg.contact) support = Mathf.Min(support, -leftLeg.height);
-            if (rightLeg.contact) support = Mathf.Min(support, -rightLeg.height);
+            if (leftLeg.contact) support = Mathf.Min(support, -leftLeg.height * leftLeg.support);
+            if (rightLeg.contact) support = Mathf.Min(support, -rightLeg.height * rightLeg.support);
 
             if (support < float.MaxValue)
             {
@@ -600,31 +660,32 @@ namespace SpeedStars.Physical
             leg.toeRoll = 0f;
             leg.swingW = 0f;
 
+            leg.support = 1f;
             switch (c.State)
             {
-                case LegState.Ready:
+                case FootState.Ready:
                     // Home, on the ground: the foot rolls down flat and waits (the body crouches onto it).
                     ball = mid;
                     pitch = Mathf.Lerp(leg.fromPitch, 0f, Mathf.SmoothStep(0f, 1f, t / HeelRollTime));
                     break;
-                case LegState.FrontWait:
-                    // Waits at Front, in the air, until the other foot is home.
+                case FootState.FrontWait:
+                    // Waits at Front, in the air, while the other foot is pushing or held back.
                     ball = front;
                     pitch = Mathf.Lerp(leg.fromPitch, 0f, Mathf.SmoothStep(0f, 1f, t / HeelRollTime));
                     break;
-                case LegState.Reach:
-                    // The other foot steps back: this one swings forward to Front, arriving first.
-                    ball = Swing(leg, front, Mathf.Clamp01(t / Mathf.Max(0.001f, reachDuration)), touchdownPitch, out pitch);
+                case FootState.Reach:
+                    // The other foot steps back: this one swings forward to Front.
+                    ball = Swing(leg, front, Mathf.Clamp01(t / Mathf.Max(0.001f, c.Duration)), touchdownPitch, out pitch);
                     break;
-                case LegState.Hold:
+                case FootState.Hold:
                     ball = back;
                     pitch = pitchBack;
                     leg.toeRoll = Profile(pr => pr.toeRoll, 1f);
                     break;
-                case LegState.Step:
+                case FootState.Step:
                 {
                     // Stance (push): foot flat, late heel rise, toes roll at toe-off.
-                    float s = Mathf.Clamp01(t / Mathf.Max(0.001f, stepDuration));
+                    float s = Mathf.Clamp01(t / Mathf.Max(0.001f, c.Duration));
                     // Along the lower arc to Back (it touches the ground only at the base).
                     ball = AlongLowerArc(loop, leg.fromBall, 1f, s);
                     // A step can start anywhere (e.g. mid-return): ease from there onto the curve.
@@ -632,17 +693,19 @@ namespace SpeedStars.Physical
                     leg.toeRoll = Profile(pr => pr.toeRoll, s);
                     break;
                 }
-                case LegState.Return:
+                case FootState.Return:
                 {
-                    float s = Mathf.Clamp01(t / Mathf.Max(0.001f, c.ReturnDuration(Timings)));
+                    float s = Mathf.Clamp01(t / Mathf.Max(0.001f, c.Duration));
                     if (c.FromFront)
                     {
-                        // From Front (after the other foot is home): back home, rolling flat. Without a Rest
-                        // point home is the base: down the lower arc, touching the ground only there.
+                        // From ahead: comes back home along the ground, rolling flat, and the body comes
+                        // down onto it as it goes (home sits higher in the body's frame = the crouch).
+                        // Without a Rest point home is the base: down the lower arc, touching the ground only there.
                         ball = leg.rest
                             ? EllipseLoop(leg.fromBall, mid, s, 0f)
                             : AlongLowerArc(loop, leg.fromBall, loop.baseU, s);
                         pitch = Mathf.Lerp(leg.fromPitch, 0f, Mathf.SmoothStep(0f, 1f, t / HeelRollTime));
+                        leg.support = Mathf.SmoothStep(0f, 1f, s);
                     }
                     else
                     {
@@ -668,7 +731,7 @@ namespace SpeedStars.Physical
             }
 
             // Never below the ground (the loop only touches it at the base).
-            if (c.State != LegState.Grounded) ball.y = Mathf.Max(ball.y, GroundY(leg));
+            if (c.State != FootState.Grounded) ball.y = Mathf.Max(ball.y, GroundY(leg));
             // Toes up: the heel would dip under the ground, so the foot stands on its heel instead.
             float heelY = ball.y + (Quaternion.Euler(pitch, 0f, 0f) * HeelFromBall(leg)).y;
             if (heelY < GroundY(leg)) ball.y += GroundY(leg) - heelY;
@@ -680,11 +743,11 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
-        /// Is this foot planted (carrying the body)? Only a foot that is really on the ground — at the base.
-        /// Waiting with no key down, both feet are there. A foot waiting at Front, or anywhere else on the
-        /// loop, simply stays in the air (the body is not pulled down to it). A pushing foot that started
-        /// on the ground stays planted until it has risen stanceCompression in the body's frame, then it
-        /// lifts off for the rest of the step.
+        /// Is this foot planted (carrying the body)? A foot home is (both, waiting with no key down), and so
+        /// is a foot coming back home from ahead along the ground — the body sinks onto it as it goes (see
+        /// support). A foot waiting at Front or anywhere else on the loop stays in the air (the body is not
+        /// pulled down to it). A pushing foot that started on the ground stays planted until it has risen
+        /// stanceCompression in the body's frame, then it lifts off for the rest of the step.
         /// </summary>
         void UpdateContact(Leg leg)
         {
@@ -692,15 +755,18 @@ namespace SpeedStars.Physical
             var c = leg.cycle;
             switch (c.State)
             {
-                case LegState.Ready:
-                case LegState.Grounded:
+                case FootState.Ready:
+                case FootState.Grounded:
                     leg.contact = true;
                     break;
-                case LegState.Step:
+                case FootState.Return:
+                    leg.contact = c.FromFront || leg.height <= onGround;
+                    break;
+                case FootState.Step:
                     if (leg.contact && leg.height > stanceCompression) leg.liftedOff = true;
                     leg.contact = !leg.liftedOff && (leg.contact || leg.height <= onGround);
                     break;
-                case LegState.Hold:
+                case FootState.Hold:
                     leg.contact = false;
                     break;
                 default:
@@ -767,8 +833,11 @@ namespace SpeedStars.Physical
             return p + (from - LowerArc(loop, u0)) * (1f - Mathf.SmoothStep(0f, 1f, s / 0.3f));
         }
 
-        /// <summary>Where the foot waits with no input: its Rest point, or the loop's base without one.</summary>
-        Vector3 Home(Leg leg, Loop loop) => leg.rest ? Local(leg.rest) : loop.Base;
+        /// <summary>
+        /// Where the foot goes home: standing still its Rest point (the crouch), running the loop's base
+        /// (running height), sliding between the two by speed (restToBaseSpeed). Without a Rest point the base.
+        /// </summary>
+        Vector3 Home(Leg leg, Loop loop) => leg.rest ? Vector3.Lerp(Local(leg.rest), loop.Base, _runHome) : loop.Base;
 
         /// <summary>Home of the foot (set each frame by ComputeLeg).</summary>
         Vector3 Mid(Leg leg) => leg.midBall;
