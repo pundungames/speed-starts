@@ -10,13 +10,13 @@ namespace SpeedStars.Physical
     public static class RunnerPoseDefaults
     {
         /// <summary>
-        /// Waiting at the line (the runner's home pose: no input = exactly this): a deep squat, sitting
-        /// back — pelvis low and behind the feet, knees forward and a little out, feet side by side under
-        /// the knees, trunk nearly upright, fists up at the chin, eyes ahead.
+        /// Waiting at the line: knees forward and a little out, trunk nearly upright, fists up at the chin,
+        /// eyes ahead. How deep the runner squats is not here: it comes from the feet's Rest points (the body
+        /// sinks until the feet standing on them reach the ground).
         /// </summary>
         public static PoseData Ready => new PoseData
         {
-            pelvis = new Vector2(-0.08f, -0.27f),
+            pelvis = Vector2.zero,
             pelvisPitch = 18f,
             trunkPitch = 6f,
             width = 0.05f,

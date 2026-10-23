@@ -113,7 +113,7 @@ Ek cezalar: bastığın bacak hâlâ geride ise verim düşer; aynı bacağa 1 s
 | Grup | Alan | Ne yapar |
 |---|---|---|
 | Speed | `maxSpeed`, `pushGain`, `dragConstant`, `dragLinear` | Tavan hız, bir itişin kazandırdığı hız, yavaşlama |
-| Stride | `stanceTime`, `hopVelocity`, `hopAtRest`, `gravity` | İtiş süresi ve zıplama yüksekliği (dururken / hızlıyken) |
+| Stride | `stanceTime`, `hopVelocity`, `hopAtRest`, `gravity` | İtiş süresi ve görünmeyen uçuş süresi (dururken / hızlıyken). Uçuş sadece "erken basış" kararı için; ekrandaki inip kalkma `RunnerPoseDriver → Body height`'tan gelir |
 | Push efficiency | `earlyEfficiency`, `lateGrace`, `lateFloorTime`, `lateFloor`, `sameLegFactor` | Erken/geç basış ne kadar cezalı |
 | Hold | `minStepTime`, `holdThrust`, `holdThrustTime`, `bothMultiplier` | Ne kadar basılı tutunca "tutma" sayılır, tutmanın itişi |
 | Springs | `extRise/Fall`, `holdRise/Fall`, `lean` | Yayların hızı (Hz) ve sönümü |
@@ -132,9 +132,9 @@ Her karede dört katman üst üste konur:
 | Sıra | Katman | Kaynak | Ne yapar |
 |---|---|---|---|
 | 1 | **Pozlar** | `Physical/Poses/*.asset` | **Ready** → (hızlandıkça) **Run** → (çok eğilince) **Stumble**; sonra tutma köşeleri: sol tutulu = **LungeLeft**, sağ = **LungeRight**, ikisi = **Dive**. |
-| 2 | **Adım döngüsü** (ayaklar) | Eski sistemin `LegCycle` mantığı | Basılan ayak alt yaydan Back'e iter (Step), diğeri üst yaydan havada Front'a gelir ve önce varır (Reach). Bırakınca geri ayak havadan tabana iner, öndeki de alt yaydan tabana gelir. **Ev = taban noktası**: ayakların indiği ve buluştuğu yer. Tutma başlayınca ayaklar döngüden tutma pozuna geçer. |
+| 2 | **Adım döngüsü** (ayaklar) | Eski sistemin `LegCycle` mantığı | Basılan ayak alt yaydan Back'e iter (Step), diğeri üst yaydan havada Front'a gelir ve önce varır (Reach). Bırakınca iki ayak da **Rest** (bekleme) noktasına döner. Koşarken ayak tabana iner; beklerken Rest'te durur. Tutma başlayınca ayaklar döngüden tutma pozuna geçer. |
 | 3 | **Eğim** | `RunnerSim.Lean` | Bütün gövde yerdeki ayağın etrafında öne/geri döner; tutulan ayak gövdeyle birlikte döner. |
-| 4 | **Gövde yüksekliği** | Ayakların yere teması | Sadece **tabandaki** ayak yerdedir ve gövdeyi taşır. Hiç basılmıyorken iki ayak da tabana iner. Önde (Front) ya da arkada bekleyen ayak **havada kalır**, gövdeyi aşağı çekmez. Tabandan itişe başlayan ayak gövdeye göre yükseldikçe gövde onun üstüne iner; `stanceCompression` kadar yükselince kalkar ve itiş gövdeyi yukarı atar (iyi basış = daha yüksek). Hiçbir ayak yerde değilken kısa bir uçuş olabilir. Ayrı bir zıplama yok. |
+| 4 | **Gövde yüksekliği** | Ayakların yere teması | Yerdeki ayak gövdeyi taşır. Hiç basılmıyorken iki ayak **Rest** noktasında yere basar; Rest gövdeye göre yukarıda olduğu için gövde o kadar **çöker**. İlk basışta ayaklar döngüye geçip yerden kesilir, gövde zıplar gibi kalkar; iki ayak Rest'te buluşunca tekrar iner. Koşarken sadece **tabandaki** ayak yerdedir. Önde (Front) ya da arkada bekleyen ayak **havada kalır**, gövdeyi aşağı çekmez. Tabandan itişe başlayan ayak gövdeye göre yükseldikçe gövde onun üstüne iner; `stanceCompression` kadar yükselince kalkar ve itiş gövdeyi yukarı atar (iyi basış = daha yüksek). Hiçbir ayak yerde değilken kısa bir uçuş olabilir. Ayrı bir zıplama yok. |
 
 IK'dan sonra (`LateUpdate`): **kollar** (karşı ayakla çapraz sarkaç, yaylı → gecikmeli/sallanan),
 **diz twist düzeltmesi**, **ayak bileği** (baldıra göre açı, sınırlı), **parmaklar** (yerde düz, itişin
@@ -171,9 +171,10 @@ Her poz, rig'in dinlenme duruşuna göre **ofsetlerdir** (x = ileri, y = yukarı
 | `leftArm` / `rightArm` | Omuz salınımı, dirsek |
 | `armSwing` | Koşarken kolların ne kadar sallanacağı (0 = poz sabit) |
 
-**Ready = ev pozu:** Girdi yokken kalça, gövde, kollar ve ayak açıklığı (`width`) bu pozdan gelir.
-Ayakların ileri-geri yeri ise artık **taban noktasından** gelir (Step Points). Ready'deki `left/right.ankle`
-sadece önizlemede ve tutma pozlarına geçişte kullanılır.
+**Ready = bekleme duruşu:** Girdi yokken pelvis/gövde eğimi, kollar ve ayak açıklığı (`width`) bu pozdan gelir.
+**Çömelme derinliği buradan gelmez:** Ayakların durduğu yer ve gövdenin ne kadar çökeceği Step Points'teki
+**Rest** noktalarından gelir. Ready'deki `pelvis` ve `left/right.ankle` sadece önizlemede ve tutma pozlarına
+geçişte kullanılır.
 
 **Pozu canlı düzenleme:** Play'e gir → `RunnerPoseDriver` → **Preview**'u aç → `Preview Pose`'a bir poz
 sürükle (`Preview Lean` ile eğimi dene) → poz asset'ini seçip değerleri değiştir. Karakter anında
@@ -213,9 +214,16 @@ Control Rig  [Rig]
 
 **Step Points** (rig'in dışında, koşucunun altında): `Left/Front`, `Left/Back`, `Right/Front`, `Right/Back`.
 Ayak topunun (parmak eklemi) adım döngüsünde gittiği **ön** ve **arka** noktalar. İkisi de havadadır.
-Aralarındaki alt yay zemine **tek bir noktada** değer: **taban** (sarı küre, "Taban" yazısı). Ayaklar
-oraya iner ve orada buluşur. Front/Back'i sürükledikçe taban da kayar. Döngü sahnede **play'e girmeden de**
-çizilir: yeşil = Front, kırmızı = Back, üst yay = havadan öne, alt yay = itiş.
+Aralarındaki alt yay zemine **tek bir noktada** değer: **taban** (sarı küre, "Taban" yazısı); koşarken
+ayak oraya iner. Front/Back'i sürükledikçe taban da kayar.
+
+Her ayağın bir de **Rest** noktası var (`Step Points/Left/Rest`, `Right/Rest`; camgöbeği küre, "Bekleme"
+yazısı). Girdi yokken ayak orada yere basar. Rest'in **yüksekliği = çömelme derinliği**: yukarı sürüklersen
+karakter daha derin çöker. **İleri-geri yeri** ayakların gövdeye göre yerini belirler (öne alırsan kalça
+geride kalır). Küreden zemine inen çizgi gövdenin ne kadar ineceğini gösterir.
+
+Döngü sahnede **play'e girmeden de** çizilir: yeşil = Front, kırmızı = Back, sarı = taban, camgöbeği = Rest,
+üst yay = havadan öne, alt yay = itiş.
 
 **Rig'de kodun kemiğe doğrudan dokunduğu yerler** (IK'dan sonra, constraint'siz): `B-upperArm`,
 `B-forearm`, `B-shoulder` (kollar), `B-thigh`/`B-shin` (diz twist), `B-foot` (bilek açısı), `B-toe` (parmak).
@@ -235,7 +243,9 @@ oraya iner ve orada buluşur. Front/Back'i sürükledikçe taban da kayar. Döng
 | Ayakların buluştuğu yer (taban) çok önde / arkada | Sahnede Step Points **Front/Back** yükseklikleri ve yerleri (sarı "Taban" küresine bak) |
 | Bırakınca geri yaylanma az / çok | `Tuning → releaseKick`, `lean` (damping ↓ = daha çok sallanma) |
 | Tutunca yeterince öne eğilmiyor | `Tuning → lungeLean` (tek ayak), `diveLean` (iki ayak) |
-| Bekleme duruşu yanlış | `Poses/Ready.asset` (`pelvis`, `width`, `left/right.ankle`, kollar) |
+| Beklerken çok az / çok çömeliyor | Sahnede **Rest** noktalarının yüksekliği |
+| Beklerken ayaklar gövdeye göre önde / geride | Sahnede **Rest** noktalarının ileri-geri yeri |
+| Bekleme duruşunda eğim, kollar, ayak açıklığı | `Poses/Ready.asset` (`pelvisPitch`, `trunkPitch`, kollar, `width`) |
 | Koşu duruşu yanlış | `Poses/Run.asset`, `runPoseSpeed` |
 | Hamle / dalış pozu yanlış | `Poses/LungeLeft`, `LungeRight`, `Dive` |
 | Adım çok uzun / kısa, arka ayak çok yüksek | Sahnede **Step Points** Front/Back objeleri |

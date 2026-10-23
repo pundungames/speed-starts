@@ -16,7 +16,10 @@ namespace SpeedStars.Physical
     ///      heel up at toe-off) while the other Reaches forward through the air and lands on its heel first;
     ///      release returns the back foot home through the air, then the front one along the ground.
     ///      The loop through Front and Back dips just far enough to touch the ground at one point, the base
-    ///      (taban): there a foot lands and there the feet meet when waiting. See ComputeLeg / GetLoop.
+    ///      (taban), where a running foot lands. With no input the feet stand on their Rest points instead:
+    ///      Rest sits higher in the body's frame, so standing on it the body crouches; the first press takes
+    ///      the feet onto the loop and the body rises off them, and when both come home it lands back into
+    ///      the crouch. See ComputeLeg / GetLoop / Home.
     ///   3. The physical lean tips the body about the planted feet (a held foot rides with the body), so a
     ///      lunge leans over its support foot and a release swings back past upright on its own.
     ///   4. Body height comes from the feet, not from a jump: a planted foot carries the body, so as it
@@ -42,6 +45,9 @@ namespace SpeedStars.Physical
             [Header("Step points (ball of foot)")]
             public Transform front;
             public Transform back;
+            [Tooltip("Where the foot stands with no input (on the ground). Higher than the loop's base = deeper " +
+                     "crouch. Empty = the loop's base.")]
+            public Transform rest;
 
             [HideInInspector] public Vector3 restAnkle, restHintFromHip, ballOffset, toeInFoot, restHingeInThigh, restHingeInShin;
             [HideInInspector] public Quaternion restFootInShin, restFootRunner, restToeInFoot;
@@ -49,7 +55,7 @@ namespace SpeedStars.Physical
             [HideInInspector] public LegState lastState;
             [HideInInspector] public double lastStateTime;
             [HideInInspector] public Vector3 fromBall, baseBall;
-            [HideInInspector] public Vector3 midBall;   // home: the loop's base point (taban), on the ground
+            [HideInInspector] public Vector3 midBall;   // home: the Rest point (or the loop's base), on the ground
             [HideInInspector] public float height;      // ball height above the ground in the body's frame (m)
             [HideInInspector] public bool contact;      // this foot is planted and carries the body
             [HideInInspector] public bool liftedOff;    // pushed off during the current step
@@ -551,7 +557,7 @@ namespace SpeedStars.Physical
         /// <summary>−1 = left, +1 = right.</summary>
         static float Side(Leg leg) => leg.restAnkle.x < 0f ? -1f : 1f;
 
-        /// <summary>Where the foot is on the step cycle: +1 = Front, 0 = the base (home), −1 = Back.</summary>
+        /// <summary>Where the foot is on the step cycle: +1 = Front, 0 = home, −1 = Back.</summary>
         float FootSwing(Leg leg)
         {
             float z = leg.baseBall.z, home = leg.midBall.z;
@@ -586,7 +592,7 @@ namespace SpeedStars.Physical
 
             float t = (float)(now - c.StateTime);
             var loop = GetLoop(leg, GroundY(leg));
-            Vector3 front = loop.front, back = loop.back, mid = loop.Base;
+            Vector3 front = loop.front, back = loop.back, mid = Home(leg, loop);
             leg.midBall = mid;
             Vector3 ball;
             float pitch;
@@ -597,7 +603,7 @@ namespace SpeedStars.Physical
             switch (c.State)
             {
                 case LegState.Ready:
-                    // Feet together at the base, on the ground: the foot rolls down flat and waits.
+                    // Home, on the ground: the foot rolls down flat and waits (the body crouches onto it).
                     ball = mid;
                     pitch = Mathf.Lerp(leg.fromPitch, 0f, Mathf.SmoothStep(0f, 1f, t / HeelRollTime));
                     break;
@@ -631,19 +637,21 @@ namespace SpeedStars.Physical
                     float s = Mathf.Clamp01(t / Mathf.Max(0.001f, c.ReturnDuration(Timings)));
                     if (c.FromFront)
                     {
-                        // From Front (after the other foot is home): down the lower arc to the base,
-                        // touching the ground only there, rolling flat.
-                        ball = AlongLowerArc(loop, leg.fromBall, loop.baseU, s);
+                        // From Front (after the other foot is home): back home, rolling flat. Without a Rest
+                        // point home is the base: down the lower arc, touching the ground only there.
+                        ball = leg.rest
+                            ? EllipseLoop(leg.fromBall, mid, s, 0f)
+                            : AlongLowerArc(loop, leg.fromBall, loop.baseU, s);
                         pitch = Mathf.Lerp(leg.fromPitch, 0f, Mathf.SmoothStep(0f, 1f, t / HeelRollTime));
                     }
                     else
                     {
-                        // From Back: swings through the air and lands on the heel at the base.
+                        // From Back: swings through the air and lands on the heel at home.
                         ball = Swing(leg, mid, s, touchdownPitch, out pitch);
                     }
                     break;
                 }
-                default: // Grounded (reset): settle onto the base, same as Ready.
+                default: // Grounded (reset): settle onto home, same as Ready.
                 {
                     float s = Mathf.SmoothStep(0f, 1f, t / Mathf.Max(0.001f, groundBlendTime));
                     ball = Vector3.Lerp(leg.fromBall, mid, s);
@@ -759,7 +767,10 @@ namespace SpeedStars.Physical
             return p + (from - LowerArc(loop, u0)) * (1f - Mathf.SmoothStep(0f, 1f, s / 0.3f));
         }
 
-        /// <summary>Home of the foot: the loop's base (taban), on the ground.</summary>
+        /// <summary>Where the foot waits with no input: its Rest point, or the loop's base without one.</summary>
+        Vector3 Home(Leg leg, Loop loop) => leg.rest ? Local(leg.rest) : loop.Base;
+
+        /// <summary>Home of the foot (set each frame by ComputeLeg).</summary>
         Vector3 Mid(Leg leg) => leg.midBall;
 
         /// <summary>
@@ -925,8 +936,9 @@ namespace SpeedStars.Physical
 
         /// <summary>
         /// The step loop, in edit mode too: green = Front, red = Back, yellow = the base (taban, the only
-        /// point on the ground), upper arc = swing, lower arc = push. Outside play mode the ground comes
-        /// straight from the toe bone (nothing is bound, so nothing in the rig is changed).
+        /// point of the loop on the ground), cyan = Rest (where the foot stands with no input), upper arc =
+        /// swing, lower arc = push. Outside play mode the ground comes straight from the toe bone (nothing is
+        /// bound, so nothing in the rig is changed).
         /// </summary>
         void DrawLegGizmos(Leg leg, Color c)
         {
@@ -948,6 +960,17 @@ namespace SpeedStars.Physical
 #if UNITY_EDITOR
             UnityEditor.Handles.Label(baseWorld + transform.up * 0.06f, "Taban");
 #endif
+            if (leg.rest)
+            {
+                Gizmos.color = Color.cyan;
+                Gizmos.DrawWireSphere(leg.rest.position, 0.03f);
+                // How far the body crouches standing on it: Rest above the ground in the body's frame.
+                Vector3 groundBelow = transform.TransformPoint(new Vector3(Local(leg.rest).x, ground, Local(leg.rest).z));
+                Gizmos.DrawLine(leg.rest.position, groundBelow);
+#if UNITY_EDITOR
+                UnityEditor.Handles.Label(leg.rest.position + transform.up * 0.06f, "Bekleme");
+#endif
+            }
             Gizmos.color = c;
             const int segments = 40;
             Vector3 prevUp = leg.back.position, prevDown = leg.front.position;

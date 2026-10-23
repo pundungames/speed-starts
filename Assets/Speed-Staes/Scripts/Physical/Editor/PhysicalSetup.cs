@@ -105,8 +105,10 @@ namespace SpeedStars.Physical.EditorTools
             {
                 driver.leftLeg.front = Find(Find(steps, "Left"), "Front");
                 driver.leftLeg.back = Find(Find(steps, "Left"), "Back");
+                driver.leftLeg.rest = EnsureRest(t, Find(steps, "Left"), "B-toe.L");
                 driver.rightLeg.front = Find(Find(steps, "Right"), "Front");
                 driver.rightLeg.back = Find(Find(steps, "Right"), "Back");
+                driver.rightLeg.rest = EnsureRest(t, Find(steps, "Right"), "B-toe.R");
             }
             driver.leftArm.ikTarget = Find(t, "Left Hand Target");
             driver.rightArm.ikTarget = Find(t, "Right Hand Target");
@@ -156,6 +158,25 @@ namespace SpeedStars.Physical.EditorTools
                 if (follow) follow.target = t;
             }
             return $"Set up {scene.path}: runner '{runner.name}', {poses.Length} poses, finish at z={t.position.z + race.raceDistance:F1}";
+        }
+
+        /// <summary>
+        /// The Rest point under a step-point group, made if missing: above the toe's standing place by
+        /// RestCrouch (that is how deep the runner squats waiting) and RestAhead in front of it (the hips sit
+        /// back behind the feet). Move it in the scene to change the stance.
+        /// </summary>
+        static Transform EnsureRest(Transform runner, Transform group, string toeName)
+        {
+            if (!group) return null;
+            var rest = Find(group, "Rest");
+            if (rest) return rest;
+            var toe = Find(runner, toeName);
+            if (!toe) return null;
+            const float RestCrouch = 0.25f, RestAhead = 0.08f;
+            rest = new GameObject("Rest").transform;
+            rest.SetParent(group, false);
+            rest.position = toe.position + runner.up * RestCrouch + runner.forward * RestAhead;
+            return rest;
         }
 
         static void Remove<T>(GameObject go) where T : Component
