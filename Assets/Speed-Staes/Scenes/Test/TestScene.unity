@@ -726,7 +726,7 @@ Transform:
   m_GameObject: {fileID: 233371275}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.11825466, y: 0.505998, z: -0.725}
+  m_LocalPosition: {x: 0.11825466, y: 0.397, z: -0.674}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -840,7 +840,7 @@ Transform:
   m_GameObject: {fileID: 391287887}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.11825502, y: 0.506, z: -0.725}
+  m_LocalPosition: {x: -0.11825502, y: 0.39700198, z: -0.6739999}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -904,7 +904,7 @@ Transform:
   m_GameObject: {fileID: 415325071}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.11825502, y: 0.125, z: 0.521}
+  m_LocalPosition: {x: -0.11825502, y: 0.13, z: 0.559}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1088,7 +1088,7 @@ Transform:
   m_GameObject: {fileID: 509507887}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.11825466, y: 0.12499803, z: 0.521}
+  m_LocalPosition: {x: 0.11825466, y: 0.13, z: 0.559}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5415,6 +5415,7 @@ MonoBehaviour:
     restFootRunner: {x: 0, y: 0, z: 0, w: 0}
     toeInFoot: {x: 0, y: 0, z: 0}
     lastState: 0
+    lastStateTime: 0
     fromBall: {x: 0, y: 0, z: 0}
     fromPitch: 0
     ball: {x: 0, y: 0, z: 0}
@@ -5423,8 +5424,6 @@ MonoBehaviour:
     basePitch: 0
     holdW: 0
     supportW: 0
-    supportLocked: 0
-    supportWorld: {x: 0, y: 0, z: 0}
     supportLocal: {x: 0, y: 0, z: 0}
     restToeInFoot: {x: 0, y: 0, z: 0, w: 0}
     restHingeInThigh: {x: 0, y: 0, z: 0}
@@ -5448,6 +5447,7 @@ MonoBehaviour:
     restFootRunner: {x: 0, y: 0, z: 0, w: 0}
     toeInFoot: {x: 0, y: 0, z: 0}
     lastState: 0
+    lastStateTime: 0
     fromBall: {x: 0, y: 0, z: 0}
     fromPitch: 0
     ball: {x: 0, y: 0, z: 0}
@@ -5456,8 +5456,6 @@ MonoBehaviour:
     basePitch: 0
     holdW: 0
     supportW: 0
-    supportLocked: 0
-    supportWorld: {x: 0, y: 0, z: 0}
     supportLocal: {x: 0, y: 0, z: 0}
     restToeInFoot: {x: 0, y: 0, z: 0, w: 0}
     restHingeInThigh: {x: 0, y: 0, z: 0}
@@ -5874,18 +5872,20 @@ MonoBehaviour:
   toeLength: 0.06
   toeUpMax: 55
   toeDownMax: 0
-  loopHeight: 0.35
-  loopSkew: 0.7
+  loopHeight: 0.25
+  loopSkew: 0.6
   kneeHintOffset: {x: 0, y: -0.35, z: 0.6}
+  midAlong: 0.3
   groundBlendTime: 0.25
   ankleUpMax: 20
   ankleDownMax: 50
   runCrouch: 0.04
-  bobAmplitude: 0.03
-  bobSharpness: 14
+  readyCrouch: 0.1
+  hopHeight: 0.04
   pelvisForward: 0.04
   pelvisTilt: 6
-  leanByFootBack:
+  hipExtensionLimit: 25
+  leanByTapRate:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
@@ -5898,8 +5898,8 @@ MonoBehaviour:
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 0.5
-      value: 0
+      time: 2
+      value: 8
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -5907,8 +5907,17 @@ MonoBehaviour:
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
-      time: 1
-      value: 85
+      time: 5
+      value: 20
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 8
+      value: 28
       inSlope: 0
       outSlope: 0
       tangentMode: 0
@@ -5925,7 +5934,6 @@ MonoBehaviour:
   heldToePoint: 0
   planeHipHeight: 0.5
   supportAheadOfHip: 0.3
-  supportMaxBehind: 0.4
   supportKneeFollow: 0.3
   proneLean: 88
   proneHipHeight: 0.15
@@ -5955,59 +5963,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   input: {fileID: 7868829318101808432}
   movement: {fileID: 7868829318101808431}
-  timing:
-    efficiency:
+  push:
+    power:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
-        time: -0.1
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: -0.03
-        value: 0.8
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
         time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.04
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.12
-        value: 0.55
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.3
         value: 0
         inSlope: 0
+        outSlope: 0.5
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1.5
         outSlope: 0
         tangentMode: 0
         weightedMode: 0
@@ -6017,8 +5989,9 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   stepDuration: 0.2
-  returnDuration: 0.25
-  sameLegFactor: 0.3
+  reachDuration: 0.08
+  returnDuration: 0.4
+  frontReturnDuration: 0.15
   tapRateSmoothing: 0.3
 --- !u!114 &7868829318101808431
 MonoBehaviour:
@@ -6035,7 +6008,7 @@ MonoBehaviour:
   maxSpeed: 30
   pushGain: 3
   pushDuration: 0.2
-  drag: 3
+  drag: 5
 --- !u!114 &7868829318101808432
 MonoBehaviour:
   m_ObjectHideFlags: 0
