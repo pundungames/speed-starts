@@ -38,8 +38,11 @@ namespace SpeedStars.Physical
 
         public double EndTime => StateTime + Duration;
         public bool Moving => State == FootState.Step || State == FootState.Reach || State == FootState.Return;
-        /// <summary>Held back, or will stay back once its step ends.</summary>
-        public bool Holding => State == FootState.Hold || (State == FootState.Step && Held);
+        /// <summary>
+        /// Key down and back (or on its way back): it stays there. Once the key is up a foot in Hold is
+        /// free to go home — it must not count as holding, or it would never leave.
+        /// </summary>
+        public bool Holding => Held && (State == FootState.Hold || State == FootState.Step);
         public bool AtHome => State == FootState.Ready || State == FootState.Grounded;
 
         public void Enter(FootState state, double time, float duration = 0f, bool fromFront = false)

@@ -425,6 +425,12 @@ namespace SpeedStars.Physical
                 {
                     var c = leg.cycle;
                     var partner = (leg == leftLeg ? rightLeg : leftLeg).cycle;
+                    // A foot left back with its key up (however it got there) goes home.
+                    if (c.State == FootState.Hold && !c.Held)
+                    {
+                        BeginReturn(System.Math.Max(c.StateTime, time - 1e-3));
+                        continue;
+                    }
                     if (c.State == FootState.FrontWait && !partner.Holding && partner.State != FootState.Step)
                     {
                         BeginReturn(System.Math.Max(c.StateTime, partner.StateTime));
