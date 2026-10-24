@@ -142,7 +142,7 @@ Her karede dört katman üst üste konur:
 |---|---|---|
 | **Ayaklar** | Tutulan ayak Back'te; diğeri Front'ta, tutma oturdukça yere iner ve gövdeyi taşır | İkisi de Back'te; gövde yere indikçe ayaklar da yere iner ve yerde kalır |
 | **Bel yeri** | İki ayağın ortasından destek ayağının üstüne **yavaşça** kayar (`holdShiftSpring`), `holdCrouch` kadar iner | Ayaklara göre konum alır (iki ayak da geride olduğu için ortalama beli öne verir) |
-| **Eğim** | Belden öne (`holdLean` × 1); arka bacak kalça etrafında yukarı kalkar | Belden öne (`holdLean` × 2) + başın çekişi → `lieRange`'i geçince **yere iniş**: gövde yere uzanır (`lieLean`), kalça `lieHipHeight`'e iner; bacaklar kalkmaz |
+| **Eğim** | Belden öne (`holdLean` × 1); arka bacak kalça etrafında yukarı kalkar | Belden öne (`holdLean` × 2) + başın çekişi. **Hiçbir ayak gövdeyi taşımıyor** → gövde yerçekimiyle düşer, kalça yerde `pelvisClearance` kadar yukarıda durur; kalça da eğimin tamamını alır. Tutulan bacaklar düzleştirilmez, gövde inerken kendiliğinden katlanır |
 | **Baş** | `holdHead` kadar öne, en fazla `oneFootMax`: gövdeyle aynı çizgide, ileri-aşağı bakar | 2 × `holdHead`, tavan yok: baş önden gider, gövde takip eder |
 | **İtiş** | Basış + tutma itişi | Her basış kendi itişi + ayak başına tutma itişi (2 kat); özel kural yok |
 | **Kollar** | Karşı ayağa kilitli: tutulan ayağın karşı kolu geride | İki ayak geride → iki kol geride (yerdeyken de) |
@@ -162,7 +162,7 @@ Tek bir **baş açısı** var: geride ↔ dik ↔ önde. Basışın sonucu ve ve
 - Her basışta küçük bir sallanma (`headNod`); baş hedefini kendi yayıyla (`headSpring`) gecikerek, hafif taşarak izler.
 - Tutulan her ayak başı öne iter (`holdHead`); tek ayakta tavan `oneFootMax`, iki ayakta tavan yok.
 - **Boyun** `neckMax`'a kadar alır; aşan kısım **beli çeker** (`trunkFollow`): önce baş gider, gövde arkasından gelir.
-  Bele istenen eğim `lieRange`'i geçince gövde yere uzanır. Ayrı bir "yere iniş" tetiği yok.
+  Hazır bir yatma pozu **yok**: çok sık basmada gövde alçalır ama bacaklar koşmaya devam eder (kollar da onlara kilitli).
 
 IK'dan sonra (`LateUpdate`): **kollar** (karşı ayakla çapraz sarkaç, yaylı → gecikmeli/sallanan),
 **diz twist düzeltmesi**, **ayak bileği** (baldıra göre açı, sınırlı), **parmaklar** (yerde düz, itişin
@@ -176,7 +176,7 @@ sonunda yuvarlanma, havada eğri).
 | **Key poses** | 3 poz asset'i (Ready, Run, Stumble). Boş bırakılırsa koddaki varsayılan kullanılır. |
 | **Holds** | `holdShiftSpring` (tek ayak tutmada belin destek ayağına kayma hızı — yavaş = sürünerek), `holdCrouch` (tam tutmada belin inişi), `heldLegMaxAngle` (tutulan bacağın kalça etrafında en fazla kalkacağı açı; 90 = yatay). |
 | **Head & neck** | Baş açısı (°, + = öne). `headBack` (basış gelmezse adım indikten sonra başın düştüğü geri açı), `headFallSpring` (geriye düşme hızı), `lateRecover` (geç basış başı dikliğe ne kadar yaklaştırır; 1 = tam dik), `earlyKick` (verimi 0 olan basışın öne itişi; × (1 − verim) — hız az geldikçe baş çok gider), `headRecover` (öndeki birikimin geri çekilme hızı, °/sn; basışlar bundan hızlıysa birikir), `headNod` (her basışta küçük sallanma, canlılık), `holdHead` (basılı ayak başına öne itiş), `oneFootMax` (tek ayak tutmada tavan; iki ayakta tavan yok), `headSpring` (baş hedefini bu yayla takip eder; sönüm ↓ = daha çok sallanır), `neckMax` (boynun tek başına eğilebileceği en büyük açı; aşan kısım beli çeker. Gövde bu açıya kadar eğikken baş hâlâ ileri bakar), `trunkFollow` (aşan kısmın bele aktarılma oranı). |
-| **Going down** | Bele istenen eğim (tutma + ayaklar + başın çekişi) `lieRange` (60°→90°) aralığına girince gövde yere uzanır — çok sık basma ve iki ayak tutma buradan çıkar, ayrı tetik yok. `lieSpring` (kalçanın gövdeyi takip edip yere inme hızı — daha yavaş), `lieHipHeight` (yerdeyken kalça yüksekliği), `lieLean` (yerdeyken gövde eğimi; 90 = yatay, fazlası = baş kalçanın altına, yere), `liePelvisShare` (yerdeyken eğimin kalçaya düşen payı — sırt kamburlaşmasın), `lieLegReach` (bacaklar geriye uzanırken ayak hedefi × bacak boyu; 1'den büyük = bacak dümdüz), `lieFootPitch` (yerdeyken ayak açısı, parmak ucu yerde), `lieLookAhead` (yerdeyken başın hâlâ ileri bakma payı). **Sıra:** baş önden gider, gövdenin eğilmesi + bacakların geriye uzanması bel yayıyla, kalçanın yere inmesi daha yavaş `lieSpring` ile. |
+| **Falling** | Hazır yatma pozu yok. İki ayak geride tutulunca hiçbir ayak inemez: gövde yerçekimiyle (`RunnerBody → Tuning → gravity`) düşer ve yerde durur. `pelvisClearance` (yerdeyken kalçanın zeminden yüksekliği — gövdenin kalınlığı). Bırakınca ayaklar döner, yerdeki ayak gövdeyi tekrar kaldırır. |
 | **Blend** | `runPoseSpeed`: Ready→Run geçişinin tamamlandığı hız. `stumbleBlendRange`: sendeleme pozunun devreye girme aralığı. |
 | **Step cycle** | `strideSpeed` (6 m/s: basılan ayak geriye, diğeri öne — ikisi aynı hızda), `returnSpeed` (2.5 m/s: tuş yokken iki ayak birlikte eve), `minMoveTime` (çok kısa yolda ani sıçramayı önler), `restToBaseSpeed` (adımlar sürerken: bu hızların altında ev = Rest/çömelme, üstünde ev = taban/koşu yüksekliği), `stanceKeepTime` (son basıştan sonra koşu duruşu bu kadar korunur; sonra tuş yoksa karakter hız ne olursa olsun **doğrudan Ready çömelmesine** yönelir — arada dik duruş yok), `stanceBlend` (koşu duruşu ↔ çömelme geçiş hızı). |
 | **Foot** / **Foot motion** / **Toes** | Tutulan ayağın açısı; hızlanma ↔ max hız ayak profilleri (topukla iniş, itişte topuk kalkışı, havada bilek ve parmak eğrileri); parmak sınırları. |
@@ -293,13 +293,10 @@ Döngü sahnede **play'e girmeden de** çizilir: yeşil = Front, kırmızı = Ba
 | Geç basışta baş yeterince geride kalmıyor | `lateRecover` ↓ |
 | Tek ayak tutmada baş çok / az iniyor | `holdHead`, `oneFootMax` |
 | Baş öne gidince gövde takip etmiyor / çok erken takip ediyor | `neckMax` ↓ / ↑, `trunkFollow` |
-| Gövde yere çok kolay / zor iniyor | `lieRange` (↑ = daha zor) |
-| Kalça yere çok geç / erken iniyor | `lieSpring` |
-| Yerdeyken kalça çok yüksek / alçak | `lieHipHeight` |
-| Yerdeyken baş havada kalıyor | `lieLean` ↑ (90'ın üstü baş yere iner) |
-| Yere inerken dizler katlanıyor / diz çöküyor | `lieLegReach` ↑ (1'in üstünde kalmalı) |
-| Yerdeyken sırt kambur | `liePelvisShare` ↑ |
-| Karakter havada kalıyor | `lieSpring` daha hızlı, `liftKick` ↓ |
+| Sık basmada gövde yeterince alçalmıyor | `earlyKick` ↑, `headRecover` ↓, `neckMax` ↓ |
+| Yerdeyken kalça çok yüksek / alçak | `pelvisClearance` |
+| İki ayak tutmada gövde çok hızlı / yavaş düşüyor | `Tuning → gravity` (zamanlamayı da etkiler) |
+| Karakter havada kalıyor | `liftKick` ↓, `bodySpring` |
 | Adım çok uzun / kısa, arka ayak çok yüksek | Sahnede **Step Points** Front/Back objeleri |
 | Öne gelen ayak çok yükseğe kalkıyor | `RunnerPoseDriver → loopHeight` |
 | Adımlar hızlı / yavaş | `RunnerPoseDriver → strideSpeed` |

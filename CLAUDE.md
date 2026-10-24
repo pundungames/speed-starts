@@ -76,9 +76,9 @@ Rig (Control Rig): `Hip target` (MultiParent → `B-hips`), `Spine Root/Tip Targ
   birikir (`headRecover` yetişmez). Basışlar arası (adım indikten sonra) baş geriye düşer. Her basışta küçük
   bir sallanma (`headNod`). Tutulan ayak başı öne iter (`holdHead`; tek ayak `oneFootMax` tavanlı, iki ayak
   tavansız). Boyun `neckMax`'a kadar alır, aşan kısım beli çeker (gövde başı takip eder).
-- **Yere iniş özel durum değil:** Bele istenen eğim `lieRange`'i geçince gövde yere uzanır (çok sık basma ve
-  iki ayak tutma bundan çıkar). Bacaklar dümdüz geriye uzanır (parmak uçları yerde, diz çökme yok), en son
-  kalça yere iner (yavaş `lieSpring`). Havada asılı kalma yok.
+- **Hazır yatma pozu yok** (kullanıcı reddetti: tahta gibi yatış, dümdüz bacaklar). Çok sık basmada gövde
+  alçalır ama bacaklar adım döngüsünde koşmaya devam eder. İki ayak geride tutulunca hiçbir ayak gövdeyi
+  taşımaz: gövde yerçekimiyle düşer, yerde durur (`pelvisClearance`); tutulan bacaklar düzleştirilmez.
 - **Kollar:** El IK kapalı. **Karşı ayağa tam kilitli** (sağ kol ↔ sol ayak, sol kol ↔ sağ ayak), yay/gecikme
   yok; tutmada ve yerdeyken de (ayak geride → kol geride). Kol geriye giderken dirsek açılır (`elbowOpenBack`).
 - **İki tuşa özel durum yok** (fizikte de görselde de): baş, kol, gövde basış sıklığından ve basılı kalmadan
@@ -90,8 +90,9 @@ Rig (Control Rig): `Hip target` (MultiParent → `B-hips`), `Spine Root/Tip Targ
 
 - Baş açısı `Head LookAt Target` konumlandırılarak verilir (Head Aim weight hep 1). Gövde `neckMax`'a kadar
   eğikken baş ileri bakar, ötesinde gövdeyle iner; baş açısı bunun üstüne eklenir. Boyun (Spine Tip) baş
-  açısının yarısını alır (`NeckShare`). Yerdeyken baş gövde hizasına döner, `lieLookAhead` kadar ileri bakar.
-- Kaldırılanlar: `headLead`, `headDropSpring`, `headFollowLean`, `stumbleW` / `holdL×holdR` yere iniş tetiği.
+  açısının yarısını alır (`NeckShare`).
+- Kaldırılanlar: `headLead`, `headDropSpring`, `headFollowLean`, yere iniş tetiği ve bütün `lie*` yatma pozu
+  alanları (`lieRange`, `lieLean`, `lieHipHeight`, `lieSpring`, `lieLegReach` …), `diveLift`, `holdArm`, `armSpring`.
 - Sıradaki: kullanıcının play'de denemesi, `1–4` dizileriyle değer ayarı. HUD'a baş açısı çizgisi
   eklenmesi önerildi, kullanıcı henüz cevaplamadı.
 
