@@ -1,91 +1,104 @@
 # Speed Stars (speed-starts) — Proje Devir Notu
 
-> Bu dosya Claude Code tarafından her oturumda otomatik okunur. Projeye yeni bir hesap/oturumla
-> devam ederken bağlam buradan gelir. Son güncelleme: 2026-10-21.
+> Bu dosya Claude Code tarafından her oturumda otomatik okunur. Projeye yeni bir oturumla devam ederken
+> bağlam buradan gelir. Son güncelleme: 2026-10-24.
+> **Ayrıntılı rehber:** `Assets/Speed-Staes/Scripts/Physical/PlayerController.md` — oturumun başında oku.
 
 ## Proje nedir
 
-Mobil, yandan görünümlü bir **sprint (100 m tarzı) koşu oyunu prototipi**. Oyuncu iki tuşla
-(sol/sağ ok veya ekranın sol/sağ yarısına dokunarak) koşucunun **her bir ayağını ayrı ayrı**
-kontrol eder. Hız, basışların **zamanlamasına** göre kazanılır (ritim / timing oyunu).
-Animasyon klip ile değil, **prosedürel** olarak Animation Rigging IK hedefleriyle üretilir.
+Mobil, yandan görünümlü bir **sprint (100 m) koşu oyunu prototipi** (örnek: orijinal "Speed Stars").
+Oyuncu iki tuşla (←/→ veya ekranın sol/sağ yarısı) koşucunun **her bir ayağını ayrı** kontrol eder.
+Animasyon klip ile değil, **prosedürel**: Animation Rigging IK hedefleri koddan yazılır.
 
-- Unity **2022.3.62f3** (Built-in render pipeline)
-- Paketler: Animation Rigging 1.2.1, Input System 1.19.0 (Active Input Handling = Both),
-  Device Simulator, **MCP for Unity** (`com.coplaydev.unity-mcp`, Claude'un editörü kontrol etmesi için)
-- Git remote: `https://github.com/pundungames/speed-starts.git`, branch `main`
-- Kullanıcı Türkçe konuşuyor; HUD metinleri Türkçe, kod/yorumlar İngilizce.
+- Unity **2022.3.62** (Built-in RP). Paketler: Animation Rigging 1.2.1, Input System 1.19.0 (Active Input
+  Handling = Both), Device Simulator, **MCP for Unity** (Claude editörü buradan kontrol eder),
+  postprocessing, recorder, shadergraph.
+- Git: `https://github.com/pundungames/speed-starts.git`, branch `main`. Ekipte başka biri de (Serhat) çalışıyor.
+- Kullanıcı Türkçe konuşur; HUD metinleri Türkçe, kod ve yorumlar İngilizce (kısa, "neden"i anlatan
+  `<summary>` blokları; mevcut stile uy).
 
-## Klasör yapısı
+## Kullanıcıyla çalışma kuralları (önemli)
 
-- `Assets/Speed-Staes/` — **projenin kendi içeriği** (klasör adı "Staes" yazım hatası, ama değiştirme; referanslar bozulur)
-  - `Scenes/Test/TestScene.unity` — tek çalışma sahnesi
-  - `Scripts/Runner/` — tüm oyun kodu (namespace `SpeedStars.Runner`)
-  - `Materials/` — pist malzemeleri (Track_Asphalt, Track_Line, Track_Finish)
-- `Assets/Ash Assets/Control Rig/` — hazır Control Rig asset'i (rig yapısı, `ControlRigBuilder` editör aracı)
-- `Assets/Kevin Iglesias/Human Character Dummy/` — karakter modeli (sahnede `HumanCharacterDummy_F`)
-- Sahnede ayrıca `LowPoly Male` modeli var.
+- **Git'e izinsiz dokunma:** commit, push, pull, merge, stash, dosya silme — hiçbiri kullanıcı açıkça
+  istemeden yapılmaz. Git hakkında soru sorarsa sadece bilgi ver.
+- **Önce anla, sonra yap:** Kullanıcı tarif ederken sık sık "ne anladın" diye sorar. Bu durumda **kod
+  yazma**; anladığını kısa ve net anlat, onay bekle. "İşlem yapma" dediyse kesinlikle değişiklik yapma.
+- **Play mode testi:** Varsayılan olarak kullanıcı kendisi test eder. "Test et" derse MCP ile play mode'da
+  test et: `Application.runInBackground = true` (Unity arka plandayken kare ilerlemez), olayları
+  `RunnerInput.Inject` ile ver, `EditorApplication.isPaused` ile durdur, `manage_camera` ile Main Camera'dan
+  ekran görüntüsü al (`output_folder: Temp/...`, iş bitince sil).
+- **Sahne:** Kullanıcının kaydedilmemiş değişiklikleri olabilir; sahne dirty ise kaydetme. Koda yeni
+  alan eklenince sahnedeki örnek eski/varsayılan değeri tutabilir (Inspector değeri kodu ezer) — kontrol et.
+- **Referans videolar:** Kullanıcı orijinal oyundan video/ekran görüntüsü atar. Videoyu tarayıcıda kare kare
+  incele (Range destekli yerel bir sunucu + canvas'a kare ızgarası). Gördüğünü tablo hâlinde anlat.
+- Değişiklikten sonra `read_console` ile derleme hatası kontrol et. Rehberi (`PlayerController.md`) güncel tut.
 
-## Sahne kurulumu (TestScene)
+## Sistem: yay tabanlı koşucu (`Assets/Speed-Staes/Scripts/Physical`, namespace `SpeedStars.Physical`)
 
-Koşucu objesi üzerinde: `RunnerInput`, `RunnerStepController`, `RunnerMovement`,
-`RunnerGaitDriver`, `RunnerDebugHUD`. Kamera üzerinde `SideFollowCamera`.
+Sahne: **`Scenes/Test/PhysicalTest.unity`** (koşucu: `HumanCharacterDummy_F`). Yeniden kurulum:
+**Tools → Speed Stars → Set Up PhysicalTest Scene**. Eski prosedürel sistem `Scripts/Runner` +
+`TestScene.unity`'de duruyor ama kullanılmıyor; oradan sadece `RunnerInput` ve `SideFollowCamera` kullanılır.
 
-Rig hiyerarşisi (Control Rig): `Rig` altında `Hip Rig`, `Spine Rig`, `Twist Spine Rig`,
-`Leg Rig` (Left/Right Leg Target + Hint, TwoBoneIK), `Hand Rig` (kol IK — runtime'da **kapatılır**),
-`Head Aim Rig` (MultiAim). `Step Points` altında her ayak için `Front` ve `Back` noktaları
-(ayağın top/ball noktası için düzenlenebilir adım noktaları). Kemik adları `B-shin.L`, `B-foot.R`,
-`B-toe.L`, `B-upperArm.R`, `B-forearm.L`, `B-hand.L` vb. — kod bunları **isimle** buluyor.
-
-Pist: `Track`, `Ground`, `LaneLine_-2 … LaneLine_3`.
-
-## Mimari (Scripts/Runner)
-
-Akış: **Input → StepController (+Timing) → Movement**; görsel taraf (`RunnerGaitDriver`) sadece okur.
-Execution order: Input −200, StepController −100, GaitDriver −50.
+Akış: **RunnerInput → RunnerBody (+RunnerSim: fizik) → RunnerPoseDriver (sadece görsel, IK)**.
+Görsel taraf hızı/zamanlamayı asla değiştirmez.
 
 | Dosya | Görev |
 |---|---|
-| `RunnerInput.cs` | Basma/bırakma olaylarını **kendi zaman damgalarıyla** kuyruğa atar (klavye ←/→, dokunmatik sol/sağ yarı). Input System zamanını game-time'a çevirir. `Inject()` test/bot için. |
-| `LegCycle.cs` | Tek bacağın mantıksal döngüsü, saf zaman tabanlı: `Grounded → Ready → Step (öne→arkaya) → Hold (basılı tutuluyor) → Return (arkadan öne)`. Kısa bas-bırak da tam adımı tamamlar. |
-| `RunnerStepController.cs` | İki `LegCycle`'ın sahibi. Her basış bir adım; verim = `TimingEvaluator(error)`, error = basış zamanı − ayağın Front'a dönüş anı. Aynı ayak üst üste → `sameLegFactor` cezası. Sabit `stepDuration=0.12`, `returnDuration=0.25`. Durunca `Stop`, `ResetRun` (R tuşu). |
-| `TimingEvaluator.cs` | Zamanlama eğrisi (AnimationCurve): −100 ms → 0, 0…+40 ms → 1, +300 ms → 0. |
-| `RunnerMovement.cs` | Sadece ileri hareket: `Push(eff)` hız kazancını `pushDuration` boyunca yayar, `drag` ile kayıp, `maxSpeed=11.5`. |
-| `RunnerGaitDriver.cs` (~840 satır) | **Sadece görsel.** LegCycle'ları okuyup IK hedeflerini yazar: ayak yörüngesi (Front–Back arası çarpık elips, alt yay zeminde kırpılır), topuk vuruşu, ayak/ayak bileği/parmak profilleri (hızlanma ↔ max hız profili hıza göre blend), pelvis bob, gövde eğimi (ayakların ne kadar geride olduğuna göre), **hold pozları** (tek ayak basılı = "uçak" pozu, iki ayak basılı = yüzüstü/dalış), sarkaç kollar (çapraz: sağ ayak → sol kol), omuz/klavikula takibi, diz twist düzeltmesi (`FixLegTwist`), el pozu (`flatHand`). Kollar/ayak bileği/parmaklar `LateUpdate`'te IK'dan sonra pozlanır. |
-| `RunnerDebugHUD.cs` | IMGUI ölçüm paneli: hız, mesafe, bacak durumları, son basış sonucu, zamanlama grafiği (mavi=sol, turuncu=sağ). |
-| `SideFollowCamera.cs` | Yandan takip kamerası, sadece koşu ekseninde takip (bob kamerayı sallamaz). |
+| `RunnerSim.cs` | Saf C# fizik: hız (impulse + sürtünme), bacak `ext`/`hold` yayları, eğim yayı (sadece oyun mantığı: sendeleme), zamanlama için görünmeyen uçuş, enerji. Basış verimi fiziksel durumdan (havada = erken, geç, bacak hâlâ geride). İki tuşa özel kural **yok**: diğer ayaktan hemen sonra gelen basış (`togetherWindow`) erken sayılmaz; tutma itişi ayak başına. |
+| `RunnerBody.cs` | Girdiyi zaman damgasıyla sim'e verir, kökü taşır; `Tapped`/`RunReset` olayları. |
+| `FootCycle.cs` | Ayak durum makinesi (Step/Reach/Hold/FrontWait/Return/Ready). Süre = yol ÷ hız. |
+| `RunnerPoseDriver.cs` | Görsel: pozlar (Ready/Run/Stumble), adım döngüsü, bel yayı, tutma, yere iniş, gövde yüksekliği, kollar, baş. |
+| `RunnerPose*.cs` | Poz verisi ve varsayılanlar (Ready, Run, Stumble). Tutma/dalış pozu **yok**. |
+| `RaceController.cs` | 100 m; bitişte süreyi kaydedip direkt başa döner (R tuşu yok). |
+| `RunnerReplay.cs` / `ReferenceSequences.cs` | Videolardan ölçülen basış dizileri, 1–4 tuşları. |
+| `RunnerBodyHUD.cs` | Ayar paneli (H gizler). `Editor/PhysicalSetup.cs` kurulum aracı. |
 
-### Tasarım kuralları (kullanıcıyla oturmuş)
-- Mantık ve görsel kesin ayrık: GaitDriver **asla** hızı/zamanlamayı değiştirmez.
-- Gövde sadece X ekseninde döner (pitch); Y/Z rotasyonu 0.
-- Leg IK sadece ayak bileği pozisyonunu koyar (`targetRotationWeight = 0`); ayak açısı IK sonrası
-  baldıra göre uygulanır ve bilek sınırlarına clamp edilir.
-- Kol IK kapalı; kollar kemik rotasyonlarıyla sarkaç olarak sürülür.
-- Kodda yorumlar İngilizce, kısa, "neden"i anlatan `<summary>` blokları; mevcut stile uy.
+Rig (Control Rig): `Hip target` (MultiParent → `B-hips`), `Spine Root/Tip Target` (TwistChain
+`B-spine → B-neck`), `Left/Right Leg Target + Hint` (TwoBoneIK), `Hand Rig` (play'de kapatılır),
+`Head Aim Rig` (MultiAim → `B-head`, hedef `Head LookAt Target`). `Step Points/Left|Right` altında
+`Front`, `Back`, `Rest`. Kemikler isimle bulunur (`B-shin.L`, `B-toe.R`, `B-upperArm.L` …).
 
-## Mevcut durum (2026-10-21)
+### Oturmuş kurallar (kullanıcının onayladığı davranışlar)
 
-- Commit geçmişi: `fded600 basic running`, ardından iki "push" commit'i (log/layout dosyaları).
-- **Commit edilmemiş değişiklikler var** (en son çalışma):
-  - `RunnerGaitDriver.cs`: forefoot → **topuk vuruşu (heel-strike)** ayak profiline geçiş
-    (`touchdownPitch`, `HeelBehindAnkle`, `HeelRollTime`), yeni ayak profili eğrileri,
-    diz twist düzeltmesi (`FixLegTwist`, `restHingeInThigh/Shin`), omuzun geri çekilişi için ayrı
-    değerler (`shoulderSwingBack`, `shoulderLiftBack`), el pozu sistemi (`HandRig`, `flatHand`),
-    yüzüstü pozda kolların yukarı kalkması kaldırıldı (kollar geri salınımda kalıyor).
-  - `TestScene.unity`: sahne ayarları/inspector değerleri.
-  - Yeni materyal: `Kevin Iglesias/.../HumanCharacterDummy_ColorPalette.mat`.
-- `.gitignore` sadece Library/Temp/Obj/Build içeriyor; `Logs/` ve `UserSettings/` da repoya giriyor
-  (istenirse eklenebilir).
-- `Scripts/Runner/.idea/` Rider klasörü yanlışlıkla Assets içinde; zararsız.
+- **Bekleme duruşu:** Karakter hep **Ready çömelmesine** yönelir. Ayaklar `Rest` noktalarında yere basar;
+  Rest yükseldikçe çömelme derinleşir. Koşu duruşu (ev = elipsin tabanı, Run pozu) sadece basışlar sürerken
+  (`stanceKeepTime`); girdi kesilince doğrudan çömelmeye, arada dik duruş yok.
+- **Adım döngüsü:** Front–Back arası elips; alt yay zemine tek noktada (taban) değer. Ayaklar **eşli ve aynı
+  hızda**: basılan geriye, diğeri öne; tuş yokken ikisi aynı anda eve döner, yakın olan önce varır.
+- **Gövde yüksekliği ayaklardan:** Yerdeki ayak gövdeyi taşır; kalkışta itiş gövdeyi atar. Ayrı zıplama yok.
+- **Bel:** Kendi yayı (`UpdateWaist`): ayaklara göre ortalanır + basılı her ayak `holdLean` öne. Öne eğim
+  **belden** (kalça ayakların üstünde kalır); geriye yaylanma (bırakınca) ayaklar etrafında.
+- **Tek ayak tutma:** Tutulan ayak Back'te, diğeri Front'ta yere iner ve taşır; bel yavaşça destek ayağına
+  kayar, arka bacak kalça etrafında yataya kadar kalkar (tahterevalli).
+- **Baş ve boyun (`UpdateHead`):** Tek bir baş açısı (geride ↔ dik ↔ önde). Hızla **aynı kaynak, ters
+  grafik**: basışın sonucu/verimi (`LastResult`, `LastEfficiency`). Tam zamanında = baş dik kalır; geç = biraz
+  geride kalır (`lateRecover`); erken / boşa basış = `earlyKick × (1 − verim)` öne iter. Sık basınca itmeler
+  birikir (`headRecover` yetişmez). Basışlar arası (adım indikten sonra) baş geriye düşer. Her basışta küçük
+  bir sallanma (`headNod`). Tutulan ayak başı öne iter (`holdHead`; tek ayak `oneFootMax` tavanlı, iki ayak
+  tavansız). Boyun `neckMax`'a kadar alır, aşan kısım beli çeker (gövde başı takip eder).
+- **Yere iniş özel durum değil:** Bele istenen eğim `lieRange`'i geçince gövde yere uzanır (çok sık basma ve
+  iki ayak tutma bundan çıkar). Bacaklar dümdüz geriye uzanır (parmak uçları yerde, diz çökme yok), en son
+  kalça yere iner (yavaş `lieSpring`). Havada asılı kalma yok.
+- **Kollar:** El IK kapalı. **Karşı ayağa tam kilitli** (sağ kol ↔ sol ayak, sol kol ↔ sağ ayak), yay/gecikme
+  yok; tutmada ve yerdeyken de (ayak geride → kol geride). Kol geriye giderken dirsek açılır (`elbowOpenBack`).
+- **İki tuşa özel durum yok** (fizikte de görselde de): baş, kol, gövde basış sıklığından ve basılı kalmadan
+  kendiliğinden oluşur. Hızlı koşuda basışlar 0.05–0.08 sn arayla gelebilir (`togetherWindow`, erken sayılmaz).
+- **Baş hızlı koşuda gövdeyle aynı çizgide** (Run pozu `headDown` = 1), dururken/yavaşken ileri bakar.
+- Gövde ağırlıkla X ekseninde döner. (Pelvis/göğüs Y/Z dönüşü ve el IK denendi, kullanıcı geri aldırdı.)
 
-## Muhtemel sonraki adımlar (henüz yapılmadı)
-- Heel-strike animasyonunun oyunda göz ile doğrulanması/ince ayarı.
-- Start pozu (çömelme/blok çıkışı — `flatHand` bunun için hazırlandı).
-- Bitiş çizgisi / yarış akışı, rakipler, UI (şu an sadece debug HUD).
-- Mobil test (Device Simulator).
+## Şu anki konu: BAŞ ve BOYUN (2026-10-24, ilk sürüm yazıldı, göz ayarı bekliyor)
 
-## Claude için çalışma notları
-- Unity editörü açıkken **MCP for Unity** araçlarıyla (`mcp__UnityMCP__*`) sahne/console/play mode
-  kontrol edilebilir. Script değişikliğinden sonra `read_console` ile derleme hatası kontrol et.
-- Test: Play mode'a gir, ←/→ ile koş, R ile sıfırla; HUD'daki zamanlama grafiğine bak.
-- Kullanıcıya Türkçe yanıt ver.
+- Baş açısı `Head LookAt Target` konumlandırılarak verilir (Head Aim weight hep 1). Gövde `neckMax`'a kadar
+  eğikken baş ileri bakar, ötesinde gövdeyle iner; baş açısı bunun üstüne eklenir. Boyun (Spine Tip) baş
+  açısının yarısını alır (`NeckShare`). Yerdeyken baş gövde hizasına döner, `lieLookAhead` kadar ileri bakar.
+- Kaldırılanlar: `headLead`, `headDropSpring`, `headFollowLean`, `stumbleW` / `holdL×holdR` yere iniş tetiği.
+- Sıradaki: kullanıcının play'de denemesi, `1–4` dizileriyle değer ayarı. HUD'a baş açısı çizgisi
+  eklenmesi önerildi, kullanıcı henüz cevaplamadı.
+
+## Durum
+
+- Bütün yeni sistem `main` çalışma klasöründe; **son değişiklikler commit edilmemiş** (kullanıcı kendisi
+  commit eder). Eski worktree `.claude/worktrees/physics-based-speed-stars-56d8b3` geride kaldı; ana
+  klasörde (`speed-starts`) çalış.
+- `Physical/Poses/LungeLeft|LungeRight|Dive.asset` artık kullanılmıyor (silmek kullanıcıya bırakıldı).
+- `ProjectVersion.txt` ekipte 62f2/62f3 arasında gidip geliyor; ekipçe karar verilmeli.

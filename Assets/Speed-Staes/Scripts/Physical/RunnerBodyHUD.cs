@@ -168,7 +168,6 @@ namespace SpeedStars.Physical
                 case PressResult.Good: return "<color=#4f4>tam zamanında</color>";
                 case PressResult.Late: return "<color=#ff4>geç</color>";
                 case PressResult.Early: return "<color=#f44>erken (havada)</color>";
-                case PressResult.Both: return "iki ayak";
                 default: return "-";
             }
         }

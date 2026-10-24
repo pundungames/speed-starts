@@ -29,9 +29,6 @@ namespace SpeedStars.Physical.EditorTools
             {
                 Pose("Ready", RunnerPoseDefaults.Ready),
                 Pose("Run", RunnerPoseDefaults.Run),
-                Pose("LungeLeft", RunnerPoseDefaults.LungeLeft),
-                Pose("LungeRight", RunnerPoseDefaults.LungeRight),
-                Pose("Dive", RunnerPoseDefaults.Dive),
                 Pose("Stumble", RunnerPoseDefaults.Stumble),
             };
             AssetDatabase.SaveAssets();
@@ -114,10 +111,7 @@ namespace SpeedStars.Physical.EditorTools
             driver.rightArm.ikTarget = Find(t, "Right Hand Target");
             driver.ready = poses[0];
             driver.run = poses[1];
-            driver.lungeLeft = poses[2];
-            driver.lungeRight = poses[3];
-            driver.dive = poses[4];
-            driver.stumble = poses[5];
+            driver.stumble = poses[2];
 
             // Race flow and finish line.
             RaceController race = null;

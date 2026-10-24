@@ -13,8 +13,6 @@ namespace SpeedStars.Physical
         Late,
         /// <summary>Pressed in the air or while the other foot was still pushing: wasted, tips the body.</summary>
         Early,
-        /// <summary>Second finger of a two-finger press (dive).</summary>
-        Both,
     }
 
     /// <summary>All numbers of the runner's reduced physics. Defaults are tuned to the reference videos.</summary>
@@ -42,8 +40,9 @@ namespace SpeedStars.Physical
         public float gravity = 9.81f;
 
         [Header("Push efficiency (read from the physical state, no timing curve)")]
-        [Tooltip("Two presses closer than this (s) count as one two-finger press.")]
-        public float simultaneousWindow = 0.06f;
+        [Tooltip("A press this soon (s) after the other foot's is not early: the two push together. Later in " +
+                 "the other foot's stance it is early. (Fast runs in the videos press 0.05–0.08 s apart.)")]
+        public float togetherWindow = 0.08f;
         [Tooltip("Efficiency of a press in the air or while the other foot is still pushing.")]
         [Range(0f, 1f)] public float earlyEfficiency = 0.15f;
         [Tooltip("After landing, presses within this time (s) are full.")]
@@ -61,11 +60,9 @@ namespace SpeedStars.Physical
         [Header("Hold")]
         [Tooltip("A press shorter than this still makes a full stride; longer is a hold (s).")]
         public float minStepTime = 0.14f;
-        [Tooltip("Forward push while held (m/s²), for holdThrustTime after the hold starts.")]
+        [Tooltip("Forward push per held foot (m/s²), for holdThrustTime after the hold starts.")]
         public float holdThrust = 1f;
         public float holdThrustTime = 0.6f;
-        [Tooltip("Both feet held push this many times harder.")]
-        public float bothMultiplier = 1.5f;
         [Tooltip("Extra loss in a hold pose (m/s²): the planted feet slide.")]
         public float holdDrag = 0f;
 
@@ -82,8 +79,8 @@ namespace SpeedStars.Physical
         public SpringSettings lean = new SpringSettings(1f, 0.3f);
 
         [Header("Lean (deg, + forward)")]
+        [Tooltip("Lean a held foot asks for (deg, per held foot): not stumbling.")]
         public float lungeLean = 40f;
-        public float diveLean = 75f;
         [Tooltip("Lean at max speed.")]
         public float runLean = 8f;
         [Tooltip("Forward lean kick of a push (deg/s).")]
@@ -162,6 +159,8 @@ namespace SpeedStars.Physical
         public double LastPressTime { get; private set; }
         public PressResult LastResult { get; private set; }
         public float LastEfficiency { get; private set; }
+        /// <summary>When the body last came down (or a held foot stayed down): a press right after it is on time.</summary>
+        public double LandTime => _landTime;
 
         public float Lean => LeanSpring.Value;
         /// <summary>The part of the lean the hold poses ask for (deg); Lean − PoseLean beyond stumbleLean is stumbling.</summary>
@@ -213,19 +212,17 @@ namespace SpeedStars.Physical
 
             float sinceLast = (float)(Time - LastPressTime);
             bool launchPending = _launchTime >= 0.0;
+            // The other foot pressed only just before: the two push together, not one into the other's stance.
+            // No special case beyond that — it is judged like any press.
+            bool together = LastLeg >= 0 && LastLeg != leg && sinceLast < T.togetherWindow;
             PressResult result;
             float eff;
-            if (LastLeg >= 0 && LastLeg != leg && sinceLast < T.simultaneousWindow)
-            {
-                result = PressResult.Both;
-                eff = LastEfficiency;
-            }
-            else if (Speed < 0.3f && !Airborne && !launchPending)
+            if (Speed < 0.3f && !Airborne && !launchPending)
             {
                 result = PressResult.Start;
                 eff = 1f;
             }
-            else if (Airborne || launchPending)
+            else if (Airborne || (launchPending && !together))
             {
                 result = PressResult.Early;
                 eff = T.earlyEfficiency;
@@ -239,19 +236,13 @@ namespace SpeedStars.Physical
                 result = eff > 0.9f ? PressResult.Good : PressResult.Late;
             }
 
-            if (result != PressResult.Both)
-            {
-                // The pressed leg must be back under the body to push again.
-                eff *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T.legReadyExt.x, T.legReadyExt.y, l.Ext.Value));
-                if (LastLeg == leg && sinceLast < 1f) eff *= T.sameLegFactor;
-            }
+            // The pressed leg must be back under the body to push again.
+            eff *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T.legReadyExt.x, T.legReadyExt.y, l.Ext.Value));
+            if (LastLeg == leg && sinceLast < 1f) eff *= T.sameLegFactor;
             eff *= EnergyFactor();
 
             float room = Mathf.Max(0f, 1f - Speed / T.maxSpeed);
-            if (result == PressResult.Both)
-                _pending += T.pushGain * eff * room * (T.bothMultiplier - 1f);
-            else
-                _pending += T.pushGain * eff * room;
+            _pending += T.pushGain * eff * room;
 
             LeanSpring.Velocity += T.leanKick * (1f + T.stumbleKick * (1f - eff));
 
@@ -326,19 +317,15 @@ namespace SpeedStars.Physical
                 maxHold = Mathf.Max(maxHold, l.HoldValue);
             }
 
-            // Speed.
+            // Speed. Every held foot pushes: both held push twice, no special case.
             float applied = _pending * (1f - Mathf.Exp(-3f * h / Mathf.Max(0.001f, T.pushTime)));
             _pending -= applied;
             float thrust = 0f;
             int holding = HoldingCount;
             if (holding > 0 && Time - thrustStart < T.holdThrustTime)
-                thrust = T.holdThrust * (holding == 2 ? T.bothMultiplier : 1f)
-                         * Mathf.Max(0f, 1f - Speed / T.maxSpeed) * EnergyFactor();
-            // Stumbling is lean beyond what the pose asks for (a hold pose leans on purpose).
-            float hl = Legs[0].HoldValue, hr = Legs[1].HoldValue;
-            float both = hl * hr;
-            float one = hl * (1f - hr) + hr * (1f - hl);
-            float poseLean = PoseLean = T.lungeLean * one + T.diveLean * both;
+                thrust = T.holdThrust * holding * Mathf.Max(0f, 1f - Speed / T.maxSpeed) * EnergyFactor();
+            // Stumbling is lean beyond what holding asks for (every held foot leans on purpose).
+            float poseLean = PoseLean = T.lungeLean * (Legs[0].HoldValue + Legs[1].HoldValue);
             float drag = T.dragConstant + T.dragLinear * Speed + T.holdDrag * maxHold
                          + Mathf.Max(0f, Lean - poseLean - T.stumbleLean) * T.stumbleDrag;
             Speed = Mathf.Clamp(Speed + applied + (thrust - drag) * h, 0f, T.maxSpeed);
