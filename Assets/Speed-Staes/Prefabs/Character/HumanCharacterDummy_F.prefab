@@ -370,6 +370,7 @@ MonoBehaviour:
     phaseTime: 0
     duration: 0
     held: 0
+    pressTime: 0
     from:
       thigh: 0
       knee: 0
@@ -381,6 +382,7 @@ MonoBehaviour:
     knee: {x: 0, y: 0, z: 0}
     ankle: {x: 0, y: 0, z: 0}
     pitch: 0
+    rock: 0
     fromPitch: 0
     strideW: 0
     width: 0
@@ -409,6 +411,7 @@ MonoBehaviour:
     phaseTime: 0
     duration: 0
     held: 0
+    pressTime: 0
     from:
       thigh: 0
       knee: 0
@@ -420,6 +423,7 @@ MonoBehaviour:
     knee: {x: 0, y: 0, z: 0}
     ankle: {x: 0, y: 0, z: 0}
     pitch: 0
+    rock: 0
     fromPitch: 0
     strideW: 0
     width: 0
@@ -486,26 +490,30 @@ MonoBehaviour:
     knee: 100
   maxKnee: 177
   heldLegMaxAngle: 79
+  heldLegArch: -10
   pushTime: {x: 0.12, y: 0.08}
   recoverTime: 0.15
   midTime: 0.15
   homeTime: 0.15
   frontHomeTime: 0.3
-  holdBlendTime: 0.15
   airTimeAtSpeed: 0.6
   restToBaseSpeed: {x: 0.5, y: 3}
-  stanceKeepTime: 0.6
   stanceBlend: 8
   heightSpring:
     frequency: 8
     damping: 0.8
-  diveTime: {x: 0.3, y: 0.5}
-  diveSpeed: 0.9
-  diveLean: 115
-  headRest: 0.15
-  diveRecover:
+  liftSpring:
+    frequency: 0.9
+    damping: 1
+  liftBelow: 0.25
+  liftRange: 0.2
+  liftKick: 1.5
+  airTip: 60
+  airTipBack:
     frequency: 3
     damping: 1
+  headRest: 0.15
+  kneeRest: 0.05
   pitchBack: 50
   accelProfile:
     touchdownPitch: -17
@@ -890,29 +898,35 @@ MonoBehaviour:
   toeDownMax: 15
   ankleUpMax: 25
   ankleDownMax: 70
-  holdLean: 85
-  speedLean: 8
-  stepKick: 30
-  waistSpring:
-    frequency: 1.2
-    damping: 0.35
   headBack: -15
-  headFallSpring:
-    frequency: 2
+  headKick: 24
+  holdPush: 40
+  headReturnSpring:
+    frequency: 1
+    damping: 0.42
+  headSettleSpring:
+    frequency: 0.4
     damping: 1
-  earlyKick: 25
-  headReturn: 2.5
-  pressReturn: 0.4
   headForwardMax: 80
   headNod: 60
-  holdHead: 20
-  oneFootMax: 25
+  holdIn:
+    frequency: 1.2
+    damping: 1
+  holdOut:
+    frequency: 4.5
+    damping: 1
   headSpring:
     frequency: 6
     damping: 0.5
   neckMax: 35
-  trunkFollow: 1
-  waistAngle: 6.5
+  headLead: 15
+  headKeep: 0.33
+  heelRock: 1
+  hipFollow: 1
+  hipFollowSpring:
+    frequency: 3
+    damping: 0.9
+  waistAngle: 6
   pelvisPitchRange: {x: -10, y: 90}
   armBack: -40
   elbowBack: 30
