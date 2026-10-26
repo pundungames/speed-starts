@@ -19,6 +19,9 @@ namespace SpeedStars.Runner
         public int imageWidth = 1600;
         public int imageHeight = 2000;
         public bool showControls = true;
+        public bool handleInput = true;
+        public string capturePrefix;
+        [Min(0f)] public float rotationSpeed = 90f;
         public string lastCapture;
         string status;
         bool capturing;
@@ -41,6 +44,7 @@ namespace SpeedStars.Runner
 
         void Update()
         {
+            if (!handleInput) return;
 #if ENABLE_INPUT_SYSTEM
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
@@ -48,19 +52,25 @@ namespace SpeedStars.Runner
             for (int i = 0; i < 9; i++)
                 if (keyboard[(Key)((int)Key.Digit1 + i)].wasPressedThisFrame ||
                     keyboard[(Key)((int)Key.Numpad1 + i)].wasPressedThisFrame) SelectSet(i + 1);
-            if (keyboard.rightArrowKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame) NextSet();
-            if (keyboard.leftArrowKey.wasPressedThisFrame) PreviousSet();
+            RotateCharacter((keyboard.rightArrowKey.isPressed ? 1f : 0f) - (keyboard.leftArrowKey.isPressed ? 1f : 0f));
+            if (keyboard.spaceKey.wasPressedThisFrame) NextSet();
             if (keyboard.vKey.wasPressedThisFrame) Capture();
             if (keyboard.hKey.wasPressedThisFrame) showControls = !showControls;
 #else
             if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0)) SelectSet(0);
             for (int i = 0; i < 9; i++)
                 if (Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + i))) SelectSet(i + 1);
-            if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.Space)) NextSet();
-            if (Input.GetKeyDown(KeyCode.LeftArrow)) PreviousSet();
+            RotateCharacter((Input.GetKey(KeyCode.RightArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.LeftArrow) ? 1f : 0f));
+            if (Input.GetKeyDown(KeyCode.Space)) NextSet();
             if (Input.GetKeyDown(KeyCode.V)) Capture();
             if (Input.GetKeyDown(KeyCode.H)) showControls = !showControls;
 #endif
+        }
+
+        void RotateCharacter(float direction)
+        {
+            if (character && direction != 0f)
+                character.Rotate(Vector3.up, direction * rotationSpeed * Time.unscaledDeltaTime, Space.World);
         }
 
         public static int SetFor(string category, string itemName)
@@ -180,12 +190,14 @@ namespace SpeedStars.Runner
             var previousTarget = photoCamera.targetTexture;
             var previousActive = RenderTexture.active;
             float previousAspect = photoCamera.aspect;
+            Rect previousRect = photoCamera.rect;
             try
             {
                 Directory.CreateDirectory(CaptureDirectory);
                 int width = Mathf.Clamp(imageWidth, 64, 8192), height = Mathf.Clamp(imageHeight, 64, 8192);
                 target = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
                 photoCamera.targetTexture = target;
+                photoCamera.rect = new Rect(0, 0, 1, 1);
                 photoCamera.aspect = (float)width / height;
                 photoCamera.Render();
                 RenderTexture.active = target;
@@ -194,7 +206,7 @@ namespace SpeedStars.Runner
                 pixels.Apply();
                 string tier = selectedSet == 0 ? "Base" : selectedSet <= 7 ? "Regular" : "Premium";
                 string path = Path.Combine(CaptureDirectory,
-                    $"Set_{selectedSet:00}_{tier}_{DateTime.Now:yyyyMMdd_HHmmss_fff}_{Guid.NewGuid().ToString("N").Substring(0, 6)}.png");
+                    $"{(string.IsNullOrEmpty(capturePrefix) ? $"Set_{selectedSet:00}_{tier}" : capturePrefix)}_{DateTime.Now:yyyyMMdd_HHmmss_fff}_{Guid.NewGuid().ToString("N").Substring(0, 6)}.png");
                 File.WriteAllBytes(path, pixels.EncodeToPNG());
                 lastCapture = path;
                 Debug.Log("Accessory photo saved: " + path, this);
@@ -204,6 +216,7 @@ namespace SpeedStars.Runner
             {
                 photoCamera.targetTexture = previousTarget;
                 photoCamera.aspect = previousAspect;
+                photoCamera.rect = previousRect;
                 RenderTexture.active = previousActive;
                 if (target) RenderTexture.ReleaseTemporary(target);
                 if (pixels)
@@ -220,6 +233,7 @@ namespace SpeedStars.Runner
             GUILayout.BeginArea(new Rect(16, 16, 370, 170), GUI.skin.box);
             GUILayout.Label($"ACCESSORY STUDIO  /  SET {selectedSet:00}  /  {(selectedSet == 0 ? "BASE" : selectedSet <= 7 ? "REGULAR" : "PREMIUM")}");
             GUILayout.Label("0: base  1-9: set + random colors  V: PNG  H: hide");
+            GUILayout.Label("Hold Left / Right: rotate    Space: next set");
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("<")) PreviousSet();
             if (GUILayout.Button("Capture PNG (V)")) Capture();

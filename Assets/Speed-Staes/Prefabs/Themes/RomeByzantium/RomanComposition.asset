@@ -1,0 +1,1150 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c985a89482d58b44b94652bd3670be4c, type: 3}
+  m_Name: RomanComposition
+  m_EditorClassIdentifier: 
+  districts:
+  - name: Market Neighborhood
+    length: 58
+    slots:
+    - role: Shop Cluster
+      asset: Roman Insula Shops
+      alternatives:
+      - Roman Insula Shops
+      - Striped Roman Market
+      - Ceramic Kiln Workshop
+      - Courtyard Roman Villa
+      layer: 0
+      distance: 7
+      x: -24.5
+      scale: 0.62
+      yaw: 270
+      focal: 0
+    - role: Shop Cluster
+      asset: Striped Roman Market
+      alternatives:
+      - Roman Insula Shops
+      - Striped Roman Market
+      - Ceramic Kiln Workshop
+      - Courtyard Roman Villa
+      layer: 0
+      distance: 18
+      x: -24.5
+      scale: 0.79
+      yaw: 270
+      focal: 0
+    - role: Craft Cluster
+      asset: Ceramic Kiln Workshop
+      alternatives:
+      - Roman Insula Shops
+      - Striped Roman Market
+      - Ceramic Kiln Workshop
+      - Courtyard Roman Villa
+      layer: 0
+      distance: 30
+      x: -25
+      scale: 0.72
+      yaw: 270
+      focal: 0
+    - role: Residential Edge
+      asset: Courtyard Roman Villa
+      alternatives:
+      - Roman Insula Shops
+      - Striped Roman Market
+      - Ceramic Kiln Workshop
+      - Courtyard Roman Villa
+      layer: 0
+      distance: 51
+      x: -26
+      scale: 0.72
+      yaw: 270
+      focal: 0
+    - role: Well Court
+      asset: Stone Well With Winch
+      alternatives: []
+      layer: 1
+      distance: 40
+      x: -19
+      scale: 0.88
+      yaw: 270
+      focal: 0
+    - role: Well Court
+      asset: Carved Marble Bench
+      alternatives: []
+      layer: 1
+      distance: 43
+      x: -17
+      scale: 0.82
+      yaw: 270
+      focal: 0
+    - role: Market Goods
+      asset: Roman Produce Cart
+      alternatives: []
+      layer: 1
+      distance: 21
+      x: -17
+      scale: 0.82
+      yaw: 270
+      focal: 0
+    - role: Market Goods
+      asset: Roman Amphora
+      alternatives: []
+      layer: 1
+      distance: 14
+      x: -18
+      scale: 0.78
+      yaw: 270
+      focal: 0
+    - role: Market Goods
+      asset: Roman Amphora
+      alternatives: []
+      layer: 1
+      distance: 16
+      x: -18.4
+      scale: 0.62
+      yaw: 270
+      focal: 0
+    - role: Shop Entry
+      asset: Terracotta Garden Planter
+      alternatives: []
+      layer: 1
+      distance: 4
+      x: -17
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Shop Entry
+      asset: Terracotta Garden Planter
+      alternatives: []
+      layer: 1
+      distance: 10
+      x: -17
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Well Court
+      asset: Excavated Column Fragments
+      alternatives: []
+      layer: 1
+      distance: 45
+      x: -22
+      scale: 0.66
+      yaw: 270
+      focal: 0
+    - role: Court Frame
+      asset: Olive Tree
+      alternatives: []
+      layer: 2
+      distance: 35
+      x: -22
+      scale: 0.74
+      yaw: 270
+      focal: 0
+    - role: Residential Frame
+      asset: Cypress Tree
+      alternatives: []
+      layer: 2
+      distance: 55
+      x: -24
+      scale: 0.63
+      yaw: 270
+      focal: 0
+    - role: Town Backdrop
+      asset: Horizon Gabled Merchant Quarter
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Long Roof Warehouses
+      - Horizon Citadel Ridge
+      - Horizon Abandoned Roofless Hall
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Garden Wall Pavilions
+      - Horizon Ancient Terraced Ruins
+      - Horizon Hillside Monastery
+      - Horizon Terraced Imperial Palace
+      - Horizon Round Tower City Gate
+      layer: 3
+      distance: 10
+      x: -64
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Town Backdrop
+      asset: Horizon Stepped Hill Town
+      alternatives:
+      - Horizon Long Roof Warehouses
+      - Horizon Citadel Ridge
+      - Horizon Abandoned Roofless Hall
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Garden Wall Pavilions
+      - Horizon Ancient Terraced Ruins
+      - Horizon Hillside Monastery
+      - Horizon Terraced Imperial Palace
+      - Horizon Round Tower City Gate
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 37
+      x: -68
+      scale: 0.92
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Market Forecourt
+      distance: 20
+      length: 33
+      x: -23
+      width: 19
+    - name: Well Court Opening
+      distance: 40
+      length: 13
+      x: -23
+      width: 18
+  - name: Arena and Processional Walk
+    length: 66
+    slots:
+    - role: Arena Approach
+      asset: Byzantine Brick Watchtower
+      alternatives: []
+      layer: 0
+      distance: 7
+      x: -33
+      scale: 0.55
+      yaw: 270
+      focal: 0
+    - role: Focus Amphitheatre
+      asset: Oval Roman Amphitheatre
+      alternatives: []
+      layer: 0
+      distance: 29
+      x: -37
+      scale: 0.85
+      yaw: 270
+      focal: 1
+    - role: Sculpture Terrace
+      asset: Statue and Mosaic Plaza
+      alternatives: []
+      layer: 0
+      distance: 56
+      x: -27
+      scale: 0.72
+      yaw: 270
+      focal: 0
+    - role: Processional Statue
+      asset: Marble Emperor Statue
+      alternatives: []
+      layer: 1
+      distance: 17
+      x: -23
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Arena Standards
+      asset: Roman Red Standard
+      alternatives: []
+      layer: 1
+      distance: 23
+      x: -21
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Arena Standards
+      asset: Roman Red Standard
+      alternatives: []
+      layer: 1
+      distance: 36
+      x: -21
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Arena Rest
+      asset: Carved Marble Bench
+      alternatives: []
+      layer: 1
+      distance: 47
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Gallery Mosaic
+      asset: Framed Mosaic Panel
+      alternatives: []
+      layer: 1
+      distance: 60
+      x: -20
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Arena Tree Frame
+      asset: Cypress Tree
+      alternatives: []
+      layer: 2
+      distance: 43
+      x: -29
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Arena Backdrop
+      asset: Horizon Ancient Terraced Ruins
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Long Roof Warehouses
+      - Horizon Citadel Ridge
+      - Horizon Abandoned Roofless Hall
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Garden Wall Pavilions
+      - Horizon Hillside Monastery
+      - Horizon Terraced Imperial Palace
+      - Horizon Round Tower City Gate
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 17
+      x: -68
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Arena Backdrop
+      asset: Horizon Round Tower City Gate
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Long Roof Warehouses
+      - Horizon Citadel Ridge
+      - Horizon Abandoned Roofless Hall
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Garden Wall Pavilions
+      - Horizon Ancient Terraced Ruins
+      - Horizon Hillside Monastery
+      - Horizon Terraced Imperial Palace
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 51
+      x: -73
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Arena Arrival Terrace
+      distance: 29
+      length: 42
+      x: -30
+      width: 30
+  - name: Forum Square
+    length: 64
+    slots:
+    - role: Forum Gateway
+      asset: Triumphal Arch
+      alternatives: []
+      layer: 0
+      distance: 7
+      x: -41
+      scale: 0.57
+      yaw: 270
+      focal: 0
+    - role: Focus Forum Monument
+      asset: Marble Forum Temple
+      alternatives:
+      - Turquoise Dome Basilica
+      - Circular Copper Roof Shrine
+      layer: 0
+      distance: 31
+      x: -43
+      scale: 0.75
+      yaw: 270
+      focal: 1
+    - role: Low Fountain Court
+      asset: Tiered Fountain Garden
+      alternatives: []
+      layer: 0
+      distance: 32
+      x: -23.8
+      scale: 0.62
+      yaw: 270
+      focal: 0
+    - role: Square Exit
+      asset: Roman Insula Shops
+      alternatives:
+      - Courtyard Roman Villa
+      layer: 0
+      distance: 57
+      x: -27
+      scale: 0.6
+      yaw: 270
+      focal: 0
+    - role: Left Monument Frame
+      asset: Cypress Tree
+      alternatives: []
+      layer: 2
+      distance: 16
+      x: -27
+      scale: 0.68
+      yaw: 270
+      focal: 0
+    - role: Right Monument Frame
+      asset: Cypress Tree
+      alternatives: []
+      layer: 2
+      distance: 47
+      x: -27
+      scale: 0.73
+      yaw: 270
+      focal: 0
+    - role: Gateway Markers
+      asset: Roman Red Standard
+      alternatives: []
+      layer: 1
+      distance: 4
+      x: -18
+      scale: 0.68
+      yaw: 270
+      focal: 0
+    - role: Gateway Markers
+      asset: Roman Red Standard
+      alternatives: []
+      layer: 1
+      distance: 11
+      x: -18
+      scale: 0.68
+      yaw: 270
+      focal: 0
+    - role: Square Seating
+      asset: Carved Marble Bench
+      alternatives: []
+      layer: 1
+      distance: 23
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Square Seating
+      asset: Carved Marble Bench
+      alternatives: []
+      layer: 1
+      distance: 41
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Square Exit Detail
+      asset: Marble Sundial
+      alternatives: []
+      layer: 1
+      distance: 49
+      x: -21
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Fountain Approach
+      asset: Terracotta Garden Planter
+      alternatives: []
+      layer: 1
+      distance: 20
+      x: -20
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Fountain Approach
+      asset: Terracotta Garden Planter
+      alternatives: []
+      layer: 1
+      distance: 44
+      x: -20
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Civic Backdrop
+      asset: Horizon Terraced Imperial Palace
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Long Roof Warehouses
+      - Horizon Citadel Ridge
+      - Horizon Abandoned Roofless Hall
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Garden Wall Pavilions
+      - Horizon Ancient Terraced Ruins
+      - Horizon Hillside Monastery
+      - Horizon Round Tower City Gate
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 13
+      x: -72
+      scale: 0.95
+      yaw: 270
+      focal: 0
+    - role: Civic Backdrop
+      asset: Horizon Abandoned Roofless Hall
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Long Roof Warehouses
+      - Horizon Citadel Ridge
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Garden Wall Pavilions
+      - Horizon Ancient Terraced Ruins
+      - Horizon Hillside Monastery
+      - Horizon Terraced Imperial Palace
+      - Horizon Round Tower City Gate
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 51
+      x: -68
+      scale: 0.94
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Forum Entrance Paving
+      distance: 9
+      length: 18
+      x: -26
+      width: 26
+    - name: Main Forum Square
+      distance: 33
+      length: 34
+      x: -28
+      width: 32
+  - name: Baths and Sculpture Gardens
+    length: 62
+    slots:
+    - role: Focus Public Baths
+      asset: Terracotta Vault Baths
+      alternatives: []
+      layer: 0
+      distance: 23
+      x: -32
+      scale: 0.82
+      yaw: 270
+      focal: 1
+    - role: Baths Service Lane
+      asset: Ceramic Kiln Workshop
+      alternatives:
+      - Striped Roman Market
+      layer: 0
+      distance: 53
+      x: -26
+      scale: 0.68
+      yaw: 270
+      focal: 0
+    - role: Baths Sculpture
+      asset: Marble Emperor Statue
+      alternatives: []
+      layer: 1
+      distance: 10
+      x: -24
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Garden Sundial
+      asset: Marble Sundial
+      alternatives: []
+      layer: 1
+      distance: 39
+      x: -22
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Baths Mosaic
+      asset: Framed Mosaic Panel
+      alternatives: []
+      layer: 1
+      distance: 45
+      x: -22
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Baths Garden Frame
+      asset: Olive Tree
+      alternatives: []
+      layer: 2
+      distance: 4
+      x: -26
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Baths Garden Frame
+      asset: Cypress Tree
+      alternatives: []
+      layer: 2
+      distance: 41
+      x: -27
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Baths Seating
+      asset: Carved Marble Bench
+      alternatives: []
+      layer: 1
+      distance: 34
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Baths Garden
+      asset: Terracotta Garden Planter
+      alternatives: []
+      layer: 1
+      distance: 31
+      x: -23
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Garden Backdrop
+      asset: Horizon Garden Wall Pavilions
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Long Roof Warehouses
+      - Horizon Citadel Ridge
+      - Horizon Abandoned Roofless Hall
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Ancient Terraced Ruins
+      - Horizon Hillside Monastery
+      - Horizon Terraced Imperial Palace
+      - Horizon Round Tower City Gate
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 17
+      x: -65
+      scale: 0.95
+      yaw: 270
+      focal: 0
+    - role: Garden Backdrop
+      asset: Horizon Long Roof Warehouses
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Citadel Ridge
+      - Horizon Abandoned Roofless Hall
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Garden Wall Pavilions
+      - Horizon Ancient Terraced Ruins
+      - Horizon Hillside Monastery
+      - Horizon Terraced Imperial Palace
+      - Horizon Round Tower City Gate
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 47
+      x: -73
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Baths Garden Terrace
+      distance: 24
+      length: 36
+      x: -28
+      width: 28
+  - name: Villas and City Edge
+    length: 55
+    slots:
+    - role: Villa Garden
+      asset: Courtyard Roman Villa
+      alternatives:
+      - Roman Insula Shops
+      layer: 0
+      distance: 6
+      x: -25
+      scale: 0.76
+      yaw: 270
+      focal: 0
+    - role: Rural Craft Yard
+      asset: Ceramic Kiln Workshop
+      alternatives:
+      - Striped Roman Market
+      - Roman Insula Shops
+      layer: 0
+      distance: 21
+      x: -26
+      scale: 0.74
+      yaw: 270
+      focal: 0
+    - role: Roadside Garden
+      asset: Tiered Fountain Garden
+      alternatives:
+      - Courtyard Roman Villa
+      - Statue and Mosaic Plaza
+      layer: 0
+      distance: 43
+      x: -29
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Garden Frame
+      asset: Olive Tree
+      alternatives: []
+      layer: 2
+      distance: 15
+      x: -21
+      scale: 0.82
+      yaw: 270
+      focal: 0
+    - role: Garden Frame
+      asset: Olive Tree
+      alternatives: []
+      layer: 2
+      distance: 50
+      x: -25
+      scale: 0.78
+      yaw: 270
+      focal: 0
+    - role: Workshop Deliveries
+      asset: Roman Produce Cart
+      alternatives: []
+      layer: 1
+      distance: 28
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Roadside Water
+      asset: Stone Well With Winch
+      alternatives: []
+      layer: 1
+      distance: 37
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Villa Entry
+      asset: Terracotta Garden Planter
+      alternatives: []
+      layer: 1
+      distance: 2
+      x: -17
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Villa Entry
+      asset: Terracotta Garden Planter
+      alternatives: []
+      layer: 1
+      distance: 10
+      x: -17
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Workshop Goods
+      asset: Roman Amphora
+      alternatives: []
+      layer: 1
+      distance: 24
+      x: -19
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Workshop Goods
+      asset: Roman Amphora
+      alternatives: []
+      layer: 1
+      distance: 25.5
+      x: -19.2
+      scale: 0.65
+      yaw: 270
+      focal: 0
+    - role: Edge Farmland
+      asset: Countryside Terraced Vineyard
+      alternatives:
+      - Countryside Fenced Farmstead
+      layer: 4
+      distance: 30
+      x: -54
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Villa Garden Apron
+      distance: 10
+      length: 19
+      x: -23
+      width: 20
+    - name: Workshop Yard
+      distance: 28
+      length: 16
+      x: -24
+      width: 22
+  - name: Basilica and Bell Courtyard
+    length: 70
+    slots:
+    - role: Focus Basilica
+      asset: Turquoise Dome Basilica
+      alternatives: []
+      layer: 0
+      distance: 25
+      x: -38
+      scale: 0.46
+      yaw: 270
+      focal: 1
+    - role: Bell Courtyard
+      asset: Ivory Belfry Courtyard
+      alternatives: []
+      layer: 0
+      distance: 58
+      x: -33
+      scale: 0.43
+      yaw: 270
+      focal: 0
+    - role: Sacred Entry Sculpture
+      asset: Marble Emperor Statue
+      alternatives: []
+      layer: 1
+      distance: 9
+      x: -24
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Sacred Mosaic
+      asset: Framed Mosaic Panel
+      alternatives: []
+      layer: 1
+      distance: 42
+      x: -22
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Basilica Frame
+      asset: Cypress Tree
+      alternatives: []
+      layer: 2
+      distance: 10
+      x: -28
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Basilica Frame
+      asset: Cypress Tree
+      alternatives: []
+      layer: 2
+      distance: 41
+      x: -28
+      scale: 0.75
+      yaw: 270
+      focal: 0
+    - role: Belfry Garden
+      asset: Olive Tree
+      alternatives: []
+      layer: 2
+      distance: 66
+      x: -25
+      scale: 0.65
+      yaw: 270
+      focal: 0
+    - role: Pilgrim Rest
+      asset: Carved Marble Bench
+      alternatives: []
+      layer: 1
+      distance: 46
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Belfry Entry
+      asset: Terracotta Garden Planter
+      alternatives: []
+      layer: 1
+      distance: 52
+      x: -21
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Sacred Backdrop
+      asset: Horizon Hillside Monastery
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Long Roof Warehouses
+      - Horizon Citadel Ridge
+      - Horizon Abandoned Roofless Hall
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Garden Wall Pavilions
+      - Horizon Ancient Terraced Ruins
+      - Horizon Terraced Imperial Palace
+      - Horizon Round Tower City Gate
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 19
+      x: -72
+      scale: 0.95
+      yaw: 270
+      focal: 0
+    - role: Sacred Backdrop
+      asset: Horizon Twin Slender Spires
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Long Roof Warehouses
+      - Horizon Citadel Ridge
+      - Horizon Abandoned Roofless Hall
+      - Horizon River Quarter Roofline
+      - Horizon Garden Wall Pavilions
+      - Horizon Ancient Terraced Ruins
+      - Horizon Hillside Monastery
+      - Horizon Terraced Imperial Palace
+      - Horizon Round Tower City Gate
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 53
+      x: -78
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Basilica Forecourt
+      distance: 26
+      length: 35
+      x: -29
+      width: 30
+    - name: Bell Courtyard Apron
+      distance: 59
+      length: 17
+      x: -27
+      width: 24
+  - name: Pasture and Village
+    length: 65
+    slots:
+    - role: Village Home
+      asset: Courtyard Roman Villa
+      alternatives:
+      - Ceramic Kiln Workshop
+      layer: 0
+      distance: 5
+      x: -27
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Farm Produce Stall
+      asset: Striped Roman Market
+      alternatives:
+      - Ceramic Kiln Workshop
+      layer: 0
+      distance: 57
+      x: -28
+      scale: 0.64
+      yaw: 270
+      focal: 0
+    - role: Open Pasture View
+      asset: Countryside Shepherd Flock
+      alternatives:
+      - Countryside Open Olive Meadow
+      - Countryside Mountain Pasture
+      layer: 4
+      distance: 23
+      x: -46
+      scale: 0.94
+      yaw: 270
+      focal: 0
+    - role: Village Horizon
+      asset: Countryside Village Chapel
+      alternatives:
+      - Countryside Fenced Farmstead
+      - Countryside Terraced Vineyard
+      layer: 4
+      distance: 49
+      x: -65
+      scale: 0.76
+      yaw: 270
+      focal: 0
+    - role: Pasture Left Frame
+      asset: Olive Tree
+      alternatives: []
+      layer: 2
+      distance: 12
+      x: -24
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Village Frame
+      asset: Olive Tree
+      alternatives: []
+      layer: 2
+      distance: 44
+      x: -25
+      scale: 0.72
+      yaw: 270
+      focal: 0
+    - role: Wayside Water
+      asset: Stone Well With Winch
+      alternatives: []
+      layer: 1
+      distance: 34
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Wayside Rest
+      asset: Carved Marble Bench
+      alternatives: []
+      layer: 1
+      distance: 37
+      x: -17
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Farm Produce
+      asset: Roman Produce Cart
+      alternatives: []
+      layer: 1
+      distance: 53
+      x: -18
+      scale: 0.82
+      yaw: 270
+      focal: 0
+    - role: Farm Produce
+      asset: Terracotta Garden Planter
+      alternatives: []
+      layer: 1
+      distance: 60
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Village Entrance Apron
+      distance: 6
+      length: 15
+      x: -23
+      width: 18
+    - name: Wayside Well Apron
+      distance: 34
+      length: 12
+      x: -21
+      width: 16
+  - name: Shrine and Ancient Waterworks
+    length: 67
+    slots:
+    - role: Focus Round Shrine
+      asset: Circular Copper Roof Shrine
+      alternatives: []
+      layer: 0
+      distance: 18
+      x: -33
+      scale: 0.7
+      yaw: 270
+      focal: 1
+    - role: Ancient Waterworks
+      asset: Aqueduct Arcade
+      alternatives: []
+      layer: 0
+      distance: 48
+      x: -43
+      scale: 0.78
+      yaw: 270
+      focal: 0
+    - role: Waterworks Sculpture
+      asset: Marble Emperor Statue
+      alternatives: []
+      layer: 1
+      distance: 34
+      x: -24
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Archaeological Garden
+      asset: Excavated Column Fragments
+      alternatives: []
+      layer: 1
+      distance: 56
+      x: -25
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Shrine Offering
+      asset: Roman Amphora
+      alternatives: []
+      layer: 1
+      distance: 6
+      x: -20
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Shrine Mosaic
+      asset: Framed Mosaic Panel
+      alternatives: []
+      layer: 1
+      distance: 28
+      x: -22
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Aqueduct Water
+      asset: Stone Well With Winch
+      alternatives: []
+      layer: 1
+      distance: 61
+      x: -19
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Shrine Frame
+      asset: Olive Tree
+      alternatives: []
+      layer: 2
+      distance: 31
+      x: -28
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Waterworks Frame
+      asset: Cypress Tree
+      alternatives: []
+      layer: 2
+      distance: 64
+      x: -28
+      scale: 0.65
+      yaw: 270
+      focal: 0
+    - role: Ancient Backdrop
+      asset: Horizon Abandoned Roofless Hall
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Long Roof Warehouses
+      - Horizon Citadel Ridge
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Garden Wall Pavilions
+      - Horizon Ancient Terraced Ruins
+      - Horizon Hillside Monastery
+      - Horizon Terraced Imperial Palace
+      - Horizon Round Tower City Gate
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 14
+      x: -72
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Ancient Backdrop
+      asset: Horizon Citadel Ridge
+      alternatives:
+      - Horizon Stepped Hill Town
+      - Horizon Long Roof Warehouses
+      - Horizon Abandoned Roofless Hall
+      - Horizon River Quarter Roofline
+      - Horizon Twin Slender Spires
+      - Horizon Garden Wall Pavilions
+      - Horizon Ancient Terraced Ruins
+      - Horizon Hillside Monastery
+      - Horizon Terraced Imperial Palace
+      - Horizon Round Tower City Gate
+      - Horizon Gabled Merchant Quarter
+      layer: 3
+      distance: 52
+      x: -78
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Round Shrine Court
+      distance: 19
+      length: 26
+      x: -28
+      width: 27
+  lampSpacing: 11.81
