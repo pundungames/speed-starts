@@ -237,12 +237,9 @@ namespace SpeedStars.Physical
         public float frontHomeTime = 0.3f;
         [Tooltip("The air phases (recover, mid) take this share of their time at max speed.")]
         [Range(0.3f, 1f)] public float airTimeAtSpeed = 0.6f;
-        [Tooltip("While stepping, home is the crouch below x m/s and the running home above y. Only while presses " +
-                 "keep coming (see stanceKeepTime): with no input home is the crouch.")]
+        [Tooltip("While a key is down, home is the crouch below x m/s and the running home above y. With no key down " +
+                 "home is the crouch: the runner heads straight for it, no upright stance on the way.")]
         public Vector2 restToBaseSpeed = new Vector2(0.5f, 3f);
-        [Tooltip("The run stance (running home, Run pose) is kept this long after the last press (s). After that, with " +
-                 "no key down, the runner heads straight for the Ready crouch — no upright in-between stance.")]
-        public float stanceKeepTime = 0.6f;
         [Tooltip("How fast it turns from the run stance to the Ready crouch and back (1/s).")]
         public float stanceBlend = 8f;
 
@@ -320,6 +317,10 @@ namespace SpeedStars.Physical
         [Tooltip("No key down: the head comes back to headBack through this spring. Damping < 1 = it swings past " +
                  "upright and back (the sit back after a hold). Presses before it is back pile it up.")]
         public SpringSettings headReturnSpring = new SpringSettings(1f, 0.42f);
+        [Tooltip("Past headBack on its way back the head (and the body after it) goes on through this softer, " +
+                 "well damped spring: it sits back as far as the way back threw it, then comes back slowly, never " +
+                 "swinging forward again (the reference video: ~40° back, ~1.5–2 s).")]
+        public SpringSettings headSettleSpring = new SpringSettings(0.4f, 1f);
         [Tooltip("Most the head goes forward (deg).")]
         public float headForwardMax = 80f;
         [Tooltip("Small nod every press gives the head (deg/s), whatever the press: keeps it alive.")]
@@ -340,9 +341,10 @@ namespace SpeedStars.Physical
         [Header("Body: the waist is fixed, the hips take all the lean (head → neck → hips)")]
         [Tooltip("B-spine's bend on the hips (deg, its Inspector X): fixed, the waist itself never bends.")]
         public float waistAngle = 6.5f;
-        [Tooltip("Hip pitch range (deg, + = forward): the lean — the head's pull, the dive — turns " +
-                 "the hips, never past these. The pose's own pelvisPitch is included.")]
-        public Vector2 pelvisPitchRange = new Vector2(-40f, 115f);
+        [Tooltip("Hip pitch range (deg, + = forward): the forward lean — the head's pull, the dive — turns " +
+                 "the hips, never past these (the pose's own pelvisPitch included). Leaning back is the whole body " +
+                 "about the feet instead (see Update), not the hips.")]
+        public Vector2 pelvisPitchRange = new Vector2(-10f, 115f);
 
         [Header("Arms (deg, + = forward): one key moves one leg and one arm — right key: right leg + left arm")]
         [Tooltip("Upper arm (deg, −) with its leg all the way back — fixed: speed and the key poses do not move it, " +
@@ -374,7 +376,7 @@ namespace SpeedStars.Physical
         Quaternion _restHipRot, _restSpineRoot, _restSpineTip;
         float _ground, _sole, _profileW, _runHome;
         float _restWaist;                          // B-spine's bend on the hips at rest (deg)
-        float _stepping;                           // 1 = presses keep coming (run stance), 0 = none: Ready crouch
+        float _stepping;                           // 1 = a key is down (run stance), 0 = none: Ready crouch
         Spring _bodyY, _lean;                      // the hips' lean after the head (deg)
         Spring _head;                              // the head angle (deg)
         Spring _headFwd;                           // where the keys have taken the head (deg), coming back with no key down
@@ -754,9 +756,9 @@ namespace SpeedStars.Physical
             }
             else
             {
-                // The Ready crouch is where the runner always heads; the run stance only lasts while presses
-                // keep coming, so stopping goes straight back to the crouch (no upright stance on the way).
-                bool stepping = sim.Legs[0].Pressed || sim.Legs[1].Pressed || sim.Time - sim.LastPressTime < stanceKeepTime;
+                // The Ready crouch is where the runner always heads; the run stance only lasts while a key is
+                // down, so with no input it goes straight back to the crouch (no upright stance on the way).
+                bool stepping = sim.Legs[0].Pressed || sim.Legs[1].Pressed;
                 _stepping = Mathf.Lerp(_stepping, stepping ? 1f : 0f, 1f - Mathf.Exp(-stanceBlend * dt));
                 p = PoseData.Lerp(Get(ready, RunnerPoseDefaults.Ready), Get(run, RunnerPoseDefaults.Run),
                     Mathf.SmoothStep(0f, 1f, sim.Speed / Mathf.Max(0.01f, runPoseSpeed)) * _stepping);
@@ -778,8 +780,10 @@ namespace SpeedStars.Physical
             _headAngle = preview ? 0f : UpdateHead(now, dt);
             if (!preview) lean = UpdateLean(dt) + UpdateTip(dt);
 
-            // 3. The hips take all the lean (the waist is fixed): they follow the head, within pelvisPitchRange.
-            float hipPitch = Mathf.Clamp(p.pelvisPitch + lean, pelvisPitchRange.x, pelvisPitchRange.y);
+            // 3. Forward the hips take the lean (the waist is fixed): they follow the head, within
+            //    pelvisPitchRange. Back, the whole body leans about the feet on the ground (below, after the height).
+            float backLean = Mathf.Min(0f, lean);
+            float hipPitch = Mathf.Clamp(p.pelvisPitch + lean - backLean, pelvisPitchRange.x, pelvisPitchRange.y);
             float legTurn = hipPitch - p.pelvisPitch;   // the lean part only: the pose's own tilt does not turn the legs
             Quaternion pelvisTilt = Quaternion.Euler(hipPitch, 0f, 0f);
 
@@ -802,14 +806,17 @@ namespace SpeedStars.Physical
                 leg.ankle.y += bodyY;
                 leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + HeelLift(leg));
             }
+            if (backLean < 0f) SitBack(ref hip, backLean);
 
             // Write the rig. The waist sits at waistAngle on the hips whatever they do; the trunk angle the neck
             // and head work from is the hips' plus that bend (0 = the rig's rest).
             Quaternion rootRot = transform.rotation;
             hipTarget.position = transform.TransformPoint(hip);
-            hipTarget.rotation = rootRot * pelvisTilt * _restHipRot;
+            hipTarget.rotation = rootRot * Quaternion.Euler(backLean, 0f, 0f) * pelvisTilt * _restHipRot;
             spineRootTarget.rotation = hipTarget.rotation * Quaternion.Euler(waistAngle, 0f, 0f);
-            WriteHead(hipPitch + waistAngle - _restWaist, p.pelvisPitch + waistAngle - _restWaist, p.headDown, rootRot);
+            // Leaning back the head goes with the body, in line with it.
+            WriteHead(hipPitch + backLean + waistAngle - _restWaist, p.pelvisPitch + backLean + waistAngle - _restWaist,
+                _headAngle - backLean, p.headDown, rootRot);
             WriteLeg(leftLeg);
             WriteLeg(rightLeg);
 
@@ -823,7 +830,8 @@ namespace SpeedStars.Physical
         /// The head angle (deg, + = forward). One input per key, down or up: while a key is down the head goes
         /// forward — headKick at once (within ~0.1 s), then on at holdPush as the key's hold weight builds up —
         /// and does not come back; with no key down it comes back to headBack (past upright while running,
-        /// upright standing in the crouch) through headReturnSpring, swinging past and back. A tap is a short
+        /// upright standing in the crouch) through headReturnSpring, and past it through the softer
+        /// headSettleSpring: it sits back as far as it was thrown and comes back slowly. A tap is a short
         /// hold. Presses coming before it is back pile it up; on the rhythm push and return balance about
         /// upright. The head follows it through its own spring, so it lags and swings a little more.
         /// </summary>
@@ -833,7 +841,12 @@ namespace SpeedStars.Physical
             if (leftLeg.held || rightLeg.held)
                 _headFwd.Velocity *= Mathf.Exp(-HeldStop * dt);   // a key down stops the way back
             else
-                _headFwd.Step(headBack * _stepping, headReturnSpring.frequency, headReturnSpring.damping, dt);
+            {
+                // Back to upright fast; past headBack the soft settle spring takes over (no swing forward again).
+                float back = headBack * Running();
+                var s = _headFwd.Value > back ? headReturnSpring : headSettleSpring;
+                _headFwd.Step(back, s.frequency, s.damping, dt);
+            }
             _headFwd.Value += push;
             if (_headFwd.Value > headForwardMax)
             {
@@ -843,6 +856,10 @@ namespace SpeedStars.Physical
             _head.Step(_headFwd.Value, headSpring.frequency, headSpring.damping, dt);
             return _head.Value;
         }
+
+        /// <summary>How much the runner is running (0 = standing in the crouch, 1 = at speed), from the sim's speed.</summary>
+        float Running() => body && body.Sim != null
+            ? Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(restToBaseSpeed.x, restToBaseSpeed.y, body.Sim.Speed)) : 0f;
 
         /// <summary>
         /// How far one key takes the head forward this frame (deg): the first moment of a key down gives
@@ -874,16 +891,39 @@ namespace SpeedStars.Physical
         /// comes on top. The trunk itself (the pose's plus the lean the hips have followed) only lags behind it,
         /// so the neck bends the difference, never past neckMax. The head is aimed by placing its look target.
         /// </summary>
-        void WriteHead(float trunk, float poseTrunk, float headDown, Quaternion rootRot)
+        void WriteHead(float trunk, float poseTrunk, float head, float headDown, Quaternion rootRot)
         {
             float follow = Mathf.Lerp(Mathf.Max(0f, poseTrunk - neckMax), poseTrunk, headDown);
-            float pitch = Mathf.Clamp(follow + _headAngle, trunk - neckMax + headBack, trunk + neckMax);
+            float pitch = Mathf.Clamp(follow + head, trunk - neckMax + headBack, trunk + neckMax);
             float neck = Mathf.Clamp(pitch - trunk, -neckMax, neckMax) * NeckShare;
             spineTipTarget.rotation = rootRot * Quaternion.Euler(trunk + neck, 0f, 0f) * _restSpineTip;
             if (!_headAim || !_headBone || !_lookTarget) return;
 
             _headAim.weight = 1f;
             _lookTarget.position = _headBone.position + rootRot * (Quaternion.Euler(pitch, 0f, 0f) * Vector3.forward) * _lookDistance;
+        }
+
+        /// <summary>
+        /// Leaning back (deg, −) is the whole body about the feet on the ground: the pelvis swings back and a little
+        /// down around them, the legs in the air go round with it, the feet on the ground stay where they are (the
+        /// leg IK bends those knees, the legs end up angled forward). Trunk and head turn with it (Update). With no
+        /// foot on the ground it turns about the pelvis.
+        /// </summary>
+        void SitBack(ref Vector3 hip, float backLean)
+        {
+            Vector3 pivot = hip;
+            int n = 0;
+            Vector3 sum = Vector3.zero;
+            foreach (var leg in new[] { leftLeg, rightLeg })
+                if (Carries(leg)) { sum += leg.ankle; n++; }
+            if (n > 0) pivot = sum / n;
+            Quaternion r = Quaternion.Euler(backLean, 0f, 0f);
+            hip = pivot + r * (hip - pivot);
+            foreach (var leg in new[] { leftLeg, rightLeg })
+            {
+                leg.knee = pivot + r * (leg.knee - pivot);
+                if (!Carries(leg)) leg.ankle = pivot + r * (leg.ankle - pivot);
+            }
         }
 
         /// <summary>
@@ -983,14 +1023,16 @@ namespace SpeedStars.Physical
         /// <summary>
         /// The body's lean (deg, + forward; the hips take it, the waist stays fixed): the hips follow the head
         /// angle all the way (hipFollow), no threshold, through a spring so the head leads and the body bends
-        /// after it — forward, and back when the head swings past upright. Holding leans it too, through the head.
-        /// Nothing else moves it. How low it gets is
+        /// after it. Back it only takes the head's swing past where the head rests (headBack while running): the
+        /// head alone tips back there, the body sits back only when the way back throws the head beyond it
+        /// (about the feet, see SitBack). Holding leans it too, through the head. Nothing else moves it. How low it gets is
         /// up to the legs: they keep the hips at their height (UpdateBodyHeight), so with a foot carrying the
         /// body the head cannot reach the ground. The sim's own lean stays for the game (stumble losses).
         /// </summary>
         float UpdateLean(float dt)
         {
-            _lean.Step(_headAngle * hipFollow, hipFollowSpring.frequency, hipFollowSpring.damping, dt);
+            float head = _headAngle >= 0f ? _headAngle : Mathf.Min(0f, _headAngle - headBack * Running());
+            _lean.Step(head * hipFollow, hipFollowSpring.frequency, hipFollowSpring.damping, dt);
             return _lean.Value;
         }
 
