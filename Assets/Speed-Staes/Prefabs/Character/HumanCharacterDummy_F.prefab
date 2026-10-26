@@ -143,7 +143,6 @@ Transform:
   - {fileID: 2304953604001790437}
   - {fileID: 1219583599488615129}
   - {fileID: 1106436310603109794}
-  - {fileID: 3054646626354355458}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &613470436980688880
@@ -291,7 +290,7 @@ MonoBehaviour:
     hopVelocity: 1
     hopAtRest: 0.8
     gravity: 9.81
-    simultaneousWindow: 0.06
+    togetherWindow: 0.08
     earlyEfficiency: 0.15
     lateGrace: 0.08
     lateFloorTime: 0.45
@@ -302,7 +301,6 @@ MonoBehaviour:
     minStepTime: 0.14
     holdThrust: 1
     holdThrustTime: 0.6
-    bothMultiplier: 1.5
     holdDrag: 0
     extRise:
       frequency: 6
@@ -320,7 +318,6 @@ MonoBehaviour:
       frequency: 1
       damping: 0.3
     lungeLean: 40
-    diveLean: 75
     runLean: 8
     leanKick: 40
     stumbleKick: 3
@@ -358,30 +355,33 @@ MonoBehaviour:
     shinBone: {fileID: 0}
     footBone: {fileID: 0}
     toeBone: {fileID: 0}
-    front: {fileID: 1642301508058930912}
-    back: {fileID: 6363600029984284342}
-    rest: {fileID: 5235000606029645724}
     restAnkle: {x: 0, y: 0, z: 0}
-    restHintFromHip: {x: 0, y: 0, z: 0}
     ballOffset: {x: 0, y: 0, z: 0}
     toeInFoot: {x: 0, y: 0, z: 0}
     restHingeInThigh: {x: 0, y: 0, z: 0}
     restHingeInShin: {x: 0, y: 0, z: 0}
+    hipJointFromHip: {x: 0, y: 0, z: 0}
+    thighLength: 0
+    shinLength: 0
     restFootInShin: {x: 0, y: 0, z: 0, w: 0}
     restFootRunner: {x: 0, y: 0, z: 0, w: 0}
     restToeInFoot: {x: 0, y: 0, z: 0, w: 0}
-    lastState: 0
-    lastStateTime: 0
-    fromBall: {x: 0, y: 0, z: 0}
-    baseBall: {x: 0, y: 0, z: 0}
-    midBall: {x: 0, y: 0, z: 0}
-    height: 0
-    contact: 0
-    support: 0
-    liftedOff: 0
-    fromPitch: 0
-    basePitch: 0
+    phase: 0
+    phaseTime: 0
+    duration: 0
+    held: 0
+    from:
+      thigh: 0
+      knee: 0
+    angles:
+      thigh: 0
+      knee: 0
+    follow: 0
+    thighWorld: 0
+    knee: {x: 0, y: 0, z: 0}
+    ankle: {x: 0, y: 0, z: 0}
     pitch: 0
+    fromPitch: 0
     strideW: 0
     width: 0
     toeRoll: 0
@@ -394,30 +394,33 @@ MonoBehaviour:
     shinBone: {fileID: 0}
     footBone: {fileID: 0}
     toeBone: {fileID: 0}
-    front: {fileID: 7568157914351393241}
-    back: {fileID: 7390973176069695723}
-    rest: {fileID: 5619140730307354525}
     restAnkle: {x: 0, y: 0, z: 0}
-    restHintFromHip: {x: 0, y: 0, z: 0}
     ballOffset: {x: 0, y: 0, z: 0}
     toeInFoot: {x: 0, y: 0, z: 0}
     restHingeInThigh: {x: 0, y: 0, z: 0}
     restHingeInShin: {x: 0, y: 0, z: 0}
+    hipJointFromHip: {x: 0, y: 0, z: 0}
+    thighLength: 0
+    shinLength: 0
     restFootInShin: {x: 0, y: 0, z: 0, w: 0}
     restFootRunner: {x: 0, y: 0, z: 0, w: 0}
     restToeInFoot: {x: 0, y: 0, z: 0, w: 0}
-    lastState: 0
-    lastStateTime: 0
-    fromBall: {x: 0, y: 0, z: 0}
-    baseBall: {x: 0, y: 0, z: 0}
-    midBall: {x: 0, y: 0, z: 0}
-    height: 0
-    contact: 0
-    support: 0
-    liftedOff: 0
-    fromPitch: 0
-    basePitch: 0
+    phase: 0
+    phaseTime: 0
+    duration: 0
+    held: 0
+    from:
+      thigh: 0
+      knee: 0
+    angles:
+      thigh: 0
+      knee: 0
+    follow: 0
+    thighWorld: 0
+    knee: {x: 0, y: 0, z: 0}
+    ankle: {x: 0, y: 0, z: 0}
     pitch: 0
+    fromPitch: 0
     strideW: 0
     width: 0
     toeRoll: 0
@@ -436,12 +439,8 @@ MonoBehaviour:
     parentRest: {x: 0, y: 0, z: 0, w: 0}
     restDir: {x: 0, y: 0, z: 0}
     side: 0
-    swing:
-      Value: 0
-      Velocity: 0
-    elbow:
-      Value: 0
-      Velocity: 0
+    swing: 0
+    elbow: 0
   rightArm:
     upperArm: {fileID: 0}
     forearm: {fileID: 0}
@@ -454,27 +453,62 @@ MonoBehaviour:
     parentRest: {x: 0, y: 0, z: 0, w: 0}
     restDir: {x: 0, y: 0, z: 0}
     side: 0
-    swing:
-      Value: 0
-      Velocity: 0
-    elbow:
-      Value: 0
-      Velocity: 0
+    swing: 0
+    elbow: 0
   ready: {fileID: 11400000, guid: 9dfb07f5159caca44827bf349ec7a448, type: 2}
   run: {fileID: 11400000, guid: bca7447b8bddcda45960b3d8d5065024, type: 2}
-  lungeLeft: {fileID: 11400000, guid: 75b5c9050a0eeaf438d4cc4bb3255865, type: 2}
-  lungeRight: {fileID: 11400000, guid: 4532c098826eec04fabbb102461babab, type: 2}
-  dive: {fileID: 11400000, guid: 2da47b83603728f429acc4c896633cc3, type: 2}
   stumble: {fileID: 11400000, guid: b3e3ee7000fd18c4ea3939576bef5897, type: 2}
   runPoseSpeed: 4
   stumbleBlendRange: 15
-  strideSpeed: 6
-  returnSpeed: 2.5
-  minMoveTime: 0.05
+  crouch:
+    thigh: 40
+    knee: 100
+  runHome:
+    thigh: 10
+    knee: 160
+  pushEnd:
+    thigh: -30
+    knee: 150
+  recover:
+    thigh: -40
+    knee: 100
+  mid:
+    thigh: 15
+    knee: 70
+  reach:
+    thigh: 47
+    knee: 175
+  holdBack:
+    thigh: -45
+    knee: 159
+  holdSupport:
+    thigh: 80
+    knee: 100
+  maxKnee: 177
+  heldLegMaxAngle: 79
+  pushTime: {x: 0.12, y: 0.08}
+  recoverTime: 0.15
+  midTime: 0.15
+  homeTime: 0.15
+  frontHomeTime: 0.3
+  holdBlendTime: 0.15
+  airTimeAtSpeed: 0.6
   restToBaseSpeed: {x: 0.5, y: 3}
+  stanceKeepTime: 0.6
+  stanceBlend: 8
+  heightSpring:
+    frequency: 8
+    damping: 0.8
+  diveTime: {x: 0.3, y: 0.5}
+  diveSpeed: 0.9
+  diveLean: 115
+  headRest: 0.15
+  diveRecover:
+    frequency: 3
+    damping: 1
   pitchBack: 50
   accelProfile:
-    touchdownPitch: -8
+    touchdownPitch: -17
     stancePitch:
       serializedVersion: 2
       m_Curve:
@@ -662,7 +696,7 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   maxSpeedProfile:
-    touchdownPitch: -12
+    touchdownPitch: -15
     stancePitch:
       serializedVersion: 2
       m_Curve:
@@ -854,29 +888,34 @@ MonoBehaviour:
   toeLength: 0.06
   toeUpMax: 55
   toeDownMax: 15
-  loopHeight: 0.25
-  loopSkew: 0.79
-  kneeHintOffset: {x: 0, y: -0.35, z: 0.6}
-  groundBlendTime: 0.25
   ankleUpMax: 25
   ankleDownMax: 70
-  kneeLeanFollow: 0.4
-  maxLegReach: 0.97
-  stanceCompression: 0.06
-  contactSpring:
-    frequency: 14
-    damping: 1
-  bodySpring:
-    frequency: 3
+  holdLean: 85
+  speedLean: 8
+  stepKick: 30
+  waistSpring:
+    frequency: 1.2
     damping: 0.35
-  liftKick: 0.5
-  armSpring:
-    frequency: 3.5
-    damping: 0.4
-  headFollowLean: 25
-  armFront: 45
+  headBack: -15
+  headFallSpring:
+    frequency: 2
+    damping: 1
+  earlyKick: 25
+  headReturn: 2.5
+  pressReturn: 0.4
+  headForwardMax: 80
+  headNod: 60
+  holdHead: 20
+  oneFootMax: 25
+  headSpring:
+    frequency: 6
+    damping: 0.5
+  neckMax: 35
+  trunkFollow: 1
+  waistAngle: 6.5
+  pelvisPitchRange: {x: -10, y: 90}
   armBack: -40
-  elbowSwing: 15
+  elbowBack: 30
   armOutward: 8
   shoulderFollow: 12
   preview: 0
@@ -2167,40 +2206,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7507220795517875836}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &980862335070173979
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3755187710898900139}
-  m_Layer: 0
-  m_Name: Right
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3755187710898900139
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 980862335070173979}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.05, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 7568157914351393241}
-  - {fileID: 7390973176069695723}
-  - {fileID: 5619140730307354525}
-  m_Father: {fileID: 3054646626354355458}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &986560786685692760
 GameObject:
   m_ObjectHideFlags: 0
@@ -2682,13 +2687,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1164213898384006724}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.039128218, y: -0.00000013789433, z: -0.000000008290564, w: 0.9992342}
+  m_LocalRotation: {x: 0.0356876, y: 0.00030960923, z: 0.008014503, w: 0.99933076}
   m_LocalPosition: {x: 0, y: 0.9797114, z: 0.016771913}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 6412118246876032491}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 4.09, y: 0.068, z: 0.921}
 --- !u!1 &1306434551834713774
 GameObject:
   m_ObjectHideFlags: 0
@@ -3790,40 +3795,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 5840803781673122729}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2294658056045335763
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3402781664275306829}
-  m_Layer: 0
-  m_Name: Left
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3402781664275306829
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2294658056045335763}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.05, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1642301508058930912}
-  - {fileID: 6363600029984284342}
-  - {fileID: 5235000606029645724}
-  m_Father: {fileID: 3054646626354355458}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2359043622450481809
 GameObject:
@@ -6099,37 +6070,6 @@ Transform:
   - {fileID: 8309251158967180299}
   m_Father: {fileID: 892929968025251252}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &3294024049727647205
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 7568157914351393241}
-  m_Layer: 0
-  m_Name: Front
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &7568157914351393241
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3294024049727647205}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.11825466, y: 0.21539803, z: 0.4928}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3755187710898900139}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3301319496221130165
 GameObject:
   m_ObjectHideFlags: 0
@@ -7084,37 +7024,6 @@ Transform:
   - {fileID: 6167573081285066787}
   - {fileID: 1685418359167387766}
   m_Father: {fileID: 5494094436783920855}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &3596111218296576484
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6363600029984284342}
-  m_Layer: 0
-  m_Name: Back
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6363600029984284342
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3596111218296576484}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.11825502, y: 0.422, z: -0.47199994}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3402781664275306829}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3824835777482108003
 GameObject:
@@ -8819,37 +8728,6 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.0000011920929, y: 0.8454781, z: 0.049275354}
     m_Extent: {x: 0.9183154, y: 0.953139, z: 0.2004115}
   m_DirtyAABB: 0
---- !u!1 &5100568457423580026
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1642301508058930912}
-  m_Layer: 0
-  m_Name: Front
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1642301508058930912
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5100568457423580026}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.11825502, y: 0.2154, z: 0.4928}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3402781664275306829}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5139198767095966842
 GameObject:
   m_ObjectHideFlags: 0
@@ -10106,37 +9984,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 5840803781673122729}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &5935558009224178355
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 5619140730307354525}
-  m_Layer: 0
-  m_Name: Rest
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &5619140730307354525
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5935558009224178355}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.11825466, y: 0.3306573, z: 0.21646838}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3755187710898900139}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5973858584103449166
 GameObject:
   m_ObjectHideFlags: 0
@@ -11133,39 +10980,6 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.0000011920929, y: 0.8454781, z: 0.049275354}
     m_Extent: {x: 0.9183154, y: 0.953139, z: 0.2004115}
   m_DirtyAABB: 0
---- !u!1 &6223378567670302406
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3054646626354355458}
-  m_Layer: 0
-  m_Name: Step Points
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3054646626354355458
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6223378567670302406}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 3402781664275306829}
-  - {fileID: 3755187710898900139}
-  m_Father: {fileID: 5486146632621593019}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6243304230824399210
 GameObject:
   m_ObjectHideFlags: 0
@@ -12735,37 +12549,6 @@ Transform:
   - {fileID: 6523627843923071}
   m_Father: {fileID: 6435911874620252086}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &6925492020299145391
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 7390973176069695723}
-  m_Layer: 0
-  m_Name: Back
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &7390973176069695723
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6925492020299145391}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.11825466, y: 0.422, z: -0.472}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3755187710898900139}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6944922934880300571
 GameObject:
   m_ObjectHideFlags: 0
@@ -13192,37 +12975,6 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.0000011920929, y: 0.8454781, z: 0.049275354}
     m_Extent: {x: 0.9183154, y: 0.953139, z: 0.2004115}
   m_DirtyAABB: 0
---- !u!1 &7037358682044780487
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 5235000606029645724}
-  m_Layer: 0
-  m_Name: Rest
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &5235000606029645724
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7037358682044780487}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.11825502, y: 0.3306592, z: 0.21646632}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3402781664275306829}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7038683156977028838
 GameObject:
   m_ObjectHideFlags: 0

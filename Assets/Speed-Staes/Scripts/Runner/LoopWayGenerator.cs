@@ -48,7 +48,7 @@ namespace SpeedStars.Runner
         void Start()
         {
             if(!Application.isPlaying||!streamAtRuntime||!IsConfigured)return;
-            if(!runner){var movement=FindObjectOfType<RunnerMovement>();if(movement)runner=movement.transform;}
+            if(!runner){var movement=FindObjectOfType<SpeedStars.Physical.RunnerBody>();if(movement)runner=movement.transform;}
             if(loopCount<2)loopCount=2;
             Generate();
         }

@@ -77,7 +77,7 @@ namespace SpeedStars.Editor
             var furniture=Child(g,"Street Furniture - Beyond Camera");var props=furniture.Cast<Transform>().Select((t,i)=>CaptureAsset(g,t,"StreetProp_"+i)).ToList();
             props.Add(CaptureAsset(g,Child(g,"Vending Machine - Pastel Drinks"),"StreetProp_Vending"));
             for(int i=0;i<2;i++)props.Add(CreateExtraProp(g,i));props.AddRange(StreetPropCatalogBuilder.Build(g));g.props=props.ToArray();
-            var movement=UnityEngine.Object.FindObjectOfType<RunnerMovement>();if(movement)g.runner=movement.transform;
+            var movement=UnityEngine.Object.FindObjectOfType<SpeedStars.Physical.RunnerBody>();if(movement)g.runner=movement.transform;
             if(g.busStop==null||!g.busStop.prefab||g.park==null||!g.park.prefab||g.hospital==null||!g.hospital.prefab)LoopWayLandmarkBuilder.Setup(g);
             g.configured=true;EditorUtility.SetDirty(g);AssetDatabase.SaveAssets();EditorSceneManager.MarkSceneDirty(g.gameObject.scene);
         }

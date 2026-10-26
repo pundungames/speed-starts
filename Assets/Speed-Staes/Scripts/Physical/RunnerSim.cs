@@ -159,8 +159,6 @@ namespace SpeedStars.Physical
         public double LastPressTime { get; private set; }
         public PressResult LastResult { get; private set; }
         public float LastEfficiency { get; private set; }
-        /// <summary>When the body last came down (or a held foot stayed down): a press right after it is on time.</summary>
-        public double LandTime => _landTime;
 
         public float Lean => LeanSpring.Value;
         /// <summary>The part of the lean the hold poses ask for (deg); Lean − PoseLean beyond stumbleLean is stumbling.</summary>
