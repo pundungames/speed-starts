@@ -71,8 +71,11 @@ Rig (Control Rig): `Hip target` (MultiParent → `B-hips`), `Spine Root/Tip Targ
 - **Gövde yüksekliği açılardan:** Kalça, en alttaki ayak tam zemine değecek yükseklikte. Açı genişleyince bacak
   uzar → gövde kalkar; kapanınca iner. Ayak zemine girmez, hafif kayma kabul. Ayrı zıplama yok.
 - **Zincir baş → boyun → kalça (2026-10-26):** Bel **sabit**: `B-spine` X = `waistAngle` (6.5), hiç bükülmez.
-  Bütün eğim (tutma `holdLean`, başın çekişi, `speedLean`, dalış) **kalçadan**: kalça açısı = pozun `pelvisPitch`
-  + eğim, `pelvisPitchRange` −10 … 90 (bu bizim açımız; Inspector'daki `Hip target` X'e kemiğin dinlenme açısı
+  Eğim **sadece baştan** (+ dalış): kalça baş açısını **baştan sona** takip eder (`hipFollow` 1, yayla
+  `hipFollowSpring`, eşik yok — önce baş gider, kalça arkasından eğilir). `holdLean`, `speedLean`, `stepKick`,
+  `waistSpring`, `trunkFollow` kaldırıldı. Eğilmenin sınırını ayaklar koyar: yerde ayak varken / bacaklar
+  toparlanırken gövde kalkar, baş yere değemez. Eğim **kalçadan**: kalça açısı = pozun `pelvisPitch`
+  + eğim, `pelvisPitchRange` −40 … 90 (geriye taşma için açıldı; bu bizim açımız; Inspector'daki `Hip target` X'e kemiğin dinlenme açısı
   4.5 eklenir). Ready pozu kalça −10 (geride). Kalçanın yeri bacaklardan gelir, sadece açısı değişir.
   **Bacaklar kalçaya göre**: havadaki ve tutulan bacaklar kalçanın *eğim* kısmıyla döner (pozun sabit
   eğimiyle değil); yere basan bacak (Rest, Front/destek, taşıyan Push) yere göre kalır (`FollowHips`).
@@ -80,16 +83,26 @@ Rig (Control Rig): `Hip target` (MultiParent → `B-hips`), `Spine Root/Tip Targ
   `pelvisWaistShare` ve pozdaki `trunkPitch`/`armSwing` kaldırıldı.
 - **Tek ayak tutma:** Tutulan bacak `holdBack` (geride, düz); öndeki bacak tutma yayıyla `holdSupport`'a geçer
   (alt bacak dik, diz ~100°) ve taşır; kalça ayağın arkasında-üstünde, üstüne çökmez. Gövde 1–2 sn'de akarak
-  ön bacağın üstüne katlanır (`holdLean` 85°/ayak, kalçadan); arka bacak kalçayla birlikte yataya kalkar
+  ön bacağın üstüne katlanır (başın üstünden: basılı kaldıkça `holdPush` başı öne akıtır, kalça takip eder; ölçüm: ~1.5 sn'de kalça 90); arka bacak kalçayla birlikte yataya kalkar
   (`heldLegMaxAngle`). Referans: ikinci video, 1.4–3.4 sn.
-- **Baş ve boyun (`UpdateHead`):** Tek bir baş açısı (geride ↔ dik ↔ önde). Hızla **aynı kaynak, ters
-  grafik**: basışın verimi (`LastEfficiency`), **eğri, eşik yok**. İyi basış dikleştirir ve öndeki başı
-  `pressReturn × verim` kadar geri alır; boşa basış `earlyKick × (1 − verim)` öne iter. Öndeki baş **her an**
-  geri döner (`headReturn`, basış olsa da olmasa da, bekleme yok); önde sadece boşa basışlar dönüşten hızlı
-  geldikçe kalır. Bel başı izler, yayıyla (`waistSpring`) biraz geriye taşıp oturur. Boşa basış beli öne
-  iter (`stepKick × (1 − verim)`), doğru basış itmez. Tuş basılı değilken baş geriye düşer. Her basışta küçük
-  bir sallanma (`headNod`). Tutulan ayak başı öne iter (`holdHead`; tek ayak `oneFootMax` tavanlı, iki ayak
-  tavansız). Boyun `neckMax`'a kadar alır, aşan kısım beli çeker (gövde başı takip eder).
+- **Basma = kısa tutma, tek akış (2026-10-26, kullanıcı: "bas-çek ve basılı tutma diye ayrım olmasın"):** Her tuşun
+  tek bilgisi var: basılı mı. Görselde eşik / mod yok. Tuşun **tutma ağırlığı** (`holdIn`/`holdOut`) basıldığı an
+  dolmaya başlar; fizikteki `HoldValue` (0.14 sn eşikli) görselde kullanılmaz. Bacak: `Push` hedefi baştan
+  `Lerp(pushEnd, holdBack, ağırlık)`, itiş bitince tuş basılıysa `Hold`'a **blendsiz** devam (aynı hareket);
+  ayak açısı da itişten tutmaya ağırlıkla geçer (`holdBlendTime` kaldırıldı). **Fizik (`RunnerSim`) henüz eski
+  ayrımla** (darbe + 0.14 sn sonra tutma itişi): sıradaki adım, video değerleriyle kontrol ederek.
+- **Baş ve boyun (`UpdateHead`, 2026-10-26):** Tek bir baş açısı (geride ↔ dik ↔ önde). **Verime bakılmaz**.
+  Tuş basılıyken baş öne gider: ilk anda `headKick` (24°, ~0.1 sn içinde; her basış aynı), basılı kaldıkça
+  `holdPush` (40°/sn × ağırlık) ile akarak; tuş basılıyken **geri gelmez**. Hiç tuş yokken bir yayla
+  (`headReturnSpring` 1 Hz / 0.42) `headBack`'e döner, dik konumu geçip geriye taşar ve oturur. Baş geri gelmeden
+  basmak itişleri biriktirir → baş öne yatar → kalça takip eder → eğilme; ritimde dengede, seyrekte geride.
+  Kullanıcının tarifi: "basınca öne gider, bırakınca geri gelir; geri gelmeden basarsan daha öne". Her basışta
+  küçük sallanma (`headNod`). Kalça başı geriye de izler (`pelvisPitchRange` −40 … 90). Boyun kalçanın henüz
+  takip etmediği farkı büker (en fazla `neckMax`).
+  Play ölçümü (2026-10-26; kalça kemiğinin açısı): ritim 0.3 sn → kalça ort. 20°, baş ort. +10° (−2…+21);
+  sık basma 0.1 sn → kalça ~86°, baş ~78°; tek ayak tutma → ~1.56 sn'de kalça 75°; bırakınca (sık basma da,
+  tutma da) ~0.34 sn'de dik, geriye taşma: sık basmadan −35°/−37°, tutmadan −25°/−21° (video: ~0.25 sn, 30–40°).
+  Kalça 0.8 m civarında kalır (bacaklar taşıyor), baş yere değmez.
 - **Hazır yatma pozu yok** (kullanıcı reddetti: tahta gibi yatış, dümdüz bacaklar). Çok sık basmada gövde
   alçalır ama bacaklar fazlarında koşmaya devam eder.
 - **İki ayak tutma = dalış, karakter yere iner** (2026-10-26, kullanıcı düzeltti; önceki "düşme yok" yanlıştı;
