@@ -112,7 +112,7 @@ namespace SpeedStars.Physical
                         replay.Play(i);
                 y += 26f;
             }
-            GUI.Label(new Rect(x, y, w, 20f), "←/→ veya ekranın sol/sağ yarısı · bitişte başa döner · H gizle", _label);
+            GUI.Label(new Rect(x, y, w, 20f), "N/M veya ekranın sol/sağ yarısı · bitişte başa döner · H gizle", _label);
         }
 
         void Line(ref float y, float x, string text)

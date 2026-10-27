@@ -109,6 +109,10 @@ namespace SpeedStars.Physical
         [Tooltip("Past headBack the head (and the body after it) goes on through this softer, well damped spring: it sits " +
                  "back as far as the way back threw it, then comes back slowly, never swinging forward again.")]
         public SpringSettings headSettleSpring = new SpringSettings(0.4f, 1f);
+        [Tooltip("After the last key comes up the way back starts soft and reaches full strength over this long (s): " +
+                 "a press coming sooner finds it still weak, so quick taps pile the head up like a hold; presses on " +
+                 "the rhythm leave it time to bring the head back.")]
+        public float headReturnDelay = 0.08f;
         [Tooltip("Most the head goes forward (deg).")]
         public float headForwardMax = 80f;
         [Tooltip("Small nod every press gives the head (deg/s), whatever the press: keeps it alive.")]
@@ -216,6 +220,7 @@ namespace SpeedStars.Physical
 
         float _pending, _hopVelocity, _launchVelocity;
         Spring _head, _headFwd;   // the head angle; where the keys have taken it, coming back with no key down
+        double _keyUpTime;        // sim time the last key down came up
         double _launchTime, _landTime;
 
         public RunnerSim(RunnerTuning tuning)
@@ -239,6 +244,7 @@ namespace SpeedStars.Physical
             LeanSpring.Reset();
             _head.Reset();
             _headFwd.Reset();
+            _keyUpTime = -1000.0;
             PoseLean = 0f;
             Legs[0].Reset();
             Legs[1].Reset();
@@ -342,12 +348,17 @@ namespace SpeedStars.Physical
                 push += T.headKick * (Mathf.Exp(-t0 / PressBurst) - Mathf.Exp(-t / PressBurst)) + T.holdPush * l.WeightValue * h;
             }
             if (down)
+            {
                 _headFwd.Velocity *= Mathf.Exp(-HeldStop * h);   // a key down stops the way back
+                _keyUpTime = Time;
+            }
             else
             {
+                // The way back builds up from the moment the last key came up.
+                float ramp = Mathf.SmoothStep(0f, 1f, (float)(Time - _keyUpTime) / Mathf.Max(0.001f, T.headReturnDelay));
                 float back = HeadRest;
                 var s = _headFwd.Value > back ? T.headReturnSpring : T.headSettleSpring;
-                _headFwd.Step(back, s.frequency, s.damping, h);
+                _headFwd.Step(back, s.frequency * ramp, s.damping, h);
             }
             _headFwd.Value += push;
             if (_headFwd.Value > T.headForwardMax)

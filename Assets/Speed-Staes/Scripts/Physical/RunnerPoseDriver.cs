@@ -23,9 +23,11 @@ namespace SpeedStars.Physical
     ///                       lean (one held or both); the leg in front turns into the support angles as the hold builds up;
     ///        no input     — home: the crouch angles (blended to the running home while presses keep coming).
     ///      Every phase starts from the leg's current angles, so a press mid-swing goes on back from there.
-    ///   3. The lean comes from the head alone (UpdateLean): the hips follow the head angle all the way
-    ///      (hipFollow, through a spring, so the head leads), the waist is fixed at waistAngle on the hips and
-    ///      the hips pitch within pelvisPitchRange. Legs in the air and held legs turn with the hips' lean; a leg
+    ///   3. The lean comes from the head alone (UpdateLean), down a chain: head → neck → chest (the waist's
+    ///      top) → B-spine (its base) → hips, each following the one above through a spring (the head leads,
+    ///      the hips come last). Forward the hips take hipShare of the lean the head asks for and the back
+    ///      curves on top of them (waistBaseShare, waistTopShare of the lean), back only up to waistBackMax; the
+    ///      legs still turn with all of it. The hips pitch within pelvisPitchRange. Legs in the air and held legs turn with the hips' lean; a leg
     ///      on the ground keeps its angle to the ground (FollowHips). Height still comes from the legs (4), so
     ///      while a foot carries the body the head cannot reach the ground.
     ///   Head and neck: one head angle, back ↔ upright ↔ forward, computed by the sim (RunnerSim.HeadAngle,
@@ -215,7 +217,7 @@ namespace SpeedStars.Physical
         public LegAngles reach = new LegAngles(47f, 175f);
         [Tooltip("A held leg at a full hold: back, the knee a little bent (not dead straight). It rises behind with the " +
                  "hips' lean, up to heldLegMaxAngle.")]
-        public LegAngles holdBack = new LegAngles(-50f, 145f);
+        public LegAngles holdBack = new LegAngles(-60f, 145f);
         [Tooltip("The leg in front while the other is held, at a full hold, carrying the body. thigh + knee = 180 " +
                  "stands the shin upright, the pelvis behind and above the foot.")]
         public LegAngles holdSupport = new LegAngles(80f, 100f);
@@ -223,7 +225,7 @@ namespace SpeedStars.Physical
         public float maxKnee = 177f;
         [Tooltip("A held leg rises behind with the hips' lean up to this angle from straight down (deg; 90 = level). " +
                  "Set from the user's pose in play mode: 79, a little below level.")]
-        public float heldLegMaxAngle = 79f;
+        public float heldLegMaxAngle = 90f;
         [Tooltip("A held leg's thigh goes at most this far past the hips' angle (deg; − = short of it, which the slightly " +
                  "bent knee makes up): leaning, held legs trail the body in a nearly straight line instead of rising " +
                  "ahead of it (the reference video's dive).")]
@@ -265,6 +267,12 @@ namespace SpeedStars.Physical
                  "The reference video: the straight body turns ~45° → ~78° over the half second in the air.")]
         public float airTip = 90f;
         public SpringSettings airTipBack = new SpringSettings(3f, 1f);
+        [Tooltip("Head on the ground with no foot carrying: the body settles through this spring — the waist's curve " +
+                 "opens, the head comes up off its forward bend and the tip goes on to level — so the body comes down " +
+                 "after the head (chest, hips, knees) instead of hanging on it. A foot carrying again takes it back.")]
+        public SpringSettings settleSpring = new SpringSettings(1.5f, 1f);
+        [Tooltip("Settled on the ground the head comes up this far past the line of the body (deg), looking ahead.")]
+        public float settleHeadUp = 15f;
 
         [Header("Ground: nothing goes into it (with no foot carrying, the body stops on the first part down)")]
         [Tooltip("Head bone height above the ground when the head lies on it (m).")]
@@ -324,14 +332,33 @@ namespace SpeedStars.Physical
         [Tooltip("Sitting back the feet on the ground rock onto their heels by this share of the lean: toes up, the " +
                  "whole body turning about the heels.")]
         [Range(0f, 1f)] public float heelRock = 1f;
-        [Tooltip("Share of the head angle the hips follow, all the way (the head comes down, the hips bend after it).")]
+        [Tooltip("Leaning forward B-neck bends this much less (deg) than the waist chain gives it; the head keeps its " +
+                 "own angle. The head stays in line with the body, so the body, not a curled-in head, comes down to " +
+                 "the ground. Comes in with the forward lean, all of it from neckTrimLean (deg) on.")]
+        public float neckTrim = 10f;
+        public float neckTrimLean = 30f;
+        [Tooltip("Share of the head angle the body follows, all the way (the head comes down, the body bends after it).")]
         [Range(0f, 1f)] public float hipFollow = 1f;
-        [Tooltip("The hips follow the head through this spring, so the head leads.")]
+        [Tooltip("The top of the waist (chest, neck base) follows the head through this spring, so the head leads.")]
         public SpringSettings hipFollowSpring = new SpringSettings(4f, 0.9f);
 
-        [Header("Body: the waist is fixed, the hips take all the lean (head → neck → hips)")]
-        [Tooltip("B-spine's bend on the hips (deg, its Inspector X): fixed, the waist itself never bends.")]
-        public float waistAngle = 6.5f;
+        [Header("Body: head → neck → chest → waist base → hips, each following the one above")]
+        [Tooltip("B-spine's bend on the hips at rest (deg, its Inspector X); the chain's bend comes on top.")]
+        public float waistAngle = 2f;
+        [Tooltip("The top of the waist's bend forward on B-spine at rest (deg, on top of the rig's rest): with " +
+                 "waistAngle a gentle curve, the base a little back, chest and neck forward.")]
+        public float waistTopAngle = 13f;
+        [Tooltip("Share of the forward lean the hips take themselves (the legs turn with all of it); the waist bends " +
+                 "on top of them. Leaning back the hips take all of it.")]
+        [Range(0f, 1f)] public float hipShare = 0.65f;
+        [Tooltip("The top of the waist (chest and neck base) bends this share of the lean on B-spine, on top of the hips'.")]
+        [Range(0f, 1f)] public float waistTopShare = 0.67f;
+        [Tooltip("The base of the waist (B-spine) bends this share of the lean on the hips.")]
+        [Range(0f, 1f)] public float waistBaseShare = 0.27f;
+        [Tooltip("Each link down the waist follows the one above through this spring (damping 1: it lags, never swings).")]
+        public SpringSettings waistSpring = new SpringSettings(3f, 1f);
+        [Tooltip("Most the waist bends back (deg); a lean back past it is the whole body sitting back on the heels.")]
+        public float waistBackMax = 7f;
         [Tooltip("Hip pitch range (deg, + = forward): the forward lean — the head's pull, the dive — turns " +
                  "the hips, never past these (the pose's own pelvisPitch included). Leaning back is the whole body " +
                  "about the feet instead (see Update), not the hips.")]
@@ -366,15 +393,18 @@ namespace SpeedStars.Physical
         float _ground, _sole, _profileW, _runHome;
         float _restWaist;                          // B-spine's bend on the hips at rest (deg)
         float _stepping;                           // 1 = a key is down (run stance), 0 = none: Ready crouch
-        Spring _bodyY, _lean;                      // the hips' lean after the head (deg)
+        Spring _bodyY, _lean;                      // the waist top's lean after the head (deg)
+        Spring _waistBase, _hipsLean;              // B-spine's and the hips' lean down the chain (deg)
         float _headAngle;                          // this frame's head angle (deg, + = forward)
         float _holdL, _holdR;                      // hold weights this frame
         bool _bound, _heightSet;
         float _lastBodyY;                          // last frame's body height (the head bone is last frame's too)
         bool _carried = true, _headDown;           // last frame: a leg carried the body / the head was on the ground
         Spring _tip;                               // the lean the body has tipped over in the air (deg)
+        Spring _settle;                            // 0..1: the body settling down after the head touched (no foot carrying)
         MultiAimConstraint _headAim;
-        Transform _headBone, _lookTarget;
+        Transform _headBone, _lookTarget, _neckBone;
+        float _neckTrimNow;                        // this frame's neck trim (deg), applied after the rig
         float _lookDistance;
 
         Vector3 Local(Transform t) => transform.InverseTransformPoint(t.position);
@@ -426,6 +456,7 @@ namespace SpeedStars.Physical
                 if (_headBone && _lookTarget)
                     _lookDistance = Mathf.Max(0.3f, Vector3.Distance(_headBone.position, _lookTarget.position));
             }
+            _neckBone = _headBone ? _headBone.parent : FindDeep(transform, "B-neck");
             BindArm(leftArm, -1f, "B-upperArm.L", "B-forearm.L");
             BindArm(rightArm, 1f, "B-upperArm.R", "B-forearm.R");
             _bound = true;
@@ -531,7 +562,10 @@ namespace SpeedStars.Physical
         void OnRunReset()
         {
             _lean.Reset();
+            _waistBase.Reset();
+            _hipsLean.Reset();
             _tip.Reset();
+            _settle.Reset();
             _carried = true;
             ResetLeg(leftLeg);
             ResetLeg(rightLeg);
@@ -760,25 +794,32 @@ namespace SpeedStars.Physical
             _profileW = Mathf.Lerp(_profileW, profileTarget, 1f - Mathf.Exp(-4f * dt));
             _headAngle = preview ? 0f : sim.HeadAngle;
             // The tip over in the air turns the whole body, head included (else the hips would pass the head).
-            float tip = 0f;
+            float tip = 0f, baseBend = 0f, bend = 0f, legLean = 0f;
             if (!preview)
             {
-                lean = UpdateLean(dt);
+                lean = UpdateLean(dt, out baseBend, out bend, out legLean);
                 tip = UpdateTip(dt, pelvisPitchRange.y - p.pelvisPitch - lean);
                 lean += tip;
+                // The head on the ground with no foot carrying lets the body settle after it: the waist opens.
+                float settle = _carried ? 0f : _headDown ? 1f : _settle.Value;
+                _settle.Step(settle, settleSpring.frequency, settleSpring.damping, dt);
+                float open = 1f - Mathf.Clamp01(_settle.Value);
+                baseBend *= open;
+                bend *= open;
             }
 
-            // 3. Forward the hips take the lean (the waist is fixed): they follow the head, within
+            // 3. Forward the hips take their part of the lean (the waist bends the rest on them), within
             //    pelvisPitchRange. Back, the whole body leans about the feet on the ground (below, after the height).
             float backLean = Mathf.Min(0f, lean);
             float hipPitch = Mathf.Clamp(p.pelvisPitch + lean - backLean, pelvisPitchRange.x, pelvisPitchRange.y);
-            float legTurn = hipPitch - p.pelvisPitch;   // the lean part only: the pose's own tilt does not turn the legs
+            // The lean part only (the pose's own tilt does not turn the legs), with all of the lean the hips left to the waist.
+            float legTurn = hipPitch - p.pelvisPitch + legLean;
             Quaternion pelvisTilt = Quaternion.Euler(hipPitch, 0f, 0f);
 
             UpdateLeg(leftLeg, now, dt, legTurn, _holdL, _holdR);
             UpdateLeg(rightLeg, now, dt, legTurn, _holdR, _holdL);
-            FollowHips(leftLeg, rightLeg, legTurn, hipPitch, dt);
-            FollowHips(rightLeg, leftLeg, legTurn, hipPitch, dt);
+            FollowHips(leftLeg, rightLeg, legTurn, hipPitch + legLean, dt);
+            FollowHips(rightLeg, leftLeg, legTurn, hipPitch + legLean, dt);
             Vector3 hip = _restHip + new Vector3(0f, 0f, p.pelvis.x);
             LegFK(leftLeg, hip, pelvisTilt, p.width);
             LegFK(rightLeg, hip, pelvisTilt, p.width);
@@ -797,15 +838,17 @@ namespace SpeedStars.Physical
             leftLeg.rock = rightLeg.rock = 0f;
             if (backLean < 0f) SitBack(ref hip, backLean);
 
-            // Write the rig. The waist sits at waistAngle on the hips whatever they do; the trunk angle the neck
-            // and head work from is the hips' plus that bend (0 = the rig's rest).
+            // Write the rig. The waist base sits at waistAngle plus its bend on the hips; the chain (TwistChain)
+            // fills the chest in between it and the top, whose angle the neck and head work from (0 = the rig's rest).
             Quaternion rootRot = transform.rotation;
+            _neckTrimNow = preview ? 0f : neckTrim * Mathf.SmoothStep(0f, 1f, (_lean.Value + tip) / Mathf.Max(1f, neckTrimLean));
             hipTarget.position = transform.TransformPoint(hip);
             hipTarget.rotation = rootRot * Quaternion.Euler(backLean, 0f, 0f) * pelvisTilt * _restHipRot;
-            spineRootTarget.rotation = hipTarget.rotation * Quaternion.Euler(waistAngle, 0f, 0f);
+            spineRootTarget.rotation = hipTarget.rotation * Quaternion.Euler(waistAngle + baseBend, 0f, 0f);
             // Leaning back the head keeps looking ahead: it takes only headKeep of the lean, the neck bends the rest.
-            WriteHead(hipPitch + backLean + waistAngle - _restWaist, p.pelvisPitch + waistAngle - _restWaist,
-                _headAngle + tip - backLean, backLean, p.headDown, rootRot);
+            WriteHead(hipPitch + backLean + waistAngle - _restWaist + waistTopAngle + bend,
+                p.pelvisPitch + waistAngle - _restWaist,
+                _headAngle + tip - backLean, backLean, p.headDown, Mathf.Clamp01(_settle.Value), rootRot);
             WriteLeg(leftLeg);
             WriteLeg(rightLeg);
 
@@ -823,10 +866,11 @@ namespace SpeedStars.Physical
         /// headKeep of it and keeps looking ahead: the neck bends forward on the trunk, up to neckMax. The head is
         /// aimed by placing its look target.
         /// </summary>
-        void WriteHead(float trunk, float poseTrunk, float head, float sit, float headDown, Quaternion rootRot)
+        void WriteHead(float trunk, float poseTrunk, float head, float sit, float headDown, float settle, Quaternion rootRot)
         {
             float follow = Mathf.Lerp(Mathf.Max(0f, poseTrunk - neckMax), poseTrunk, headDown);
             float lead = Mathf.Lerp(Mathf.Min(neckMax, headLead), neckMax, Mathf.Clamp01(-sit / 10f));
+            lead = Mathf.Lerp(lead, -settleHeadUp, settle);   // settling on the ground the head comes up, looking ahead
             float pitch = Mathf.Clamp(follow + head + sit * headKeep, trunk - neckMax + body.Sim.T.headBack, trunk + lead);
             float neck = Mathf.Clamp(pitch - trunk, -neckMax, neckMax) * NeckShare;
             spineTipTarget.rotation = rootRot * Quaternion.Euler(trunk + neck, 0f, 0f) * _restSpineTip;
@@ -916,7 +960,7 @@ namespace SpeedStars.Physical
                 _tip.Step(0f, airTipBack.frequency, airTipBack.damping, dt);
             else
             {
-                if (!_headDown) _tip.Value += airTip * Mathf.Clamp01(_headAngle / Mathf.Max(1f, body.Sim.T.headForwardMax)) * dt;
+                if (!_headDown || _settle.Value > 0f) _tip.Value += airTip * Mathf.Clamp01(_headAngle / Mathf.Max(1f, body.Sim.T.headForwardMax)) * dt;
                 _tip.Value = Mathf.Min(_tip.Value, Mathf.Max(0f, max));
                 _tip.Velocity = 0f;
             }
@@ -962,19 +1006,37 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
-        /// The body's lean (deg, + forward; the hips take it, the waist stays fixed): the hips follow the head
-        /// angle all the way (hipFollow), no threshold, through a spring so the head leads and the body bends
-        /// after it. Back it only takes the head's swing past where the head rests (headBack while running): the
+        /// The body's lean (deg, + forward), down a chain: the top of the waist follows the head angle all the way
+        /// (hipFollow), no threshold, through a spring so the head leads; the waist base follows the top, the
+        /// hips follow the base (waistSpring each), so the bend runs down the back like a wave. Settled, forward
+        /// the hips take hipShare of the lean the head asks for and the waist curves on top of them (waistBaseShare,
+        /// waistTopShare of the lean); the waist bends back waistBackMax at most. Returns the hips' lean; baseBend
+        /// is B-spine's bend on the hips, bend the whole waist's (top on hips), legLean the lean the hips left to the
+        /// waist (the legs turn with it all the same). Back it only takes the head's swing past where the head rests (headBack while running): the
         /// head alone tips back there, the body sits back only when the way back throws the head beyond it
         /// (about the feet, see SitBack). Holding leans it too, through the head. Nothing else moves it. How low it gets is
         /// up to the legs: they keep the hips at their height (UpdateBodyHeight), so with a foot carrying the
         /// body the head cannot reach the ground. The sim's own lean stays for the game (stumble losses).
         /// </summary>
-        float UpdateLean(float dt)
+        float UpdateLean(float dt, out float baseBend, out float bend, out float legLean)
         {
             float head = _headAngle >= 0f ? _headAngle : Mathf.Min(0f, _headAngle - body.Sim.HeadRest);
             _lean.Step(head * hipFollow, hipFollowSpring.frequency, hipFollowSpring.damping, dt);
-            return _lean.Value;
+            float top = _lean.Value;
+            _waistBase.Step(top, waistSpring.frequency, waistSpring.damping, dt);
+            _hipsLean.Step(_waistBase.Value, waistSpring.frequency, waistSpring.damping, dt);
+            float full = _hipsLean.Value;
+            float hips = full > 0f ? full * hipShare : full;
+            legLean = full - hips;
+            // The curve, plus what the links below have not caught up with yet (the wave).
+            baseBend = waistBaseShare * top + (_waistBase.Value - full);
+            bend = (waistBaseShare + waistTopShare) * top + (top - full);
+            if (bend < -waistBackMax)
+            {
+                baseBend *= -waistBackMax / bend;
+                bend = -waistBackMax;
+            }
+            return hips;
         }
 
         /// <summary>The IK reproduces the angles: target = the ankle, hint = in front of the knee, across the thigh.</summary>
@@ -1020,6 +1082,7 @@ namespace SpeedStars.Physical
         void LateUpdate()
         {
             if (!_bound) return;
+            TrimNeck();
             PoseArm(leftArm);
             PoseArm(rightArm);
             FixLegTwist(leftLeg);
@@ -1028,6 +1091,15 @@ namespace SpeedStars.Physical
             PoseAnkle(rightLeg);
             PoseToes(leftLeg);
             PoseToes(rightLeg);
+        }
+
+        /// <summary>B-neck turns back by this frame's trim after the rig; the head keeps the angle the rig gave it.</summary>
+        void TrimNeck()
+        {
+            if (!_neckBone || !_headBone || _neckTrimNow <= 0f) return;
+            Quaternion head = _headBone.rotation;
+            _neckBone.rotation = Quaternion.AngleAxis(-_neckTrimNow, transform.right) * _neckBone.rotation;
+            _headBone.rotation = head;
         }
 
         /// <summary>
@@ -1098,7 +1170,10 @@ namespace SpeedStars.Physical
             Quaternion wanted = transform.rotation * Quaternion.Euler(leg.pitch + leg.rock, 0f, 0f) * leg.restFootRunner;
             Vector3 from = Vector3.ProjectOnPlane(neutral * leg.toeInFoot, axis);
             Vector3 to = Vector3.ProjectOnPlane(wanted * leg.toeInFoot, axis);
-            float bend = Mathf.Lerp(Vector3.SignedAngle(from, to, axis), leg.swingAnkle, leg.swingW * leg.strideW);
+            // The pitch's bend is clamped before the blend: a leg folding back up has its shin near level, where
+            // the ground pitch asks for an impossible bend that would drag the swing curve far toes up.
+            float bend = Mathf.Lerp(Mathf.Clamp(Vector3.SignedAngle(from, to, axis), -ankleUpMax, ankleDownMax),
+                leg.swingAnkle, leg.swingW * leg.strideW);
             bend = Mathf.Clamp(bend, -ankleUpMax, ankleDownMax);
             leg.footBone.rotation = Quaternion.AngleAxis(bend, axis) * neutral;
         }

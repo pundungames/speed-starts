@@ -20,7 +20,7 @@ namespace SpeedStars.Runner
 
     /// <summary>
     /// Collects left/right press and release events with their own timestamps.
-    /// Keyboard (← left, → right) and touch (left/right half of the screen; a finger keeps
+    /// Keyboard (N left, M right) and touch (left/right half of the screen; a finger keeps
     /// the side it started on until it lifts). Nothing here judges or moves anything.
     /// </summary>
     [DefaultExecutionOrder(-200)]
@@ -48,13 +48,13 @@ namespace SpeedStars.Runner
         void OnEnable()
         {
             _left = new InputAction("LeftFoot", InputActionType.Button);
-            _left.AddBinding("<Keyboard>/leftArrow");
+            _left.AddBinding("<Keyboard>/n");
             _left.performed += ctx => Enqueue(0, true, ctx.time);
             _left.canceled += ctx => Enqueue(0, false, ctx.time);
             _left.Enable();
 
             _right = new InputAction("RightFoot", InputActionType.Button);
-            _right.AddBinding("<Keyboard>/rightArrow");
+            _right.AddBinding("<Keyboard>/m");
             _right.performed += ctx => Enqueue(1, true, ctx.time);
             _right.canceled += ctx => Enqueue(1, false, ctx.time);
             _right.Enable();
@@ -98,10 +98,10 @@ namespace SpeedStars.Runner
 
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.LeftArrow)) Enqueue(0, true);
-            if (Input.GetKeyUp(KeyCode.LeftArrow)) Enqueue(0, false);
-            if (Input.GetKeyDown(KeyCode.RightArrow)) Enqueue(1, true);
-            if (Input.GetKeyUp(KeyCode.RightArrow)) Enqueue(1, false);
+            if (Input.GetKeyDown(KeyCode.N)) Enqueue(0, true);
+            if (Input.GetKeyUp(KeyCode.N)) Enqueue(0, false);
+            if (Input.GetKeyDown(KeyCode.M)) Enqueue(1, true);
+            if (Input.GetKeyUp(KeyCode.M)) Enqueue(1, false);
             for (int i = 0; i < Input.touchCount; i++)
             {
                 var t = Input.GetTouch(i);
