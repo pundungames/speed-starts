@@ -289,7 +289,7 @@ MonoBehaviour:
     stanceTime: 0.12
     hopVelocity: 1
     hopAtRest: 0.8
-    gravity: 9.81
+    gravity: 7
     togetherWindow: 0.08
     earlyEfficiency: 0.15
     lateGrace: 0.08
@@ -323,9 +323,32 @@ MonoBehaviour:
     stumbleKick: 3
     releaseKick: 140
     stumbleLean: 30
-    stumbleDrag: 0.2
     maxForwardLean: 85
     maxBackLean: 45
+    headBack: -15
+    headBackSpeed: {x: 0.5, y: 3}
+    headKick: 16
+    holdPush: 70
+    headReturnSpring:
+      frequency: 1
+      damping: 0.42
+    headSettleSpring:
+      frequency: 0.4
+      damping: 1
+    headForwardMax: 80
+    headNod: 60
+    headSpring:
+      frequency: 6
+      damping: 0.5
+    holdIn:
+      frequency: 2
+      damping: 1
+    holdOut:
+      frequency: 4.5
+      damping: 1
+    headSpoil: 90
+    headSpoilPower: 1.1
+    headDrag: 0.8
     energyMax: 100
     drainPerPush: 0.25
     drainHoldPerSecond: 2
@@ -370,7 +393,6 @@ MonoBehaviour:
     phaseTime: 0
     duration: 0
     held: 0
-    pressTime: 0
     from:
       thigh: 0
       knee: 0
@@ -411,7 +433,6 @@ MonoBehaviour:
     phaseTime: 0
     duration: 0
     held: 0
-    pressTime: 0
     from:
       thigh: 0
       knee: 0
@@ -483,8 +504,8 @@ MonoBehaviour:
     thigh: 47
     knee: 175
   holdBack:
-    thigh: -45
-    knee: 159
+    thigh: -50
+    knee: 145
   holdSupport:
     thigh: 80
     knee: 100
@@ -514,7 +535,7 @@ MonoBehaviour:
     damping: 1
   headRest: 0.15
   kneeRest: 0.05
-  pitchBack: 50
+  pitchBack: 35
   accelProfile:
     touchdownPitch: -17
     stancePitch:
@@ -898,33 +919,13 @@ MonoBehaviour:
   toeDownMax: 15
   ankleUpMax: 25
   ankleDownMax: 70
-  headBack: -15
-  headKick: 24
-  holdPush: 40
-  headReturnSpring:
-    frequency: 1
-    damping: 0.42
-  headSettleSpring:
-    frequency: 0.4
-    damping: 1
-  headForwardMax: 80
-  headNod: 60
-  holdIn:
-    frequency: 1.2
-    damping: 1
-  holdOut:
-    frequency: 4.5
-    damping: 1
-  headSpring:
-    frequency: 6
-    damping: 0.5
   neckMax: 35
   headLead: 15
   headKeep: 0.33
   heelRock: 1
   hipFollow: 1
   hipFollowSpring:
-    frequency: 3
+    frequency: 4
     damping: 0.9
   waistAngle: 6
   pelvisPitchRange: {x: -10, y: 90}

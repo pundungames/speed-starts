@@ -28,7 +28,8 @@ namespace SpeedStars.Physical
     ///      the hips pitch within pelvisPitchRange. Legs in the air and held legs turn with the hips' lean; a leg
     ///      on the ground keeps its angle to the ground (FollowHips). Height still comes from the legs (4), so
     ///      while a foot carries the body the head cannot reach the ground.
-    ///   Head and neck (UpdateHead): one head angle, back ↔ upright ↔ forward, and one input per key: down or
+    ///   Head and neck: one head angle, back ↔ upright ↔ forward, computed by the sim (RunnerSim.HeadAngle,
+    ///      it also takes speed off presses made with the head down) and drawn here. One input per key: down or
     ///      up — a tap and a hold are the same thing, a hold only lasts longer. While a key is down the head
     ///      goes forward (fast at first, headKick in all, then on at holdPush) and does not come back; with no
     ///      key down it comes back through a spring (headReturnSpring), past upright and back again. Nothing
@@ -107,7 +108,6 @@ namespace SpeedStars.Physical
             [HideInInspector] public double phaseTime;  // sim time the phase began
             [HideInInspector] public float duration;    // blend from the angles at the start into the phase's (s)
             [HideInInspector] public bool held;         // this leg's key is down
-            [HideInInspector] public double pressTime;  // sim time its key went down
             [HideInInspector] public LegAngles from, angles;   // thigh relative to the hips' lean (see follow)
             [HideInInspector] public float follow;      // 1 = turns with the hips' lean (in the air, held), 0 = keeps to the ground
             [HideInInspector] public float thighWorld;  // the thigh this frame after the hips' turn (deg from straight down)
@@ -215,7 +215,7 @@ namespace SpeedStars.Physical
         public LegAngles reach = new LegAngles(47f, 175f);
         [Tooltip("A held leg at a full hold: back, the knee a little bent (not dead straight). It rises behind with the " +
                  "hips' lean, up to heldLegMaxAngle.")]
-        public LegAngles holdBack = new LegAngles(-45f, 159f);
+        public LegAngles holdBack = new LegAngles(-50f, 145f);
         [Tooltip("The leg in front while the other is held, at a full hold, carrying the body. thigh + knee = 180 " +
                  "stands the shin upright, the pelvis behind and above the foot.")]
         public LegAngles holdSupport = new LegAngles(80f, 100f);
@@ -274,7 +274,7 @@ namespace SpeedStars.Physical
 
         [Header("Foot")]
         [Tooltip("Foot angle while a foot is held back (deg).")]
-        public float pitchBack = 50f;
+        public float pitchBack = 35f;
 
         [Header("Foot motion (blended by speed: acceleration → max velocity)")]
         public FootProfile accelProfile = new FootProfile
@@ -312,31 +312,7 @@ namespace SpeedStars.Physical
         [Tooltip("Max toes-down bend of the ankle (plantarflexion, deg).")]
         public float ankleDownMax = 50f;
 
-        [Header("Head & neck (deg, + = forward): a key down takes it forward, no key down brings it back")]
-        [Tooltip("Where the head comes back to when no key is down (while running; in the crouch it looks ahead).")]
-        public float headBack = -15f;
-        [Tooltip("How far the first moment of a key down takes the head forward (deg, all of it within ~0.1 s), " +
-                 "whatever the press, from wherever the head is.")]
-        public float headKick = 24f;
-        [Tooltip("Key still down: the head goes on forward at this rate (deg/s × the key's hold weight; both keys = twice).")]
-        public float holdPush = 40f;
-        [Tooltip("No key down: the head comes back to headBack through this spring. Damping < 1 = it swings past " +
-                 "upright and back (the sit back after a hold). Presses before it is back pile it up.")]
-        public SpringSettings headReturnSpring = new SpringSettings(1f, 0.42f);
-        [Tooltip("Past headBack on its way back the head (and the body after it) goes on through this softer, " +
-                 "well damped spring: it sits back as far as the way back threw it, then comes back slowly, never " +
-                 "swinging forward again (the reference video: ~40° back, ~1.5–2 s).")]
-        public SpringSettings headSettleSpring = new SpringSettings(0.4f, 1f);
-        [Tooltip("Most the head goes forward (deg).")]
-        public float headForwardMax = 80f;
-        [Tooltip("Small nod every press gives the head (deg/s), whatever the press: keeps it alive.")]
-        public float headNod = 60f;
-        [Tooltip("A key's hold weight (0 = up, 1 = held a while) builds up from the moment it goes down — no " +
-                 "threshold between a tap and a hold — and goes away after it comes up. Leg hold angles and holdPush use it.")]
-        public SpringSettings holdIn = new SpringSettings(1.2f, 1f);
-        public SpringSettings holdOut = new SpringSettings(4.5f, 1f);
-        [Tooltip("The head follows its target through this spring (low damping = it swings).")]
-        public SpringSettings headSpring = new SpringSettings(6f, 0.5f);
+        [Header("Head & neck (deg, + = forward): the head angle itself and its springs are in RunnerBody → Tuning → Head")]
         [Tooltip("Most the neck bends on its own. Also how far the pose's trunk may lean while the head still looks ahead.")]
         public float neckMax = 35f;
         [Tooltip("Most the head goes on ahead of the trunk (deg): past it the head stays in line with the body (the dive: " +
@@ -351,7 +327,7 @@ namespace SpeedStars.Physical
         [Tooltip("Share of the head angle the hips follow, all the way (the head comes down, the hips bend after it).")]
         [Range(0f, 1f)] public float hipFollow = 1f;
         [Tooltip("The hips follow the head through this spring, so the head leads.")]
-        public SpringSettings hipFollowSpring = new SpringSettings(3f, 0.9f);
+        public SpringSettings hipFollowSpring = new SpringSettings(4f, 0.9f);
 
         [Header("Body: the waist is fixed, the hips take all the lean (head → neck → hips)")]
         [Tooltip("B-spine's bend on the hips (deg, its Inspector X): fixed, the waist itself never bends.")]
@@ -384,8 +360,6 @@ namespace SpeedStars.Physical
         const float ToesUpFree = 5f;           // foot this far toes up (deg) keeps its toes in line instead of flat
         const float MinPelvis = 0.1f;          // the pelvis never goes lower than this above the ground (m)
         const float FollowRate = 6f;           // a leg changes between turning with the hips and keeping to the ground this fast (1/s)
-        const float PressBurst = 0.03f;        // a key down gives its headKick over about this long (s, time constant)
-        const float HeldStop = 20f;            // a key down stops the head's way back this fast (1/s)
 
         Vector3 _restHip;
         Quaternion _restHipRot, _restSpineRoot, _restSpineTip;
@@ -393,9 +367,6 @@ namespace SpeedStars.Physical
         float _restWaist;                          // B-spine's bend on the hips at rest (deg)
         float _stepping;                           // 1 = a key is down (run stance), 0 = none: Ready crouch
         Spring _bodyY, _lean;                      // the hips' lean after the head (deg)
-        Spring _head;                              // the head angle (deg)
-        Spring _headFwd;                           // where the keys have taken the head (deg), coming back with no key down
-        Spring _holdWL, _holdWR;                   // each key's hold weight (0..1), from the moment it goes down
         float _headAngle;                          // this frame's head angle (deg, + = forward)
         float _holdL, _holdR;                      // hold weights this frame
         bool _bound, _heightSet;
@@ -551,26 +522,17 @@ namespace SpeedStars.Physical
                 return;
             }
             l.held = true;
-            l.pressTime = time;
-            HeadPress();
             float push = Mathf.Lerp(pushTime.x, pushTime.y, Speed01());
             Enter(l, LegPhase.Push, time, push);
             var other = Legs(1 - leg);
             if (!other.HeldBack) Enter(other, LegPhase.Reach, time, push);
         }
 
-        /// <summary>A key going down nods the head a little, whatever the press; the push itself is in UpdateHead.</summary>
-        void HeadPress() => _head.Velocity += headNod;
-
         void OnRunReset()
         {
-            _head.Reset();
             _lean.Reset();
-            _headFwd.Reset();
             _tip.Reset();
             _carried = true;
-            _holdWL.Reset();
-            _holdWR.Reset();
             ResetLeg(leftLeg);
             ResetLeg(rightLeg);
             _heightSet = false;
@@ -787,8 +749,8 @@ namespace SpeedStars.Physical
                 p = PoseData.Lerp(p, Get(stumble, RunnerPoseDefaults.Stumble), stumbleW);
                 lean = 0f;    // the head decides it below
             }
-            _holdL = preview ? 0f : HoldWeight(ref _holdWL, leftLeg, dt);
-            _holdR = preview ? 0f : HoldWeight(ref _holdWR, rightLeg, dt);
+            _holdL = preview ? 0f : sim.Legs[0].WeightValue;
+            _holdR = preview ? 0f : sim.Legs[1].WeightValue;
 
             // 2. Legs: phases → angles → knee and ankle points.
             double now = sim.Time;
@@ -796,7 +758,7 @@ namespace SpeedStars.Physical
             _runHome = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(restToBaseSpeed.x, restToBaseSpeed.y, sim.Speed)) * _stepping;
             float profileTarget = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(accelProfileSpeed, maxProfileSpeed, sim.Speed));
             _profileW = Mathf.Lerp(_profileW, profileTarget, 1f - Mathf.Exp(-4f * dt));
-            _headAngle = preview ? 0f : UpdateHead(now, dt);
+            _headAngle = preview ? 0f : sim.HeadAngle;
             // The tip over in the air turns the whole body, head included (else the hips would pass the head).
             float tip = 0f;
             if (!preview)
@@ -854,65 +816,6 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
-        /// The head angle (deg, + = forward). One input per key, down or up: while a key is down the head goes
-        /// forward — headKick at once (within ~0.1 s), then on at holdPush as the key's hold weight builds up —
-        /// and does not come back; with no key down it comes back to headBack (past upright while running,
-        /// upright standing in the crouch) through headReturnSpring, and past it through the softer
-        /// headSettleSpring: it sits back as far as it was thrown and comes back slowly. A tap is a short
-        /// hold. Presses coming before it is back pile it up; on the rhythm push and return balance about
-        /// upright. The head follows it through its own spring, so it lags and swings a little more.
-        /// </summary>
-        float UpdateHead(double now, float dt)
-        {
-            float push = KeyPush(leftLeg, _holdL, now, dt) + KeyPush(rightLeg, _holdR, now, dt);
-            if (leftLeg.held || rightLeg.held)
-                _headFwd.Velocity *= Mathf.Exp(-HeldStop * dt);   // a key down stops the way back
-            else
-            {
-                // Back to upright fast; past headBack the soft settle spring takes over (no swing forward again).
-                float back = headBack * Running();
-                var s = _headFwd.Value > back ? headReturnSpring : headSettleSpring;
-                _headFwd.Step(back, s.frequency, s.damping, dt);
-            }
-            _headFwd.Value += push;
-            if (_headFwd.Value > headForwardMax)
-            {
-                _headFwd.Value = headForwardMax;
-                _headFwd.Velocity = Mathf.Min(0f, _headFwd.Velocity);
-            }
-            _head.Step(_headFwd.Value, headSpring.frequency, headSpring.damping, dt);
-            return _head.Value;
-        }
-
-        /// <summary>How much the runner is running (0 = standing in the crouch, 1 = at speed), from the sim's speed.</summary>
-        float Running() => body && body.Sim != null
-            ? Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(restToBaseSpeed.x, restToBaseSpeed.y, body.Sim.Speed)) : 0f;
-
-        /// <summary>
-        /// How far one key takes the head forward this frame (deg): the first moment of a key down gives
-        /// headKick (fast, then less: all of it within ~0.1 s, so every press gives the same whatever its length),
-        /// then on at holdPush × its hold weight for as long as it stays down.
-        /// </summary>
-        float KeyPush(Leg leg, float hold, double now, float dt)
-        {
-            if (!leg.held) return 0f;
-            float t = (float)(now - leg.pressTime);
-            float t0 = Mathf.Max(0f, t - dt);
-            return headKick * (Mathf.Exp(-t0 / PressBurst) - Mathf.Exp(-Mathf.Max(t0, t) / PressBurst)) + holdPush * hold * dt;
-        }
-
-        /// <summary>
-        /// A key's hold weight (0..1): builds up from the moment the key goes down (holdIn) — no threshold, a
-        /// tap only gets a little of it — and goes away after it comes up (holdOut).
-        /// </summary>
-        float HoldWeight(ref Spring w, Leg leg, float dt)
-        {
-            var s = leg.held ? holdIn : holdOut;
-            w.Step(leg.held ? 1f : 0f, s.frequency, s.damping, dt);
-            return Mathf.Clamp01(w.Value);
-        }
-
-        /// <summary>
         /// Neck and head. The head's own angle sits on the pose's trunk: up to neckMax of it the head still looks
         /// ahead, beyond that it goes down with it (or with it all the way by the pose's headDown); the head angle
         /// comes on top. The trunk itself (the pose's plus the lean the hips have followed) only lags behind it,
@@ -924,7 +827,7 @@ namespace SpeedStars.Physical
         {
             float follow = Mathf.Lerp(Mathf.Max(0f, poseTrunk - neckMax), poseTrunk, headDown);
             float lead = Mathf.Lerp(Mathf.Min(neckMax, headLead), neckMax, Mathf.Clamp01(-sit / 10f));
-            float pitch = Mathf.Clamp(follow + head + sit * headKeep, trunk - neckMax + headBack, trunk + lead);
+            float pitch = Mathf.Clamp(follow + head + sit * headKeep, trunk - neckMax + body.Sim.T.headBack, trunk + lead);
             float neck = Mathf.Clamp(pitch - trunk, -neckMax, neckMax) * NeckShare;
             spineTipTarget.rotation = rootRot * Quaternion.Euler(trunk + neck, 0f, 0f) * _restSpineTip;
             if (!_headAim || !_headBone || !_lookTarget) return;
@@ -1013,7 +916,7 @@ namespace SpeedStars.Physical
                 _tip.Step(0f, airTipBack.frequency, airTipBack.damping, dt);
             else
             {
-                if (!_headDown) _tip.Value += airTip * Mathf.Clamp01(_headAngle / Mathf.Max(1f, headForwardMax)) * dt;
+                if (!_headDown) _tip.Value += airTip * Mathf.Clamp01(_headAngle / Mathf.Max(1f, body.Sim.T.headForwardMax)) * dt;
                 _tip.Value = Mathf.Min(_tip.Value, Mathf.Max(0f, max));
                 _tip.Velocity = 0f;
             }
@@ -1069,7 +972,7 @@ namespace SpeedStars.Physical
         /// </summary>
         float UpdateLean(float dt)
         {
-            float head = _headAngle >= 0f ? _headAngle : Mathf.Min(0f, _headAngle - headBack * Running());
+            float head = _headAngle >= 0f ? _headAngle : Mathf.Min(0f, _headAngle - body.Sim.HeadRest);
             _lean.Step(head * hipFollow, hipFollowSpring.frequency, hipFollowSpring.damping, dt);
             return _lean.Value;
         }

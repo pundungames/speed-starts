@@ -89,12 +89,44 @@ namespace SpeedStars.Physical
         public float stumbleKick = 3f;
         [Tooltip("Backward kick when a hold is let go (deg/s × hold weight): the bent support leg straightens.")]
         public float releaseKick = 140f;
-        [Tooltip("Lean past this (deg) is stumbling: extra loss.")]
+        [Tooltip("Lean past this (deg) blends in the Stumble pose (visual only; the loss comes from the head, below).")]
         public float stumbleLean = 30f;
-        [Tooltip("Loss per degree past stumbleLean (m/s²).")]
-        public float stumbleDrag = 0.2f;
         public float maxForwardLean = 85f;
         public float maxBackLean = 45f;
+
+        [Header("Head (deg, + = forward): a key down takes it forward, no key down brings it back")]
+        [Tooltip("Where the head comes back to when no key is down, while running (standing in the crouch: upright).")]
+        public float headBack = -15f;
+        [Tooltip("Speed (m/s) from which the head rests at headBack (x: upright below, y: fully at headBack).")]
+        public Vector2 headBackSpeed = new Vector2(0.5f, 3f);
+        [Tooltip("How far the first moment of a key down takes the head forward (deg, all of it within ~0.1 s), " +
+                 "whatever the press, from wherever the head is.")]
+        public float headKick = 16f;
+        [Tooltip("Key still down: the head goes on forward at this rate (deg/s × the key's hold weight; both keys = twice).")]
+        public float holdPush = 70f;
+        [Tooltip("No key down: the head comes back to headBack through this spring. Presses before it is back pile it up.")]
+        public SpringSettings headReturnSpring = new SpringSettings(1f, 0.42f);
+        [Tooltip("Past headBack the head (and the body after it) goes on through this softer, well damped spring: it sits " +
+                 "back as far as the way back threw it, then comes back slowly, never swinging forward again.")]
+        public SpringSettings headSettleSpring = new SpringSettings(0.4f, 1f);
+        [Tooltip("Most the head goes forward (deg).")]
+        public float headForwardMax = 80f;
+        [Tooltip("Small nod every press gives the head (deg/s), whatever the press: keeps it alive.")]
+        public float headNod = 60f;
+        [Tooltip("The head follows its target through this spring (low damping = it swings).")]
+        public SpringSettings headSpring = new SpringSettings(6f, 0.5f);
+        [Tooltip("A key's hold weight (0 = up, 1 = held a while) builds up from the moment it goes down — no threshold " +
+                 "between a tap and a hold — and goes away after it comes up. holdPush and the legs' hold angles use it.")]
+        public SpringSettings holdIn = new SpringSettings(2f, 1f);
+        public SpringSettings holdOut = new SpringSettings(4.5f, 1f);
+
+        [Header("Head → speed: the further forward the head, the less a press gives and the more the runner loses")]
+        [Tooltip("Head angle (deg) at which a press gives nothing; upright or back a press gives all. In between it " +
+                 "falls off smoothly (no threshold): 1 − (head / headSpoil)^headSpoilPower.")]
+        public float headSpoil = 90f;
+        public float headSpoilPower = 1.1f;
+        [Tooltip("Extra loss with the head all the way forward (m/s² at headForwardMax, in proportion below).")]
+        public float headDrag = 0.8f;
 
         [Header("Energy")]
         public float energyMax = 100f;
@@ -120,9 +152,12 @@ namespace SpeedStars.Physical
         public bool Holding;
         /// <summary>Coming back forward through the air.</summary>
         public bool Swinging;
+        /// <summary>Hold weight from the moment the key went down (no threshold): 0 = up, 1 = held a while.</summary>
+        public Spring Weight;
 
         public float ExtValue => Mathf.Clamp01(Ext.Value);
         public float HoldValue => Mathf.Clamp01(Hold.Value);
+        public float WeightValue => Mathf.Clamp01(Weight.Value);
 
         public void Reset()
         {
@@ -130,6 +165,7 @@ namespace SpeedStars.Physical
             PressTime = -10.0;
             Ext.Reset();
             Hold.Reset();
+            Weight.Reset();
         }
     }
 
@@ -139,11 +175,17 @@ namespace SpeedStars.Physical
     /// How good a press is comes only from this state: is the body on the ground, how long since it
     /// landed, is the pressed leg back under the body. Mashing therefore wastes presses and their lean
     /// kicks pile up until the runner stumbles; a release lets the lean spring swing back past upright.
+    /// The head angle lives here too (the visual draws it): every key down takes it forward, no key down
+    /// brings it back; the further forward it is, the less a press gives (HeadUpright) and the more the
+    /// runner loses (headDrag) — so mashing spoils itself and the presses get their full push back only as
+    /// the head comes up again. No threshold anywhere.
     /// Pure C#: no scene, no input, steps itself in small fixed sub-steps.
     /// </summary>
     public sealed class RunnerSim
     {
         const float SubStep = 1f / 240f;
+        const float PressBurst = 0.03f;   // a key down gives its headKick over about this long (s, time constant)
+        const float HeldStop = 20f;       // a key down stops the head's way back this fast (1/s)
 
         public readonly RunnerTuning T;
         public readonly LegSim[] Legs = { new LegSim(), new LegSim() };
@@ -161,12 +203,19 @@ namespace SpeedStars.Physical
         public float LastEfficiency { get; private set; }
 
         public float Lean => LeanSpring.Value;
+        /// <summary>The head angle (deg, + = forward).</summary>
+        public float HeadAngle => _head.Value;
+        /// <summary>Where the head rests with no key down (deg): headBack while running, upright standing.</summary>
+        public float HeadRest => T.headBack * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T.headBackSpeed.x, T.headBackSpeed.y, Speed));
+        /// <summary>How much of its push a press gets at this head angle (1 upright or back, 0 at headSpoil).</summary>
+        public float HeadUpright => 1f - Mathf.Pow(Mathf.Clamp01(HeadAngle / Mathf.Max(1f, T.headSpoil)), T.headSpoilPower);
         /// <summary>The part of the lean the hold poses ask for (deg); Lean − PoseLean beyond stumbleLean is stumbling.</summary>
         public float PoseLean { get; private set; }
         public bool Airborne => HopY > 0f;
         public int HoldingCount => (Legs[0].Holding ? 1 : 0) + (Legs[1].Holding ? 1 : 0);
 
         float _pending, _hopVelocity, _launchVelocity;
+        Spring _head, _headFwd;   // the head angle; where the keys have taken it, coming back with no key down
         double _launchTime, _landTime;
 
         public RunnerSim(RunnerTuning tuning)
@@ -188,6 +237,8 @@ namespace SpeedStars.Physical
             _launchTime = -1.0;
             _landTime = -10.0;
             LeanSpring.Reset();
+            _head.Reset();
+            _headFwd.Reset();
             PoseLean = 0f;
             Legs[0].Reset();
             Legs[1].Reset();
@@ -238,6 +289,9 @@ namespace SpeedStars.Physical
             eff *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T.legReadyExt.x, T.legReadyExt.y, l.Ext.Value));
             if (LastLeg == leg && sinceLast < 1f) eff *= T.sameLegFactor;
             eff *= EnergyFactor();
+            // A head that is down spoils the push: it comes back in full only as the head comes up.
+            eff *= HeadUpright;
+            _head.Velocity += T.headNod;
 
             float room = Mathf.Max(0f, 1f - Speed / T.maxSpeed);
             _pending += T.pushGain * eff * room;
@@ -266,6 +320,42 @@ namespace SpeedStars.Physical
             if (!l.Pressed) return;
             l.Pressed = false;
             LeanSpring.Velocity -= T.releaseKick * l.HoldValue;
+        }
+
+        /// <summary>
+        /// The head angle: while a key is down it goes forward — headKick at once (within ~0.1 s), then on at
+        /// holdPush × the key's hold weight — and does not come back; with no key down it comes back to
+        /// HeadRest through headReturnSpring and past it through the softer headSettleSpring. A tap is a short
+        /// hold; presses before it is back pile it up. The head follows through its own spring.
+        /// </summary>
+        void StepHead(float h)
+        {
+            float push = 0f;
+            bool down = false;
+            foreach (var l in Legs)
+            {
+                var ws = l.Pressed ? T.holdIn : T.holdOut;
+                l.Weight.Step(l.Pressed ? 1f : 0f, ws.frequency, ws.damping, h);
+                if (!l.Pressed) continue;
+                down = true;
+                float t = (float)(Time - l.PressTime), t0 = Mathf.Max(0f, t - h);
+                push += T.headKick * (Mathf.Exp(-t0 / PressBurst) - Mathf.Exp(-t / PressBurst)) + T.holdPush * l.WeightValue * h;
+            }
+            if (down)
+                _headFwd.Velocity *= Mathf.Exp(-HeldStop * h);   // a key down stops the way back
+            else
+            {
+                float back = HeadRest;
+                var s = _headFwd.Value > back ? T.headReturnSpring : T.headSettleSpring;
+                _headFwd.Step(back, s.frequency, s.damping, h);
+            }
+            _headFwd.Value += push;
+            if (_headFwd.Value > T.headForwardMax)
+            {
+                _headFwd.Value = T.headForwardMax;
+                _headFwd.Velocity = Mathf.Min(0f, _headFwd.Velocity);
+            }
+            _head.Step(_headFwd.Value, T.headSpring.frequency, T.headSpring.damping, h);
         }
 
         float EnergyFactor() =>
@@ -315,6 +405,8 @@ namespace SpeedStars.Physical
                 maxHold = Mathf.Max(maxHold, l.HoldValue);
             }
 
+            StepHead(h);
+
             // Speed. Every held foot pushes: both held push twice, no special case.
             float applied = _pending * (1f - Mathf.Exp(-3f * h / Mathf.Max(0.001f, T.pushTime)));
             _pending -= applied;
@@ -325,7 +417,7 @@ namespace SpeedStars.Physical
             // Stumbling is lean beyond what holding asks for (every held foot leans on purpose).
             float poseLean = PoseLean = T.lungeLean * (Legs[0].HoldValue + Legs[1].HoldValue);
             float drag = T.dragConstant + T.dragLinear * Speed + T.holdDrag * maxHold
-                         + Mathf.Max(0f, Lean - poseLean - T.stumbleLean) * T.stumbleDrag;
+                         + T.headDrag * Mathf.Clamp01(HeadAngle / Mathf.Max(1f, T.headForwardMax));
             Speed = Mathf.Clamp(Speed + applied + (thrust - drag) * h, 0f, T.maxSpeed);
             Distance += Speed * h;
 
