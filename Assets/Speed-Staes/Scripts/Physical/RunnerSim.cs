@@ -20,16 +20,26 @@ namespace SpeedStars.Physical
     public sealed class RunnerTuning
     {
         [Header("Speed (m/s)")]
-        [Tooltip("Top speed (m/s): pushes and the hold thrust give less and less toward it, nothing at it.")]
+        [Tooltip("Hard limit on speed (m/s). The real top speed comes from the losses (dragQuadratic) catching up with the pushes.")]
         public float maxSpeed = 10.5f;
-        [Tooltip("Speed gained by a full push at 0 m/s; shrinks toward maxSpeed.")]
-        public float pushGain = 1.2f;
+        [Tooltip("Speed a full push gives (m/s), the same at any speed: every press is a real push, and the losses " +
+                 "between presses take it back — the runner speeds up on each push and slows down until the next.")]
+        public float pushGain = 1.5f;
         [Tooltip("Time over which a push's gain is applied (s).")]
         public float pushTime = 0.12f;
         [Tooltip("Constant loss (m/s²).")]
-        public float dragConstant = 0.64f;
+        public float dragConstant = 0.4f;
         [Tooltip("Loss growing with speed (per second).")]
-        public float dragLinear = 0.05f;
+        public float dragLinear = 0f;
+        [Tooltip("Loss growing with the square of speed (per metre): small slow, large fast — it sets the top speed " +
+                 "and makes the slowing between presses visible at speed.")]
+        public float dragQuadratic = 0.1f;
+        [Tooltip("Stopping: once no key has been down for stopDelay (s) the runner has stopped running and brakes " +
+                 "with its feet — a constant loss (m/s²) like real friction, coming in over stopRamp (s): speed falls " +
+                 "in a straight line, faster and faster for what is left, and stops. Any key down takes it away.")]
+        public float stopBrake = 3.5f;
+        public float stopDelay = 0.6f;
+        public float stopRamp = 0.3f;
 
         [Header("Stride")]
         [Tooltip("Press → take-off: how long the foot pushes on the ground (s).")]
@@ -139,7 +149,7 @@ namespace SpeedStars.Physical
         [Tooltip("Shape of that fall-off: 1 = straight; above 1 a slightly forward head costs less, a far forward one as much.")]
         public float headSpoilPower = 1.1f;
         [Tooltip("Extra loss with the head all the way forward (m/s² at headForwardMax, in proportion below).")]
-        public float headDrag = 1.6f;
+        public float headDrag = 0.8f;
 
         [Header("Energy")]
         [Tooltip("Full energy, at the start of a run.")]
@@ -311,8 +321,7 @@ namespace SpeedStars.Physical
             eff *= HeadUpright;
             _head.Velocity += T.headNod;
 
-            float room = Mathf.Max(0f, 1f - Speed / T.maxSpeed);
-            _pending += T.pushGain * eff * room;
+            _pending += T.pushGain * eff;
 
             LeanSpring.Velocity += T.leanKick * (1f + T.stumbleKick * (1f - eff));
 
@@ -436,10 +445,13 @@ namespace SpeedStars.Physical
             float thrust = 0f;
             int holding = HoldingCount;
             if (holding > 0 && Time - thrustStart < T.holdThrustTime)
-                thrust = T.holdThrust * holding * Mathf.Max(0f, 1f - Speed / T.maxSpeed) * EnergyFactor();
+                thrust = T.holdThrust * holding * EnergyFactor();
             // Stumbling is lean beyond what holding asks for (every held foot leans on purpose).
             float poseLean = PoseLean = T.lungeLean * (Legs[0].HoldValue + Legs[1].HoldValue);
-            float drag = T.dragConstant + T.dragLinear * Speed + T.holdDrag * maxHold
+            // No key down for a while: the runner has stopped running and brakes (constant, like friction).
+            float idle = (float)(Time - _keyUpTime) - T.stopDelay;
+            float brake = T.stopBrake * Mathf.SmoothStep(0f, 1f, idle / Mathf.Max(0.001f, T.stopRamp));
+            float drag = T.dragConstant + T.dragLinear * Speed + T.dragQuadratic * Speed * Speed + brake + T.holdDrag * maxHold
                          + T.headDrag * Mathf.Clamp01(HeadAngle / Mathf.Max(1f, T.headForwardMax));
             Speed = Mathf.Clamp(Speed + applied + (thrust - drag) * h, 0f, T.maxSpeed);
             Distance += Speed * h;
