@@ -28,6 +28,7 @@ namespace SpeedStars.Tests.UI.Race
         private ScreenNavigator _navigator;
         private SceneFlow _sceneFlow;
         private FakePrompt _prompt;
+        private FakeRewards _rewards;
 
         [SetUp]
         public void SetUp()
@@ -45,10 +46,11 @@ namespace SpeedStars.Tests.UI.Race
             _navigator.Push(_hud);
             _sceneFlow = new SceneFlow(_loader, new SceneFlowScenes("TestHome", "TestRace"));
             _prompt = new FakePrompt();
+            _rewards = new FakeRewards();
         }
 
         private RaceFlowLogic Make(bool withPrompt = true) =>
-            new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, withPrompt ? _prompt : null);
+            new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, withPrompt ? _prompt : null);
 
         private static RaceOutcome Outcome(RaceEventId id, double seconds) => new RaceOutcome(id, seconds, 100f, 1, 1);
 
@@ -129,6 +131,54 @@ namespace SpeedStars.Tests.UI.Race
             _session.Finish(Outcome(Dash, 11d));
 
             Assert.AreEqual(1, _results.PresentCount);
+        }
+
+        [Test]
+        public void Finished_PaysTheRewardOnce_WithTheRaceOutcome_AndShowsTheGems()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            _rewards.Gems = 3;
+            Make().Start();
+
+            RaceOutcome outcome = Outcome(Dash, 9.5);
+            _session.Finish(outcome);
+            _session.Finish(outcome); // a repeated finish of the same race
+
+            Assert.AreEqual(1, _rewards.Calls.Count);
+            Assert.AreEqual(Dash, _rewards.Calls[0].Outcome.EventId);
+            Assert.AreEqual(3, _results.GemsShown);
+        }
+
+        [Test]
+        public void Finished_NoGems_TellsTheScreenZero()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            _rewards.Gems = 0;
+            Make().Start();
+
+            _session.Finish(Outcome(Dash, 9.5));
+
+            Assert.AreEqual(0, _results.GemsShown);
+            Assert.AreEqual(1, _results.GemCalls);
+        }
+
+        [Test]
+        public void EachRace_UsesItsOwnPayoutId()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            Make().Start();
+            _session.Finish(Outcome(Dash, 9.5));
+            _gate.NextResult = EntryResult.EnteredFree;
+            _results.RaiseRaceAgain();
+
+            _session.Finish(Outcome(Dash, 9.7));
+
+            Assert.AreEqual(2, _rewards.Calls.Count);
+            Assert.IsNotEmpty(_rewards.Calls[0].PayoutId);
+            Assert.AreNotEqual(_rewards.Calls[0].PayoutId, _rewards.Calls[1].PayoutId);
         }
 
         [TestCase(EntryResult.EnteredFree)]
@@ -396,8 +446,22 @@ namespace SpeedStars.Tests.UI.Race
             public void Hide() { }
         }
 
-        private sealed class FakeResults : IResultsView
+        private sealed class FakeRewards : IRaceRewardResolver
         {
+            public readonly List<(RaceOutcome Outcome, string PayoutId)> Calls = new List<(RaceOutcome, string)>();
+            public int Gems;
+
+            public int Resolve(RaceOutcome outcome, string payoutId)
+            {
+                Calls.Add((outcome, payoutId));
+                return Gems;
+            }
+        }
+
+        private sealed class FakeResults : IResultsView, IGemRewardView
+        {
+            public int GemsShown = -1;
+            public int GemCalls;
             public RaceResult Presented;
             public int PresentCount;
             public int DeniedCount;
@@ -408,6 +472,12 @@ namespace SpeedStars.Tests.UI.Race
             {
                 Presented = result;
                 PresentCount++;
+            }
+
+            public void ShowGemReward(int gems)
+            {
+                GemsShown = gems;
+                GemCalls++;
             }
 
             public void NotifyDenied() => DeniedCount++;

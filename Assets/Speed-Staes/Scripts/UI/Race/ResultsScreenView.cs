@@ -1,5 +1,6 @@
 using System;
 using DG.Tweening;
+using SpeedStars.UI.Home;
 using SpeedStars.UI.Framework;
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,6 +34,13 @@ namespace SpeedStars.UI.Race
         [Tooltip("HighScoreRow prefab with a ResultRowView on its root.")]
         [SerializeField] private ResultRowView rowPrefab;
 
+        [Header("Gem reward")]
+        [Tooltip("LeftPanel/GemReward: the '+N' line, visible only when the race paid Purple Gems.")]
+        [SerializeField] private GameObject gemRewardRoot;
+
+        [Tooltip("LeftPanel/GemReward/Value: '+N'.")]
+        [SerializeField] private Text gemRewardText;
+
         [Header("Buttons")]
         [Tooltip("Buttons/WatchReplay: greyed out in this phase.")]
         [SerializeField] private Button watchReplayButton;
@@ -53,6 +61,8 @@ namespace SpeedStars.UI.Race
         private ResultRowView _row;
         private Tween _denied;
         private Vector3 _deniedBase;
+        private Tween _gemPunch;
+        private bool _punchGems;
 
         public event Action RaceAgainRequested;
         public event Action MainMenuRequested;
@@ -73,16 +83,25 @@ namespace SpeedStars.UI.Race
             if (mainMenuButton != null) mainMenuButton.onClick.AddListener(OnMainMenuClicked);
         }
 
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            if (_punchGems) PlayGemPunch();
+            _punchGems = false;
+        }
+
         protected override void OnDisable()
         {
             base.OnDisable();
             KillDenied();
+            KillGemPunch();
         }
 
         protected override void OnDestroy()
         {
             base.OnDestroy();
             KillDenied();
+            KillGemPunch();
             if (raceAgainButton != null) raceAgainButton.onClick.RemoveListener(OnRaceAgainClicked);
             if (mainMenuButton != null) mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
         }
@@ -92,6 +111,7 @@ namespace SpeedStars.UI.Race
             if (eventTitleText != null) eventTitleText.text = result.EventTitle;
             if (personalBestText != null) personalBestText.text = result.PersonalBestText;
             if (worldRecordText != null) worldRecordText.text = result.WorldRecordText;
+
 
             if (resultsContent == null || rowPrefab == null)
             {
@@ -120,6 +140,37 @@ namespace SpeedStars.UI.Race
                 if (target != null) target.localPosition = _deniedBase;
             });
             _denied = shake;
+        }
+
+        public void ShowGemReward(int gems)
+        {
+            bool paid = gems > 0;
+            if (gemRewardRoot != null) gemRewardRoot.SetActive(paid);
+            if (paid && gemRewardText != null) gemRewardText.text = HomeTexts.GemReward(gems);
+            _punchGems = paid; // the screen is not on yet: the punch plays when it opens
+        }
+
+        private void PlayGemPunch()
+        {
+            if (gemRewardRoot == null || _motion == null) return;
+
+            KillGemPunch();
+            Transform target = gemRewardRoot.transform;
+            target.localScale = Vector3.one;
+            _gemPunch = target
+                .DOPunchScale(Vector3.one * _motion.ButtonPunchScale, _motion.ButtonPunchDuration, _motion.ButtonPunchVibrato)
+                .SetUpdate(true)
+                .SetLink(gameObject);
+        }
+
+        private void KillGemPunch()
+        {
+            if (_gemPunch != null)
+            {
+                _gemPunch.Kill();
+                _gemPunch = null;
+            }
+            if (gemRewardRoot != null) gemRewardRoot.transform.localScale = Vector3.one;
         }
 
         private void OnRaceAgainClicked() => RaceAgainRequested?.Invoke();

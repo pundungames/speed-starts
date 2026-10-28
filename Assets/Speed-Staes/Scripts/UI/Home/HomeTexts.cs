@@ -14,6 +14,9 @@ namespace SpeedStars.UI.Home
         public const string UnknownEventWarning = "Event not found";
         public const string BuyWithCash = "Cash";
         public const string WatchAd = "Watch ad";
+        public const string UseTimedTicket = "Use Timed Ticket";
+        public const string EntryTicketsFull = "Entry Tickets Full";
+        public const string GetTickets = "Get tickets";
         public const string DefaultRacerName = "Custom 1";
         public const string RacerHeight = "Height: 5'9\"";
 
@@ -21,5 +24,8 @@ namespace SpeedStars.UI.Home
         public static string TicketCount(int count, int cap) => $"{count}/{cap}";
 
         public static string TicketsLeft(int count) => $"Left: {count}";
+
+        /// <summary>"+3": Purple Gems won in a race (results screen).</summary>
+        public static string GemReward(int gems) => $"+{gems}";
     }
 }

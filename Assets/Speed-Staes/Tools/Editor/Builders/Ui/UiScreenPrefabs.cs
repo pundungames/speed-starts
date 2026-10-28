@@ -190,7 +190,15 @@ namespace SpeedStars.Tools.Builders
             Kit.TopBand(resultsCaption.rectTransform, 440f, 64f, 60f);
 
             RectTransform results = Kit.VerticalList(left, "Results", 4f);
-            Kit.Stretch(results, 40f, 40f, 514f, 30f);
+            Kit.Stretch(results, 40f, 40f, 514f, 150f); // room below for the gem reward line
+
+            // "+N" Purple Gems line: the view shows it only when the race paid gems.
+            RectTransform gemReward = Kit.BottomBand(Kit.Node(left, "GemReward"), 30f, 100f, 60f);
+            Image gemIcon = Kit.Icon(gemReward, "Icon", UiShape.Round, Kit.GemPurple);
+            Kit.Anchor(gemIcon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 0f), new Vector2(72f, 72f));
+            Text gemValue = Kit.Label(gemReward, "Value", "+3", 64f, Kit.InkColor, TextAnchor.MiddleLeft);
+            Kit.Margin(gemValue, 110f, 0f, 16f, 0f);
+            gemReward.gameObject.SetActive(false);
 
             RectTransform buttons = Kit.Node(root, "Buttons");
             Kit.Anchor(buttons, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-260f, 0f), new Vector2(660f, 760f));
@@ -279,11 +287,11 @@ namespace SpeedStars.Tools.Builders
     {
         /// <summary>
         /// Entry gate: event name, "use an Entry Ticket" (+ remaining count), Timed Ticket status, ticket offers
-        /// (Cash, rewarded ad; both start greyed out: not interactable), Close.
+        /// (Cash, rewarded ad; the view opens or greys them), "Use Timed Ticket", Close.
         /// </summary>
         public static void EntryGate(RectTransform root)
         {
-            RectTransform window = PopupFrame<SpeedStars.UI.Home.EntryGateModalView>(root, new Vector2(960f, 820f));
+            RectTransform window = PopupFrame<SpeedStars.UI.Home.EntryGateModalView>(root, new Vector2(960f, 960f));
             Kit.CloseButton(window);
 
             Text eventName = Kit.Label(window, "EventName", "100m dash", 76f, Kit.InkColor);
@@ -309,6 +317,11 @@ namespace SpeedStars.Tools.Builders
             Kit.Span(timedValue.rectTransform, new Vector2(0.62f, 0f), Vector2.one);
             Kit.Margin(timedValue, 8f, 0f, 24f, 0f);
 
+            // Starts the Timed Ticket window; the view shows it only with a ticket in stock and no window running.
+            RectTransform useTimed = Kit.TextButton(window, "UseTimedTicket", "Use Timed Ticket", 52f, Kit.InkColor);
+            Kit.Anchor(useTimed, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -440f), new Vector2(780f, 100f));
+            useTimed.gameObject.SetActive(false);
+
             RectTransform offers = Kit.Node(window, "GetTickets");
             Kit.Anchor(offers, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(860f, 300f));
             Text offersCaption = Kit.Label(offers, "Caption", "Get tickets", 48f, Kit.InkColor);
@@ -318,7 +331,6 @@ namespace SpeedStars.Tools.Builders
             Kit.Anchor(cash, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(415f, 200f));
             Text cashPrice = Kit.Label(cash, "Price", "0", 44f, Kit.BlueText);
             Kit.BottomBand(cashPrice.rectTransform, 12f, 52f);
-            cash.GetComponent<Button>().interactable = false;
 
             RectTransform ad = Kit.IconButton(offers, "WatchAd", "Watch ad", 52f, Kit.InkColor, Kit.TicketOrange, 80f, UiShape.Round);
             Kit.Anchor(ad, new Vector2(1f, 0f), new Vector2(1f, 0f), Vector2.zero, new Vector2(415f, 200f));

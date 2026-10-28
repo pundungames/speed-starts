@@ -9,7 +9,7 @@ namespace SpeedStars.UI.Race
     /// <summary>
     /// The decisions of the Race scene, as pure C# (RaceFlow is the thin Zenject shell around it). Start: take the
     /// confirmed entry from the gate and start the race with the catalog distance; with no pending entry (Play pressed
-    /// in the editor straight from the Race scene) start the selected event for free and warn once. Finish: open Results.
+    /// in the editor straight from the Race scene) start the selected event for free and warn once. Finish: pay the gem reward once and open Results.
     /// Race again and the HUD Restart go through the entry gate again (a ticket may be spent again); no ticket opens the Entry Gate modal.
     /// </summary>
     public sealed class RaceFlowLogic : IDisposable
@@ -21,6 +21,7 @@ namespace SpeedStars.UI.Race
         private readonly ScreenNavigator _navigator;
         private readonly SceneFlow _sceneFlow;
         private readonly IResultsView _results;
+        private readonly IRaceRewardResolver _rewards;
         private readonly IEntryGatePrompt _prompt; // optional
 
         private RaceEventInfo _current;
@@ -28,9 +29,10 @@ namespace SpeedStars.UI.Race
         private bool _started;
         private bool _resultsOpen;
         private bool _warnedFreeStart;
+        private string _payoutId = string.Empty;
 
         public RaceFlowLogic(IRaceSession session, IRaceEntryGate gate, IRaceSelection selection, IRaceEventLookup events,
-            ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IEntryGatePrompt prompt)
+            ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, IEntryGatePrompt prompt)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _gate = gate ?? throw new ArgumentNullException(nameof(gate));
@@ -39,6 +41,7 @@ namespace SpeedStars.UI.Race
             _navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
             _sceneFlow = sceneFlow ?? throw new ArgumentNullException(nameof(sceneFlow));
             _results = results ?? throw new ArgumentNullException(nameof(results));
+            _rewards = rewards ?? throw new ArgumentNullException(nameof(rewards));
             _prompt = prompt;
         }
 
@@ -87,6 +90,7 @@ namespace SpeedStars.UI.Race
             _current = info;
             _hasCurrent = true;
             _resultsOpen = false;
+            _payoutId = Guid.NewGuid().ToString("N"); // one reward id per race start: a repeated finish cannot pay twice
             _session.RequestStart(new RaceStartRequest(info.Id, info.DistanceMeters));
             return true;
         }
@@ -101,7 +105,10 @@ namespace SpeedStars.UI.Race
             else title = outcome.EventId.ToString();
 
             _resultsOpen = true;
+            if (string.IsNullOrEmpty(_payoutId)) _payoutId = Guid.NewGuid().ToString("N");
+            int gems = _rewards.Resolve(outcome, _payoutId); // once per race (the guard above); the resolver pays once per id too
             _results.Present(new RaceResult(title, RaceDisplayFormat.Time(outcome.TimeSeconds), "-", "-", false));
+            if (_results is IGemRewardView gemView) gemView.ShowGemReward(gems); // 0 clears the line of a previous race
             _navigator.Push(_results);
         }
 

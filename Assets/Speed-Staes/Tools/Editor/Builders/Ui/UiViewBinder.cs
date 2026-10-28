@@ -65,6 +65,11 @@ namespace SpeedStars.Tools.Builders
             b.Set("remainingText", b.Child<Text>("Window/UseEntryTicket/Remaining"));
             b.Set("timedLabel", b.Child<Text>("Window/TimedTicketStatus/Label"));
             b.Set("timedValue", b.Child<Text>("Window/TimedTicketStatus/Value"));
+            b.Set("useTimedButton", b.Child<Button>("Window/UseTimedTicket"));
+            b.Set("useTimedLabel", b.Child<Text>("Window/UseTimedTicket/Label"));
+            b.Set("timedStatus", b.Child<RectTransform>("Window/TimedTicketStatus"));
+            b.Set("offersCaption", b.Child<Text>("Window/GetTickets/Caption"));
+            b.Set("cashPriceText", b.Child<Text>("Window/GetTickets/BuyWithCash/Price"));
             b.Set("buyWithCashButton", b.Child<Button>("Window/GetTickets/BuyWithCash"));
             b.Set("watchAdButton", b.Child<Button>("Window/GetTickets/WatchAd"));
             b.Apply();
@@ -98,6 +103,8 @@ namespace SpeedStars.Tools.Builders
             b.Set("worldRecordText", b.Child<Text>("LeftPanel/WorldRecord/Value"));
             b.Set("resultsContent", b.Child<RectTransform>("LeftPanel/Results/Viewport/Content"));
             b.Set("rowPrefab", rowPrefab);
+            b.Set("gemRewardRoot", b.Child<Transform>("LeftPanel/GemReward").gameObject);
+            b.Set("gemRewardText", b.Child<Text>("LeftPanel/GemReward/Value"));
             b.Set("watchReplayButton", b.Child<Button>("Buttons/WatchReplay"));
             b.Set("raceAgainButton", b.Child<Button>("Buttons/RaceAgain"));
             b.Set("highScoresButton", b.Child<Button>("Buttons/HighScores"));

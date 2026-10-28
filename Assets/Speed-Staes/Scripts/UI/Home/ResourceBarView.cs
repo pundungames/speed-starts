@@ -26,7 +26,7 @@ namespace SpeedStars.UI.Home
         [Tooltip("TicketTimer/Value: time to the next ticket.")]
         [SerializeField] private Text entryTimerText;
 
-        [Tooltip("TimedTicket/Value: unused Timed Tickets, or 'n ON' while the window runs.")]
+        [Tooltip("TimedTicket/Value: unused Timed Tickets, or the time left while the window runs.")]
         [SerializeField] private Text timedTicketText;
 
         [Tooltip("Cash/Value.")]
@@ -72,15 +72,25 @@ namespace SpeedStars.UI.Home
             _elapsed -= tickInterval;
             _tickets.Refresh(); // may raise Changed, which redraws
             RedrawCountdown();
+            RedrawTimed();
         }
 
         private void Redraw()
         {
             purpleGemText.text = _wallet.PurpleGems.ToString();
             cashText.text = _wallet.Cash.ToString();
-            timedTicketText.text = _wallet.TimedAccessActive ? $"{_wallet.TimedTickets} ON" : _wallet.TimedTickets.ToString();
+            RedrawTimed();
             entryTicketText.text = HomeTexts.TicketCount(_tickets.Count, _tickets.Cap);
             RedrawCountdown();
+        }
+
+        /// <summary>Stock normally; the countdown while a Timed Ticket window runs (the once-a-second tick keeps it moving).</summary>
+        private void RedrawTimed()
+        {
+            DateTime? ends = _wallet.TimedAccessEndsUtc;
+            timedTicketText.text = _wallet.TimedAccessActive && ends.HasValue
+                ? CountdownFormatter.Format(ends.Value - _clock.UtcNow)
+                : _wallet.TimedTickets.ToString();
         }
 
         private void RedrawCountdown()

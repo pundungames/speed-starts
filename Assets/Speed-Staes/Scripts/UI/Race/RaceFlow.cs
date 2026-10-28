@@ -16,9 +16,9 @@ namespace SpeedStars.UI.Race
         private readonly RaceFlowLogic _logic;
 
         public RaceFlow(IRaceSession session, IRaceEntryGate gate, IRaceSelection selection, IRaceEventLookup events,
-            ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, [InjectOptional] IEntryGatePrompt prompt)
+            ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, [InjectOptional] IEntryGatePrompt prompt)
         {
-            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, prompt);
+            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt);
         }
 
         public void Initialize() => _logic.Start();

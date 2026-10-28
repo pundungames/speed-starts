@@ -1,7 +1,7 @@
 ---
 id: T-029
 title: Faz 3 ekonomi UI - giris kapisinda Sureli Bilet kullan, dolu envanter uyarisi, sonuc ekraninda Mor Mucevher
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-028]
 owns_paths:
@@ -22,10 +22,13 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
+    durum: closed
+    not: "RaceFlow ctor'una IRaceRewardResolver eklendi; Zenject kurucu enjeksiyonu ProjectInstaller'daki mevcut baglamayi kullanir (RaceSceneInstaller degismedi). Gate view: ITimedAccess, IEntryTicketShop, EconomyConfig, IClock, UiMotionConfig (hepsi ProjectInstaller'da bagli)"
+  - tip: ASSET
     durum: open
-    not: "RaceFlow -> IRaceRewardResolver (yaris bitisinde bir kez); view'lar ITimedAccess alir"
-started:
-finished:
+    not: "Builder kopyada kosulur: UI/Popups/EntryGateModal.prefab (UseTimedTicket, Caption/Price baglari, pencere 960x960) ve UI/Screens/ResultsScreen.prefab (LeftPanel/GemReward) yeniden uretilmeli; mevcut prefab'lar overwrite olmadan korunur (yalniz bu ikisi silinip uretilmeli) + yeni .cs/.meta GeriAl ile"
+started: 2026-10-28
+finished: 2026-10-28
 blocked_reason:
 ---
 
@@ -56,4 +59,8 @@ KAMERA  : yok
 - Ekonomi kuralları (T-028), günlük hediye ve 7 gün (Faz 4), reklam SDK'sı
 
 ## Calisma notu
-(Agent doldurur)
+- Yapildi: EntryGateModel saf + EntryGateState (Timed butonu, geri sayim, dolu uyari, Nakit/reklam pasifligi; 9 test, sinif adi EntryGateEconomyTests: eski EntryGateModelTests HomeLogicTests'te); EntryGateModalView ITimedAccess/IEntryTicketShop/EconomyConfig ile; ResourceBarView Timed kutusu etkinken geri sayim.
+- Yarisin sonu: RaceFlowLogic yarisin basinda Guid payoutId, bitiste Resolve bir kez (3 yeni test); kazanilan gem Results'a IGemRewardView ile (RaceViewContracts owns disi: RaceResult/IResultsView degismedi); ResultsScreenView "+N" satiri + UiMotionConfig punch (acilista).
+- Sinirlar: "Mor Mucevher sayaci" sonuc ekraninda yok, punch +N satirina yapildi. Timed kutusu punch'i giris kapisinda (kaynak cubugunda degil). Fiyat yok (0) -> Nakit pasif, reklam SDK yok -> pasif; unicode nokta yerine ASCII ('Timed Ticket active' + deger = geri sayim).
+- PlayMode duman testine dokunulmadi (akis ayni; Timed butonu gizli baslar); Timed Ticket kullanimi icin yeni adim eklenmedi.
+- Dogrulanmadi: Unity derleme/test calistirilmadi; prefab alan baglari builder sonrasi grep'lenmeli.
