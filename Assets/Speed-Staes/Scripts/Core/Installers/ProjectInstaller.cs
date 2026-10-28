@@ -7,6 +7,7 @@ using SpeedStars.Meta.Cosmetics;
 using SpeedStars.Meta.Economy;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.Meta.Race;
+using SpeedStars.Meta.Settings;
 using SpeedStars.Meta.Themes;
 using SpeedStars.Meta.Tickets;
 using SpeedStars.Meta.Wallet;
@@ -34,6 +35,8 @@ namespace SpeedStars.Installers
         [SerializeField] private UiMotionConfig uiMotion;
         [Tooltip("Menu themes (T-023): order = MainMenuThemeShowcase index, Cash prices (0 = not for sale).")]
         [SerializeField] private ThemeCatalog themes;
+        [Tooltip("Settings window (T-031): languages, flags, player name rules, defaults.")]
+        [SerializeField] private SettingsConfig settings;
 
         [Header("Scenes")]
         [SerializeField] private SceneFlowScenes scenes = new SceneFlowScenes();
@@ -58,6 +61,7 @@ namespace SpeedStars.Installers
             BindConfig(cosmetics);
             BindConfig(uiMotion);
             BindConfig(themes);
+            BindConfig(settings);
 
             Container.Bind<ISaveStore>().FromMethod(_ => FileSaveStore.CreateDefault()).AsSingle();
             Container.Bind<ProgressRepository>().FromMethod(CreateProgress).AsSingle();
@@ -82,6 +86,8 @@ namespace SpeedStars.Installers
             Container.Bind<ICosmeticPreview>().To<CosmeticPreview>().AsSingle();
             // T-023: in the editor and development builds every theme counts as owned (user 28.10: switch directly).
             Container.Bind<IThemeService>().FromMethod(CreateThemes).AsSingle();
+            // T-031: music / sfx / language / flag / player name, saved with the progress.
+            Container.Bind<IPlayerSettings>().FromMethod(c => new PlayerSettingsService(c.Container.Resolve<SettingsConfig>(), c.Container.Resolve<ProgressRepository>())).AsSingle();
 
             Container.Bind<IRaceEntryGate>().To<RaceEntryGate>().AsSingle();
             // Project-wide because the Entry Gate modal sits in both scenes (Play on Home, Race again on Race).
