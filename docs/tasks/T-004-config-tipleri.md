@@ -21,8 +21,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
-    not: "Data/Config/*.asset ornekleri PDF degerleriyle (T-006, scene-integrator)"
+    durum: closed
+    not: "Data/Config/*.asset ornekleri PDF degerleriyle (T-006, scene-integrator) -> Faz1Builder batchmode (kopya) + GeriAl, agent/faz1-ui"
   - tip: WIRING
     durum: closed
     not: "Config SO'lari -> ProjectInstaller Inspector referansi (T-008) -> T-008 Installers (ProjectInstaller, SceneUiInstaller)"

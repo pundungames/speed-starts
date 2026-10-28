@@ -25,11 +25,11 @@ needs:
     durum: closed
     not: "Cihaz geri tusu -> ScreenNavigator.Back(). SpeedStars.UI asmdef'inde Unity.InputSystem referansi yok, okuyucu yazilmadi: Installers'ta (Assembly-CSharp) ITickable ile Keyboard.current.escapeKey.wasPressedThisFrame -> sahnenin ScreenNavigator.Back(); false donerse (kokte, popup yok) bir sey yapma. Alternatif: T-002 asmdef'ine Unity.InputSystem eklenir, okuyucu UI'da yazilir -> T-008 Installers (ProjectInstaller, SceneUiInstaller)"
   - tip: ASSET
-    durum: open
-    not: "Data/Config/UiMotionConfig.asset ornegi (T-006): Create > Speed Stars > UI > Ui Motion Config; alan varsayilanlari kit 05 s1 degerleri, oldugu gibi kalabilir"
+    durum: closed
+    not: "Data/Config/UiMotionConfig.asset ornegi (T-006): Create > Speed Stars > UI > Ui Motion Config; alan varsayilanlari kit 05 s1 degerleri, oldugu gibi kalabilir -> Faz1Builder batchmode (kopya) + GeriAl, agent/faz1-ui"
   - tip: SCENE
-    durum: open
-    not: "T-007/T-006 prefab ve sahnelerinde: ekran prefab kokune UiScreen, popup kokune UiPopup (CanvasGroup kendiliginden eklenir); sahnede yalniz kok ekran aktif, digerleri ve popup'lar kapali baslar. Her Button nesnesine ButtonFeedback (Button'in kendi nesnesine; Punch Target istege bagli cocuk). Her sahnede UI Root'a SceneTransitionBlocker; en ustteki canvas'ta tam ekran, raycast target'li, alpha 0 Image'li kapali bir cocuk (TransitionBlocker) -> SceneTransitionBlocker.blocker alanina bagla. Home/Race sahne adlari Build Settings'te SceneFlowScenes ile ayni olmali (varsayilan Home / Race)"
+    durum: closed
+    not: "T-007/T-006 prefab ve sahnelerinde: ekran prefab kokune UiScreen, popup kokune UiPopup (CanvasGroup kendiliginden eklenir); sahnede yalniz kok ekran aktif, digerleri ve popup'lar kapali baslar. Her Button nesnesine ButtonFeedback (Button'in kendi nesnesine; Punch Target istege bagli cocuk). Her sahnede UI Root'a SceneTransitionBlocker; en ustteki canvas'ta tam ekran, raycast target'li, alpha 0 Image'li kapali bir cocuk (TransitionBlocker) -> SceneTransitionBlocker.blocker alanina bagla. Home/Race sahne adlari Build Settings'te SceneFlowScenes ile ayni olmali (varsayilan Home / Race) -> Faz1Builder batchmode (kopya) + GeriAl, agent/faz1-ui"
 started: 2026-10-28
 finished: 2026-10-28
 blocked_reason:
