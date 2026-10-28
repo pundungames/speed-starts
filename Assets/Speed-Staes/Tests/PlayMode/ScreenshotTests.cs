@@ -8,6 +8,7 @@ using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Flow;
+using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -60,6 +61,25 @@ namespace SpeedStars.PlayTests
                 yield return Settle();
                 yield return Capture(dir, "Home_play");
 
+                // Home screens: open, shoot, close (same buttons and close path as the smoke tests).
+                yield return ShootScreen(dir, home, "eventSelectButton", "eventSelectScreen", "Home_eventselect");
+                yield return ShootScreen(dir, home, "environmentButton", "themeSelectScreen", "Home_themeselect");
+                yield return ShootScreen(dir, home, "editRacerButton", "cosmeticsScreen", "Home_costume");
+
+                // Entry gate: Play with no ticket opens it.
+                SelectTicketEvent(container);
+                progress.EntryTickets = 0;
+                progress.EntryRegenDueUtcTicks = 0;
+                progress.TimedAccessExpiresUtcTicks = 0;
+                container.Resolve<IEntryTickets>().Refresh();
+                EntryGateModalView emptyGate = RequireField<EntryGateModalView>(home, "entryGateModal");
+                yield return Tap(RequireField<Button>(home, "playButton"), "Play button (no ticket)");
+                yield return WaitOpen(emptyGate, "entry gate");
+                yield return Settle();
+                yield return Capture(dir, "Home_entrygate");
+                yield return Tap(CloseButtonOf(emptyGate), "entry gate Close");
+                yield return WaitClosed(emptyGate, "entry gate");
+
                 // Race: a ticketed event, exactly one ticket, then Use Entry Ticket.
                 SelectTicketEvent(container);
                 progress.EntryTickets = 1;
@@ -93,6 +113,21 @@ namespace SpeedStars.PlayTests
                 }
                 saveFiles.Restore();
             }
+        }
+
+        private static IEnumerator ShootScreen(string dir, HomeScreenView home, string buttonField, string screenField, string shotName)
+        {
+            UiScreen screen = RequireField<UiScreen>(home, screenField);
+            yield return Tap(RequireField<Button>(home, buttonField), buttonField);
+            yield return WaitOpen(screen, screenField);
+            yield return WaitClosed(home, "HomeScreen to step aside");
+            yield return Settle();
+            yield return Capture(dir, shotName);
+
+            yield return Tap(CloseButtonOf(screen), $"{screenField} Back");
+            yield return WaitClosed(screen, screenField);
+            yield return WaitOpen(home, "HomeScreen to come back");
+            yield return Settle();
         }
 
         private static IEnumerator Settle()
