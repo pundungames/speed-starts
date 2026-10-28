@@ -1,7 +1,7 @@
 ---
 id: T-003
 title: Kayit ve saat servisleri (ISaveStore, IClock, PlayerProgress)
-status: review
+status: done
 owner: systems-agent
 depends_on: [T-002]
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Time/**"
 touches_scene: false
 branch: agent/faz1-iskele
-commits: []
+commits: [c3dbe46]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Persistence/FileSaveStoreTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Persistence/ProgressRepositoryTests.cs"

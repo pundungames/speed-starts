@@ -1,7 +1,7 @@
 ---
 id: T-002
 title: Assembly tanimlari ve Core seam'leri (ortak dosyalar)
-status: review
+status: done
 owner: supervisor
 depends_on: []
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/SpeedStars.Tests.asmdef"
 touches_scene: false
 branch: agent/faz1-iskele
-commits: []
+commits: [c3dbe46]
 tests:
   - "gerekmiyor: yalniz arayuz ve veri tipleri; davranis T-003..T-005 testlerinde"
 analytics:
@@ -30,7 +30,7 @@ Core seam'leri: `IRaceSession`, `RaceEventId`, `RaceStartRequest`, `RaceOutcome`
 ## Kabul kriterleri
 - [x] Dört asmdef, sözleşme §3 ok yönleriyle (Meta → Core; UI → Core, Meta, Zenject, TMP, uGUI; Tests → hepsi + TestRunner)
 - [x] Core seam'leri; Core'un başka assembly'ye referansı yok
-- [ ] Kopyada derleme yeşil (T-003..T-005 ile birlikte)
+- [x] Kopyada derleme yeşil (T-003..T-005 ile birlikte, 116 test)
 
 ## Çalışma notu
 Installers ve Bridge asmdef'siz kalır (Assembly-CSharp; Malik'in koduna erişmek için). `ILeaderboard` Faz 6'da açılır.

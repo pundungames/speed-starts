@@ -1,7 +1,7 @@
 ---
 id: T-004
 title: Config ScriptableObject tipleri (ekonomi, etkinlik, odul, 7 gun, kozmetik)
-status: review
+status: done
 owner: systems-agent
 depends_on: [T-002]
 owns_paths:
@@ -9,7 +9,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Config/**"
 touches_scene: false
 branch: agent/faz1-iskele
-commits: []
+commits: [c3dbe46]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Config/EconomyConfigTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Config/RaceEventCatalogTests.cs"

@@ -1,7 +1,7 @@
 ---
 id: T-005
 title: UI cercevesi (UiMotionConfig, ekran/popup, buton geri bildirimi, sahne akisi)
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-002]
 owns_paths:
@@ -10,7 +10,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/**"
 touches_scene: false
 branch: agent/faz1-iskele
-commits: []
+commits: [c3dbe46]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/ScreenNavigatorTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/SceneFlowTests.cs"

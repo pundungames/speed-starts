@@ -16,13 +16,15 @@ Son güncelleme: 2026-10-28 · agent-kit v2 kurulumu · dal `main` (ad3616b üst
 - Oyuncuya görünen metin dili / yerelleştirme — md'lerle netleşir.
 
 ## Gözle bakılacaklar (öncelikli)
-- Yok (DOTween Setup yapıldı, `f3b5f8a`).
+- Unity'ye geçince Faz 1 kodu derlenir (`c3dbe46`, kopyada 116 test yeşil): konsol temiz mi. Görülecek ekran yok (T-006/T-007 bekliyor).
 
 ## Sıradaki iş
-1. Kullanıcı `docs/YOL-HARITASI.md` 5 soruyu cevaplar + sözleşmeyi onaylar → Faz 1 iskele task'ları (T-001..T-008) açılır.
-- Gün 0 durumu: GDD `docs/gdd/`; sözleşme taslak v2; açık ürün kararları `docs/decisions/OPEN-2026-10-28-gdd-acik-kararlar.md`;
-  raporlar `reports/leaderboard-tasima-*`, `reports/kozmetik-hazirlik-*`.
-2. Faz 1: `Scripts/Core/Installers` (ProjectContext + sahne installer'ları), `UiMotionConfig`, `Scenes/Menu/Home.unity`.
+1. **Oturumu yeniden aç** (pano + Unity MCP yüklenir) → T-001 yatay ekran, T-006 Home/Race sahneleri + config asset'leri (PDF değerleri) +
+   ProjectContext, T-007 yer tutucu UI prefab'ları — scene-integrator, sırayla (sahneye dokunan iş tek başına).
+2. Faz 2 dikey dilim task'ları (`docs/YOL-HARITASI.md`): EntryTicketService, RaceEntryGate, kaynak çubukları, Event Select, Entry Gate,
+   Race HUD (Bridge adaptörü), Results, Dev bitiş.
+- Faz 1 kod: T-002/3/4 done, T-005/T-008 merged (gözle bakılacak yanı T-006/T-007'de). Doğrulama kopyası `D:\Pundun\speed-starts-verify-1`
+  (Library hazır, ~30 sn derleme).
 
 ## Dikkat
 - Unity'nin commit'siz dosyası: `ProjectSettings/ProjectSettings.asset` — dokunma, commit'e katma.
