@@ -66,6 +66,16 @@ namespace SpeedStars.PlayTests
                 yield return ShootScreen(dir, home, "environmentButton", "themeSelectScreen", "Home_themeselect");
                 yield return ShootScreen(dir, home, "editRacerButton", "cosmeticsScreen", "Home_costume");
 
+                // Settings is a popup over Home (Home stays open behind its dimscreen).
+                UiPopup settings = RequireField<UiPopup>(home, "settingsPopup");
+                yield return Tap(RequireField<Button>(home, "settingsButton"), "settingsButton");
+                yield return WaitOpen(settings, "settings popup");
+                yield return Settle();
+                yield return Capture(dir, "Home_settings");
+                yield return Tap(CloseButtonOf(settings), "settings X");
+                yield return WaitClosed(settings, "settings popup");
+                yield return Settle();
+
                 // Entry gate: Play with no ticket opens it.
                 SelectTicketEvent(container);
                 progress.EntryTickets = 0;
