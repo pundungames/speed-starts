@@ -1,7 +1,7 @@
 ---
 id: T-031
 title: Ayarlar penceresi (Settings_Moduler_UI_v1) - Music, Language, Flag, Player Name, Done/X; ana ekran ses butonu
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-026, T-029]
 owns_paths:
@@ -22,7 +22,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Settings/**"
 touches_scene: true
 branch: agent/T-031-ayarlar
-commits: []
+commits: [05af037, 23c7afe, bc512e4, dbc6746]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Settings/PlayerSettingsServiceTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Settings/PlayerNameRulesTests.cs"
@@ -31,11 +31,11 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
-    not: "ProjectInstaller: SettingsConfig + IPlayerSettings AsSingle (exact lines in Calisma notu)"
+    durum: closed
+    not: "ProjectInstaller: SettingsConfig + IPlayerSettings AsSingle (exact lines in Calisma notu) -> dbc6746"
   - tip: SCENE
-    durum: open
-    not: "ProjectContext prefab: assign Data/Config/SettingsConfig.asset to the new ProjectInstaller 'settings' field. Then run the Home scene builder (it nests SettingsPopup under Canvas Popups and binds HomeScreenView.settingsPopup) and rebuild the UI prefabs with overwrite = true (HomeScreen/EventSelect keep nothing new; SettingsRow, LanguageRow, FlagCell, SettingsPopup are new; UiV2Prefabs now builds Settings/Sound/Environment/Previous/Next interactable, so HomeScreen needs the overwrite rebuild)."
+    durum: closed
+    not: "ProjectContext prefab: assign Data/Config/SettingsConfig.asset to the new ProjectInstaller 'settings' field. Then run the Home scene builder (it nests SettingsPopup under Canvas Popups and binds HomeScreenView.settingsPopup) and rebuild the UI prefabs with overwrite = true (HomeScreen/EventSelect keep nothing new; SettingsRow, LanguageRow, FlagCell, SettingsPopup are new; UiV2Prefabs now builds Settings/Sound/Environment/Previous/Next interactable, so HomeScreen needs the overwrite rebuild). -> dbc6746"
 started: 2026-10-28
 finished: 2026-10-28
 blocked_reason:
