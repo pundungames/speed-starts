@@ -1,7 +1,7 @@
 ---
 id: T-034
 title: Karakter karti butonlari tum karti kapliyor (Emote tiklamayi yutuyor) + testte gercek isin kontrolu
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-031]
 owns_paths:
@@ -16,7 +16,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs"
 touches_scene: true
 branch: agent/T-034-kart-isabet
-commits: []
+commits: [ad7779a, e24a5c3, 472ee97]
 tests:
   - "Assets/Speed-Staes/Tests/PlayMode/HomeRaceButtonSmokeTests.cs"
 analytics:
