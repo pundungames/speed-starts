@@ -12,7 +12,7 @@
 - Proje kökü = depo kökü `D:\Pundun\speed-starts`. **Kullanıcının Unity'si bu klasörde açık**; iş de burada, `main`'de yapılır.
 - Pipeline dosyaları: `scripts/`, `docs/`, `prompts/`, `reports/`, `agent-kit/` (kitin salt okunur kopyası).
   Log'lar `pipeline-logs/` (yerel, git'e girmez). `Library/`, `Temp/`, `Logs/`, `UserSettings/` Unity'nindir — yazma.
-- Paketler (2026-10-28): uGUI 1.0.0, TextMeshPro 3.0.7, Test Framework 1.1.33, Input System 1.19 (Active Input
+- Paketler (2026-10-28): uGUI 1.0.0 (TextMeshPro YOK — kaldırıldı), Test Framework 1.1.33, Input System 1.19 (Active Input
   Handling = Both), Animation Rigging, MCP for Unity. Eklentiler: `Assets/Plugins/Zenject` (Extenject 9.2.0: çekirdek,
   Signals, TestFramework, MemoryPoolMonitor), `Assets/Plugins/Demigiant/DOTween` (1.3.045, ücretsiz).
 
@@ -104,7 +104,9 @@ Biçim `docs/tasks/_TEMPLATE.md`; `scripts/tur-sonu.ps1` makineyle okur. Başlar
   kullanım onların alanı).
 - **Tween: DOTween** (`using DG.Tweening;`); UI animasyonu `agent-kit/05-DOTWEEN-UI-ANIMASYON.md` reçeteleri ve tek
   `UiMotionConfig` ile. Panel animasyonunu kendin uydurma.
-- **UI: uGUI + TextMeshPro** (`TMP_Text`); `UnityEngine.UI.Text` kullanılmaz. Input: Input System.
+- **UI: uGUI + legacy `UnityEngine.UI.Text`** — TextMeshPro KULLANILMAZ (kullanıcı kararı 28.10: oyun Çin pazarına; legacy Text'in
+  dinamik fontu cihazda CJK karakterleri işletim sistemi fontundan alır). Font: `LegacyRuntime.ttf` (yerleşik) ya da dinamik bir TTF.
+  Oyuncuya görünen metin **İngilizce**. Input: Input System. UI referans çözünürlüğü 2400×1080 yatay, CanvasScaler yükseklik eşleşmesi.
 - Public alan yerine `[SerializeField] private`. Magic number yok — config asset'ine.
 - String yerine enum; olay: C# `event`/Zenject Signal (UnityEvent yalnız Inspector'dan bağlanan UI'da).
 - `using System;` + `using UnityEngine;` olan dosyada `Object`, `Random`, `Debug` niteliksiz kullanılmaz.

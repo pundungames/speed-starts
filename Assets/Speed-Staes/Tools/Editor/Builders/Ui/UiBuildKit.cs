@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using SpeedStars.UI.Framework;
-using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -51,9 +50,9 @@ namespace SpeedStars.Tools.Builders
         private const string RoundSpritePath = "UI/Skin/Knob.psd";
         private const string CheckSpritePath = "UI/Skin/Checkmark.psd";
         private const string ArrowSpritePath = "UI/Skin/DropdownArrow.psd";
-        private const string TmpSettingsResource = "TMP Settings";
+        private const string FontResource = "LegacyRuntime.ttf";
 
-        private static TMP_FontAsset s_font;
+        private static Font s_font;
         private static Sprite s_panelSprite;
         private static Sprite s_roundSprite;
         private static Sprite s_checkSprite;
@@ -61,22 +60,15 @@ namespace SpeedStars.Tools.Builders
         private static int s_uiLayer;
 
         /// <summary>
-        /// Loads the font and sprites once per build. Throws when TMP Essentials are missing: without them TextMeshPro
-        /// opens its importer window instead of drawing, which in batchmode would leave every label without a font.
+        /// Loads the font and sprites once per build. Legacy Text uses the built-in dynamic font, which falls back to the
+        /// operating system font for CJK, so the same prefabs work for the Chinese market without font assets.
         /// </summary>
         public static void Begin()
         {
-            if (Resources.Load<TMP_Settings>(TmpSettingsResource) == null)
-            {
-                throw new InvalidOperationException(
-                    "UiPrefabBuilder: TMP Essentials are missing (Assets/TextMesh Pro/Resources/TMP Settings.asset). " +
-                    "Import them with Window > TextMeshPro > Import TMP Essential Resources, then build again.");
-            }
-
-            s_font = TMP_Settings.defaultFontAsset;
+            s_font = Resources.GetBuiltinResource<Font>(FontResource);
             if (s_font == null)
             {
-                throw new InvalidOperationException("UiPrefabBuilder: TMP Settings has no default font asset.");
+                throw new InvalidOperationException($"UiPrefabBuilder: built-in font '{FontResource}' not found.");
             }
 
             s_panelSprite = LoadBuiltinSprite(PanelSpritePath);
@@ -257,29 +249,40 @@ namespace SpeedStars.Tools.Builders
         }
 
         /// <summary>
-        /// Bold italic TMP label stretched over its parent. Auto-size shrinks long text to the box (max = given size).
-        /// Placeholder text only: views fill the real values. Keep it ASCII + Latin-1 (the static LiberationSans atlas
-        /// has no ğ ı ş İ; missing glyphs would make the dynamic fallback asset rewrite itself).
+        /// Bold italic legacy Text label stretched over its parent. Best fit shrinks long text to the box (max = given
+        /// size); one or two character captions ("X", "+", "<") keep a fixed size. Placeholder text only: views fill the
+        /// real values. Text is English.
         /// </summary>
-        public static TextMeshProUGUI Label(Transform parent, string name, string text, float size, Color color,
-            TextAlignmentOptions alignment = TextAlignmentOptions.Center)
+        public static Text Label(Transform parent, string name, string text, float size, Color color,
+            TextAnchor alignment = TextAnchor.MiddleCenter)
         {
             RectTransform rt = Node(parent, name);
-            TextMeshProUGUI label = rt.gameObject.AddComponent<TextMeshProUGUI>();
-            Stretch(rt); // after AddComponent: a new TMP object resizes a default-sized rect to its own default box
+            Text label = rt.gameObject.AddComponent<Text>();
+            Stretch(rt);
             label.font = s_font;
             label.text = text;
-            label.fontStyle = FontStyles.Bold | FontStyles.Italic;
-            label.enableAutoSizing = true;
-            label.fontSizeMax = size;
-            label.fontSizeMin = Mathf.Max(12f, size * 0.4f);
-            label.fontSize = size;
+            label.fontStyle = FontStyle.BoldAndItalic;
+            label.fontSize = Mathf.RoundToInt(size);
+            label.resizeTextForBestFit = text.Length > 2;
+            label.resizeTextMaxSize = Mathf.RoundToInt(size);
+            label.resizeTextMinSize = Mathf.RoundToInt(Mathf.Max(12f, size * 0.4f));
             label.color = color;
             label.alignment = alignment;
-            label.enableWordWrapping = false;
-            label.overflowMode = TextOverflowModes.Overflow;
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
             label.raycastTarget = false;
             return label;
+        }
+
+        /// <summary>
+        /// Insets a label's rect (left, top, right, bottom px) on top of its current placement: legacy Text has no margin,
+        /// so the rect itself shrinks. Call after the label is placed.
+        /// </summary>
+        public static void Margin(Text label, float left, float top, float right, float bottom)
+        {
+            RectTransform rt = label.rectTransform;
+            rt.offsetMin += new Vector2(left, bottom);
+            rt.offsetMax -= new Vector2(right, top);
         }
 
         // ---------------------------------------------------------------- buttons
@@ -301,13 +304,13 @@ namespace SpeedStars.Tools.Builders
 
         /// <summary>TextButton that also hands back its label (to move it or add a second line).</summary>
         public static RectTransform TextButton(Transform parent, string name, string caption, float fontSize, Color textColor,
-            out TextMeshProUGUI label)
+            out Text label)
         {
             RectTransform rt = Node(parent, name);
             Image background = Panel(rt.gameObject, PanelColor, frame: true, raycast: true);
             Clickable(rt.gameObject, background);
             label = Label(rt, "Label", caption, fontSize, textColor);
-            label.margin = new Vector4(16f, 4f, 16f, 4f);
+            Margin(label, 16f, 4f, 16f, 4f);
             return rt;
         }
 
@@ -320,13 +323,13 @@ namespace SpeedStars.Tools.Builders
 
         /// <summary>IconButton that also hands back its label.</summary>
         public static RectTransform IconButton(Transform parent, string name, string caption, float fontSize, Color textColor,
-            Color iconColor, float iconSize, UiShape shape, out TextMeshProUGUI label)
+            Color iconColor, float iconSize, UiShape shape, out Text label)
         {
             RectTransform rt = TextButton(parent, name, caption, fontSize, textColor, out label);
             Image icon = Icon(rt, "Icon", shape, iconColor);
             Anchor(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(18f, 0f), new Vector2(iconSize, iconSize));
             icon.rectTransform.SetAsFirstSibling();
-            label.margin = new Vector4(iconSize + 32f, 4f, 16f, 4f);
+            Margin(label, iconSize + 16f, 0f, 0f, 0f); // on top of the 16 px TextButton inset
             return rt;
         }
 

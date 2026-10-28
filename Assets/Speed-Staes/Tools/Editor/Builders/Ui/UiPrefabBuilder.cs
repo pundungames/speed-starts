@@ -23,8 +23,8 @@ namespace SpeedStars.Tools.Builders
             var run = new Run(scene, overwrite);
             try
             {
-                run.Build(UiPrefabPaths.EventRow, UiRowPrefabs.EventRow);
-                run.Build(UiPrefabPaths.HighScoreRow, UiRowPrefabs.HighScoreRow);
+                GameObject eventRow = run.Build(UiPrefabPaths.EventRow, UiRowPrefabs.EventRow);
+                GameObject highScoreRow = run.Build(UiPrefabPaths.HighScoreRow, UiRowPrefabs.HighScoreRow);
                 run.Build(UiPrefabPaths.CosmeticCell, UiRowPrefabs.CosmeticCell);
                 GameObject sevenDayCell = run.Build(UiPrefabPaths.SevenDayCell, UiRowPrefabs.SevenDayCell);
 
@@ -33,11 +33,13 @@ namespace SpeedStars.Tools.Builders
                 run.Build(UiPrefabPaths.RewardFlight, UiWidgetPrefabs.RewardFlight);
 
                 run.Build(UiPrefabPaths.HomeScreen, root => UiScreenPrefabs.Home(root, redDot, scene));
-                run.Build(UiPrefabPaths.EventSelectScreen, UiScreenPrefabs.EventSelect);
+                run.Build(UiPrefabPaths.EventSelectScreen,
+                    root => UiScreenPrefabs.EventSelect(root, UiViewBinder.RowComponent<SpeedStars.UI.Home.EventRowView>(eventRow, UiPrefabPaths.EventRow)));
                 run.Build(UiPrefabPaths.CosmeticsScreen, UiScreenPrefabs.Cosmetics);
                 run.Build(UiPrefabPaths.HighScoresScreen, UiScreenPrefabs.HighScores);
                 run.Build(UiPrefabPaths.RaceHud, UiScreenPrefabs.RaceHud);
-                run.Build(UiPrefabPaths.ResultsScreen, UiScreenPrefabs.Results);
+                run.Build(UiPrefabPaths.ResultsScreen,
+                    root => UiScreenPrefabs.Results(root, UiViewBinder.RowComponent<SpeedStars.UI.Race.ResultRowView>(highScoreRow, UiPrefabPaths.HighScoreRow)));
 
                 run.Build(UiPrefabPaths.EntryGateModal, UiPopupPrefabs.EntryGate);
                 run.Build(UiPrefabPaths.DailyGiftPopup, UiPopupPrefabs.DailyGift);

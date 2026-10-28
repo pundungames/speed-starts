@@ -71,6 +71,7 @@ namespace SpeedStars.Tools.Builders
                 SceneUiLayout.CreateTransitionBlocker(uiRoot, overlayCanvas);
 
                 SceneUiLayout.CreateSceneContext<HomeSceneInstaller>(scene, SceneUiLayout.RootScreenOf(rootScreen, UiPrefabPaths.HomeScreens[0]));
+                SceneWiring.WireHome(scene);
                 Save(scene, HomeScenePath);
             }
             finally
@@ -120,6 +121,7 @@ namespace SpeedStars.Tools.Builders
                 SceneUiLayout.CreateTransitionBlocker(uiRoot, overlayCanvas);
 
                 SceneUiLayout.CreateSceneContext<RaceSceneInstaller>(scene, SceneUiLayout.RootScreenOf(raceHud, UiPrefabPaths.RaceHud));
+                SceneWiring.WireRace(scene);
                 Save(scene, RaceScenePath);
                 done = true;
             }

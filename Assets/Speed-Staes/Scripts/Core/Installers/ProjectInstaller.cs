@@ -2,9 +2,14 @@ using DG.Tweening;
 using SpeedStars.Core.Services;
 using SpeedStars.Meta.Clock;
 using SpeedStars.Meta.Config;
+using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
+using SpeedStars.Meta.Race;
+using SpeedStars.Meta.Tickets;
+using SpeedStars.Meta.Wallet;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
+using SpeedStars.UI.Home;
 using UnityEngine;
 using Zenject;
 
@@ -38,7 +43,8 @@ namespace SpeedStars.Installers
 
         public override void InstallBindings()
         {
-            DOTween.Init().SetCapacity(tweenCapacity, sequenceCapacity);
+            // Zenject validation (editor, not playing) runs installers too; DOTween.Init returns null there.
+            if (!Container.IsValidating) DOTween.Init()?.SetCapacity(tweenCapacity, sequenceCapacity);
 
             BindConfig(economy);
             BindConfig(raceEvents);
@@ -54,6 +60,14 @@ namespace SpeedStars.Installers
             Container.BindInstance(scenes);
             Container.Bind<ISceneLoader>().To<UnitySceneLoader>().AsSingle();
             Container.Bind<SceneFlow>().AsSingle();
+
+            // Faz 2 (T-010): one EntryTicketService instance serves the UI (IEntryTickets) and the gate (concrete TrySpend).
+            Container.Bind(typeof(IEntryTickets), typeof(EntryTicketService)).To<EntryTicketService>().AsSingle();
+            Container.Bind(typeof(IWallet), typeof(WalletService)).To<WalletService>().AsSingle();
+            Container.Bind<IRaceSelection>().To<RaceSelection>().AsSingle();
+            Container.Bind<IRaceEntryGate>().To<RaceEntryGate>().AsSingle();
+            // Project-wide because the Entry Gate modal sits in both scenes (Play on Home, Race again on Race).
+            Container.Bind<HomeEntryFlow>().AsSingle();
         }
 
         private void BindConfig<T>(T asset) where T : ScriptableObject

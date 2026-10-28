@@ -1,5 +1,4 @@
 using SpeedStars.UI.Framework;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Kit = SpeedStars.Tools.Builders.UiBuildKit;
@@ -7,7 +6,7 @@ using Kit = SpeedStars.Tools.Builders.UiBuildKit;
 namespace SpeedStars.Tools.Builders
 {
     /// <summary>
-    /// Screen prefabs (UiScreen root, stretched full screen; layout in 1920×1080 reference pixels, CanvasScaler match 0.5).
+    /// Screen prefabs (UiScreen root, stretched full screen; layout in 2400×1080 reference pixels, CanvasScaler height match = 1: width varies per phone, so edge items are anchored to their corner and middle items are centered).
     /// Positions follow the original's reference screens (docs/gdd/referans-ekranlar): menu buttons on the right, racer
     /// controls bottom-left, the 3D racer in the middle stays free. Lists keep an empty Content: views instantiate rows.
     /// Out of scope and therefore absent: Upgrade, Players, Emote, Stats, settings, banner ad, Random, Global, Find player.
@@ -16,7 +15,7 @@ namespace SpeedStars.Tools.Builders
     {
         public static void Home(RectTransform root, GameObject redDot, UnityEngine.SceneManagement.Scene scene)
         {
-            root.gameObject.AddComponent<UiScreen>();
+            root.gameObject.AddComponent<SpeedStars.UI.Home.HomeScreenView>();
 
             // The ResourceBar widget lives on the overlay canvas; this empty slot keeps its corner free.
             Kit.Anchor(Kit.Node(root, "ResourceBarSlot"), Vector2.one, Vector2.one, new Vector2(-24f, -20f), new Vector2(1260f, 100f));
@@ -27,18 +26,18 @@ namespace SpeedStars.Tools.Builders
             Kit.Clickable(sevenDay.gameObject, sevenDayBackground);
             Image sevenDayIcon = Kit.Icon(sevenDay, "Icon", UiShape.Panel, Kit.TicketOrange);
             Kit.Anchor(sevenDayIcon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(90f, 90f));
-            TextMeshProUGUI sevenDayLabel = Kit.Label(sevenDay, "Label", "7 Günlük Ödül", 26f, Kit.InkColor);
+            Text sevenDayLabel = Kit.Label(sevenDay, "Label", "7-Day Rewards", 26f, Kit.InkColor);
             Kit.BottomBand(sevenDayLabel.rectTransform, 8f, 40f, 6f);
             Kit.Nest(redDot, sevenDay, "RedDot", scene);
 
             RectTransform highScores = Kit.IconButton(root, "HighScores", "High scores", 72f, Kit.GoldText, Kit.GoldText, 90f, UiShape.Round);
             Kit.Anchor(highScores, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-40f, 470f), new Vector2(600f, 120f));
 
-            RectTransform eventSelect = Kit.TextButton(root, "EventSelect", "100m", 76f, Kit.InkColor, out TextMeshProUGUI eventName);
+            RectTransform eventSelect = Kit.TextButton(root, "EventSelect", "100m", 76f, Kit.InkColor, out Text eventName);
             Kit.Anchor(eventSelect, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-40f, 290f), new Vector2(600f, 150f));
             eventName.name = "EventName";
-            Kit.Stretch(eventName.rectTransform, 0f, 0f, 50f, 6f);
-            TextMeshProUGUI caption = Kit.Label(eventSelect, "Caption", "Event select:", 42f, Kit.InkColor);
+            Kit.Stretch(eventName.rectTransform, 16f, 16f, 54f, 10f);
+            Text caption = Kit.Label(eventSelect, "Caption", "Event select:", 42f, Kit.InkColor);
             Kit.TopBand(caption.rectTransform, 6f, 48f, 16f);
 
             RectTransform play = Kit.IconButton(root, "Play", "Play", 150f, Kit.InkColor, Kit.FrameColor, 150f);
@@ -57,23 +56,27 @@ namespace SpeedStars.Tools.Builders
             Kit.Panel(presetName.gameObject, Kit.PanelColor, frame: true, raycast: false);
             Image avatar = Kit.Icon(presetName, "Avatar", UiShape.Round, Kit.BlueText);
             Kit.Anchor(avatar.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(14f, 0f), new Vector2(96f, 96f));
-            TextMeshProUGUI presetLabel = Kit.Label(presetName, "Name", "Custom 1", 76f, Kit.BlueText);
-            presetLabel.margin = new Vector4(120f, 0f, 16f, 0f);
+            Text presetLabel = Kit.Label(presetName, "Name", "Custom 1", 76f, Kit.BlueText);
+            Kit.Margin(presetLabel, 120f, 0f, 16f, 0f);
+
+            UiViewBinder.BindHome(root);
         }
 
-        public static void EventSelect(RectTransform root)
+        public static void EventSelect(RectTransform root, SpeedStars.UI.Home.EventRowView rowPrefab)
         {
-            root.gameObject.AddComponent<UiScreen>();
+            root.gameObject.AddComponent<SpeedStars.UI.Home.EventSelectScreenView>();
             Kit.BackButton(root);
 
             RectTransform panel = Kit.Stretch(Kit.Node(root, "Panel"), 300f, 300f, 60f, 60f);
             Kit.Panel(panel.gameObject, Kit.PanelColor, frame: true, raycast: true);
 
-            TextMeshProUGUI title = Kit.Label(panel, "Title", "Event select", 80f, Kit.InkColor);
+            Text title = Kit.Label(panel, "Title", "Event select", 80f, Kit.InkColor);
             Kit.TopBand(title.rectTransform, 20f, 100f, 40f);
 
             RectTransform list = Kit.VerticalList(panel, "List", 12f);
             Kit.Stretch(list, 40f, 40f, 140f, 40f);
+
+            UiViewBinder.BindEventSelect(root, rowPrefab);
         }
 
         /// <summary>
@@ -92,8 +95,8 @@ namespace SpeedStars.Tools.Builders
             Kit.Panel(racerName.gameObject, Kit.PanelColor, frame: true, raycast: false);
             Image avatar = Kit.Icon(racerName, "Avatar", UiShape.Round, Kit.BlueText);
             Kit.Anchor(avatar.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(16f, 0f), new Vector2(96f, 96f));
-            TextMeshProUGUI nameLabel = Kit.Label(racerName, "Name", "Custom 1", 76f, Kit.BlueText);
-            nameLabel.margin = new Vector4(120f, 0f, 16f, 0f);
+            Text nameLabel = Kit.Label(racerName, "Name", "Custom 1", 76f, Kit.BlueText);
+            Kit.Margin(nameLabel, 120f, 0f, 16f, 0f);
 
             RectTransform categories = Kit.TopBand(Kit.Node(categoryPanel, "Categories"), 150f, 560f);
             GridLayoutGroup grid = categories.gameObject.AddComponent<GridLayoutGroup>();
@@ -132,8 +135,8 @@ namespace SpeedStars.Tools.Builders
             Kit.Panel(price.gameObject, Kit.PanelColor, frame: true, raycast: false);
             Image currency = Kit.Icon(price, "Icon", UiShape.Round, Kit.CashGreen);
             Kit.Anchor(currency.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(16f, 0f), new Vector2(56f, 56f));
-            TextMeshProUGUI amount = Kit.Label(price, "Amount", "0", 52f, Kit.InkColor);
-            amount.margin = new Vector4(80f, 0f, 16f, 0f);
+            Text amount = Kit.Label(price, "Amount", "0", 52f, Kit.InkColor);
+            Kit.Margin(amount, 80f, 0f, 16f, 0f);
 
             RectTransform itemBack = Kit.TextButton(itemPanel, "ItemBack", "Back", 60f, Kit.InkColor);
             Kit.Anchor(itemBack, new Vector2(0.5f, 0f), new Vector2(1f, 0f), new Vector2(-20f, 40f), new Vector2(340f, 110f));
@@ -155,17 +158,17 @@ namespace SpeedStars.Tools.Builders
             RectTransform panel = Kit.Stretch(Kit.Node(root, "Panel"), 300f, 300f, 40f, 40f);
             Kit.Panel(panel.gameObject, Kit.PanelColor, frame: true, raycast: true);
 
-            TextMeshProUGUI title = Kit.Label(panel, "Title", "High scores", 84f, Kit.GoldText);
+            Text title = Kit.Label(panel, "Title", "High scores", 84f, Kit.GoldText);
             Kit.TopBand(title.rectTransform, 20f, 100f, 140f);
             Image titleIcon = Kit.Icon(panel, "TitleIcon", UiShape.Round, Kit.GoldText);
             Kit.Anchor(titleIcon.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(60f, -25f), new Vector2(90f, 90f));
 
             RectTransform filters = Kit.TopBand(Kit.Node(panel, "Filters"), 140f, 90f, 40f);
 
-            RectTransform eventSelector = Kit.TextButton(filters, "EventSelector", "100m dash", 52f, Kit.InkColor, out TextMeshProUGUI eventLabel);
+            RectTransform eventSelector = Kit.TextButton(filters, "EventSelector", "100m dash", 52f, Kit.InkColor, out Text eventLabel);
             Kit.Span(eventSelector, Vector2.zero, new Vector2(0.46f, 1f));
-            eventLabel.alignment = TextAlignmentOptions.Left;
-            eventLabel.margin = new Vector4(24f, 4f, 80f, 4f);
+            eventLabel.alignment = TextAnchor.MiddleLeft;
+            Kit.Stretch(eventLabel.rectTransform, 24f, 80f, 4f, 4f);
             Image arrow = Kit.Icon(eventSelector, "Arrow", UiShape.Arrow, Kit.InkColor);
             Kit.Anchor(arrow.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-20f, 0f), new Vector2(52f, 52f));
 
@@ -185,7 +188,7 @@ namespace SpeedStars.Tools.Builders
             Kit.Panel(playerRow.gameObject, Kit.HighlightColor, frame: true, raycast: false);
             Image flag = Kit.Icon(playerRow, "Flag", UiShape.Panel, Kit.IconGrey);
             Kit.Span(flag.rectTransform, new Vector2(0.02f, 0.18f), new Vector2(0.08f, 0.82f));
-            Kit.Span(Kit.Label(playerRow, "Name", "Player", 48f, Kit.InkColor, TextAlignmentOptions.Left).rectTransform,
+            Kit.Span(Kit.Label(playerRow, "Name", "Player", 48f, Kit.InkColor, TextAnchor.MiddleLeft).rectTransform,
                 new Vector2(0.1f, 0f), new Vector2(0.38f, 1f));
             Kit.Span(Kit.Label(playerRow, "Time", "0.00", 48f, Kit.InkColor).rectTransform, new Vector2(0.4f, 0f), new Vector2(0.56f, 1f));
             Kit.Span(Kit.Label(playerRow, "Rank", "#0", 48f, Kit.InkColor).rectTransform, new Vector2(0.58f, 0f), new Vector2(0.78f, 1f));
@@ -198,7 +201,7 @@ namespace SpeedStars.Tools.Builders
         /// <summary>Race HUD: race time and distance / progress bar. No pause (not in the PDF). Nothing catches taps.</summary>
         public static void RaceHud(RectTransform root)
         {
-            root.gameObject.AddComponent<UiScreen>();
+            root.gameObject.AddComponent<SpeedStars.UI.Race.RaceHudView>();
 
             RectTransform raceTime = Kit.Node(root, "RaceTime");
             Kit.Anchor(raceTime, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(360f, 110f));
@@ -219,17 +222,19 @@ namespace SpeedStars.Tools.Builders
             fill.fillOrigin = (int)Image.OriginHorizontal.Left;
             fill.fillAmount = 0f;
 
-            TextMeshProUGUI distance = Kit.Label(progress, "Distance", "0 m", 44f, Kit.InkColor);
+            Text distance = Kit.Label(progress, "Distance", "0 m", 44f, Kit.InkColor);
             Kit.Place(distance.rectTransform, new Vector2(1f, 0f), Vector2.one, new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(184f, 0f));
+
+            UiViewBinder.BindRaceHud(root);
         }
 
         /// <summary>
         /// Results: left panel (event title, Personal Best, World Record, "Results" list of HighScoreRow) and the MD §2.1
         /// buttons on the right: Watch replay, Race again, High scores, Practice, Main menu.
         /// </summary>
-        public static void Results(RectTransform root)
+        public static void Results(RectTransform root, SpeedStars.UI.Race.ResultRowView rowPrefab)
         {
-            root.gameObject.AddComponent<UiScreen>();
+            root.gameObject.AddComponent<SpeedStars.UI.Race.ResultsScreenView>();
 
             RectTransform left = Kit.Node(root, "LeftPanel");
             Kit.Place(left, Vector2.zero, new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(210f, 0f), new Vector2(760f, 0f));
@@ -238,15 +243,15 @@ namespace SpeedStars.Tools.Builders
             RectTransform eventTitle = Kit.TopBand(Kit.Node(left, "EventTitle"), 30f, 110f, 40f);
             Image eventIcon = Kit.Icon(eventTitle, "Icon", UiShape.Panel, Kit.FrameColor);
             Kit.Anchor(eventIcon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(40f, 0f), new Vector2(80f, 80f));
-            TextMeshProUGUI eventName = Kit.Label(eventTitle, "Label", "100m dash", 84f, Kit.InkColor);
-            eventName.margin = new Vector4(130f, 0f, 16f, 0f);
+            Text eventName = Kit.Label(eventTitle, "Label", "100m dash", 84f, Kit.InkColor);
+            Kit.Margin(eventName, 130f, 0f, 16f, 0f);
 
             Kit.Fill(Kit.TopBand(Kit.Node(left, "Divider"), 160f, 6f, 50f).gameObject, Kit.FrameColor, raycast: false);
             RecordBlock(left, "PersonalBest", "Personal Best:", Kit.BlueText, 180f);
             RecordBlock(left, "WorldRecord", "World Record:", Kit.OrangeText, 300f);
             Kit.Fill(Kit.TopBand(Kit.Node(left, "Divider2"), 424f, 6f, 50f).gameObject, Kit.FrameColor, raycast: false);
 
-            TextMeshProUGUI resultsCaption = Kit.Label(left, "ResultsCaption", "Results", 48f, Kit.InkColor, TextAlignmentOptions.Left);
+            Text resultsCaption = Kit.Label(left, "ResultsCaption", "Results", 48f, Kit.InkColor, TextAnchor.MiddleLeft);
             Kit.TopBand(resultsCaption.rectTransform, 440f, 64f, 60f);
 
             RectTransform results = Kit.VerticalList(left, "Results", 4f);
@@ -268,6 +273,8 @@ namespace SpeedStars.Tools.Builders
             ResultButton(buttons, "HighScores", "High scores", Kit.GoldText);
             ResultButton(buttons, "Practice", "Practice", Kit.InkColor);
             ResultButton(buttons, "MainMenu", "Main menu", Kit.PinkText);
+
+            UiViewBinder.BindResults(root, rowPrefab);
         }
 
         private static void BuildColorPicker(RectTransform itemPanel)
@@ -316,9 +323,9 @@ namespace SpeedStars.Tools.Builders
             RectTransform block = Kit.TopBand(Kit.Node(panel, name), top, 110f, 60f);
             Image icon = Kit.Icon(block, "Icon", UiShape.Round, Kit.GoldText);
             Kit.Anchor(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(90f, 90f));
-            TextMeshProUGUI captionLabel = Kit.Label(block, "Caption", caption, 46f, captionColor, TextAlignmentOptions.Left);
+            Text captionLabel = Kit.Label(block, "Caption", caption, 46f, captionColor, TextAnchor.MiddleLeft);
             Kit.Place(captionLabel.rectTransform, new Vector2(0f, 0.5f), Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(55f, 0f), new Vector2(-110f, 0f));
-            TextMeshProUGUI value = Kit.Label(block, "Value", "-", 40f, Kit.InkColor, TextAlignmentOptions.Left);
+            Text value = Kit.Label(block, "Value", "-", 40f, Kit.InkColor, TextAnchor.MiddleLeft);
             Kit.Place(value.rectTransform, Vector2.zero, new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(55f, 0f), new Vector2(-110f, 0f));
         }
 
@@ -341,58 +348,60 @@ namespace SpeedStars.Tools.Builders
         /// </summary>
         public static void EntryGate(RectTransform root)
         {
-            RectTransform window = PopupFrame(root, new Vector2(960f, 820f));
+            RectTransform window = PopupFrame<SpeedStars.UI.Home.EntryGateModalView>(root, new Vector2(960f, 820f));
             Kit.CloseButton(window);
 
-            TextMeshProUGUI eventName = Kit.Label(window, "EventName", "100m dash", 76f, Kit.InkColor);
+            Text eventName = Kit.Label(window, "EventName", "100m dash", 76f, Kit.InkColor);
             Kit.TopBand(eventName.rectTransform, 30f, 100f, 140f);
 
-            RectTransform useTicket = Kit.IconButton(window, "UseEntryTicket", "Adet Bileti Kullan", 60f, Kit.InkColor, Kit.TicketOrange, 96f,
-                UiShape.Panel, out TextMeshProUGUI useLabel);
+            RectTransform useTicket = Kit.IconButton(window, "UseEntryTicket", "Use Entry Ticket", 60f, Kit.InkColor, Kit.TicketOrange, 96f,
+                UiShape.Panel, out Text useLabel);
             Kit.Anchor(useTicket, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -160f), new Vector2(780f, 140f));
-            Kit.Stretch(useLabel.rectTransform, 0f, 0f, 0f, 48f);
-            TextMeshProUGUI remaining = Kit.Label(useTicket, "Remaining", "Kalan: 0", 36f, Kit.BlueText);
+            Kit.Stretch(useLabel.rectTransform, 128f, 16f, 4f, 52f); // icon inset + room for the Remaining line
+            Text remaining = Kit.Label(useTicket, "Remaining", "Left: 0", 36f, Kit.BlueText);
             Kit.BottomBand(remaining.rectTransform, 8f, 44f);
-            remaining.margin = useLabel.margin;
+            Kit.Margin(remaining, 128f, 0f, 16f, 0f); // same inset as the ticket label
 
             RectTransform timed = Kit.Node(window, "TimedTicketStatus");
             Kit.Anchor(timed, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -330f), new Vector2(780f, 100f));
             Kit.Panel(timed.gameObject, Kit.SoftColor, frame: true, raycast: false);
             Image timedIcon = Kit.Icon(timed, "Icon", UiShape.Round, Kit.TimedCyan);
             Kit.Anchor(timedIcon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(18f, 0f), new Vector2(70f, 70f));
-            TextMeshProUGUI timedLabel = Kit.Label(timed, "Label", "Süreli Bilet", 44f, Kit.InkColor, TextAlignmentOptions.Left);
+            Text timedLabel = Kit.Label(timed, "Label", "Timed Ticket", 44f, Kit.InkColor, TextAnchor.MiddleLeft);
             Kit.Span(timedLabel.rectTransform, Vector2.zero, new Vector2(0.62f, 1f));
-            timedLabel.margin = new Vector4(104f, 0f, 8f, 0f);
-            TextMeshProUGUI timedValue = Kit.Label(timed, "Value", "-", 44f, Kit.BlueText, TextAlignmentOptions.Right);
+            Kit.Margin(timedLabel, 104f, 0f, 8f, 0f);
+            Text timedValue = Kit.Label(timed, "Value", "-", 44f, Kit.BlueText, TextAnchor.MiddleRight);
             Kit.Span(timedValue.rectTransform, new Vector2(0.62f, 0f), Vector2.one);
-            timedValue.margin = new Vector4(8f, 0f, 24f, 0f);
+            Kit.Margin(timedValue, 8f, 0f, 24f, 0f);
 
             RectTransform offers = Kit.Node(window, "GetTickets");
             Kit.Anchor(offers, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(860f, 300f));
-            TextMeshProUGUI offersCaption = Kit.Label(offers, "Caption", "Bilet edin", 48f, Kit.InkColor);
+            Text offersCaption = Kit.Label(offers, "Caption", "Get tickets", 48f, Kit.InkColor);
             Kit.TopBand(offersCaption.rectTransform, 0f, 64f);
 
-            RectTransform cash = Kit.IconButton(offers, "BuyWithCash", "Nakit", 56f, Kit.InkColor, Kit.CashGreen, 80f, UiShape.Round);
+            RectTransform cash = Kit.IconButton(offers, "BuyWithCash", "Cash", 56f, Kit.InkColor, Kit.CashGreen, 80f, UiShape.Round);
             Kit.Anchor(cash, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(415f, 200f));
-            TextMeshProUGUI cashPrice = Kit.Label(cash, "Price", "0", 44f, Kit.BlueText);
+            Text cashPrice = Kit.Label(cash, "Price", "0", 44f, Kit.BlueText);
             Kit.BottomBand(cashPrice.rectTransform, 12f, 52f);
             cash.GetComponent<Button>().interactable = false;
 
-            RectTransform ad = Kit.IconButton(offers, "WatchAd", "Ödüllü reklam", 52f, Kit.InkColor, Kit.TicketOrange, 80f, UiShape.Round);
+            RectTransform ad = Kit.IconButton(offers, "WatchAd", "Watch ad", 52f, Kit.InkColor, Kit.TicketOrange, 80f, UiShape.Round);
             Kit.Anchor(ad, new Vector2(1f, 0f), new Vector2(1f, 0f), Vector2.zero, new Vector2(415f, 200f));
             ad.GetComponent<Button>().interactable = false;
+
+            UiViewBinder.BindEntryGate(root);
         }
 
         /// <summary>Daily entry gift: "Welcome back", the ticket picture, CLAIM (claiming closes it; no Close button).</summary>
         public static void DailyGift(RectTransform root)
         {
-            RectTransform window = PopupFrame(root, new Vector2(760f, 640f));
+            RectTransform window = PopupFrame<UiPopup>(root, new Vector2(900f, 700f));
 
-            TextMeshProUGUI title = Kit.Label(window, "Title", "Welcome back", 80f, Kit.InkColor);
-            Kit.TopBand(title.rectTransform, 40f, 100f, 40f);
+            Text title = Kit.Label(window, "Title", "Welcome back! Claim it and go to start your challenge!", 60f, Kit.InkColor);
+            Kit.TopBand(title.rectTransform, 40f, 190f, 50f);
 
             Image ticket = Kit.Icon(window, "TicketIcon", UiShape.Panel, Kit.TicketOrange);
-            Kit.Anchor(ticket.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 20f), new Vector2(240f, 240f));
+            Kit.Anchor(ticket.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(220f, 220f));
             Kit.Frame(ticket.gameObject);
 
             RectTransform claim = Kit.TextButton(window, "Claim", "CLAIM", 72f, Kit.GreenText);
@@ -402,10 +411,10 @@ namespace SpeedStars.Tools.Builders
         /// <summary>7-day check-in: title, seven SevenDayCell instances (Day1..Day7, fixed count, not a list), Close.</summary>
         public static void SevenDayCheckIn(RectTransform root, GameObject sevenDayCell, UnityEngine.SceneManagement.Scene scene)
         {
-            RectTransform window = PopupFrame(root, new Vector2(1580f, 640f));
+            RectTransform window = PopupFrame<UiPopup>(root, new Vector2(1580f, 640f));
             Kit.CloseButton(window);
 
-            TextMeshProUGUI title = Kit.Label(window, "Title", "7 Günlük Ödül", 80f, Kit.InkColor);
+            Text title = Kit.Label(window, "Title", "7-Day Rewards", 80f, Kit.InkColor);
             Kit.TopBand(title.rectTransform, 30f, 100f, 140f);
 
             RectTransform days = Kit.Node(window, "Days");
@@ -417,16 +426,16 @@ namespace SpeedStars.Tools.Builders
                 RectTransform cell = Kit.Nest(sevenDayCell, days, "Day" + day, scene);
                 if (cell == null) continue;
                 Transform dayLabel = cell.Find("Day");
-                TextMeshProUGUI text = dayLabel != null ? dayLabel.GetComponent<TextMeshProUGUI>() : null;
+                Text text = dayLabel != null ? dayLabel.GetComponent<Text>() : null;
                 if (text == null) continue;
-                text.text = "Gün " + day;
+                text.text = "Day " + day;
                 Kit.Record(text);
             }
         }
 
-        private static RectTransform PopupFrame(RectTransform root, Vector2 windowSize)
+        private static RectTransform PopupFrame<TPopup>(RectTransform root, Vector2 windowSize) where TPopup : UiPopup
         {
-            root.gameObject.AddComponent<UiPopup>();
+            root.gameObject.AddComponent<TPopup>();
 
             Kit.Fill(Kit.Stretch(Kit.Node(root, "Dim")).gameObject, Kit.DimColor, raycast: true);
 

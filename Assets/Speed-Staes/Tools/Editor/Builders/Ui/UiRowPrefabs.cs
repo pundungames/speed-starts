@@ -1,4 +1,3 @@
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Kit = SpeedStars.Tools.Builders.UiBuildKit;
@@ -15,29 +14,32 @@ namespace SpeedStars.Tools.Builders
         /// <summary>Event Select row: name, distance, "ticketed" badge, lock. The whole row is the tap target.</summary>
         public static void EventRow(RectTransform root)
         {
+            root.gameObject.AddComponent<SpeedStars.UI.Home.EventRowView>();
             Kit.Anchor(root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000f, 120f));
             Image background = Kit.Panel(root.gameObject, Kit.PanelColor, frame: true, raycast: true);
             Kit.Clickable(root.gameObject, background);
             Kit.PreferredHeight(root.gameObject, 120f);
 
-            TextMeshProUGUI eventName = Kit.Label(root, "Name", "100m dash", 56f, Kit.InkColor, TextAlignmentOptions.Left);
+            Text eventName = Kit.Label(root, "Name", "100m dash", 56f, Kit.InkColor, TextAnchor.MiddleLeft);
             Kit.Span(eventName.rectTransform, new Vector2(0.04f, 0f), new Vector2(0.58f, 1f));
 
-            TextMeshProUGUI distance = Kit.Label(root, "Distance", "100m", 44f, Kit.BlueText);
+            Text distance = Kit.Label(root, "Distance", "100m", 44f, Kit.BlueText);
             Kit.Span(distance.rectTransform, new Vector2(0.58f, 0f), new Vector2(0.76f, 1f));
 
             RectTransform badge = Kit.Span(Kit.Node(root, "TicketBadge"), new Vector2(0.78f, 0.2f), new Vector2(0.96f, 0.8f));
             Kit.Panel(badge.gameObject, Kit.HighlightColor, frame: true, raycast: false);
             Image badgeIcon = Kit.Icon(badge, "Icon", UiShape.Round, Kit.TicketOrange);
             Kit.Anchor(badgeIcon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(8f, 0f), new Vector2(48f, 48f));
-            TextMeshProUGUI badgeLabel = Kit.Label(badge, "Label", "Bilet", 32f, Kit.InkColor);
-            badgeLabel.margin = new Vector4(60f, 0f, 8f, 0f);
+            Text badgeLabel = Kit.Label(badge, "Label", "Ticket", 32f, Kit.InkColor);
+            Kit.Margin(badgeLabel, 60f, 0f, 8f, 0f);
 
             RectTransform lockOverlay = Kit.Stretch(Kit.Node(root, "Lock"));
             Kit.Fill(lockOverlay.gameObject, Kit.ShadeColor, raycast: false);
             Image lockIcon = Kit.Icon(lockOverlay, "Icon", UiShape.Panel, Kit.IconGrey);
             Kit.Anchor(lockIcon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(72f, 72f));
             lockOverlay.gameObject.SetActive(false);
+
+            UiViewBinder.BindEventRow(root);
         }
 
         /// <summary>Edit racer item cell: icon, lock, price, premium glow panel (premium items sit on top, glowing).</summary>
@@ -61,8 +63,8 @@ namespace SpeedStars.Tools.Builders
             RectTransform price = Kit.BottomBand(Kit.Node(root, "Price"), 10f, 56f, 16f);
             Image currency = Kit.Icon(price, "Icon", UiShape.Round, Kit.CashGreen);
             Kit.Anchor(currency.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(44f, 44f));
-            TextMeshProUGUI amount = Kit.Label(price, "Amount", "0", 40f, Kit.InkColor, TextAlignmentOptions.Left);
-            amount.margin = new Vector4(52f, 0f, 0f, 0f);
+            Text amount = Kit.Label(price, "Amount", "0", 40f, Kit.InkColor, TextAnchor.MiddleLeft);
+            Kit.Margin(amount, 52f, 0f, 0f, 0f);
         }
 
         /// <summary>7-day check-in cell: day, reward icon, claimed mark. Tappable (today's cell claims).</summary>
@@ -72,7 +74,7 @@ namespace SpeedStars.Tools.Builders
             Image background = Kit.Panel(root.gameObject, Kit.PanelColor, frame: true, raycast: true);
             Kit.Clickable(root.gameObject, background);
 
-            TextMeshProUGUI day = Kit.Label(root, "Day", "Gün 1", 40f, Kit.InkColor);
+            Text day = Kit.Label(root, "Day", "Day 1", 40f, Kit.InkColor);
             Kit.TopBand(day.rectTransform, 12f, 56f, 10f);
 
             Image reward = Kit.Icon(root, "RewardIcon", UiShape.Round, Kit.TicketOrange);
@@ -88,28 +90,31 @@ namespace SpeedStars.Tools.Builders
         /// <summary>High score / results row: rank, flag slot, name, time, date, PB mark. Columns follow the row width.</summary>
         public static void HighScoreRow(RectTransform root)
         {
+            root.gameObject.AddComponent<SpeedStars.UI.Race.ResultRowView>();
             Kit.Anchor(root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000f, 64f));
             Kit.Panel(root.gameObject, Kit.PanelColor, frame: false, raycast: false);
             Kit.PreferredHeight(root.gameObject, 64f);
 
-            TextMeshProUGUI rank = Kit.Label(root, "Rank", "1", 40f, Kit.InkColor);
+            Text rank = Kit.Label(root, "Rank", "1", 40f, Kit.InkColor);
             Kit.Span(rank.rectTransform, new Vector2(0f, 0f), new Vector2(0.08f, 1f));
 
             Image flag = Kit.Icon(root, "Flag", UiShape.Panel, Kit.IconGrey);
             Kit.Span(flag.rectTransform, new Vector2(0.09f, 0.18f), new Vector2(0.15f, 0.82f));
 
-            TextMeshProUGUI playerName = Kit.Label(root, "Name", "Player", 40f, Kit.InkColor, TextAlignmentOptions.Left);
+            Text playerName = Kit.Label(root, "Name", "Player", 40f, Kit.InkColor, TextAnchor.MiddleLeft);
             Kit.Span(playerName.rectTransform, new Vector2(0.17f, 0f), new Vector2(0.55f, 1f));
 
-            TextMeshProUGUI time = Kit.Label(root, "Time", "0.00", 40f, Kit.InkColor);
+            Text time = Kit.Label(root, "Time", "0.00", 40f, Kit.InkColor);
             Kit.Span(time.rectTransform, new Vector2(0.56f, 0f), new Vector2(0.72f, 1f));
 
-            TextMeshProUGUI date = Kit.Label(root, "Date", "--/--/----", 36f, Kit.BlueText);
+            Text date = Kit.Label(root, "Date", "--/--/----", 36f, Kit.BlueText);
             Kit.Span(date.rectTransform, new Vector2(0.73f, 0f), new Vector2(0.92f, 1f));
 
-            TextMeshProUGUI personalBest = Kit.Label(root, "PbMark", "PB", 36f, Kit.BlueText);
+            Text personalBest = Kit.Label(root, "PbMark", "PB", 36f, Kit.BlueText);
             Kit.Span(personalBest.rectTransform, new Vector2(0.92f, 0f), new Vector2(1f, 1f));
             personalBest.gameObject.SetActive(false);
+
+            UiViewBinder.BindResultRow(root);
         }
     }
 
@@ -122,6 +127,7 @@ namespace SpeedStars.Tools.Builders
         /// <summary>Purple Gem · Entry Ticket (count + regen countdown) · Timed Ticket · Cash, each icon + amount + "+".</summary>
         public static void ResourceBar(RectTransform root)
         {
+            root.gameObject.AddComponent<SpeedStars.UI.Home.ResourceBarView>();
             Kit.Anchor(root, Vector2.one, Vector2.one, new Vector2(-24f, -20f), new Vector2(1260f, 100f));
             Kit.Row(root.gameObject, 16f, TextAnchor.MiddleRight);
 
@@ -129,6 +135,8 @@ namespace SpeedStars.Tools.Builders
             ResourceItem(root, "EntryTicket", Kit.TicketOrange, "0/0", 340f, countdown: true);
             ResourceItem(root, "TimedTicket", Kit.TimedCyan, "0", 280f, countdown: false);
             ResourceItem(root, "Cash", Kit.CashGreen, "0", 300f, countdown: false);
+
+            UiViewBinder.BindResourceBar(root);
         }
 
         /// <summary>Small "there is something new" dot; sits at its parent's top-right corner.</summary>
@@ -167,11 +175,11 @@ namespace SpeedStars.Tools.Builders
             Image icon = Kit.Icon(item, "Icon", UiShape.Round, iconColor);
             Kit.Anchor(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(92f, 0f), new Vector2(64f, 64f));
 
-            TextMeshProUGUI value = Kit.Label(item, "Amount", amount, 48f, Kit.InkColor, TextAlignmentOptions.Left);
+            Text value = Kit.Label(item, "Amount", amount, 48f, Kit.InkColor, TextAnchor.MiddleLeft);
             Kit.Stretch(value.rectTransform, 166f, 12f, 0f, countdown ? 34f : 0f);
 
             if (!countdown) return;
-            TextMeshProUGUI timer = Kit.Label(item, "Countdown", "00:00", 28f, Kit.BlueText, TextAlignmentOptions.Left);
+            Text timer = Kit.Label(item, "Countdown", "00:00", 28f, Kit.BlueText, TextAnchor.MiddleLeft);
             Kit.Stretch(timer.rectTransform, 166f, 12f, 54f, 4f);
         }
     }
