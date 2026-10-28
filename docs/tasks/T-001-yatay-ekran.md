@@ -1,7 +1,7 @@
 ---
 id: T-001
 title: Ekran yonu yatay + referans cozunurluk
-status: blocked
+status: merged
 owner: scene-integrator
 depends_on: []
 owns_paths:
@@ -18,8 +18,8 @@ needs:
     durum: closed
     not: "Ana klasorde ProjectSettings.asset'te kullanicinin/Unity'nin commit'siz degisikligi var; once git diff ile bak, kullaniciya sor -> 058ec2d commit'lendi, merge 881966a"
 started:
-finished:
-blocked_reason: "Kullanici Player Settings > Resolution and Presentation'da Portrait ve Portrait Upside Down'u kapatir (Editor acikken dosya disaridan yazilmaz, Editor ezer)"
+finished: 2026-10-28
+blocked_reason:
 ---
 
 ## Hedef
@@ -32,3 +32,4 @@ izinli (dikey kapalı). UI referans çözünürlüğü 1920×1080 (CanvasScaler 
 - [ ] Kullanıcının mevcut commit'siz ProjectSettings değişikliği korunur
 
 ## Çalışma notu
+- 28.10: kullanıcı Android'e geçti ve "sen ayarla" dedi: allowedAutorotateToPortrait/PortraitUpsideDown = 0 (Auto Rotation, yalnız Landscape Left/Right). Editor açıkken dosyadan yazıldı; Editor ezmesin diye kullanıcı Player Settings'te kutuları kontrol eder.
