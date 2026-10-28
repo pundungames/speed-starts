@@ -8,7 +8,8 @@ MOD: süpervizör
 Son güncelleme: 2026-10-28 · agent-kit v2 kurulumu · dal `main` (ad3616b üstü)
 
 ## Kullanıcıdan bekleyen kararlar
-- `docs/YOL-HARITASI.md` sonundaki 5 soru (Upgrade, Players, High Scores backend, ikon/efekt kimden, reklam/IAP) + sözleşme onayı.
+- Başlangıç Adet Bileti (yeni kayıt) PDF'te yok → şu an 0; test için 3 öneriliyor (`EconomyConfig.startingEntryTickets`, kullanıcının sayısı).
+- Yatay ekran: `ProjectSettings` → Portrait kapalı, diske kaydedilmedi (kullanıcı Player Settings'ten).
 - Malik'ten istenecekler (UI bunlarsız kurulamaz; `docs/TEMEL-SOZLESME.md` §11): (1) yarış başladı/bitti olayı ve
   bitişte anında başa dönmemesi (`RaceController.cs:55-58` aynı karede `ResetRace`) → sonuç ekranı için; (2) dokunma
   UI üstündeyse ayak sayılmasın (`RunnerInput.cs:76-81` bütün ekranı dinliyor) → menü/duraklat butonu için;
