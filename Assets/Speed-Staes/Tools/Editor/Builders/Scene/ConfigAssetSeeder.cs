@@ -78,7 +78,9 @@ namespace SpeedStars.Tools.Builders
             // no rewarded ad (OPEN #11: no ad SDK in the project).
             Prop(so, "startingCash").intValue = 0;
             Prop(so, "startingPurpleGems").intValue = 0;
-            Prop(so, "startingEntryTickets").intValue = 0;
+            // Not in the PDF either; decided 28.10: a new player starts with a full inventory (= entryTicketCap), otherwise
+            // the very first race waits for a regen.
+            Prop(so, "startingEntryTickets").intValue = so.FindProperty("entryTicketCap").intValue;
             Prop(so, "startingTimedTickets").intValue = 0;
             Prop(so, "entryTicketCashPrice").intValue = 0;
             Prop(so, "timedTicketCashPrice").intValue = 0;
