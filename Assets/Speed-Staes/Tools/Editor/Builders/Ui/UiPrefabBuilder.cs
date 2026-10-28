@@ -18,6 +18,7 @@ namespace SpeedStars.Tools.Builders
     {
         public static void BuildAll(bool overwrite)
         {
+            UiArt.ImportAll(); // sprite settings first: prefabs load the art as Sprites
             UiBuildKit.Begin();
             UnityEngine.SceneManagement.Scene scene = EditorSceneManager.NewPreviewScene();
             var run = new Run(scene, overwrite);
@@ -28,11 +29,11 @@ namespace SpeedStars.Tools.Builders
                 run.Build(UiPrefabPaths.CosmeticCell, UiRowPrefabs.CosmeticCell);
                 GameObject sevenDayCell = run.Build(UiPrefabPaths.SevenDayCell, UiRowPrefabs.SevenDayCell);
 
-                GameObject redDot = run.Build(UiPrefabPaths.RedDot, UiWidgetPrefabs.RedDot);
+                run.Build(UiPrefabPaths.RedDot, UiWidgetPrefabs.RedDot);
                 run.Build(UiPrefabPaths.ResourceBar, UiWidgetPrefabs.ResourceBar);
                 run.Build(UiPrefabPaths.RewardFlight, UiWidgetPrefabs.RewardFlight);
 
-                run.Build(UiPrefabPaths.HomeScreen, root => UiScreenPrefabs.Home(root, redDot, scene));
+                run.Build(UiPrefabPaths.HomeScreen, UiScreenPrefabs.Home);
                 run.Build(UiPrefabPaths.EventSelectScreen,
                     root => UiScreenPrefabs.EventSelect(root, UiViewBinder.RowComponent<SpeedStars.UI.Home.EventRowView>(eventRow, UiPrefabPaths.EventRow)));
                 run.Build(UiPrefabPaths.CosmeticsScreen, UiScreenPrefabs.Cosmetics);

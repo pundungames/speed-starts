@@ -60,5 +60,26 @@ namespace SpeedStars.Tests.UI.Race
         {
             Assert.AreEqual("37 m", RaceDisplayFormat.Meters(37));
         }
+
+        [TestCase(0f, "0.0 m/s")]
+        [TestCase(7.45f, "7.4 m/s")]
+        [TestCase(10f, "10.0 m/s")]
+        [TestCase(-2f, "0.0 m/s")]
+        [TestCase(float.NaN, "0.0 m/s")]
+        public void Speed_ShowsTruncatedTenths(float metersPerSecond, string expected)
+        {
+            Assert.AreEqual(expected, RaceDisplayFormat.Speed(metersPerSecond));
+        }
+
+        [TestCase(0f, 10f, 0f)]
+        [TestCase(5f, 10f, 0.5f)]
+        [TestCase(25f, 10f, 1f)]
+        [TestCase(-1f, 10f, 0f)]
+        [TestCase(5f, 0f, 0f)]
+        [TestCase(float.NaN, 10f, 0f)]
+        public void CadenceFraction_IsClampedToTheBar(float pps, float max, float expected)
+        {
+            Assert.AreEqual(expected, RaceDisplayFormat.CadenceFraction(pps, max), 1e-5f);
+        }
     }
 }

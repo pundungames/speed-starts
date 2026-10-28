@@ -10,7 +10,7 @@ namespace SpeedStars.UI.Race
     /// The decisions of the Race scene, as pure C# (RaceFlow is the thin Zenject shell around it). Start: take the
     /// confirmed entry from the gate and start the race with the catalog distance; with no pending entry (Play pressed
     /// in the editor straight from the Race scene) start the selected event for free and warn once. Finish: open Results.
-    /// Race again goes through the entry gate again (a ticket may be spent again); no ticket opens the Entry Gate modal.
+    /// Race again and the HUD Restart go through the entry gate again (a ticket may be spent again); no ticket opens the Entry Gate modal.
     /// </summary>
     public sealed class RaceFlowLogic : IDisposable
     {
@@ -107,7 +107,17 @@ namespace SpeedStars.UI.Race
 
         private void OnRaceAgain()
         {
-            if (!_resultsOpen || !_hasCurrent || _sceneFlow.IsTransitioning) return;
+            if (!_resultsOpen) return;
+            Restart();
+        }
+
+        /// <summary>
+        /// Runs the current event again through the entry gate (a ticket may be spent again, none is refunded for the run
+        /// being left). Works while the race runs and from Results alike; ignored before the first start or during a scene move.
+        /// </summary>
+        public void Restart()
+        {
+            if (!_started || !_hasCurrent || _sceneFlow.IsTransitioning) return;
 
             EntryResult result = _gate.Enter(_current.Id);
             switch (result)
@@ -116,28 +126,34 @@ namespace SpeedStars.UI.Race
                 case EntryResult.EnteredWithTicket:
                 case EntryResult.EnteredWithTimedAccess:
                     _gate.TryTakePending(out _); // the scene takes the confirmed entry, so the next Enter pays anew
-                    _resultsOpen = false;
-                    _navigator.Pop(); // back to the HUD at the root
+                    if (_resultsOpen)
+                    {
+                        _resultsOpen = false;
+                        _navigator.Pop(); // back to the HUD at the root
+                    }
                     BeginRace(_current.Id);
                     break;
 
                 case EntryResult.NoTicket:
-                    _results.NotifyDenied();
+                    if (_resultsOpen) _results.NotifyDenied();
                     if (_prompt != null) _prompt.Open(_current.Id);
                     else UnityEngine.Debug.LogWarning($"[RaceFlow] No Entry Ticket for '{_current.Id}' and no Entry Gate modal is bound.");
                     break;
 
                 default:
-                    _results.NotifyDenied();
+                    if (_resultsOpen) _results.NotifyDenied();
                     UnityEngine.Debug.LogWarning($"[RaceFlow] Entry to '{_current.Id}' refused: {result}.");
                     break;
             }
         }
 
-        private void OnMainMenu()
+        /// <summary>Leaves to the Home scene (no ticket refund); also from the running race. Ignored during a scene move.</summary>
+        public void Exit()
         {
             if (_sceneFlow.IsTransitioning) return;
             _sceneFlow.GoTo(GameScene.Home);
         }
+
+        private void OnMainMenu() => Exit();
     }
 }

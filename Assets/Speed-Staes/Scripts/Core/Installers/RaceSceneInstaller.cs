@@ -24,7 +24,8 @@ namespace SpeedStars.Installers
                 Debug.LogError("RaceSceneInstaller: raceSession and results must be assigned.", this);
                 return;
             }
-            Container.Bind<IRaceSession>().FromInstance(raceSession).AsSingle();
+            // One adapter serves the race flow (IRaceSession) and the HUD numbers (IRaceTelemetry, UI v2).
+            Container.Bind(typeof(IRaceSession), typeof(IRaceTelemetry)).FromInstance(raceSession).AsSingle();
             Container.Bind<IResultsView>().FromInstance(results).AsSingle();
             Container.Bind<IRaceEventLookup>().To<CatalogRaceEventLookup>().AsSingle();
             Container.BindInterfacesAndSelfTo<RaceFlow>().AsSingle().NonLazy();

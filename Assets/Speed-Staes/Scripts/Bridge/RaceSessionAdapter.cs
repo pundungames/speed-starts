@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using SpeedStars.Core.Race;
 using SpeedStars.Physical;
 using UnityEngine;
@@ -6,17 +7,19 @@ using UnityEngine;
 namespace SpeedStars.Bridge
 {
     /// <summary>
-    /// Translates the runner system (RaceController / RunnerBody, read-only) into IRaceSession. No decisions here.
+    /// Translates the runner system (RaceController / RunnerBody, read-only) into IRaceSession and IRaceTelemetry. No decisions here.
     /// Today the runner has no finish event and resets in the finish frame, so a RunReset that follows a changed
     /// LastRaceTime is the finish. When the runner gets a real finish event, only this class changes.
     /// </summary>
     [DefaultExecutionOrder(10)]
-    public sealed class RaceSessionAdapter : MonoBehaviour, IRaceSession
+    public sealed class RaceSessionAdapter : MonoBehaviour, IRaceSession, IRaceTelemetry
     {
         [SerializeField, Tooltip("The scene's RaceController (race length, clock, state).")]
         RaceController race;
         [SerializeField, Tooltip("The runner body: input gate, run reset, distance. Empty = race.body.")]
         RunnerBody body;
+        [SerializeField, Min(0.1f), Tooltip("Cadence window (s): presses per second is the press count of this recent span divided by it.")]
+        float cadenceWindowSeconds = 1f;
 
         RaceSessionState _state = RaceSessionState.Ready;
         RaceEventId _eventId;
@@ -24,6 +27,7 @@ namespace SpeedStars.Bridge
         float _lastSeenFinishTime;
         bool _requesting;
         bool _subscribed;
+        readonly Queue<double> _pressTimes = new Queue<double>();
 
         public RaceSessionState State => _state;
         public float TargetDistance => race ? race.raceDistance : 0f;
@@ -46,6 +50,29 @@ namespace SpeedStars.Bridge
             }
         }
 
+        public float SpeedMetersPerSecond => body && body.Sim != null ? body.Sim.Speed : 0f;
+
+        public float Energy01
+        {
+            get
+            {
+                if (!body || body.Sim == null) return 0f;
+                float max = body.Sim.T.energyMax;
+                return max > 0f ? Mathf.Clamp01(body.Sim.Energy / max) : 0f;
+            }
+        }
+
+        public float PressesPerSecond
+        {
+            get
+            {
+                float window = Mathf.Max(0.1f, cadenceWindowSeconds);
+                double now = Time.timeAsDouble;
+                while (_pressTimes.Count > 0 && now - _pressTimes.Peek() > window) _pressTimes.Dequeue();
+                return _pressTimes.Count / window;
+            }
+        }
+
         public event Action Started;
         public event Action<RaceOutcome> Finished;
 
@@ -54,7 +81,11 @@ namespace SpeedStars.Bridge
 
         void OnDisable()
         {
-            if (_subscribed && body) body.RunReset -= OnRunReset;
+            if (_subscribed && body)
+            {
+                body.RunReset -= OnRunReset;
+                body.Tapped -= OnTapped;
+            }
             _subscribed = false;
         }
 
@@ -67,6 +98,7 @@ namespace SpeedStars.Bridge
             if (race) _lastSeenFinishTime = race.LastRaceTime;
             if (_subscribed || !body) return;
             body.RunReset += OnRunReset;
+            body.Tapped += OnTapped;
             _subscribed = true;
         }
 
@@ -99,8 +131,15 @@ namespace SpeedStars.Bridge
             Started?.Invoke();
         }
 
+        // Releases are not presses; the sim already filtered repeats.
+        void OnTapped(int leg, bool pressed, double simTime)
+        {
+            if (pressed) _pressTimes.Enqueue(Time.timeAsDouble);
+        }
+
         void OnRunReset()
         {
+            _pressTimes.Clear();
             // Our own RequestStart reset, or a reset after we already finished: not a finish.
             if (_requesting || _state == RaceSessionState.Finished || !race) return;
             if (Mathf.Approximately(race.LastRaceTime, _lastSeenFinishTime)) return;

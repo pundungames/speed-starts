@@ -14,20 +14,23 @@ namespace SpeedStars.UI.Home
     /// </summary>
     public sealed class ResourceBarView : MonoBehaviour
     {
-        [Tooltip("PurpleGem/Amount.")]
-        [SerializeField] private Text gemAmount;
+        [Tooltip("PurpleGem/Value.")]
+        [SerializeField] private Text purpleGemText;
 
-        [Tooltip("EntryTicket/Amount: 'count/cap'.")]
-        [SerializeField] private Text ticketAmount;
+        [Tooltip("EntryTicket/Value: 'count/cap'.")]
+        [SerializeField] private Text entryTicketText;
 
-        [Tooltip("EntryTicket/Countdown: time to the next ticket; hidden when the tickets are full.")]
-        [SerializeField] private Text ticketCountdown;
+        [Tooltip("TicketTimer (whole chip): hidden when the tickets are full.")]
+        [SerializeField] private GameObject entryTimerRoot;
 
-        [Tooltip("TimedTicket/Amount: unused Timed Tickets.")]
-        [SerializeField] private Text timedAmount;
+        [Tooltip("TicketTimer/Value: time to the next ticket.")]
+        [SerializeField] private Text entryTimerText;
 
-        [Tooltip("Cash/Amount.")]
-        [SerializeField] private Text cashAmount;
+        [Tooltip("TimedTicket/Value: unused Timed Tickets, or 'n ON' while the window runs.")]
+        [SerializeField] private Text timedTicketText;
+
+        [Tooltip("Cash/Value.")]
+        [SerializeField] private Text cashText;
 
         [Tooltip("Seconds between ticket refresh ticks.")]
         [Min(0.1f)]
@@ -73,10 +76,10 @@ namespace SpeedStars.UI.Home
 
         private void Redraw()
         {
-            gemAmount.text = _wallet.PurpleGems.ToString();
-            cashAmount.text = _wallet.Cash.ToString();
-            timedAmount.text = _wallet.TimedAccessActive ? $"{_wallet.TimedTickets} ON" : _wallet.TimedTickets.ToString();
-            ticketAmount.text = HomeTexts.TicketCount(_tickets.Count, _tickets.Cap);
+            purpleGemText.text = _wallet.PurpleGems.ToString();
+            cashText.text = _wallet.Cash.ToString();
+            timedTicketText.text = _wallet.TimedAccessActive ? $"{_wallet.TimedTickets} ON" : _wallet.TimedTickets.ToString();
+            entryTicketText.text = HomeTexts.TicketCount(_tickets.Count, _tickets.Cap);
             RedrawCountdown();
         }
 
@@ -85,8 +88,8 @@ namespace SpeedStars.UI.Home
             DateTime? next = _tickets.NextTicketUtc;
             bool running = !_tickets.IsFull && next.HasValue;
 
-            ticketCountdown.gameObject.SetActive(running);
-            if (running) ticketCountdown.text = CountdownFormatter.Format(next.Value - _clock.UtcNow);
+            entryTimerRoot.SetActive(running);
+            if (running) entryTimerText.text = CountdownFormatter.Format(next.Value - _clock.UtcNow);
         }
     }
 }

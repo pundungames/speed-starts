@@ -48,6 +48,27 @@ namespace SpeedStars.UI.Race
             return (int)Math.Floor(capped);
         }
 
+        /// <summary>Speed in tenths of a metre per second ("7.4 m/s"); bad or negative numbers show "0.0 m/s".</summary>
+        public static string Speed(float metersPerSecond)
+        {
+            int tenths = SpeedTenths(metersPerSecond);
+            return (tenths / 10).ToString(CultureInfo.InvariantCulture) + "." + (tenths % 10).ToString(CultureInfo.InvariantCulture) + " m/s";
+        }
+
+        /// <summary>Whole tenths of the speed, truncated; the HUD rewrites its text only when this changes.</summary>
+        public static int SpeedTenths(float metersPerSecond)
+        {
+            if (float.IsNaN(metersPerSecond) || float.IsInfinity(metersPerSecond) || metersPerSecond <= 0f) return 0;
+            return (int)Math.Floor(metersPerSecond * 10f + 1e-4f);
+        }
+
+        /// <summary>Presses per second over the bar's full scale, clamped to 0..1; no scale (or a bad number) gives 0.</summary>
+        public static float CadenceFraction(float pressesPerSecond, float maxPressesPerSecond)
+        {
+            if (float.IsNaN(pressesPerSecond) || float.IsNaN(maxPressesPerSecond) || maxPressesPerSecond <= 0f || pressesPerSecond <= 0f) return 0f;
+            return pressesPerSecond >= maxPressesPerSecond ? 1f : pressesPerSecond / maxPressesPerSecond;
+        }
+
         public static string Meters(int meters) => meters.ToString(CultureInfo.InvariantCulture) + " m";
     }
 }

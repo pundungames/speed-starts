@@ -44,9 +44,6 @@ namespace SpeedStars.UI.Home
         [Tooltip("Window/GetTickets/WatchAd: stays not interactable (no price yet).")]
         [SerializeField] private Button watchAdButton;
 
-        [Tooltip("Window/Close.")]
-        [SerializeField] private Button closeButton;
-
         [Header("Refusal shake")]
         [Tooltip("Seconds the window shakes after a refused entry.")]
         [Min(0f)]
@@ -88,7 +85,6 @@ namespace SpeedStars.UI.Home
         {
             base.Awake();
             useTicketButton.onClick.AddListener(OnUseTicket);
-            closeButton.onClick.AddListener(OnClose);
             buyWithCashButton.interactable = false;
             watchAdButton.interactable = false;
             useTicketLabel.text = HomeTexts.UseEntryTicket;
@@ -113,7 +109,6 @@ namespace SpeedStars.UI.Home
         protected override void OnDestroy()
         {
             if (useTicketButton != null) useTicketButton.onClick.RemoveListener(OnUseTicket);
-            if (closeButton != null) closeButton.onClick.RemoveListener(OnClose);
             base.OnDestroy();
         }
 
@@ -144,8 +139,6 @@ namespace SpeedStars.UI.Home
             remainingText.text = HomeEntryRules.WarningFor(outcome);
             Shake();
         }
-
-        private void OnClose() => _navigator.ClosePopup(this);
 
         private void Shake()
         {

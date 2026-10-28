@@ -11,7 +11,7 @@ namespace SpeedStars.UI.Race
     /// Zenject shell of the Race scene flow (the decisions are in RaceFlowLogic). Bound in RaceSceneInstaller with
     /// BindInterfacesAndSelfTo; the entry gate prompt is optional.
     /// </summary>
-    public sealed class RaceFlow : IInitializable, IDisposable
+    public sealed class RaceFlow : IInitializable, IDisposable, IRaceHudActions
     {
         private readonly RaceFlowLogic _logic;
 
@@ -24,5 +24,9 @@ namespace SpeedStars.UI.Race
         public void Initialize() => _logic.Start();
 
         public void Dispose() => _logic.Dispose();
+
+        public void RequestExit() => _logic.Exit();
+
+        public void RequestRestart() => _logic.Restart();
     }
 }

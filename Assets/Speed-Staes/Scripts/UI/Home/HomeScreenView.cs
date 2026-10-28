@@ -21,7 +21,7 @@ namespace SpeedStars.UI.Home
         [Tooltip("EventSelect (root button): opens the event select screen.")]
         [SerializeField] private Button eventSelectButton;
 
-        [Tooltip("EventSelect/EventName: shows the selected event's name.")]
+        [Tooltip("RaceSelect/Label: shows the selected event's name.")]
         [SerializeField] private Text eventNameText;
 
         [Tooltip("EditRacer: opens the cosmetics screen.")]
@@ -30,8 +30,49 @@ namespace SpeedStars.UI.Home
         [Tooltip("HighScores: opens the high scores screen.")]
         [SerializeField] private Button highScoresButton;
 
-        [Tooltip("SevenDayReward (root button): opens the 7-day popup.")]
+        [Tooltip("DailyReward (root button): opens the 7-day popup.")]
         [SerializeField] private Button sevenDayButton;
+
+        [Tooltip("DailyReward/Notification: red dot, shown while a 7-day reward may be waiting. Optional.")]
+        [SerializeField] private GameObject sevenDayRedDot;
+
+        [Header("Buttons without a system yet (shown, not interactable)")]
+        [Tooltip("Settings: no settings system yet.")]
+        [SerializeField] private Button settingsButton;
+
+        [Tooltip("Sound: no sound system yet.")]
+        [SerializeField] private Button soundButton;
+
+        [Tooltip("Environment: no environment system yet.")]
+        [SerializeField] private Button environmentButton;
+
+        [Tooltip("Upgrade: no upgrade system yet.")]
+        [SerializeField] private Button upgradeButton;
+
+        [Tooltip("Players: no multiplayer system yet.")]
+        [SerializeField] private Button playersButton;
+
+        [Tooltip("CharacterCard/Emote: no emote system yet.")]
+        [SerializeField] private Button emoteButton;
+
+        [Tooltip("CharacterCard/Previous: racer presets arrive in a later phase.")]
+        [SerializeField] private Button previousRacerButton;
+
+        [Tooltip("CharacterCard/Next: racer presets arrive in a later phase.")]
+        [SerializeField] private Button nextRacerButton;
+
+        [Header("Character card")]
+        [Tooltip("CharacterCard/Select/Name: racer preset name.")]
+        [SerializeField] private Text racerNameText;
+
+        [Tooltip("CharacterCard/PowerBar/Fill: Filled image; the stat system is not built, the builder sets the look.")]
+        [SerializeField] private Image powerFill;
+
+        [Tooltip("CharacterCard/StaminaBar/Fill: Filled image; the stat system is not built, the builder sets the look.")]
+        [SerializeField] private Image staminaFill;
+
+        [Tooltip("CharacterCard/HeightField/Label.")]
+        [SerializeField] private Text heightText;
 
         [Header("Targets")]
         [Tooltip("Event select screen view (scene object, starts inactive).")]
@@ -73,6 +114,17 @@ namespace SpeedStars.UI.Home
             editRacerButton.onClick.AddListener(OnEditRacer);
             highScoresButton.onClick.AddListener(OnHighScores);
             sevenDayButton.onClick.AddListener(OnSevenDay);
+            DisableUnbuilt(settingsButton, soundButton, environmentButton, upgradeButton, playersButton, emoteButton,
+                previousRacerButton, nextRacerButton);
+        }
+
+        /// <summary>Designed buttons whose system does not exist yet stay visible but dead (they may be left empty).</summary>
+        private static void DisableUnbuilt(params Button[] buttons)
+        {
+            foreach (Button button in buttons)
+            {
+                if (button != null) button.interactable = false;
+            }
         }
 
         private void Start()
@@ -119,6 +171,8 @@ namespace SpeedStars.UI.Home
 
         private void RefreshEventName()
         {
+            if (racerNameText != null && string.IsNullOrEmpty(racerNameText.text)) racerNameText.text = HomeTexts.DefaultRacerName;
+            if (heightText != null && string.IsNullOrEmpty(heightText.text)) heightText.text = HomeTexts.RacerHeight;
             eventNameText.text = _catalog.TryGet(_selection.Selected, out RaceEventDefinition definition)
                 ? definition.DisplayName
                 : string.Empty;

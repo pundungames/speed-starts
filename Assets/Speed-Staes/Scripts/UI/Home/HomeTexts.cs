@@ -14,6 +14,8 @@ namespace SpeedStars.UI.Home
         public const string UnknownEventWarning = "Event not found";
         public const string BuyWithCash = "Cash";
         public const string WatchAd = "Watch ad";
+        public const string DefaultRacerName = "Custom 1";
+        public const string RacerHeight = "Height: 5'9\"";
 
         /// <summary>"2/3": amount held over the cap (resource bar and entry gate).</summary>
         public static string TicketCount(int count, int cap) => $"{count}/{cap}";

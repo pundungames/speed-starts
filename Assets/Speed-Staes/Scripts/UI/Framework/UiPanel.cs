@@ -1,5 +1,6 @@
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.UI;
 using Zenject;
 
 namespace SpeedStars.UI.Framework
@@ -27,12 +28,26 @@ namespace SpeedStars.UI.Framework
         private bool _closing;
         private bool _warnedNoMotion;
         private Sequence _sequence;
+        private ScreenNavigator _panelNavigator;
+
+        [Tooltip("Optional Back / Close button of this panel: closes the popup, or goes back from the screen. Leave empty on views that own their close button.")]
+        [SerializeField] private Button closeButton;
 
         [Inject]
         public void Construct(UiMotionConfig motion)
         {
             _motion = motion;
         }
+
+        /// <summary>Optional so a test scene without a navigator still works; the close button then does nothing.</summary>
+        [Inject]
+        public void ConstructPanelNavigation([InjectOptional] ScreenNavigator navigator)
+        {
+            _panelNavigator = navigator;
+        }
+
+        /// <summary>True for popups: the close button closes this one popup instead of going back a screen.</summary>
+        protected virtual bool IsPopupPanel => false;
 
         /// <summary>True from Show (open animation included) until Hide.</summary>
         public bool IsVisible => gameObject.activeSelf && !_closing;
@@ -72,6 +87,13 @@ namespace SpeedStars.UI.Framework
         protected virtual void Awake()
         {
             Initialize();
+            if (closeButton != null) closeButton.onClick.AddListener(OnCloseClicked);
+        }
+
+        private void OnCloseClicked()
+        {
+            if (_panelNavigator == null) return;
+            PanelCloseRule.Close(_panelNavigator, this, IsPopupPanel);
         }
 
         protected virtual void OnEnable()
@@ -89,6 +111,7 @@ namespace SpeedStars.UI.Framework
 
         protected virtual void OnDestroy()
         {
+            if (closeButton != null) closeButton.onClick.RemoveListener(OnCloseClicked);
             KillSequence();
         }
 

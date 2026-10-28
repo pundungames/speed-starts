@@ -50,7 +50,8 @@ namespace SpeedStars.Tools.Builders
                 EnsureParentFolder(HomeScenePath);
                 Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-                SceneUiLayout.CreateFlatCamera(scene, HomeBackground);
+                Camera homeCamera = SceneUiLayout.CreateFlatCamera(scene, HomeBackground);
+                SceneHomeCharacter.Build(scene, homeCamera); // live runner prefab instance + pedestal + framing (T-019)
                 SceneUiLayout.CreateEventSystem(scene);
                 GameObject uiRoot = SceneUiLayout.CreateUiRoot(scene);
 
@@ -73,6 +74,7 @@ namespace SpeedStars.Tools.Builders
                 SceneUiLayout.CreateSceneContext<HomeSceneInstaller>(scene, SceneUiLayout.RootScreenOf(rootScreen, UiPrefabPaths.HomeScreens[0]));
                 SceneWiring.WireHome(scene);
                 Save(scene, HomeScenePath);
+                SceneHomeCharacter.TryCaptureShot(homeCamera);
             }
             finally
             {

@@ -7,6 +7,8 @@ namespace SpeedStars.UI.Framework
     /// </summary>
     public class UiPopup : UiPanel
     {
+        protected override bool IsPopupPanel => true;
+
         protected override UiTransition OpenMotion(UiMotionConfig motion) => motion.PopupOpen;
         protected override UiTransition CloseMotion(UiMotionConfig motion) => motion.PopupClose;
     }

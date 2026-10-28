@@ -119,24 +119,15 @@ namespace SpeedStars.Tools.Builders
     }
 
     /// <summary>
-    /// Widget prefabs: the resource bar (four fixed indicators, not rows), the red dot and the reward flight card.
+    /// Widget prefabs: the resource bar (fixed indicators, not rows), the red dot and the reward flight card.
     /// The resource bar lives on the scene's overlay canvas; screens only keep an empty slot for it.
     /// </summary>
     internal static class UiWidgetPrefabs
     {
-        /// <summary>Purple Gem · Entry Ticket (count + regen countdown) · Timed Ticket · Cash, each icon + amount + "+".</summary>
+        /// <summary>UI v2 resource bar: left vertical column from layout.json (see UiV2Prefabs).</summary>
         public static void ResourceBar(RectTransform root)
         {
-            root.gameObject.AddComponent<SpeedStars.UI.Home.ResourceBarView>();
-            Kit.Anchor(root, Vector2.one, Vector2.one, new Vector2(-24f, -20f), new Vector2(1260f, 100f));
-            Kit.Row(root.gameObject, 16f, TextAnchor.MiddleRight);
-
-            ResourceItem(root, "PurpleGem", Kit.GemPurple, "0", 280f, countdown: false);
-            ResourceItem(root, "EntryTicket", Kit.TicketOrange, "0/0", 340f, countdown: true);
-            ResourceItem(root, "TimedTicket", Kit.TimedCyan, "0", 280f, countdown: false);
-            ResourceItem(root, "Cash", Kit.CashGreen, "0", 300f, countdown: false);
-
-            UiViewBinder.BindResourceBar(root);
+            UiV2Prefabs.ResourceBar(root);
         }
 
         /// <summary>Small "there is something new" dot; sits at its parent's top-right corner.</summary>
@@ -161,26 +152,6 @@ namespace SpeedStars.Tools.Builders
             Image icon = Kit.Icon(root, "Icon", UiShape.Panel, Kit.TicketOrange);
             Kit.Stretch(icon.rectTransform);
             Kit.Frame(icon.gameObject);
-        }
-
-        private static void ResourceItem(Transform bar, string name, Color iconColor, string amount, float width, bool countdown)
-        {
-            RectTransform item = Kit.Node(bar, name);
-            item.sizeDelta = new Vector2(width, 90f);
-            Kit.Panel(item.gameObject, Kit.PanelColor, frame: true, raycast: false);
-
-            RectTransform plus = Kit.TextButton(item, "Plus", "+", 56f, Kit.InkColor);
-            Kit.Anchor(plus, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(8f, 0f), new Vector2(74f, 74f));
-
-            Image icon = Kit.Icon(item, "Icon", UiShape.Round, iconColor);
-            Kit.Anchor(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(92f, 0f), new Vector2(64f, 64f));
-
-            Text value = Kit.Label(item, "Amount", amount, 48f, Kit.InkColor, TextAnchor.MiddleLeft);
-            Kit.Stretch(value.rectTransform, 166f, 12f, 0f, countdown ? 34f : 0f);
-
-            if (!countdown) return;
-            Text timer = Kit.Label(item, "Countdown", "00:00", 28f, Kit.BlueText, TextAnchor.MiddleLeft);
-            Kit.Stretch(timer.rectTransform, 166f, 12f, 54f, 4f);
         }
     }
 }
