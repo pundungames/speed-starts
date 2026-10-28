@@ -110,14 +110,15 @@ bitiş → Sonuç ekranı → Ana ekran; bilet sayısı ve 30 dk sayacı uygulam
 
 ---
 
-## Kapsam dışı (GDD'de tanımı yok — soru 1-2)
-Upgrade (Power/Stamina/Height) · Players (çok oyunculu) · Emote · online leaderboard · gerçek reklam/IAP SDK.
-Ekran görüntülerinde butonları var; PDF/MD bunları tanımlamıyor.
+## Kapsam kuralı ve cevaplar (kullanıcı, 2026-10-28)
+**PDF/MD'de varsa var, yoksa yok.** Referans ekranlar: `docs/gdd/referans-ekranlar/` (orijinal oyun, yatay).
 
-## Sorular (mimariyi değiştirenler)
-1. **Upgrade + Power/Stamina** V1'de var mı? Öneri: buton görünür ama pasif; sistem yok (koşu sistemine dokunur, GDD'de yok).
-2. **Players** butonu? Öneri: yok ya da pasif.
-3. **High Scores** yerel + sahte bot (Sticker Patch gibi), online sonra — doğru mu?
-4. **Kozmetik**: setler hazır (8 kategori × 7+2). Eksik olan **ikonlar** ve **premium trail/partikül** — Serhat mı yapar,
-   ikon çekim aracını biz mi yazalım?
-5. **Reklam/IAP**: V1'de gerçek SDK mı? Öneri: arayüz + sahte uygulama; SDK sonra.
+| Konu | Karar |
+|---|---|
+| Upgrade / Power-Stamina-Height | **Yok** — PDF'te yalnız ekran görüntüsünde buton, kuralı yok |
+| Players (çok oyunculu) · Emote · Stats · banner reklam · "Unlock full version" IAP | **Yok** — PDF/MD'de yok |
+| High Scores | **Var, yerel kalacak** (online yok). Orijinal düzen: etkinlik seçici, dönem (günlük/haftalık/tüm zamanlar), oyuncunun satırı (sıra, yüzde), liste (sıra, bayrak, ad, süre, tarih). "Global" bölge ve "Find player" yerelde anlamsız → yok |
+| Sonuç ekranı | MD §2.1 butonları: Watch replay · Race again · High scores · Menu · Practice. Üstte Personal Best + World Record (yerel tablonun 1.'si) + yarış sırası listesi (bayrak, ad, süre, PB işareti) |
+| Kozmetik ikon/efekt | **Serhat yapacak.** Biz çalışan taslak ikon/efekt koyarız, sonra değişir |
+| Reklam | **Var: yalnız ödüllü reklamla Adet Bileti** (PDF §1.2; doluyken gri). Banner yok. SDK seçimi OPEN; o zamana kadar sahte uygulama |
+| Edit racer kategorileri | Orijinalde 10: Body, Head, Top, Face, Bottoms, Arms, Shoes, Hands, Socks, Leggings. Prefab'ta 8 hazır (Head=Headwear, Face=Glasses, Top=Tops, Hands=Gloves, Bottoms=Shorts, Leggings, Socks, Shoes). Body = ten rengi (renk seçici, mesh yok); Arms asset'i yok → OPEN. Orijinalde normal öğe fiyatı elmas → bizde **Nakit** (değerler OPEN), premium 50 Mor Mücevher. "Save" + yarışçı ön ayarı (Custom 1) var; "Random" orijinalde var, PDF'te yok → sonra |

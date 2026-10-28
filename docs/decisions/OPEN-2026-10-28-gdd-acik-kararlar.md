@@ -14,4 +14,6 @@
 | 7 | Saat güvenliği (cihaz saati değişimi, çevrimdışı) | MD §6.4, §14 | Cihaz UTC + geri alınan saat tespiti; sunucu saati yok | Kullanıcı |
 | 8 | Hedef cihaz / FPS / minimum OS | MD §16, §18.11 | Android, 60 FPS, yatay (yatay kesin: 2026-10-28) | Kullanıcı |
 | 9 | Engelli, 4×100m, Medley kuralları | MD §12, §18.8 | Katalogda var, oynanamaz ("yakında") | Malik + orijinal |
-| 10 | Leaderboard backend | MD §15, §18.9 | Yerel + sahte bot | Kullanıcı (soru 3) |
+| 10 | Leaderboard backend | MD §15, §18.9 | **KARAR (28.10): yerel kalacak**, sahte bot süre dağılımı config'te | — |
+| 11 | Ödüllü reklam SDK'sı (Adet Bileti için, PDF §1.2) | PDF §1.2 | Sahte uygulama (editörde anında ödül) | Kullanıcı |
+| 12 | Edit racer "Arms" kategorisi (prefab'ta yok), "Body" = yalnız ten rengi mi | referans ekran | Arms yok; Body = ten rengi | Kullanıcı + Serhat |
