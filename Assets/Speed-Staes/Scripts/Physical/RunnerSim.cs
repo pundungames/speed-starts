@@ -44,11 +44,10 @@ namespace SpeedStars.Physical
         [Header("Stride")]
         [Tooltip("Press → take-off: how long the foot pushes on the ground (s).")]
         public float stanceTime = 0.08f;
-        [Tooltip("Take-off vertical speed of a full push at max speed (m/s). Flight time = 2 × this / gravity. With " +
-                 "stanceTime it sets the rhythm: 0.08 s push + ~0.1 s flight = a press every ~0.2 s lands on time.")]
-        public float hopVelocity = 0.35f;
-        [Tooltip("Share of hopVelocity at 0 m/s.")]
-        [Range(0f, 1f)] public float hopAtRest = 0.8f;
+        [Tooltip("The step's tempo (s), standing (x) and at max speed (y): a full push lands this long after its press, " +
+                 "so the next press lands on time then (the flight is this minus stanceTime). The visual step " +
+                 "(RunnerPoseDriver) is done by then too, so a press on time comes as the foot is in front.")]
+        public Vector2 stepTime = new Vector2(0.4f, 0.22f);
         [Tooltip("Gravity (m/s²): the hop between strides here, and the body's fall in a dive (RunnerPoseDriver).")]
         public float gravity = 7f;
 
@@ -238,6 +237,8 @@ namespace SpeedStars.Physical
         /// <summary>The part of the lean the hold poses ask for (deg); Lean − PoseLean beyond stumbleLean is stumbling.</summary>
         public float PoseLean { get; private set; }
         public bool Airborne => HopY > 0f;
+        /// <summary>Press to press on time at this speed (s): a full push lands then (stepTime, standing to max speed).</summary>
+        public float StepTime => Mathf.Lerp(T.stepTime.x, T.stepTime.y, Speed / T.maxSpeed);
         public int HoldingCount => (Legs[0].Holding ? 1 : 0) + (Legs[1].Holding ? 1 : 0);
 
         float _pending, _hopVelocity, _launchVelocity;
@@ -328,7 +329,8 @@ namespace SpeedStars.Physical
             if (result == PressResult.Start || result == PressResult.Good || result == PressResult.Late)
             {
                 _launchTime = Time + T.stanceTime;
-                _launchVelocity = T.hopVelocity * eff * Mathf.Lerp(T.hopAtRest, 1f, Speed / T.maxSpeed);
+                // Flight = StepTime − stance for a full push: it comes down as the next press is due.
+                _launchVelocity = 0.5f * T.gravity * Mathf.Max(0f, StepTime - T.stanceTime) * eff;
             }
 
             Energy = Mathf.Max(0f, Energy - T.drainPerPush);
