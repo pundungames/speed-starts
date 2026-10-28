@@ -13,21 +13,11 @@
     KorunanUzantilar    = @('.unity', '.prefab', '.meta', '.asset', '.uxml', '.uss', '.mat', '.controller')
     # Kompozisyon kokleri: alt agent yazamaz, seam acip NEEDS_WIRING birakir. Zenject installer'lari.
     KompozisyonKokleri  = @('Assets/Speed-Staes/Scripts/Core/Installers/')
-    # Malik'in alani (karakter yurume/kosma mekanigi, 2026-10-28 kullanici karari): bu oturumlar yazmaz.
-    # Kitte ayri bir anahtar olmadigi icin "korunan belge" listesi kullaniliyor; ayni hook, ayni engel.
-    KorunanBelgeler     = @(
-        'Assets/Speed-Staes/Scripts/Physical/',
-        'Assets/Speed-Staes/Physical/',
-        'Assets/Speed-Staes/Prefabs/Character/',
-        'Assets/Speed-Staes/Scenes/Test/PhysicalTest.unity',
-        'Assets/Speed-Staes/Scripts/Runner/RunnerInput.cs',
-        'Assets/Speed-Staes/Scripts/Runner/SideFollowCamera.cs',
-        'Assets/Kevin Iglesias/',
-        'Assets/Ash Assets/',
-        'Assets/Samples/Animation Rigging/'
-    )
-    # Kit varsayilani + bu projenin kural dosyalari (CLAUDE.md Malik'in; bizim kurallar CLAUDE.local.md -> docs/CALISMA-KURALLARI.md).
-    GuvenlikDosyalari   = @('CLAUDE.md', 'CLAUDE.local.md', 'docs/CALISMA-KURALLARI.md', '.claude/settings.json', 'scripts/hook-', 'agent-kit.config.psd1')
+    # Kisiye ozel kilitler ORTAK config'te DEGIL: her kisinin agent-kit.config.local.psd1'inde (git'e girmez; ayni anahtari ezer).
+    # Sablonlar: docs/kit-yerel/<kisi>.config.local.psd1 · kurulum: powershell -File scripts/kit-kur-yerel.ps1 -Kisi biz|malik
+    # (speed-starts: UI tarafinin kilidi Malik'in alani, Malik'inki UI tarafininki; tek ortak liste birini kendi dosyalarina kilitliyordu.)
+    KorunanBelgeler     = @()
+    GuvenlikDosyalari   = @('.claude/settings.json', 'scripts/hook-', 'agent-kit.config.psd1', 'agent-kit.config.local.psd1', 'CLAUDE.local.md')
 
     # --- Task sistemi ---
     TaskKlasoru         = 'docs/tasks'

@@ -13,7 +13,7 @@ $script:KitVarsayilan = @{
     KorunanUzantilar    = @('.unity', '.prefab', '.meta', '.asset', '.uxml', '.uss', '.mat', '.controller')
     KompozisyonKokleri  = @()
     KorunanBelgeler     = @()
-    GuvenlikDosyalari   = @('CLAUDE.md', '.claude/settings.json', 'scripts/hook-', 'agent-kit.config.psd1')
+    GuvenlikDosyalari   = @('CLAUDE.md', '.claude/settings.json', 'scripts/hook-', 'agent-kit.config.psd1', 'agent-kit.config.local.psd1')
     TaskKlasoru         = 'docs/tasks'
     DurumDosyasi        = 'docs/DURUM.md'
     TuzakDosyasi        = 'docs/TUZAKLAR.md'
@@ -63,6 +63,15 @@ function Get-KitConfig {
     if (Test-Path $dosya) {
         $proje = Import-PowerShellDataFile -Path $dosya
         foreach ($k in $proje.Keys) { $cfg[$k] = $proje[$k] }
+    }
+    # Kisiye ozel yerel ayar (git'e girmez): ayni anahtar ortak ayari EZER (birlestirmez). Ayni depoda farkli
+    # kisiler farkli kilitlerle calisabilsin diye (speed-starts 28.10: mekanikci ile UI'cinin KorunanBelgeler'i
+    # birbirinin tersi; ortak config'e yazilan kilit, kilitlenen kisinin kendi dosyalarini kilitliyordu).
+    $yerel = Join-Path $Root 'agent-kit.config.local.psd1'
+    if (Test-Path $yerel) {
+        $kisi = Import-PowerShellDataFile -Path $yerel
+        foreach ($k in $kisi.Keys) { $cfg[$k] = $kisi[$k] }
+        $cfg['YerelAyar'] = $yerel
     }
     $cfg['Root'] = $Root
     return $cfg

@@ -67,6 +67,8 @@ Kurulum ne yapar (`kit-manifest.psd1`):
 
 Sonra elle:
 1. `agent-kit.config.psd1` — `<KÖŞELİ>` yerler: kompozisyon kökü, kopya kökü/öneki, analytics dosyaları.
+   Aynı depoda birden çok kişi kit kullanıyorsa kişiye özel kilitler (`KorunanBelgeler`, `DurumDosyasi`, `TaskKlasoru` …)
+   `agent-kit.config.local.psd1`'e (git'e girmez; aynı anahtarı ezer).
 2. `CLAUDE.md` — projeye özgü bölümler (ortam, kod standardı, kompozisyon kökü, analytics kuralı).
 3. Doğrulama script'i — `scripts/verify.ps1.ORNEK` sözleşmesiyle (`-ProjectPath`, `-CompileOnly`, `-TestFilter`;
    çıkış 0 / 1-3 / 10-19). Yolunu config'teki `DogrulamaScripti`'ne yaz.
