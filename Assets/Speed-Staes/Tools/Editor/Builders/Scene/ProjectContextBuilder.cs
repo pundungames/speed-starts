@@ -1,6 +1,7 @@
 using System;
 using SpeedStars.Installers;
 using SpeedStars.Meta.Config;
+using SpeedStars.Meta.Themes;
 using SpeedStars.UI.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -33,6 +34,7 @@ namespace SpeedStars.Tools.Builders
             var sevenDayRewards = LoadRequired<SevenDayRewardConfig>(ConfigAssetSeeder.SevenDayRewardPath, seeder);
             var cosmetics = LoadRequired<CosmeticCatalog>(ConfigAssetSeeder.CosmeticCatalogPath, seeder);
             var uiMotion = LoadRequired<UiMotionConfig>(ConfigAssetSeeder.UiMotionPath, seeder);
+            var themes = LoadRequired<ThemeCatalog>(ConfigAssetSeeder.ThemeCatalogPath, seeder);
 
             EnsureParentFolder(PrefabPath);
             var preview = EditorSceneManager.NewPreviewScene();
@@ -49,6 +51,7 @@ namespace SpeedStars.Tools.Builders
                 Prop(installerSo, "sevenDayRewards").objectReferenceValue = sevenDayRewards;
                 Prop(installerSo, "cosmetics").objectReferenceValue = cosmetics;
                 Prop(installerSo, "uiMotion").objectReferenceValue = uiMotion;
+                Prop(installerSo, "themes").objectReferenceValue = themes;
                 // Scene names must match Build Settings (SceneFlow loads by name); taken from the scene builder's paths.
                 Prop(installerSo, "scenes.homeScene").stringValue = SceneBuilder.HomeSceneName;
                 Prop(installerSo, "scenes.raceScene").stringValue = SceneBuilder.RaceSceneName;
@@ -65,7 +68,7 @@ namespace SpeedStars.Tools.Builders
             {
                 EditorSceneManager.ClosePreviewScene(preview);
             }
-            Log(Source, $"Wrote {PrefabPath} (ProjectContext + ProjectInstaller, 6 config references).");
+            Log(Source, $"Wrote {PrefabPath} (ProjectContext + ProjectInstaller, 7 config references).");
         }
     }
 }

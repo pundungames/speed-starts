@@ -3,8 +3,10 @@ using SpeedStars.Core.Services;
 using SpeedStars.Meta.Clock;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Cosmetics;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.Meta.Race;
+using SpeedStars.Meta.Themes;
 using SpeedStars.Meta.Tickets;
 using SpeedStars.Meta.Wallet;
 using SpeedStars.UI.Flow;
@@ -29,6 +31,8 @@ namespace SpeedStars.Installers
         [SerializeField] private SevenDayRewardConfig sevenDayRewards;
         [SerializeField] private CosmeticCatalog cosmetics;
         [SerializeField] private UiMotionConfig uiMotion;
+        [Tooltip("Menu themes (T-023): order = MainMenuThemeShowcase index, Cash prices (0 = not for sale).")]
+        [SerializeField] private ThemeCatalog themes;
 
         [Header("Scenes")]
         [SerializeField] private SceneFlowScenes scenes = new SceneFlowScenes();
@@ -52,6 +56,7 @@ namespace SpeedStars.Installers
             BindConfig(sevenDayRewards);
             BindConfig(cosmetics);
             BindConfig(uiMotion);
+            BindConfig(themes);
 
             Container.Bind<ISaveStore>().FromMethod(_ => FileSaveStore.CreateDefault()).AsSingle();
             Container.Bind<ProgressRepository>().FromMethod(CreateProgress).AsSingle();
@@ -65,6 +70,13 @@ namespace SpeedStars.Installers
             Container.Bind(typeof(IEntryTickets), typeof(EntryTicketService)).To<EntryTicketService>().AsSingle();
             Container.Bind(typeof(IWallet), typeof(WalletService)).To<WalletService>().AsSingle();
             Container.Bind<IRaceSelection>().To<RaceSelection>().AsSingle();
+
+            // T-025: presets, ownership, premium purchase; the preview is what the menu character wears right now.
+            Container.Bind<ICosmeticService>().To<CosmeticService>().AsSingle();
+            Container.Bind<ICosmeticPreview>().To<CosmeticPreview>().AsSingle();
+            // T-023: in the editor and development builds every theme counts as owned (user 28.10: switch directly).
+            Container.Bind<IThemeService>().FromMethod(CreateThemes).AsSingle();
+
             Container.Bind<IRaceEntryGate>().To<RaceEntryGate>().AsSingle();
             // Project-wide because the Entry Gate modal sits in both scenes (Play on Home, Race again on Race).
             Container.Bind<HomeEntryFlow>().AsSingle();
@@ -88,6 +100,13 @@ namespace SpeedStars.Installers
                 : default);
             _progress.Load();
             return _progress;
+        }
+
+        private ThemeService CreateThemes(InjectContext context)
+        {
+            var c = context.Container;
+            return new ThemeService(c.Resolve<ThemeCatalog>(), c.Resolve<ProgressRepository>(), c.Resolve<WalletService>(),
+                Application.isEditor || Debug.isDebugBuild);
         }
 
         private ClockService CreateClock(InjectContext context)

@@ -123,6 +123,7 @@ namespace SpeedStars.Tools.Builders
 
                 Scene scene = EditorSceneManager.OpenScene(RaceScenePath, OpenSceneMode.Single);
                 DisableRunnerDebugTools(scene);
+                SceneCosmetics.AddToRaceRunner(scene); // T-025: the runner wears the selected preset
                 if (FindInScene<SceneContext>(scene) != null)
                     throw new InvalidOperationException($"'{PhysicalTestScenePath}' already has a SceneContext; merge the Race scene by hand.");
 
