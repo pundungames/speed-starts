@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b178763d62fdebd4ebaf2e4b600c34db, type: 3}
+  m_Name: EventSelectLayout
+  m_EditorClassIdentifier: 
+  headingText: SELECT EVENT
+  continueLabel: CONTINUE
+  categories:
+  - category: 0
+    title: SPRINTS
+    eventIds:
+    - 100m
+    - 200m
+    - 400m
+  - category: 1
+    title: HURDLES
+    eventIds:
+    - 60mh
+    - 110mh
+    - 400mh
+  - category: 2
+    title: RELAYS
+    eventIds:
+    - 4x100m
+    - medley
+  raceOfTheDayId: race_of_the_day
+  raceOfTheDayLabel: RACE OF THE DAY
+  practiceId: training
+  practiceLabel: PRACTICE
+  deniedShakeDuration: 0.25
+  deniedShakeStrength: 14
+  deniedShakeVibrato: 14
