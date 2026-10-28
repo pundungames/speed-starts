@@ -38,7 +38,7 @@ namespace SpeedStars.Tools.Builders
                 SpeedStars.UI.Home.EventSelectLayout eventSelectContent = EventSelectConfigSeed.Seed(overwrite: false);
                 run.Build(UiPrefabPaths.EventSelectScreen, root => UiEventSelectPrefabs.EventSelect(root, eventSelectContent));
                 run.Build(UiPrefabPaths.ThemeSelectScreen, UiThemeSelectPrefabs.ThemeSelect);
-                run.Build(UiPrefabPaths.CosmeticsScreen, UiScreenPrefabs.Cosmetics);
+                UiCostumePrefabs.BuildAll(run.Build); // T-026: item card + preset row + the costume editor screen (CosmeticsScreen path)
                 run.Build(UiPrefabPaths.HighScoresScreen, UiScreenPrefabs.HighScores);
                 run.Build(UiPrefabPaths.RaceHud, UiScreenPrefabs.RaceHud);
                 run.Build(UiPrefabPaths.ResultsScreen,

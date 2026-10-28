@@ -1,7 +1,7 @@
 ---
 id: T-026
 title: Kostum editoru ekrani (Edit racer) - kategori, oge izgarasi, renk secici, on ayar, Random/Save, satin alma
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-025]
 owns_paths:
@@ -19,17 +19,24 @@ commits: []
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/CostumeEditorModelTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/HsvColorTests.cs"
+  # ShakeCurve (denied-feedback curve) is tested in CostumeEditorModelTests.cs
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
     durum: open
-    not: "Home: cosmeticsScreen = CostumeEditorScreen prefab'i; view ICosmeticService/ICosmeticPreview/IWallet/IEntryTickets alir (installer supervizorde)"
+    not: "ProjectInstaller -> Container.Bind<ICosmeticService>().To<CosmeticService>().AsSingle() ve Container.Bind<ICosmeticPreview>().To<CosmeticPreview>().AsSingle() (CosmeticService(ProgressRepository, WalletService, CosmeticCatalog); CostumeEditorScreenView + CostumeResourceView bunlari ve IWallet/IEntryTickets/IInstantiator/UiMotionConfig'i [Inject] ile alir). Home tarafi degismez: SceneWiring zaten CosmeticsScreen yolunu UiScreen olarak baglar, yeni prefab bir UiScreen"
+  - tip: SCENE
+    durum: open
+    not: "Dimscreen karakterin ARKASINDA olmali (overlay tuvalde karakteri de karartir): Home sahnesine Screen Space - Camera 'Canvas Dim' (plane distance: karakterden uzak, dekordan yakin, yani karakter dim'in onunde cizilir) + icinde stretch Image (UI/Art/Costume/dimscreen.png, raycast kapali), baslangicta kapali; CostumeEditorScreenView.dimBackdrop = o nesne. Bos birakilirsa ekran calisir, yalniz karartma olmaz"
+  - tip: ASSET
+    durum: open
+    not: "Kopyada builder: UiPrefabBuilder.BuildAll(overwrite: true) -> yalniz UI/Screens/CosmeticsScreen.prefab, UI/Rows/CostumeItemCard.prefab, UI/Rows/CostumePresetRow.prefab ve Data/Config/CostumeEditorConfig.asset (+ .meta'lar) ana agaca alinir; digerleri (kullanicinin duzenledigi prefablar) alinmaz. Art PNG/.json/.jpg .meta'lari Unity uretir"
   - tip: DECISION
     durum: open
     not: "Power/Stamina/Height PDF'te yok: panel yalniz gosterim (config'teki yer tutucu degerler). Emote kategorisinin icerigi yok: sekme pasif. Face = Glasses varsayimi"
-started:
-finished:
+started: 2026-10-28
+finished: 2026-10-28
 blocked_reason:
 ---
 
@@ -50,7 +57,7 @@ görüntüsü aynı düzen). Kamera ve karakter ana ekranla aynı (T-023: Serhat
   Seçili sekme kırmızı zemin + beyaz ikon (selected), diğerleri normal.
 - Öğe ızgarası: 2 sütun, ScrollRect + content parent + **öğe kartı prefab'ı** (kod Instantiate eder; kalıcı UI kurmaz). Kart: normal /
   seçili zemin, seçili tik, kilit kaplaması, premium = parlak panel (sanatta yok: kart zemini altın tonlu yer tutucu). Premium'lar
-  listede en üstte (PDF). İkon: öğe ikonları yok (Serhat) → kategori ikonu öğenin varsayılan rengiyle boyanmış yer tutucu.
+  listede en üstte (PDF). İkon: Serhat'ın öğe ikonları (UI/Art/Costume/Items/<Kategori>/<ParçaAdı>.png, 600×500); öğenin ikonu = İLK parça adının PNG'si, id→Sprite eşlemesi UI tarafı config asset'inde (CostumeEditorConfig, builder katalogdan doldurur).
 - Dimscreen: README'ye göre sahnenin önünde, karakter ve UI'ın arkasında (yaklaşım çalışma notunda; ör. Screen Space - Camera tuvali
   karakterin hemen arkasında).
 
@@ -75,4 +82,8 @@ KAMERA  : yok
 - Kozmetik çekirdeği (T-025), Home sahnesi builder'ı (T-023)
 
 ## Calisma notu
-(Agent doldurur)
+- Yapildi: 7 saf/view sinifi + model (CostumeEditorModel, HsvColor, ShakeCurve), CostumeEditorScreenView (UiScreen) ve alt gorunumler (renk secici, sekme, kart, on ayar listesi, kaydirma gostergesi, kaynak kutulari), CostumeEditorConfig asset'i + CostumeConfigSeed, UiCostumePrefabs (ekran + kart + on ayar satiri), UiPrefabBuilder'a tek satir; sanat + 72 oge ikonu Art/Costume'a kopyalandi.
+- Kararlar: kart kilitliyken giyilebilir (onizleme), Save kilitli oge varken pasif; giyili karta tekrar basmak ogeyi cikarir (bos slot); yeni oge kategorinin rengini korur; Dim prefab'ta yalniz dokunma yakalayici (alfa 0), gorunur karartma sahne nesnesi (SCENE needs); Emote sekmesi config'te hasContent=false -> pasif.
+- Zorlandigim: overlay tuvalde dimscreen karakteri de karartir (TUZAKLAR'a yazildi); UI modul kisayollari (DOShakeAnchorPos, DOFade, Image.DOColor) gorunmez -> sallanma/flas DOTween.To ile; dolgu cubuklari Image.Filled + tam tuval katmani, imlec/tutamac/ok isareti alfa-sinir dugumleri.
+- Birakilan: WIRING (ICosmeticService/ICosmeticPreview baglari), SCENE (Canvas Dim + dimBackdrop), builder'in kopyada calistirilip yalniz 3 prefab + 1 config'in alinmasi (ASSET); .meta'lar Unity/kopya ile uretilir; Unity/test calistirilmadi.
+- Acik risk: ekranlar ilk calistirmada derlenmedi (merkezi dogrulama bekler); Home ust kaynak cubugu (ResourceBar) bu ekranin arkasinda/ustunde gorunur mu bakilmadi; on ayar listesi 3 satira gore dolgulu (katalogda PresetCount degisirse arka plan hafif gerilir).
