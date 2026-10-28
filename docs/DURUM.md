@@ -13,11 +13,14 @@ Son güncelleme: 2026-10-28 · origin/main birleşti (881966a, push kullanıcıd
 - T-025 kozmetik çekirdeği (Custom N ön ayarları, premium satın alma, önizleme, CosmeticApplier) — `D:\Pundun\speed-starts-t025`
 - Sonra T-026 kostüm editörü UI (Kostum_Editor_UI_v1), T-025'e bağlı.
 
-## Kullanıcıdan bekleyen kararlar
-- Tema fiyatları (Nakit): asset'te 0 = fiyat yok. Geliştirmede bütün temalar serbest (kullanıcı 28.10).
-- Ön ayar sayısı (Custom 1..N): tohum 3. Power/Stamina/Height PDF'te yok → yalnız gösterim. Emote içeriği yok → sekme pasif. Face = Glasses varsayımı.
-- Serhat'ın `Docs/` (büyük D) klasörü `docs/`'a taşınsın mı (index'te iki klasör; TUZAKLAR). Depo kökünde `Backups/` 370 MB.
-- Başlangıç Adet Bileti (yeni kayıt) PDF'te yok → şu an 0 (`EconomyConfig.startingEntryTickets`).
+## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
+- Tema fiyatı (Nakit) yok → asset'te 0; geliştirmede bütün temalar serbest. Ön ayar Custom 1..3. Face = Glasses, Emote pasif,
+  Power/Stamina/Height yalnız gösterim. Normal kozmetik bedava, premium 50 Mor Mücevher (PDF).
+- Başlangıç Adet Bileti = tavan (3): PDF'te değer yok, 0 ile yeni oyuncu ilk yarış için 30 dk bekliyordu (entegrasyonda uygulanır).
+- Serhat'ın `Docs/` md'leri index'te `docs/`'a taşındı (2188d99). `Backups/` (370 MB) Serhat'ın: silinmedi (pull eden makinede
+  dosyaları silerdi); Serhat'a "yedekleri depo dışında tut" denecek.
+
+## Kullanıcıdan bekleyen
 - Malik'ten (Faz 7, sona bırakıldı): yarış başladı/bitti olayı, UI üstündeki dokunma ayak sayılmasın, geri sayım sinyali (`docs/TEMEL-SOZLESME.md` §11).
 
 ## Gözle bakılacaklar
