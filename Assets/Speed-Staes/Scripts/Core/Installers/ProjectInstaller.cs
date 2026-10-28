@@ -79,6 +79,8 @@ namespace SpeedStars.Installers
             Container.Bind<ITimedAccess>().To<TimedAccessService>().AsSingle();
             Container.Bind<IRaceRewardResolver>().To<RaceRewardResolver>().AsSingle();
             Container.Bind<IEntryTicketShop>().To<EntryTicketShop>().AsSingle();
+            // T-033: best time per event, written once per race.
+            Container.Bind<IPersonalBests>().To<SpeedStars.Meta.Records.PersonalBestService>().AsSingle();
             Container.Bind<IRaceSelection>().To<RaceSelection>().AsSingle();
 
             // T-025: presets, ownership, premium purchase; the preview is what the menu character wears right now.

@@ -10,6 +10,7 @@ using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
+using SpeedStars.UI.Race;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -104,6 +105,21 @@ namespace SpeedStars.PlayTests
                 yield return WaitForScene(RaceScene);
                 yield return Settle();
                 yield return Capture(dir, "Race_play");
+
+                // Results: finish through the adapter's dev hook (dev builds only; reached by reflection, this assembly
+                // cannot reference the Bridge), then shoot the results screen.
+                IRaceSession session = null;
+                foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>(true))
+                    if (behaviour is IRaceSession found) { session = found; break; }
+                System.Reflection.MethodInfo finish = session?.GetType().GetMethod("DevForceFinish");
+                if (finish != null)
+                {
+                    finish.Invoke(session, null);
+                    ResultsScreenView results = UnityEngine.Object.FindObjectOfType<ResultsScreenView>(true);
+                    yield return WaitUntil(() => results != null && results.gameObject.activeInHierarchy, "results screen");
+                    yield return Settle();
+                    yield return Capture(dir, "Race_results");
+                }
             }
             finally
             {
