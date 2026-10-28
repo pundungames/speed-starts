@@ -10,6 +10,7 @@ owns_paths:
   - "Assets/Speed-Staes/Scripts/UI/Themes/ThemeSelectScreenView.cs"
   - "Assets/Speed-Staes/Scripts/UI/Settings/SettingsPopupView.cs"
   - "Assets/Speed-Staes/Scripts/UI/Race/ResultsScreenView.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/SceneUiLayout.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/PlaySmokeSupport.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/HomeRaceButtonSmokeTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs"

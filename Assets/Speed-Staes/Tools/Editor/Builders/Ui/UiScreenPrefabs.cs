@@ -6,7 +6,7 @@ using Kit = SpeedStars.Tools.Builders.UiBuildKit;
 namespace SpeedStars.Tools.Builders
 {
     /// <summary>
-    /// Screen prefabs (UiScreen root, stretched full screen; layout in 2400×1080 reference pixels, CanvasScaler height match = 1: width varies per phone, so edge items are anchored to their corner and middle items are centered).
+    /// Screen prefabs (UiScreen root, stretched full screen; layout in 2400×1080 reference pixels, CanvasScaler Expand: width varies per phone (never below the reference), so edge items are anchored to their corner and middle items are centered).
     /// Positions follow the original's reference screens (docs/gdd/referans-ekranlar): menu buttons on the right, racer
     /// controls bottom-left, the 3D racer in the middle stays free. Lists keep an empty Content: views instantiate rows.
     /// Out of scope and therefore absent: Upgrade, Players, Emote, Stats, settings, banner ad, Random, Global, Find player.

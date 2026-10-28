@@ -28,9 +28,8 @@ namespace SpeedStars.Tools.Builders
         public const int PopupCanvasOrder = 10;
         public const int OverlayCanvasOrder = 20;
 
-        // Landscape reference resolution (contract §5, T-007 layouts) and an even width/height match.
+        // Landscape reference resolution (contract §5, T-007 layouts) scaled with Expand.
         private static readonly Vector2 ReferenceResolution = new Vector2(2400f, 1080f);
-        private const float WidthHeightMatch = 1f;
 
         // The scene being built is the active one (Single mode), so new objects land in it; the explicit move only
         // guarantees it. new GameObject(name, types) is used because it swaps Transform for RectTransform cleanly.
@@ -93,8 +92,7 @@ namespace SpeedStars.Tools.Builders
             var scaler = AddRequired<CanvasScaler>(go);
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = ReferenceResolution;
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = WidthHeightMatch;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand; // never narrower than the reference: centered items cannot slide over edge items
 
             AddRequired<GraphicRaycaster>(go);
             return go.transform;

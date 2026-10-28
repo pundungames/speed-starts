@@ -262,7 +262,7 @@ namespace SpeedStars.Tools.Builders
 
             /// <summary>
             /// Anchors a rect by the screen edge it sits near: left third → left edge, right third → right edge, middle →
-            /// center; bottom quarter → bottom edge, rest → top edge. Width varies per phone (height match), so edge items
+            /// center; bottom quarter → bottom edge, rest → top edge. Width varies per phone (Expand scaler), so edge items
             /// keep their distance to their own edge. Size and offsets are the reference pixels × Scale.
             /// </summary>
             public RectTransform PlaceOnScreen(RectTransform rt, LayoutComponent c)
