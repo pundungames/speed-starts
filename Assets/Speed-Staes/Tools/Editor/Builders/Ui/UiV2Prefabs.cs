@@ -35,10 +35,10 @@ namespace SpeedStars.Tools.Builders
             RectTransform daily = ArtButton(root, layout, "DailyReward", "daily_reward", "daily_reward_background", "daily_reward_icon", true);
             UiArt.Layer(daily, "Notification", UiArt.Home("daily_reward_notification"));
 
-            // Top-right: settings, sound, environment (no systems yet).
-            ArtButton(root, layout, "Settings", "settings", "settings_background", "settings_icon", false);
-            ArtButton(root, layout, "Sound", "sound", "sound_background", "sound_icon", false);
-            ArtButton(root, layout, "Environment", "environment", "environment_background", "environment_icon", false);
+            // Top-right: settings, sound, environment.
+            ArtButton(root, layout, "Settings", "settings", "settings_background", "settings_icon", true);
+            ArtButton(root, layout, "Sound", "sound", "sound_background", "sound_icon", true);
+            ArtButton(root, layout, "Environment", "environment", "environment_background", "environment_icon", true);
 
             // Bottom row.
             ArtButton(root, layout, "Upgrade", "upgrade", "upgrade_background", "upgrade_icon", false);
@@ -71,8 +71,8 @@ namespace SpeedStars.Tools.Builders
             UiArt.Layer(select, "Portrait", UiArt.Home("character_select_icon"));
             UiArt.Slot(select, "Name", "Custom 1", 56f, RacerNameMin, RacerNameMax, TextAnchor.MiddleLeft);
 
-            CardButton(cardRoot, "Previous", "character_previous_background", "character_previous_icon", false);
-            CardButton(cardRoot, "Next", "character_next_background", "character_next_icon", false);
+            CardButton(cardRoot, "Previous", "character_previous_background", "character_previous_icon", true);
+            CardButton(cardRoot, "Next", "character_next_background", "character_next_icon", true);
 
             StatBar(cardRoot, "PowerBar", "stats_power_empty", "stats_power_fill", PowerDefaultFill);
             StatBar(cardRoot, "StaminaBar", "stats_stamina_empty", "stats_stamina_fill", StaminaDefaultFill);

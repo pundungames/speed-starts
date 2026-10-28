@@ -10,7 +10,8 @@ namespace SpeedStars.UI.Home
 {
     /// <summary>
     /// Home screen (prefab HomeScreen, the root screen of the Home scene). Binds the existing buttons and decides what
-    /// Play does through <see cref="HomeEntryRules"/>; the environment button opens the theme select screen. Edit racer, High scores and the 7-day icon only open their
+    /// Play does through <see cref="HomeEntryRules"/>; the environment button opens the theme select screen; the gear opens the settings window,
+    /// the speaker switches sound effects, the card arrows step the racer presets. Edit racer, High scores and the 7-day icon only open their
     /// screen/popup (their content is a later phase); a target left empty in the Inspector is skipped with a warning.
     /// </summary>
     public sealed class HomeScreenView : UiScreen
@@ -39,12 +40,17 @@ namespace SpeedStars.UI.Home
         [Tooltip("Environment (top right, picture icon): opens the theme select screen.")]
         [SerializeField] private Button environmentButton;
 
-        [Header("Buttons without a system yet (shown, not interactable)")]
-        [Tooltip("Settings: no settings system yet.")]
+        [Tooltip("Settings (top right, gear): opens the settings window.")]
         [SerializeField] private Button settingsButton;
 
-        [Tooltip("Sound: no sound system yet.")]
+        [Tooltip("Sound (top right, speaker): switches sound effects on or off; the icon fades while they are off.")]
         [SerializeField] private Button soundButton;
+
+        [Tooltip("Icon alpha of the Sound button while sound effects are off (the art has no 'off' icon yet).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float soundOffAlpha = 0.4f;
+
+        [Header("Buttons without a system yet (shown, not interactable)")]
 
         [Tooltip("Upgrade: no upgrade system yet.")]
         [SerializeField] private Button upgradeButton;
@@ -55,10 +61,10 @@ namespace SpeedStars.UI.Home
         [Tooltip("CharacterCard/Emote: no emote system yet.")]
         [SerializeField] private Button emoteButton;
 
-        [Tooltip("CharacterCard/Previous: racer presets arrive in a later phase.")]
+        [Tooltip("CharacterCard/Previous: selects the previous racer preset (wraps around).")]
         [SerializeField] private Button previousRacerButton;
 
-        [Tooltip("CharacterCard/Next: racer presets arrive in a later phase.")]
+        [Tooltip("CharacterCard/Next: selects the next racer preset (wraps around).")]
         [SerializeField] private Button nextRacerButton;
 
         [Header("Character card")]
@@ -93,11 +99,17 @@ namespace SpeedStars.UI.Home
         [Tooltip("7-day reward popup: any UiPopup; its view arrives in a later phase.")]
         [SerializeField] private UiPopup sevenDayPopup;
 
+        [Tooltip("Settings popup (scene object, starts inactive).")]
+        [SerializeField] private UiPopup settingsPopup;
+
         private ScreenNavigator _navigator;
         private IRaceSelection _selection;
         private RaceEventCatalog _catalog;
         private IWallet _wallet;
         private HomeEntryFlow _entryFlow;
+        private IPlayerSettings _settings;
+        private ICosmeticService _cosmetics;
+        private Graphic[] _soundGraphics = new Graphic[0];
 
         [Inject]
         public void ConstructHome(ScreenNavigator navigator, IRaceSelection selection, RaceEventCatalog catalog, IWallet wallet, HomeEntryFlow entryFlow)
@@ -109,6 +121,14 @@ namespace SpeedStars.UI.Home
             _entryFlow = entryFlow;
         }
 
+        /// <summary>Optional so a scene without these services still opens; the settings and preset buttons then do nothing.</summary>
+        [Inject]
+        public void ConstructHomeExtras([InjectOptional] IPlayerSettings settings, [InjectOptional] ICosmeticService cosmetics)
+        {
+            _settings = settings;
+            _cosmetics = cosmetics;
+        }
+
         protected override void Awake()
         {
             base.Awake();
@@ -118,8 +138,26 @@ namespace SpeedStars.UI.Home
             highScoresButton.onClick.AddListener(OnHighScores);
             sevenDayButton.onClick.AddListener(OnSevenDay);
             if (environmentButton != null) environmentButton.onClick.AddListener(OnEnvironment);
-            DisableUnbuilt(settingsButton, soundButton, upgradeButton, playersButton, emoteButton,
-                previousRacerButton, nextRacerButton);
+            if (settingsButton != null) settingsButton.onClick.AddListener(OnSettings);
+            if (soundButton != null)
+            {
+                soundButton.onClick.AddListener(OnSound);
+                _soundGraphics = FindSoundIcons();
+            }
+            if (previousRacerButton != null) previousRacerButton.onClick.AddListener(OnPreviousRacer);
+            if (nextRacerButton != null) nextRacerButton.onClick.AddListener(OnNextRacer);
+            DisableUnbuilt(upgradeButton, playersButton, emoteButton);
+        }
+
+        /// <summary>Everything under the Sound button except its background: these fade while sound effects are off.</summary>
+        private Graphic[] FindSoundIcons()
+        {
+            var icons = new System.Collections.Generic.List<Graphic>();
+            foreach (Graphic graphic in soundButton.GetComponentsInChildren<Graphic>(true))
+            {
+                if (graphic != soundButton.targetGraphic) icons.Add(graphic);
+            }
+            return icons.ToArray();
         }
 
         /// <summary>Designed buttons whose system does not exist yet stay visible but dead (they may be left empty).</summary>
@@ -142,12 +180,18 @@ namespace SpeedStars.UI.Home
             base.OnEnable();
             EnsureSelection();
             _selection.Changed += RefreshEventName;
+            if (_settings != null) _settings.Changed += RefreshSound;
+            if (_cosmetics != null) _cosmetics.Changed += RefreshPresets;
             RefreshEventName();
+            RefreshSound();
+            RefreshPresets();
         }
 
         protected override void OnDisable()
         {
             _selection.Changed -= RefreshEventName;
+            if (_settings != null) _settings.Changed -= RefreshSound;
+            if (_cosmetics != null) _cosmetics.Changed -= RefreshPresets;
             base.OnDisable();
         }
 
@@ -159,6 +203,10 @@ namespace SpeedStars.UI.Home
             if (highScoresButton != null) highScoresButton.onClick.RemoveListener(OnHighScores);
             if (sevenDayButton != null) sevenDayButton.onClick.RemoveListener(OnSevenDay);
             if (environmentButton != null) environmentButton.onClick.RemoveListener(OnEnvironment);
+            if (settingsButton != null) settingsButton.onClick.RemoveListener(OnSettings);
+            if (soundButton != null) soundButton.onClick.RemoveListener(OnSound);
+            if (previousRacerButton != null) previousRacerButton.onClick.RemoveListener(OnPreviousRacer);
+            if (nextRacerButton != null) nextRacerButton.onClick.RemoveListener(OnNextRacer);
             base.OnDestroy();
         }
 
@@ -176,11 +224,56 @@ namespace SpeedStars.UI.Home
 
         private void RefreshEventName()
         {
-            if (racerNameText != null && string.IsNullOrEmpty(racerNameText.text)) racerNameText.text = HomeTexts.DefaultRacerName;
+            if (racerNameText != null && _cosmetics == null && string.IsNullOrEmpty(racerNameText.text)) racerNameText.text = HomeTexts.DefaultRacerName;
             if (heightText != null && string.IsNullOrEmpty(heightText.text)) heightText.text = HomeTexts.RacerHeight;
             eventNameText.text = _catalog.TryGet(_selection.Selected, out RaceEventDefinition definition)
                 ? definition.DisplayName
                 : string.Empty;
+        }
+
+        /// <summary>Racer name = the selected preset's name; the arrows only work with more than one preset.</summary>
+        private void RefreshPresets()
+        {
+            if (_cosmetics == null) return;
+            if (racerNameText != null) racerNameText.text = _cosmetics.GetPresetName(_cosmetics.SelectedPreset);
+            bool steppable = _cosmetics.PresetCount > 1;
+            if (previousRacerButton != null) previousRacerButton.interactable = steppable;
+            if (nextRacerButton != null) nextRacerButton.interactable = steppable;
+        }
+
+        private void OnPreviousRacer() => StepPreset(-1);
+
+        private void OnNextRacer() => StepPreset(1);
+
+        private void StepPreset(int direction)
+        {
+            if (_cosmetics == null) return;
+            _cosmetics.SelectPreset(PresetStepper.Step(_cosmetics.SelectedPreset, _cosmetics.PresetCount, direction));
+        }
+
+        private void RefreshSound()
+        {
+            if (_settings == null) return;
+            float alpha = _settings.SfxOn ? 1f : soundOffAlpha;
+            foreach (Graphic graphic in _soundGraphics)
+            {
+                if (graphic != null) graphic.canvasRenderer.SetAlpha(alpha);
+            }
+        }
+
+        private void OnSound()
+        {
+            if (_settings != null) _settings.SetSfx(!_settings.SfxOn);
+        }
+
+        private void OnSettings()
+        {
+            if (settingsPopup == null)
+            {
+                UnityEngine.Debug.LogWarning($"{name}: {nameof(settingsPopup)} is not assigned.", this);
+                return;
+            }
+            _navigator.OpenPopup(settingsPopup);
         }
 
         private void OnPlay()

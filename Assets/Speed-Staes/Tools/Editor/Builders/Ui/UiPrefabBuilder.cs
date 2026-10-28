@@ -47,6 +47,8 @@ namespace SpeedStars.Tools.Builders
                 run.Build(UiPrefabPaths.EntryGateModal, UiPopupPrefabs.EntryGate);
                 run.Build(UiPrefabPaths.DailyGiftPopup, UiPopupPrefabs.DailyGift);
                 run.Build(UiPrefabPaths.SevenDayCheckInPanel, root => UiPopupPrefabs.SevenDayCheckIn(root, sevenDayCell, scene));
+                // T-031: the settings window (its config asset, with the flag sprites, is seeded by ConfigAssetSeeder).
+                UiSettingsPrefabs.BuildAll(run.Build, scene);
             }
             finally
             {

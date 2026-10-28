@@ -1,7 +1,7 @@
 ---
 id: T-031
 title: Ayarlar penceresi (Settings_Moduler_UI_v1) - Music, Language, Flag, Player Name, Done/X; ana ekran ses butonu
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-026, T-029]
 owns_paths:
@@ -13,6 +13,7 @@ owns_paths:
   - "Assets/Speed-Staes/Scripts/UI/Home/HomeScreenView.cs"
   - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiSettingsPrefabs.cs"
   - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiPrefabBuilder.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiV2Prefabs.cs"
   - "Assets/Speed-Staes/Tools/Editor/Builders/UiPrefabPaths.cs"
   - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/SceneWiring.cs"
   - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/SettingsConfigSeed.cs"
@@ -25,14 +26,18 @@ commits: []
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Settings/PlayerSettingsServiceTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Settings/PlayerNameRulesTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Settings/PresetStepperTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
     durum: open
-    not: "ProjectInstaller: SettingsConfig + IPlayerSettings AsSingle"
-started:
-finished:
+    not: "ProjectInstaller: SettingsConfig + IPlayerSettings AsSingle (exact lines in Calisma notu)"
+  - tip: SCENE
+    durum: open
+    not: "ProjectContext prefab: assign Data/Config/SettingsConfig.asset to the new ProjectInstaller 'settings' field. Then run the Home scene builder (it nests SettingsPopup under Canvas Popups and binds HomeScreenView.settingsPopup) and rebuild the UI prefabs with overwrite = true (HomeScreen/EventSelect keep nothing new; SettingsRow, LanguageRow, FlagCell, SettingsPopup are new; UiV2Prefabs now builds Settings/Sound/Environment/Previous/Next interactable, so HomeScreen needs the overwrite rebuild)."
+started: 2026-10-28
+finished: 2026-10-28
 blocked_reason:
 ---
 
@@ -78,4 +83,8 @@ KAMERA  : yok
 - Çeviri/yerelleştirme sistemi, müzik/ses içeriği, High Scores (Faz 6), slider satırları (sanatta hazır, kullanılmıyor)
 
 ## Calisma notu
-(Agent doldurur)
+- Yapildi: Meta (IPlayerSettings, SettingsConfig, PlayerNameRules, PlayerSettingsService, PlayerProgress'e 5 alan, semaya dokunulmadi: JsonUtility eksik alani varsayilanla acar), UI (SettingsPopupView/ToggleView/LanguageRowView/FlagCellView/SettingsTexts), builder (UiSettingsPrefabs + seed + yollar + SceneWiring), HomeScreenView (dis, hoparlor, preset oklari), UiV2Prefabs 5 dugme interactable. PresetStepper dosyasi Scripts/UI/Settings'te (UI/Home bana ait degil), namespace SpeedStars.UI.Home.
+- WIRING satirlari (ProjectInstaller): alan `[SerializeField] private SettingsConfig settings;` + `BindConfig(settings);` + `Container.Bind<IPlayerSettings>().FromMethod(c => new PlayerSettingsService(c.Container.Resolve<SettingsConfig>(), c.Container.Resolve<ProgressRepository>())).AsSingle();` (using SpeedStars.Meta.Settings). IPlayerSettings ve ICosmeticService HomeScreenView'a [InjectOptional]; SettingsPopupView'da IPlayerSettings zorunlu.
+- Zorlandim: Unity/derleme calistirmak yasak, hicbir sey derlenmedi; art'ta layout.json yok, yerlesim IMPLEMENTATION.md olculerinin x1.15 (1080/937) hali; scrollbar PNG'si 32x512 tuvalde sadece ustte pill, builder kirpilmis kopya uretiyor (scrollbar_*_tight.png). Yeni PNG ve .cs icin .meta'lar yok (hook), kopyada derleyip GeriAl ile alinmali.
+- Birakildi: CN bayragi (pakette yok; config'e bir satir), slider satirlari, ses/Music icerigi (sadece MusicOn/SfxOn degeri ve Changed), hoparlor kapali ikonu yer tutucu (alfa 0.4).
+- Not: sprite yerlesimleri (bayrak boyu, toggle ON/OFF yazi konumu, popup konumlari) onayli referanstan tahmin; ekran goruntusuyle ince ayar gerekebilir. PlayMode: Home'da dis/hoparlor/oklar tiklama akisi kopyada kosulmali.

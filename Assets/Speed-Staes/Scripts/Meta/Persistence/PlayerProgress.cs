@@ -32,6 +32,26 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private long lastSeenUtcTicks;
         [SerializeField] private string selectedThemeId = string.Empty;
         [SerializeField] private List<string> ownedThemeIds = new List<string>();
+        [SerializeField] private SettingChoice musicChoice;
+        [SerializeField] private SettingChoice sfxChoice;
+        [SerializeField] private string languageCode = string.Empty;
+        [SerializeField] private string flagCode = string.Empty;
+        [SerializeField] private string playerName = string.Empty;
+
+        /// <summary>Music switch the player set; Default = never touched (the settings config decides). Added with the settings window, no schema bump: older saves open as Default.</summary>
+        public SettingChoice MusicChoice { get => musicChoice; set => musicChoice = value; }
+
+        /// <summary>Sound effects switch the player set; Default = never touched.</summary>
+        public SettingChoice SfxChoice { get => sfxChoice; set => sfxChoice = value; }
+
+        /// <summary>Language code the player chose. Empty = never chosen (config default).</summary>
+        public string LanguageCode { get => languageCode; set => languageCode = value ?? string.Empty; }
+
+        /// <summary>Flag code the player chose. Empty = never chosen (config default).</summary>
+        public string FlagCode { get => flagCode; set => flagCode = value ?? string.Empty; }
+
+        /// <summary>Saved player name. Empty = never set (config default).</summary>
+        public string PlayerName { get => playerName; set => playerName = value ?? string.Empty; }
 
         /// <summary>Format version of this save; stamped by the repository on every save.</summary>
         public int SchemaVersion { get => schemaVersion; set => schemaVersion = value; }
@@ -115,7 +135,18 @@ namespace SpeedStars.Meta.Persistence
             if (processedTransactionIds == null) processedTransactionIds = new List<string>();
             if (selectedThemeId == null) selectedThemeId = string.Empty;
             if (ownedThemeIds == null) ownedThemeIds = new List<string>();
+            if (languageCode == null) languageCode = string.Empty;
+            if (flagCode == null) flagCode = string.Empty;
+            if (playerName == null) playerName = string.Empty;
         }
+    }
+
+    /// <summary>A two-state setting that remembers "never touched": Default = use the config value. Serialized as int, append only.</summary>
+    public enum SettingChoice
+    {
+        Default = 0,
+        On = 1,
+        Off = 2
     }
 
     /// <summary>

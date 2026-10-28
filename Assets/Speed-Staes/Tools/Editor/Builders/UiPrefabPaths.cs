@@ -19,6 +19,7 @@ namespace SpeedStars.Tools.Builders
         public const string EntryGateModal = Root + "/Popups/EntryGateModal.prefab";
         public const string DailyGiftPopup = Root + "/Popups/DailyGiftPopup.prefab";
         public const string SevenDayCheckInPanel = Root + "/Popups/SevenDayCheckInPanel.prefab";
+        public const string SettingsPopup = Root + "/Popups/SettingsPopup.prefab";
 
         public const string ResourceBar = Root + "/Widgets/ResourceBar.prefab";
         public const string RedDot = Root + "/Widgets/RedDot.prefab";
@@ -28,11 +29,14 @@ namespace SpeedStars.Tools.Builders
         public const string CosmeticCell = Root + "/Rows/CosmeticCell.prefab";
         public const string SevenDayCell = Root + "/Rows/SevenDayCell.prefab";
         public const string HighScoreRow = Root + "/Rows/HighScoreRow.prefab";
+        public const string SettingsRow = Root + "/Rows/SettingsRow.prefab";
+        public const string LanguageRow = Root + "/Rows/LanguageRow.prefab";
+        public const string FlagCell = Root + "/Rows/FlagCell.prefab";
 
         /// <summary>Home scene screens, in the order they sit under "Canvas Screens" (first one is the root screen).</summary>
         public static readonly string[] HomeScreens = { HomeScreen, EventSelectScreen, ThemeSelectScreen, CosmeticsScreen, HighScoresScreen };
 
         /// <summary>Home scene popups under "Canvas Popups".</summary>
-        public static readonly string[] HomePopups = { EntryGateModal, DailyGiftPopup, SevenDayCheckInPanel };
+        public static readonly string[] HomePopups = { EntryGateModal, DailyGiftPopup, SevenDayCheckInPanel, SettingsPopup };
     }
 }

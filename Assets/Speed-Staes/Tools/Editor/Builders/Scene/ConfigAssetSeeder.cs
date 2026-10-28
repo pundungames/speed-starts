@@ -30,6 +30,7 @@ namespace SpeedStars.Tools.Builders
         public const string CosmeticCatalogPath = Folder + "/CosmeticCatalog.asset";
         public const string UiMotionPath = Folder + "/UiMotionConfig.asset";
         public const string ThemeCatalogPath = Folder + "/ThemeCatalog.asset";
+        public const string SettingsPath = Folder + "/SettingsConfig.asset";
 
         /// <summary>
         /// Events in display order (PDF §1.3, MD §12). Distance only where the name states it; Training, Race of the
@@ -62,6 +63,7 @@ namespace SpeedStars.Tools.Builders
             SeedUiMotion(overwrite);
             EventSelectConfigSeed.Seed(overwrite);
             ThemeCatalogSeed.Seed(ThemeCatalogPath, overwrite);
+            SettingsConfigSeed.Seed(SettingsPath, overwrite);
             AssetDatabase.SaveAssets();
         }
 

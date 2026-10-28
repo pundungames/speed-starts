@@ -32,6 +32,7 @@ namespace SpeedStars.Tools.Builders
             var highScores = RequireInstance<UiScreen>(scene, UiPrefabPaths.HighScoresScreen);
             var sevenDay = RequireInstance<UiPopup>(scene, UiPrefabPaths.SevenDayCheckInPanel);
             var themeSelect = RequireInstance<UiScreen>(scene, UiPrefabPaths.ThemeSelectScreen);
+            var settings = RequireInstance<UiPopup>(scene, UiPrefabPaths.SettingsPopup);
 
             var so = new SerializedObject(homeView);
             Prop(so, "eventSelectScreen").objectReferenceValue = eventSelect;
@@ -40,6 +41,7 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "highScoresScreen").objectReferenceValue = highScores;
             Prop(so, "sevenDayPopup").objectReferenceValue = sevenDay;
             Prop(so, "themeSelectScreen").objectReferenceValue = themeSelect;
+            Prop(so, "settingsPopup").objectReferenceValue = settings;
             Apply(so);
             var costume = RequireOne<SpeedStars.UI.Costume.CostumeEditorScreenView>(scene, "Costume editor screen (CosmeticsScreen prefab instance)");
             var costumeSo = new SerializedObject(costume);
