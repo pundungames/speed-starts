@@ -16,16 +16,16 @@ Son güncelleme: 2026-10-28 · agent-kit v2 kurulumu · dal `main` (ad3616b üst
 - Oyuncuya görünen metin dili / yerelleştirme — md'lerle netleşir.
 
 ## Gözle bakılacaklar (öncelikli)
-- `87dd96d` Faz 1 içerik: `Scenes/Menu/Home.unity`'yi aç → Play: ProjectContext kurulur, HomeScreen görünür, konsol temiz mi; butonlar
-  punch yapar (view mantığı Faz 2'de). `Scenes/Game/Race.unity` → Play: Malik'in koşucusu koşar, üstte RaceHud yer tutucusu.
-- Prefab'lar `Assets/Speed-Staes/UI/` (16 yer tutucu, yatay), config'ler `Data/Config/` (PDF değerleri; 6. gün boş, fiyatlar 0 = kapalı).
-- T-001 yatay ekran: kullanıcı Player Settings'ten yapacak, sonra `ProjectSettings.asset` commit'lenir.
+- `dc7db07` Faz 2 dikey dilim — Unity'de `Scenes/Menu/Home.unity` → Play: kaynak çubuğu (bilet n/3 + geri sayım), Event select (100m),
+  Play → giriş kapısı ("Use Entry Ticket") → Race; koşu; **F** = geçici bitiş → Results → Race again (bilet tekrar) / Main menu.
+  Yeni kayıtta bilet 0'dan başlar (başlangıç bakiyesi PDF'te yok): ilk bilet 30 dk'da gelir → test için `Data/Config/EconomyConfig`
+  `startingEntryTickets` (yalnız yeni kayıt) ya da kaydı sil (`persistentDataPath/save`).
+- TMP yok, legacy Text + İngilizce; UI 2400×1080 yükseklik eşleşmesi. Zenject doğrulaması: Tools → Speed Stars → Validate Zenject.
 
 ## Sıradaki iş
-1. Faz 2 dikey dilim task'ları (`docs/YOL-HARITASI.md`): EntryTicketService + RaceEntryGate (Meta, testli), Home/EventSelect/EntryGate/
-   ResourceBar view'ları, Race HUD + Bridge `RaceSessionAdapter`, Results view, Dev bitiş tetikleyicisi, Home↔Race akışı.
-- Faz 1: T-002/3/4 done; T-005/6/7/8 merged (gözle bakılacak). Builder'lar: Tools → Speed Stars → Build (var olanı ezmez).
-- Font: LiberationSans SDF'de ğ ı ş İ yok → Türkçe metin için font kararı (Faz 2/8).
+1. Faz 3 PDF ekonomisi: Süreli Bilet (60 dk gerçek zaman), Nakit/Mor Mücevher cüzdanı + işlem günlüğü, 3/2/1 ödül, uç durum testleri.
+2. Faz 4 günlük hediye + 7 gün; Faz 5 kozmetik/Edit racer; Faz 6 High Scores (yerel, Sticker Patch'ten).
+- Faz 1-2 task'ları merged (gözle bakılacak). Bitiş olayı Malik'te yok → Bridge `RunReset`'ten çıkarıyor (TEMEL-SOZLESME §11).
 
 ## Dikkat
 - Unity'nin commit'siz dosyası: `ProjectSettings/ProjectSettings.asset` — dokunma, commit'e katma.

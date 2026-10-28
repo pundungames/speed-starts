@@ -8,7 +8,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/**"
 touches_scene: true
 branch: agent/faz2-dilim
-commits: []
+commits: [bb43cdb, dc7db07]
 tests:
   - "gerekmiyor: editor builder'i; kabul supervizorun batchmode kosusu (overwrite) + Home/Race Play"
 analytics:

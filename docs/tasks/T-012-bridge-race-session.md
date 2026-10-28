@@ -8,7 +8,7 @@ owns_paths:
   - "Assets/Speed-Staes/Scripts/Bridge/**"
 touches_scene: false
 branch: agent/faz2-dilim
-commits: []
+commits: [bb43cdb, dc7db07]
 tests:
   - "gerekmiyor: Bridge asmdef'siz ve Malik'in MonoBehaviour'larina bagli; davranis Race sahnesinde gozle (Play) - kabul asagida"
 analytics:

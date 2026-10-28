@@ -13,7 +13,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Wallet/**"
 touches_scene: false
 branch: agent/faz2-dilim
-commits: []
+commits: [bb43cdb, dc7db07]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Tickets/EntryTicketServiceTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Race/RaceEntryGateTests.cs (gate, RaceSelection, WalletService)"

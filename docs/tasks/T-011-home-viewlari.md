@@ -9,7 +9,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/**"
 touches_scene: false
 branch: agent/faz2-dilim
-commits: []
+commits: [bb43cdb, dc7db07]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/HomeLogicTests.cs"
 analytics:
