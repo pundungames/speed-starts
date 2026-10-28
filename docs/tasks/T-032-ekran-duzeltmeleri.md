@@ -1,7 +1,7 @@
 ---
 id: T-032
 title: Ekran duzeltmeleri - kaynak cubugu cakismasi, kostum editorunde kayip yazilar ve renk secici, yaris seciminde karartma
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-024, T-026, T-031]
 owns_paths:
@@ -14,14 +14,14 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/**"
 touches_scene: true
 branch: agent/T-032-ekran-duzeltmeleri
-commits: []
+commits: [d67419d]
 tests:
   - "gerekmiyor: gorsel duzeltme; kabul PlayMode ekran goruntusu (Shots_HomeAndRace). Kaynak cubugu gorunurluk kurali saf siniftaysa EditMode testi"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Builder'lari yeniden calistir: ResourceBar + CosmeticsScreen prefab'lari ve Home sahnesi wiring (SceneWiring.WireHome ResourceBarView.homeScreen baglar; yeni alanlar CostumeTabView.label/renkler; CostumeTexts.cs.meta Unity uretir)"
 
 started: 2026-10-28
