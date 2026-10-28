@@ -41,8 +41,7 @@ namespace SpeedStars.Tools.Builders
                 UiCostumePrefabs.BuildAll(run.Build); // T-026: item card + preset row + the costume editor screen (CosmeticsScreen path)
                 run.Build(UiPrefabPaths.HighScoresScreen, UiScreenPrefabs.HighScores);
                 run.Build(UiPrefabPaths.RaceHud, UiScreenPrefabs.RaceHud);
-                run.Build(UiPrefabPaths.ResultsScreen,
-                    root => UiScreenPrefabs.Results(root, UiViewBinder.RowComponent<SpeedStars.UI.Race.ResultRowView>(highScoreRow, UiPrefabPaths.HighScoreRow)));
+                UiResultsPrefabs.BuildAll(run.Build); // T-033: table row prefab + the results screen with the Oyun_Bitis_UI_v1 art
 
                 run.Build(UiPrefabPaths.EntryGateModal, UiPopupPrefabs.EntryGate);
                 run.Build(UiPrefabPaths.DailyGiftPopup, UiPopupPrefabs.DailyGift);

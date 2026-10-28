@@ -115,9 +115,44 @@ namespace SpeedStars.Tests.UI.Race
             _session.Finish(Outcome(Dash, 9.589));
 
             Assert.AreEqual("100m dash", _results.Presented.EventTitle);
-            Assert.AreEqual("9.58", _results.Presented.TimeText);
+            Assert.AreEqual(1, _results.Presented.Rows.Count);
+            Assert.AreEqual("9.58s", _results.Presented.Rows[0].TimeText);
+            Assert.IsTrue(_results.Presented.Rows[0].IsPlayer);
             Assert.AreSame(_results, _navigator.CurrentScreen);
             Assert.IsTrue(flow.ResultsOpen);
+        }
+
+        [Test]
+        public void Finished_RecordsTheTimeOnce_AndPresentsTheNewRecord()
+        {
+            var records = new FakeRecords();
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            var flow = new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, _prompt, records);
+            flow.Start();
+
+            _session.Finish(Outcome(Dash, 9.589));
+            _session.Finish(Outcome(Dash, 7d)); // a repeated finish of the same race
+
+            Assert.AreEqual(1, records.Calls.Count);
+            Assert.AreEqual(Dash, records.Calls[0].Event);
+            Assert.AreEqual(9.589, records.Calls[0].Seconds, 1e-9);
+            Assert.IsFalse(string.IsNullOrEmpty(records.Calls[0].RaceId));
+            Assert.IsTrue(_results.Presented.IsNewRecord);
+            Assert.AreEqual("9.58s", _results.Presented.PersonalBestValue);
+        }
+
+        [Test]
+        public void Finished_WithoutRecords_ShowsNoBestAndNoRecord()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            Make().Start();
+
+            _session.Finish(Outcome(Dash, 9.589));
+
+            Assert.IsFalse(_results.Presented.IsNewRecord);
+            Assert.AreEqual(ResultsTexts.NoValue, _results.Presented.PersonalBestValue);
         }
 
         [Test]
@@ -462,15 +497,15 @@ namespace SpeedStars.Tests.UI.Race
         {
             public int GemsShown = -1;
             public int GemCalls;
-            public RaceResult Presented;
+            public ResultsData Presented;
             public int PresentCount;
             public int DeniedCount;
             public event Action RaceAgainRequested;
             public event Action MainMenuRequested;
 
-            public void Present(RaceResult result)
+            public void Present(ResultsData data)
             {
-                Presented = result;
+                Presented = data;
                 PresentCount++;
             }
 
@@ -485,6 +520,24 @@ namespace SpeedStars.Tests.UI.Race
             public void Hide() { }
             public void RaiseRaceAgain() => RaceAgainRequested?.Invoke();
             public void RaiseMainMenu() => MainMenuRequested?.Invoke();
+        }
+
+        /// <summary>Keeps the first result per race id (like the real service) and says "new record" for the first time of an event.</summary>
+        private sealed class FakeRecords : IPersonalBests
+        {
+            public readonly List<(RaceEventId Event, double Seconds, string RaceId)> Calls = new List<(RaceEventId, double, string)>();
+
+            public bool TryGetBest(RaceEventId eventId, out double seconds)
+            {
+                seconds = 0d;
+                return false;
+            }
+
+            public PersonalBestUpdate Record(RaceEventId eventId, double seconds, string raceId)
+            {
+                Calls.Add((eventId, seconds, raceId));
+                return new PersonalBestUpdate(true, true, seconds);
+            }
         }
 
         private sealed class FakePrompt : IEntryGatePrompt

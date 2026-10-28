@@ -9,16 +9,17 @@ namespace SpeedStars.UI.Race
 {
     /// <summary>
     /// Zenject shell of the Race scene flow (the decisions are in RaceFlowLogic). Bound in RaceSceneInstaller with
-    /// BindInterfacesAndSelfTo; the entry gate prompt is optional.
+    /// BindInterfacesAndSelfTo; the entry gate prompt, personal bests, wallet and settings are optional.
     /// </summary>
     public sealed class RaceFlow : IInitializable, IDisposable, IRaceHudActions
     {
         private readonly RaceFlowLogic _logic;
 
         public RaceFlow(IRaceSession session, IRaceEntryGate gate, IRaceSelection selection, IRaceEventLookup events,
-            ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, [InjectOptional] IEntryGatePrompt prompt)
+            ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, [InjectOptional] IEntryGatePrompt prompt,
+            [InjectOptional] IPersonalBests records, [InjectOptional] IWallet wallet, [InjectOptional] IPlayerSettings settings)
         {
-            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt);
+            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings);
         }
 
         public void Initialize() => _logic.Start();

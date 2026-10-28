@@ -1,7 +1,7 @@
 ---
 id: T-033
 title: Yaris sonu ekrani v1 (Oyun_Bitis_UI_v1) + kisisel rekor kaydi
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-029]
 owns_paths:
@@ -27,9 +27,12 @@ analytics:
 needs:
   - tip: WIRING
     durum: open
-    not: "ProjectInstaller: IPersonalBests AsSingle"
-started:
-finished:
+    not: "ProjectInstaller: IPersonalBests AsSingle. Exact line, next to the other Meta services (needs ProgressRepository, already bound): Container.Bind<IPersonalBests>().To<SpeedStars.Meta.Records.PersonalBestService>().AsSingle();  -- RaceFlow takes it with [InjectOptional], so the Race scene runs without it (PERSONAL BEST shows '--', nothing is saved) until bound."
+  - tip: SCENE
+    durum: open
+    not: "Rebuild UI prefabs with overwrite=true (UiPrefabBuilder.BuildAll): new Rows/ResultsTableRow.prefab + rebuilt Screens/ResultsScreen.prefab (same GUID). The Race scene's ResultsScreen instance (RaceSceneInstaller.results) keeps its GUID but may carry overrides of the old fields (LeftPanel/..): check it after the rebuild, re-run the scene builder if needed. Not open for any further hand work."
+started: 2026-10-28
+finished: 2026-10-28
 blocked_reason:
 ---
 
@@ -72,4 +75,8 @@ KAMERA  : yok
 - Liderlik tablosu / dünya sırası (Faz 6), tekrar sistemi, istatistik ekranı, rakip koşucular (Malik)
 
 ## Calisma notu
-(Agent doldurur)
+- Yapilan: `IPersonalBests` + `PersonalBestService` (PlayerProgress.BestTimes uzerinde, race id ile tek yazim, centisecond karsilastirma); saf `ResultsModel` (kart metinleri, satirlar, kupa, yeni rekor); `ResultsScreenView` + `ResultsTableRowView` yeniden yazildi (stagger acilis, yeni rekorda kart punch, 4 pasif buton sprite-swap disabled); `UiResultsPrefabs` builder'i layout.json'dan (tablo/daily extras dahil) screen + row prefab kurar; 41 PNG `UI/Art/Results/`'e kopyalandi.
+- `RaceFlowLogic/RaceFlow`: IPersonalBests, IWallet, IPlayerSettings opsiyonel (null = o kart bos/--); `IResultsView.Present(ResultsData)` (RaceResult kaldirildi). WORLD POSITION / PERCENTILE / BEST OF THE DAY gercek veri yok: `--` / "No races today".
+- Zorlandigim: yeni .cs/.png dosyalarinin .meta'lari yok (yazma yetkisi yok): kopyada derlenip .meta GeriAl ile alinmali (TUZAKLAR .meta maddesi). Prefab'ta alan baglari builder ile; `fileID: 0` grep'i prefab uretildikten sonra yapilmali (burada prefab yok).
+- Birakilan: eski `UiScreenPrefabs.Results` + `UiViewBinder.BindResults` + `HighScoreRow` ile `ResultRowView` olu kod (bu task'in disinda dosyalar; HighScores ekrani hala kullaniyor olabilir) -- temizlik backlog. Rakip satirlari `ResultsInput.Others` listesinde hazir (bos).
+- Testler yazildi, KOSULMADI (merkezi dogrulama): PersonalBestServiceTests, ResultsModelTests, RaceFlowLogicTests guncel + 2 yeni test.

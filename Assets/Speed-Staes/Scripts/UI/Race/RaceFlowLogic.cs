@@ -23,6 +23,9 @@ namespace SpeedStars.UI.Race
         private readonly IResultsView _results;
         private readonly IRaceRewardResolver _rewards;
         private readonly IEntryGatePrompt _prompt; // optional
+        private readonly IPersonalBests _records; // optional: without it no best time is kept or shown
+        private readonly IWallet _wallet; // optional: the Cash card shows 0 without it
+        private readonly IPlayerSettings _settings; // optional: the player row says YOU without it
 
         private RaceEventInfo _current;
         private bool _hasCurrent;
@@ -32,7 +35,8 @@ namespace SpeedStars.UI.Race
         private string _payoutId = string.Empty;
 
         public RaceFlowLogic(IRaceSession session, IRaceEntryGate gate, IRaceSelection selection, IRaceEventLookup events,
-            ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, IEntryGatePrompt prompt)
+            ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, IEntryGatePrompt prompt,
+            IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _gate = gate ?? throw new ArgumentNullException(nameof(gate));
@@ -43,6 +47,9 @@ namespace SpeedStars.UI.Race
             _results = results ?? throw new ArgumentNullException(nameof(results));
             _rewards = rewards ?? throw new ArgumentNullException(nameof(rewards));
             _prompt = prompt;
+            _records = records;
+            _wallet = wallet;
+            _settings = settings;
         }
 
         /// <summary>True while the Results screen is up (between a finish and the next start).</summary>
@@ -107,9 +114,32 @@ namespace SpeedStars.UI.Race
             _resultsOpen = true;
             if (string.IsNullOrEmpty(_payoutId)) _payoutId = Guid.NewGuid().ToString("N");
             int gems = _rewards.Resolve(outcome, _payoutId); // once per race (the guard above); the resolver pays once per id too
-            _results.Present(new RaceResult(title, RaceDisplayFormat.Time(outcome.TimeSeconds), "-", "-", false));
+            _results.Present(BuildResults(title, outcome));
             if (_results is IGemRewardView gemView) gemView.ShowGemReward(gems); // 0 clears the line of a previous race
             _navigator.Push(_results);
+        }
+
+        /// <summary>
+        /// Records the time (once per race: the payout id is the race id) and turns the outcome into screen data.
+        /// No other runners are known yet, so the table holds the player's row only.
+        /// </summary>
+        private ResultsData BuildResults(string title, RaceOutcome outcome)
+        {
+            bool hasBest = false;
+            bool isNewRecord = false;
+            double best = 0d;
+            if (_records != null)
+            {
+                PersonalBestUpdate update = _records.Record(outcome.EventId, outcome.TimeSeconds, _payoutId);
+                hasBest = update.HasBest;
+                isNewRecord = update.IsNewRecord;
+                best = update.BestSeconds;
+            }
+
+            return ResultsModel.Build(new ResultsInput(title, outcome.Rank, outcome.TimeSeconds,
+                _settings != null ? _settings.PlayerName : string.Empty,
+                _wallet != null ? _wallet.Cash : 0,
+                hasBest, best, isNewRecord, null));
         }
 
         private void OnRaceAgain()
