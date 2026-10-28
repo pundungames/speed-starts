@@ -1,6 +1,7 @@
 using System;
 using SpeedStars.Core.Services;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.UI.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -9,9 +10,11 @@ namespace SpeedStars.UI.Home
 {
     /// <summary>
     /// Resource bar (prefab ResourceBar, on the overlay canvas): Purple Gems, Entry Tickets with the regen countdown,
-    /// Timed Tickets and Cash. Redraws when the wallet or tickets change; about once a second it calls
+    /// Timed Tickets and Cash. Visible only while the Home screen is the top screen (other full screens have their own
+    /// resource columns or none); popups do not hide it. Redraws when the wallet or tickets change; about once a second it calls
     /// <c>IEntryTickets.Refresh</c> (regen is lazy) and updates the countdown. Binds existing texts, creates nothing.
     /// </summary>
+    [RequireComponent(typeof(CanvasGroup))]
     public sealed class ResourceBarView : MonoBehaviour
     {
         [Tooltip("PurpleGem/Value.")]
@@ -32,6 +35,9 @@ namespace SpeedStars.UI.Home
         [Tooltip("Cash/Value.")]
         [SerializeField] private Text cashText;
 
+        [Tooltip("The Home screen (root of the stack): the bar is shown only while it is the top screen. Empty = always shown.")]
+        [SerializeField] private UiScreen homeScreen;
+
         [Tooltip("Seconds between ticket refresh ticks.")]
         [Min(0.1f)]
         [SerializeField] private float tickInterval = 1f;
@@ -39,6 +45,8 @@ namespace SpeedStars.UI.Home
         private IWallet _wallet;
         private IEntryTickets _tickets;
         private IClock _clock;
+        private ScreenNavigator _navigator;
+        private CanvasGroup _group;
         private float _elapsed;
 
         [Inject]
@@ -49,8 +57,18 @@ namespace SpeedStars.UI.Home
             _clock = clock;
         }
 
+        /// <summary>Optional so a scene without a navigator keeps the bar always shown.</summary>
+        [Inject]
+        public void ConstructResourceBarNavigation([InjectOptional] ScreenNavigator navigator)
+        {
+            _navigator = navigator;
+        }
+
         private void OnEnable()
         {
+            if (_group == null) _group = GetComponent<CanvasGroup>();
+            if (_navigator != null) _navigator.CurrentScreenChanged += OnScreenChanged;
+            ApplyVisibility();
             _wallet.Changed += Redraw;
             _tickets.Changed += Redraw;
             _elapsed = 0f;
@@ -60,8 +78,21 @@ namespace SpeedStars.UI.Home
 
         private void OnDisable()
         {
+            if (_navigator != null) _navigator.CurrentScreenChanged -= OnScreenChanged;
             _wallet.Changed -= Redraw;
             _tickets.Changed -= Redraw;
+        }
+
+        private void OnScreenChanged(IUiView top) => ApplyVisibility();
+
+        /// <summary>Shown before the first screen opens and while Home is on top; a CanvasGroup so the bar keeps ticking.</summary>
+        private void ApplyVisibility()
+        {
+            IUiView top = _navigator?.CurrentScreen;
+            bool visible = homeScreen == null || top == null || ReferenceEquals(top, homeScreen);
+            _group.alpha = visible ? 1f : 0f;
+            _group.blocksRaycasts = visible;
+            _group.interactable = visible;
         }
 
         private void Update()

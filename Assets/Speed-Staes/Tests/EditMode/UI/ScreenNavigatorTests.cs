@@ -33,6 +33,24 @@ namespace SpeedStars.Tests.UI
         }
 
         [Test]
+        public void CurrentScreenChanged_RaisedForPushPopAndReplace_NotForPopups()
+        {
+            var home = View("home");
+            var events = View("events");
+            var themes = View("themes");
+            var seen = new List<IUiView>();
+            _nav.CurrentScreenChanged += seen.Add;
+
+            _nav.Push(home);
+            _nav.Push(events);
+            _nav.Replace(themes);
+            _nav.OpenPopup(View("settings"));
+            _nav.Pop();
+
+            CollectionAssert.AreEqual(new IUiView[] { home, events, themes, home }, seen);
+        }
+
+        [Test]
         public void Push_SecondScreen_HidesTheCoveredOneThenShowsTheNewOne()
         {
             var home = View("home");

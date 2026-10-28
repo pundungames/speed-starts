@@ -45,6 +45,14 @@ namespace SpeedStars.Tools.Builders
         private const float PriceGap = 0.03f; // between the gem and the price text
         private const float PriceEdge = 0.94f;
         private const float HeightInset = 0.03f;
+        private const float TabLabelSize = 34f;
+        private const float TitleSize = 40f;
+        private const float StatLabelSize = 28f;
+        private const float ActionLabelSize = 44f;
+        private const float LabelGap = 0.03f;      // between an icon and its label (fraction of the component)
+        private const float TabLabelRight = 0.96f;
+        private const float TitleInset = 0.06f;
+        private static readonly Color LabelWhite = Color.white;
 
         private static readonly (CostumeTab tab, string stem)[] TabArt =
         {
@@ -147,8 +155,8 @@ namespace SpeedStars.Tools.Builders
             CostumeResourceView resources = ResourceColumn(root, layout, config);
             CostumeColorPickerView picker = ColorPanel(root, layout);
             Stats(root, layout, out Image powerFill, out Image staminaFill, out Text heightText, out Vector2 barSpan);
-            Button random = ActionButton(root, layout, "Random", "random", out _);
-            Button save = ActionButton(root, layout, "Save", "save", out Image saveBackground);
+            Button random = ActionButton(root, layout, "Random", "random", CostumeTexts.Random, UiArt.Navy, out _);
+            Button save = ActionButton(root, layout, "Save", "save", CostumeTexts.Save, LabelWhite, out Image saveBackground);
             Button purchase = PurchaseButton(root, layout, out Text price, out Image purchaseBackground);
 
             RectTransform wardrobe = Kit.Stretch(Kit.Node(root, "Wardrobe"));
@@ -243,6 +251,10 @@ namespace SpeedStars.Tools.Builders
 
             UiArt.Paint(panel.gameObject, Art("color_panel_background"), raycast: true);
 
+            // The frame art is a solid navy plate (outer shape + border): it goes UNDER the gradient layers, which are smaller.
+            UiArt.Layer(panel, "SvFrame", Art("color_sv_frame"));
+            UiArt.Layer(panel, "HueFrame", Art("color_hue_frame"));
+
             // Square: invisible tap area over the inner area, the flat hue colour inside it, then the two overlays and the frame.
             Vector4 sv = AlphaBounds("color_sv_red_example");
             RectTransform svArea = Kit.Span(Kit.Node(panel, "SvArea"), new Vector2(sv.x, sv.y), new Vector2(sv.z, sv.w));
@@ -251,7 +263,10 @@ namespace SpeedStars.Tools.Builders
             Image hueBase = Kit.Fill(Kit.Stretch(Kit.Node(svArea, "Base")).gameObject, Color.red, raycast: false);
             UiArt.Layer(panel, "SvWhite", Art("color_sv_white_overlay"));
             UiArt.Layer(panel, "SvBlack", Art("color_sv_black_overlay"));
-            UiArt.Layer(panel, "SvFrame", Art("color_sv_frame"));
+
+            // Title in the band above the square (from the panel top down to the square's top edge).
+            UiArt.Slot(panel, "Title", CostumeTexts.ColorTitle, TitleSize, new Vector2(TitleInset, sv.w), new Vector2(1f - TitleInset, 0.98f),
+                TextAnchor.MiddleLeft);
 
             // Hue strip.
             Vector4 hue = AlphaBounds("color_hue_spectrum");
@@ -259,7 +274,6 @@ namespace SpeedStars.Tools.Builders
             HitArea(hueArea.gameObject);
             ColorDragArea hueDrag = hueArea.gameObject.AddComponent<ColorDragArea>();
             UiArt.Layer(panel, "HueSpectrum", Art("color_hue_spectrum"));
-            UiArt.Layer(panel, "HueFrame", Art("color_hue_frame"));
 
             // Swatch: flat colour inside its frame (the frame's border covers the square corners).
             Vector4 swatch = AlphaBounds("color_swatch_red_example");
@@ -306,9 +320,19 @@ namespace SpeedStars.Tools.Builders
                 throw new InvalidOperationException("UiCostumePrefabs: the power and stamina bars do not span the same width; the view has one bar span.");
             barSpan = new Vector2(power.x, power.z);
 
+            // Power / Stamina names: between the row icon and the bar (rows are the bar's own height band).
+            StatLabel(stats, "PowerLabel", CostumeTexts.Power, AlphaBounds("stats_power_icon"), power);
+            StatLabel(stats, "StaminaLabel", CostumeTexts.Stamina, AlphaBounds("stats_stamina_icon"), stamina);
+
             Vector4 field = AlphaBounds("stats_height_field");
             heightText = UiArt.Slot(stats, "HeightLabel", "Height", HeightSize,
                 new Vector2(field.x + HeightInset, field.y), new Vector2(field.z - HeightInset, field.w));
+        }
+
+        private static void StatLabel(Transform stats, string name, string text, Vector4 icon, Vector4 bar)
+        {
+            UiArt.Slot(stats, name, text, StatLabelSize, new Vector2(icon.z + LabelGap * 0.5f, bar.y),
+                new Vector2(bar.x - LabelGap * 0.5f, bar.w), TextAnchor.MiddleLeft);
         }
 
         private static Image FillLayer(Transform parent, string name, string art)
@@ -321,12 +345,16 @@ namespace SpeedStars.Tools.Builders
             return image;
         }
 
-        private static Button ActionButton(RectTransform root, UiArt.Layout layout, string nodeName, string artName, out Image background)
+        private static Button ActionButton(RectTransform root, UiArt.Layout layout, string nodeName, string artName, string text, Color textColor,
+            out Image background)
         {
             RectTransform node = Kit.Node(root, nodeName);
             layout.PlaceOnScreen(node, layout.Get(artName));
             background = UiArt.Paint(node.gameObject, Art(artName + "_background"), raycast: true);
             UiArt.Layer(node, "Icon", Art(artName + "_icon"));
+            Vector4 icon = AlphaBounds(artName + "_icon");
+            UiArt.Slot(node, "Label", text, ActionLabelSize, new Vector2(icon.z + LabelGap, 0.12f), new Vector2(0.96f, 0.88f),
+                TextAnchor.MiddleLeft, textColor);
             return UiArt.MakeButton(node.gameObject, background, true, alphaHit: false);
         }
 
@@ -379,8 +407,14 @@ namespace SpeedStars.Tools.Builders
                 icon = UiArt.Layer(node, "Icon", Art(stem + "_icon")).gameObject;
             }
 
+            // Name right of the icon, drawn last so it is above every layer.
+            Vector4 tabIcon = AlphaBounds(stem + (twoIcons ? "_normal_icon" : "_icon"));
+            Text tabLabel = UiArt.Slot(node, "Label", CostumeTexts.TabName(tab), TabLabelSize,
+                new Vector2(tabIcon.z + LabelGap, 0.1f), new Vector2(TabLabelRight, 0.9f), TextAnchor.MiddleLeft);
+
             var so = new SerializedObject(view);
             Find(so, "tab").intValue = (int)tab;
+            Ref(so, "label", tabLabel);
             Ref(so, "button", button);
             Ref(so, "selectedBackground", selected);
             Ref(so, "icon", icon);

@@ -43,6 +43,10 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "themeSelectScreen").objectReferenceValue = themeSelect;
             Prop(so, "settingsPopup").objectReferenceValue = settings;
             Apply(so);
+            var resourceBar = RequireOne<ResourceBarView>(scene, "ResourceBar widget (ResourceBar prefab instance)");
+            var barSo = new SerializedObject(resourceBar);
+            Prop(barSo, "homeScreen").objectReferenceValue = homeView; // bar shows only while Home is the top screen
+            Apply(barSo);
             var costume = RequireOne<SpeedStars.UI.Costume.CostumeEditorScreenView>(scene, "Costume editor screen (CosmeticsScreen prefab instance)");
             var costumeSo = new SerializedObject(costume);
             Prop(costumeSo, "dimBackdrop").objectReferenceValue = SceneHomeDim.Find(scene);

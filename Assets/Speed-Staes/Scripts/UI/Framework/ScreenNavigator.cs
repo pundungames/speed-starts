@@ -22,6 +22,9 @@ namespace SpeedStars.UI.Framework
         /// <summary>Popup that Back would close, null when none is open.</summary>
         public IUiView TopPopup => _popups.Count > 0 ? _popups[_popups.Count - 1] : null;
 
+        /// <summary>Raised after the visible screen changed (Push, Pop, Replace, unwind), with the new top screen.</summary>
+        public event Action<IUiView> CurrentScreenChanged;
+
         public int ScreenCount => _screens.Count;
         public int PopupCount => _popups.Count;
 
@@ -41,6 +44,7 @@ namespace SpeedStars.UI.Framework
             _screens.Add(screen);
             covered?.Hide();
             screen.Show();
+            CurrentScreenChanged?.Invoke(screen);
         }
 
         /// <summary>Hides the top screen and shows the one under it. False (and nothing changes) at the root.</summary>
@@ -76,6 +80,7 @@ namespace SpeedStars.UI.Framework
             _screens[top] = screen;
             replaced.Hide();
             screen.Show();
+            CurrentScreenChanged?.Invoke(screen);
         }
 
         /// <summary>Opens <paramref name="popup"/> above everything. False if it is already open (no second copy).</summary>
@@ -132,6 +137,7 @@ namespace SpeedStars.UI.Framework
             _screens.RemoveRange(index + 1, top - index);
             leaving.Hide();
             target.Show();
+            CurrentScreenChanged?.Invoke(target);
         }
     }
 }

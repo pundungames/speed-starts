@@ -58,7 +58,11 @@ namespace SpeedStars.UI.Costume
         /// <summary>Shows a colour without reporting it. Text that is not a colour is ignored.</summary>
         public void SetColor(string hex)
         {
-            if (!HsvColor.TryFromHex(hex, _color.Hue, out HsvColor parsed)) return;
+            if (!HsvColor.TryFromHex(hex, _color.Hue, out HsvColor parsed))
+            {
+                Redraw(); // not a colour: still place the parts from the current one so nothing sits at its prefab default
+                return;
+            }
             _color = parsed;
             Redraw();
         }

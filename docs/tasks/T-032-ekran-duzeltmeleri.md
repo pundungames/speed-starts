@@ -1,7 +1,7 @@
 ---
 id: T-032
 title: Ekran duzeltmeleri - kaynak cubugu cakismasi, kostum editorunde kayip yazilar ve renk secici, yaris seciminde karartma
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-024, T-026, T-031]
 owns_paths:
@@ -19,9 +19,13 @@ tests:
   - "gerekmiyor: gorsel duzeltme; kabul PlayMode ekran goruntusu (Shots_HomeAndRace). Kaynak cubugu gorunurluk kurali saf siniftaysa EditMode testi"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Builder'lari yeniden calistir: ResourceBar + CosmeticsScreen prefab'lari ve Home sahnesi wiring (SceneWiring.WireHome ResourceBarView.homeScreen baglar; yeni alanlar CostumeTabView.label/renkler; CostumeTexts.cs.meta Unity uretir)"
+
+started: 2026-10-28
+finished: 2026-10-28
 blocked_reason:
 ---
 
@@ -52,4 +56,7 @@ Builder'lar güncellenir (kod kalıcı UI kurmaz); prefab'lar süpervizör taraf
 - Giriş kapısı sanatı (henüz gelmedi; yer tutucu görünüm kalır), yeni özellik
 
 ## Calisma notu
-(Agent doldurur)
+1) Kaynak cubugu: ScreenNavigator.CurrentScreenChanged olayi; ResourceBarView (CanvasGroup) yalniz Home en ustteyken gorunur, popup etkilemez; homeScreen SceneWiring'de baglanir. Test: ScreenNavigatorTests.
+2) Yazilar: sanatta yazi yok (README) ve UiCostumePrefabs sekme adi, Color basligi, Power/Stamina, Random/Save icin hic Text OLUSTURMUYORDU. Eklendi (CostumeTexts, best-fit Slot); secili sekmede etiket beyaz.
+3) Renk secici: color_sv_frame / color_hue_frame PNG'leri tam opak lacivert plaka; kod bunlari gradyanin USTUNE koyuyordu. Simdi altta (frame, base, white, black; frame, spectrum). Gecersiz hex'te parcalar yine cizilir.
+4) Karartma: EventSelectScreen.prefab'ta zaten 'Dim' (dimscreen, alfa ~%51) var ve dogru; goruntude karakter de koyu. Degisiklik yok.

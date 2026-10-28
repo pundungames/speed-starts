@@ -26,6 +26,15 @@ namespace SpeedStars.UI.Costume
         [Tooltip("Optional icon shown instead of the normal one while selected (Body: white). Empty = the same icon in both states.")]
         [SerializeField] private GameObject selectedIcon;
 
+        [Tooltip("Tab name text (Face, Head, ...). Optional.")]
+        [SerializeField] private Text label;
+
+        [Tooltip("Label colour on the normal (cream) background.")]
+        [SerializeField] private Color normalLabelColor = new Color(0.04f, 0.12f, 0.36f, 1f);
+
+        [Tooltip("Label colour on the selected (red) background.")]
+        [SerializeField] private Color selectedLabelColor = Color.white;
+
         public CostumeTab Tab => tab;
 
         /// <summary>The player tapped the tab.</summary>
@@ -44,6 +53,7 @@ namespace SpeedStars.UI.Costume
         public void SetSelected(bool selected)
         {
             selectedBackground.SetActive(selected);
+            if (label != null) label.color = selected ? selectedLabelColor : normalLabelColor;
             if (selectedIcon == null) return;
             selectedIcon.SetActive(selected);
             icon.SetActive(!selected);
