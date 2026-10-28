@@ -14,3 +14,6 @@
 (config alani var ama okuyucusu bulunamadi - faz sonu taramasinda dogrula)
 
 ## Test kapsamasi bosluklari
+- [ölü kod] T-024/T-033 sonrası kullanılmayan: `EventRowView.cs`, `UiRowPrefabs.EventRow`, `UiViewBinder.BindEventSelect`/`BindResults`, `UiScreenPrefabs.EventSelect`/`Results`, `ResultRowView`, eski `Rows/EventRow.prefab` (28.10)
+- [builder] Her RebuildAll prefab içi fileID'leri yeniden üretiyor (her build binlerce satır diff) → var olan prefab'ı yerinde güncelleyen builder ya da sabit fileID; o zamana kadar sahne + prefab'lar aynı build'den commit'lenir (28.10)
+- [kostüm] Renk örnek kutusu öğenin rengi yoksa lacivert; 'Watch Replay' etiketi iki satıra kırılıyor (28.10)

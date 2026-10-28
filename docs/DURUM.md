@@ -7,9 +7,8 @@ MOD: süpervizör
 
 Son güncelleme: 2026-10-28 · origin/main birleşti (881966a, push kullanıcıda) · dal `main`
 
-## Sürüyor (worktree'ler, agent'lar)
-- T-031 ayarlar penceresi (Music, Language, Flag, Player Name) + ana ekran Settings/Sound/Environment butonlarının açılması + yarışçı okları
-  Custom 1..3 arasında — `D:\Pundun\speed-starts-t031`. HATA: tema butonu builder'da `interactable=false` (main'de çalışmıyor), T-031 düzeltir.
+## Sürüyor
+- Yok (bütün worktree'ler kapandı). Sıradaki: Faz 4 / Faz 6 (aşağıda).
 
 ## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
 - Tema fiyatı (Nakit) yok → asset'te 0; geliştirmede bütün temalar serbest. Ön ayar Custom 1..3. Face = Glasses, Emote pasif,
@@ -21,20 +20,20 @@ Son güncelleme: 2026-10-28 · origin/main birleşti (881966a, push kullanıcıd
 ## Kullanıcıdan bekleyen
 - Malik'ten (Faz 7, sona bırakıldı): yarış başladı/bitti olayı, UI üstündeki dokunma ayak sayılmasın, geri sayım sinyali (`docs/TEMEL-SOZLESME.md` §11).
 
-## Gözle bakılacaklar (main 2b9f19e, kopyada yeşil: EditMode 397, PlayMode 10, Zenject)
-- Home = Serhat'ın `Anamenu Themaları` kopyası (build anında): kaidede kıyafetli karakter, bilet 3/3, Custom 1 (T-023/T-025).
-- Kostüm editörü (Edit racer): 9 sekme, Serhat'ın 72 ikonu, renk seçici, Custom N, Random/Save, premium satın alma, karartma (T-026).
-- Yarış seçimi v1 (T-024), tema seçimi (T-027; buton T-031'e kadar basılmıyor).
-- Faz 3 ekonomi: tek işlem yolu, Süreli Bilet kullan + geri sayım, dolu envanter uyarısı, Mor Mücevher ödülü (T-028/T-029).
+## Gözle bakılacaklar (main ccdafad, kopyada yeşil: EditMode 441, PlayMode 10, Zenject; çekimler pipeline-logs/shots-t033-2026-10-28_173524)
+- Home (Serhat'ın sahnesinin kopyası) + tema seçimi + yarış seçimi v1 + kostüm editörü + ayarlar + giriş kapısı + yarış sonu ekranı.
+- Yarış sonu: kişisel rekor gerçek (etkinlik başına kayıt); dünya sırası/yüzdelik "--", Best of the Day "No races today" (veri Faz 6);
+  tabloda yalnız oyuncu (rakipler Malik'in NPC'leri gelince). Watch Replay / Stats / Practice / High Scores pasif.
+- Faz 3 ekonomi kapandı. Giriş kapısının sanatı yok (yer tutucu görünüm).
 
 ## Senden beklenen
-- Player Settings → Resolution and Presentation: Portrait ve Portrait Upside Down kapat (oyun cihazda dikeye dönebiliyor) (T-001).
-- Push (main 12+ commit önde).
+- Push. Unity'de Player Settings → dikey kutular işaretsiz mi bak (434879b dosyadan yazıldı).
+- Serhat'ın `Anamenu Themaları.unity` sahnesi sende commit'siz değişik (16:59): bilerek mi? Evet ise Home'a geçirilir.
 
 ## Sıradaki iş
-1. T-031 birleştir → ekran görüntüsü testi (Home_eventselect/themeselect/costume/entrygate) yeşil olmalı.
-2. Faz 4 günlük hediye + 7 gün, Faz 6 High Scores (ad + bayrak T-031'den). Ölü kod: EventRowView/EventRow builder'ı.
-3. Builder her çalışmada prefab fileID'lerini yeniden üretiyor (büyük diff) → sahne + prefab'lar hep aynı build'den commit'lenir.
+1. Faz 4 günlük hediye + 7 gün; Faz 6 High Scores (ad + bayrak T-031'de, sonuç ekranı kartları bekliyor).
+2. Ölü kod temizliği (`_backlog.md`); builder prefab fileID'lerini her çalışmada yeniden üretiyor → sahne + prefab'lar hep aynı build'den.
+3. Android mağaza öncesi: IL2CPP + ARM64, paket adı. Giriş kapısı sanatı gelince giydirme.
 
 ## Dikkat
 - `CLAUDE.md` Malik'in; bizim kurallar `docs/CALISMA-KURALLARI.md` (`CLAUDE.local.md` ile yüklenir).
