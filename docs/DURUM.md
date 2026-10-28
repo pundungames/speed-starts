@@ -17,16 +17,15 @@ Son güncelleme: 2026-10-28 · agent-kit v2 kurulumu · dal `main` (ad3616b üst
 - Oyuncuya görünen metin dili / yerelleştirme — md'lerle netleşir.
 
 ## Gözle bakılacaklar (öncelikli)
-- `dc7db07` Faz 2 dikey dilim — Unity'de `Scenes/Menu/Home.unity` → Play: kaynak çubuğu (bilet n/3 + geri sayım), Event select (100m),
-  Play → giriş kapısı ("Use Entry Ticket") → Race; koşu; **F** = geçici bitiş → Results → Race again (bilet tekrar) / Main menu.
-  Yeni kayıtta bilet 0'dan başlar (başlangıç bakiyesi PDF'te yok): ilk bilet 30 dk'da gelir → test için `Data/Config/EconomyConfig`
-  `startingEntryTickets` (yalnız yeni kayıt) ya da kaydı sil (`persistentDataPath/save`).
-- TMP yok, legacy Text + İngilizce; UI 2400×1080 yükseklik eşleşmesi. Zenject doğrulaması: Tools → Speed Stars → Validate Zenject.
+- `50e95cd` UI v2: yeni ana ekran + yarış HUD'u (sanat `UI/Art/`), kapat butonları çalışıyor, Home'da karakter örneği.
+  Bilinen: karakter T-pozda (menü duruşu yok), ışık arkadan (siyah görünüyor), kıyafet kapalı (Faz 5) — düzeltme turu sürüyor.
+- Test için bilet: `Data/Config/EconomyConfig` → Starting Entry Tickets (yalnız yeni kayıt; PDF'te değer yok, karar kullanıcıda).
+- Doğrulama artık: derleme + EditMode (218) + PlayMode (9) + Zenject + ekran görüntüsü (`pipeline-logs/shots-*`).
 
 ## Sıradaki iş
-1. Faz 3 PDF ekonomisi: Süreli Bilet (60 dk gerçek zaman), Nakit/Mor Mücevher cüzdanı + işlem günlüğü, 3/2/1 ödül, uç durum testleri.
-2. Faz 4 günlük hediye + 7 gün; Faz 5 kozmetik/Edit racer; Faz 6 High Scores (yerel, Sticker Patch'ten).
-- Faz 1-2 task'ları merged (gözle bakılacak). Bitiş olayı Malik'te yok → Bridge `RunReset`'ten çıkarıyor (TEMEL-SOZLESME §11).
+1. Menü karakteri: kollar aşağı duruş, önden ışık; PlayMode ekran görüntüsü (gerçek değerlerle).
+2. Faz 5 kozmetik (Serhat'ın customization UI'ı gelince) — CosmeticApplier menü karakterini giydirir.
+3. Faz 3 PDF ekonomisi, Faz 4 günlük hediye + 7 gün, Faz 6 High Scores.
 
 ## Dikkat
 - Unity'nin commit'siz dosyası: `ProjectSettings/ProjectSettings.asset` — dokunma, commit'e katma.
