@@ -65,7 +65,7 @@ namespace SpeedStars.Editor
             var ocean=UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(oceanPath);
             if(!ocean){ocean=new Material(Shader.Find("Speed Stars/Painted Canal"));UnityEditor.AssetDatabase.CreateAsset(ocean,oceanPath);}
             ocean.SetColor("_Color",new Color(.12f,.50f,.72f));d.waterMaterial=ocean;UnityEditor.EditorUtility.SetDirty(ocean);
-            var ship=Model("Three Mast Pirate Ship",Ship);var octopus=Model("Giant Friendly Sea Octopus",Octopus);var island=Model("Tropical Palm Island",t=>Island(t,false));var lighthouse=Model("Red White Lighthouse",Lighthouse);
+            var ship=Model("Three Mast Pirate Ship",Ship);var island=Model("Tropical Palm Island",t=>Island(t,false));var lighthouse=Model("Red White Lighthouse",Lighthouse);
             var dock=Model("Harbor Jetty and Storehouse",t=>{for(int i=0;i<12;i++)Box(t,"Pier Plank",new Vector3(-6+i*1.05f,.6f,0),new Vector3(1,.23f,4.5f),i%2==0?wood:woodDark);foreach(float x in new[]{-5f,0,5f})foreach(float z in new[]{-2f,2f})Cylinder(t,"Dock Pile",new Vector3(x,-1,z),.18f,2.8f,woodDark,10);Box(t,"Harbor Storehouse",new Vector3(-1,2.0f,1.0f),new Vector3(6,2.5f,3.3f),wood);Pyramid(t,"Storehouse Roof",new Vector3(-1,3.25f,1.0f),6.8f,1.7f,red);Box(t,"Storehouse Door",new Vector3(-1,1.6f,-.7f),new Vector3(1.6f,2,.06f),woodDark);});
             var arch=Model("Sea Rock Arch",t=>{foreach(float x in new[]{-3.7f,3.7f})Lathe(t,"Sea Stack",new Vector3(x,-.5f,0),new[]{0f,5f,7f},new[]{2.8f,2.1f,1.9f},stoneDark,7);Arc(t,"Natural Sea Arch",new Vector3(0,5.5f,0),2.3f,1.8f,3.6f,stone,12);});
             d.landmarks=new[]{dock,island,lighthouse,arch};d.background=new[]{Background(ship,"Distant Pirate Fleet"),Background(island,"Distant Tropical Island"),Background(lighthouse,"Distant Beacon")};d.backgroundHeight=-.1f;
@@ -76,7 +76,7 @@ namespace SpeedStars.Editor
             var wheel=Model("Captain Steering Wheel",t=>{Cylinder(t,"Wheel Pedestal",Vector3.zero,.23f,1.5f,woodDark);Arc(t,"Wood Wheel Ring",new Vector3(0,2.0f,0),.65f,.12f,.13f,wood,20,0,360);for(int i=0;i<8;i++){float a=i*Mathf.PI/4;Beam(t,"Ship Wheel Spoke",new Vector3(0,2,0),new Vector3(Mathf.Cos(a)*.9f,2+Mathf.Sin(a)*.9f,0),.08f,wood);} });
             var palm=Model("Shore Palm",t=>Palm(t,Vector3.zero,4.8f));var rocks=Model("Shell and Sea Grass Cluster",t=>{for(int i=0;i<4;i++)Ball(t,"Smooth Shore Rock",new Vector3((i-1.5f)*.45f,.25f,(i%2)*.3f),new Vector3(.8f,.55f,.7f),stone);for(int i=0;i<5;i++)Beam(t,"Sea Grass Blade",new Vector3(.4f,0,.3f),new Vector3(.1f+i*.14f,1.1f+(i%2)*.4f,.3f),.06f,green);});
             var lamp=Model("Dock Rope Lantern",t=>{Cylinder(t,"Dock Lantern Post",Vector3.zero,.14f,3.8f,woodDark,10);Beam(t,"Lantern Cross Arm",new Vector3(0,3.6f,0),new Vector3(1.0f,3.6f,0),.12f,wood);Beam(t,"Hanging Chain",new Vector3(.9f,3.6f,0),new Vector3(.9f,3.1f,0),.035f,dark);Box(t,"Lantern Warm Glass",new Vector3(.9f,2.8f,0),new Vector3(.50f,.65f,.50f),cream);Pyramid(t,"Lantern Hood",new Vector3(.9f,3.13f,0),.75f,.30f,dark);});
-            d.props=new[]{chest,barrels,anchor,crate,wheel};d.vegetation=new[]{palm,rocks};d.lamps=new[]{lamp};d.accent=new[]{octopus,ship,island};
+            d.props=new[]{chest,barrels,anchor,crate,wheel};d.vegetation=new[]{palm,rocks};d.lamps=new[]{lamp};d.accent=new[]{ship,island};RebuildMarineMap();
         }
         static void Castle(Transform t)
         {

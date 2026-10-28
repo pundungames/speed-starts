@@ -1,0 +1,40 @@
+#if UNITY_EDITOR
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEditor;
+using SpeedStars.Themes;
+namespace SpeedStars.Editor {
+ public static partial class ThemeKitBuilder {
+  static void TradeTable(Transform t,Vector3 p,float width){Box(t,"Joined Timber Worktop",p+Vector3.up*1.25f,new Vector3(width,.18f,1.1f),wood);foreach(float x in new[]{-width*.4f,width*.4f})foreach(float z in new[]{-.4f,.4f})Box(t,"Grounded Workbench Leg",p+new Vector3(x,.59f,z),new Vector3(.16f,1.18f,.16f),woodDark);foreach(float z in new[]{-.4f,.4f})Beam(t,"Workbench Lower Brace",p+new Vector3(-width*.4f,.4f,z),p+new Vector3(width*.4f,.4f,z),.12f,woodDark);}
+  static void TradeShed(Transform t,Vector3 p,float width,float depth){foreach(float x in new[]{-width*.5f,width*.5f})foreach(float z in new[]{-depth*.5f,depth*.5f})Box(t,"Shed Grounded Timber Post",p+new Vector3(x,1.6f,z),new Vector3(.19f,3.2f,.19f),woodDark);var roof=Box(t,"Sloping Timber Shed Roof",p+new Vector3(0,3.22f,0),new Vector3(width+.5f,.18f,depth+.5f),rRoof);roof.transform.localRotation=Quaternion.Euler(-6,0,0);foreach(float x in new[]{-width*.5f,width*.5f})Beam(t,"Shed Diagonal Knee Brace",p+new Vector3(x,2.3f,-depth*.5f),p+new Vector3(x*.65f,3.12f,-depth*.5f),.13f,woodDark);}
+  static void TradeJar(Transform t,Vector3 p,Material mat){Lathe(t,"Workshop Storage Amphora",p,new[]{0f,.15f,.65f,1f,1.25f,1.35f},new[]{.22f,.35f,.43f,.32f,.14f,.18f},mat,12);foreach(float x in new[]{-.26f,.26f})Arc(t,"Attached Jar Handle",p+new Vector3(x,1.05f,0),.18f,.045f,.07f,mat,10,0,290);}
+  public static string BuildRomanTrades(){
+   themeFolder=Base+"/RomeByzantium";Palette();RomanArtPalette();egyptAudit.Clear();var d=AssetDatabase.LoadAssetAtPath<LoopThemeDefinition>(themeFolder+"/Definition.asset");var models=new List<GameObject>();
+   models.Add(RomanQualityModel("Art Blacksmith Forge Workshop",t=>{
+    RHouse(t,5.2f,3.5f,4.5f,rBrick,1,false,true);var shed=new GameObject("Open Forge Yard");shed.transform.SetParent(t,false);shed.transform.localPosition=new Vector3(4.5f,0,-.8f);TradeShed(shed.transform,Vector3.zero,3.5f,5.2f);
+    Box(t,"Raised Masonry Hearth",new Vector3(3.6f,.6f,-.4f),new Vector3(2.4f,1.2f,1.5f),rLime);Box(t,"Dark Recess of Forge",new Vector3(3.6f,1.55f,-.25f),new Vector3(1.75f,.9f,.16f),rShade);Box(t,"Forge Glowing Coals",new Vector3(3.6f,1.24f,-.65f),new Vector3(1.5f,.08f,.5f),rOchre);Box(t,"Forge Hood Lintel",new Vector3(3.6f,2.1f,-.35f),new Vector3(2.5f,.4f,1.6f),rBrick);foreach(float x in new[]{2.5f,4.7f})Box(t,"Hood Side Masonry",new Vector3(x,1.65f,-.25f),new Vector3(.3f,.9f,1.5f),rBrick);Box(t,"Forge Tall Chimney",new Vector3(3.6f,3.4f,.15f),new Vector3(1.4f,2.4f,1.1f),rBrick);Box(t,"Chimney Stone Cap",new Vector3(3.6f,4.65f,.15f),new Vector3(1.65f,.18f,1.35f),rLime);
+    Cylinder(t,"Anvil Wooden Stump",new Vector3(3.8f,0,-2.8f),.48f,.9f,woodDark,12);Box(t,"Iron Anvil Foot",new Vector3(3.8f,.96f,-2.8f),new Vector3(.9f,.15f,.55f),rShade);Box(t,"Anvil Narrow Waist",new Vector3(3.8f,1.15f,-2.8f),new Vector3(.45f,.3f,.38f),rShade);Box(t,"Anvil Flat Face",new Vector3(3.8f,1.36f,-2.8f),new Vector3(1.2f,.18f,.55f),rShade);Beam(t,"Anvil Tapered Horn",new Vector3(4.3f,1.35f,-2.8f),new Vector3(4.9f,1.31f,-2.8f),.15f,rShade);
+    TradeTable(t,new Vector3(-.4f,0,-3),2.7f);for(int i=0;i<3;i++){Beam(t,"Hammer Handle",new Vector3(-1+i*.7f,1.4f,-3.25f),new Vector3(-.8f+i*.7f,1.4f,-2.8f),.06f,wood);Box(t,"Forged Hammer Head",new Vector3(-.8f+i*.7f,1.46f,-2.8f),new Vector3(.33f,.16f,.16f),rShade);}for(int i=0;i<4;i++)Box(t,"Stacked Iron Billet",new Vector3(5.6f,.12f+i*.16f,-2.4f),new Vector3(.65f,.14f,1.4f),rShade);
+   }));
+   models.Add(RomanQualityModel("Art Carpenter Timber Workshop",t=>{
+    RHouse(t,4.8f,5.3f,4,rOchre,2,false);TradeShed(t,new Vector3(-4.6f,0,-.6f),3.8f,4.8f);TradeTable(t,new Vector3(-4.6f,0,-2.1f),2.8f);for(int i=0;i<5;i++)Box(t,"Seasoned Plank Stack",new Vector3(-4.5f,.13f+i*.2f,1),new Vector3(3.3f,.17f,.85f),i%2==0?wood:woodDark);foreach(float x in new[]{-5.8f,-3.6f})Box(t,"Stack Timber Bearer",new Vector3(x,.1f,1),new Vector3(.25f,.2f,1.15f),woodDark);for(int i=0;i<4;i++){var board=Box(t,"Upright Display Boards",new Vector3(3+i*.32f,1.5f,-1),new Vector3(.22f,3,.45f),wood);board.transform.localRotation=Quaternion.Euler(0,0,-9);}Box(t,"Joiner Plane Base",new Vector3(-4.6f,1.43f,-2.1f),new Vector3(.65f,.18f,.22f),woodDark);Arc(t,"Plane Attached Handle",new Vector3(-4.6f,1.52f,-2.1f),.15f,.04f,.1f,wood,8,0,180);
+   }));
+   models.Add(RomanQualityModel("Art Textile Dyer Workshop",t=>{
+    RHouse(t,5,4.2f,5,rIvory,1,true,true);TradeShed(t,new Vector3(4,0,0),2.8f,4.8f);foreach(float x in new[]{-4f,4f})Box(t,"Dye Drying Rack Post",new Vector3(x,1.8f,-3.2f),new Vector3(.15f,3.6f,.15f),woodDark);Beam(t,"Drying Rack Crossbar",new Vector3(-4,3.5f,-3.2f),new Vector3(4,3.5f,-3.2f),.11f,woodDark);for(int i=0;i<5;i++){float x=-3.1f+i*1.5f;Box(t,"Hanging Dyed Linen",new Vector3(x,2.45f,-3.23f),new Vector3(1.12f,2,.07f),i%3==0?rWine:i%3==1?rBronze:rOchre);Box(t,"Linen Fold Hem",new Vector3(x,1.47f,-3.25f),new Vector3(1.15f,.08f,.1f),rIvory);}for(int i=0;i<2;i++){Cylinder(t,"Stone Dye Vat",new Vector3(3.5f,0,-1+i*2),.7f,1.1f,rLime,16);Cylinder(t,"Visible Dye Surface",new Vector3(3.5f,1.11f,-1+i*2),.6f,.025f,i==0?rWine:rBronze,16);}
+   }));
+   models.Add(RomanQualityModel("Art Stonemason Open Workshop",t=>{
+    RHouse(t,4,3.2f,4,rLime,1,false,true);TradeShed(t,new Vector3(4,0,-.3f),3.8f,4.4f);for(int i=0;i<3;i++){Box(t,"Rough Carved Stone Block",new Vector3(3.2f+i*.95f,.45f,-1.8f),new Vector3(.8f,.9f,1),i%2==0?rLime:rIvory);for(int j=0;j<3;j++)Box(t,"Chisel Mark Groove",new Vector3(3.2f+i*.95f,.35f+j*.17f,-2.31f),new Vector3(.55f,.035f,.025f),rShade);}RColumn(t,new Vector3(-3.3f,0,-1),2.4f,.27f);Box(t,"Unfinished Cornice on Bearers",new Vector3(0,.75f,-3.1f),new Vector3(3,.55f,1),rIvory);foreach(float x in new[]{-1f,1f})Box(t,"Cornice Timber Bearer",new Vector3(x,.25f,-3.1f),new Vector3(.4f,.5f,1.2f),woodDark);TradeTable(t,new Vector3(4,0,1),2);for(int i=0;i<3;i++)Box(t,"Mason Chisel",new Vector3(3.4f+i*.5f,1.38f,1),new Vector3(.07f,.07f,.5f),rShade);
+   }));
+   models.Add(RomanQualityModel("Art Raised Granary Storehouse",t=>{
+    Box(t,"Granary Stone Foundation",new Vector3(0,.4f,0),new Vector3(7,.8f,4.5f),rLime);var upper=new GameObject("Raised Brick Storehouse");upper.transform.SetParent(t,false);upper.transform.localPosition=Vector3.up*.8f;RHouse(upper.transform,6.5f,4.4f,4,rBrick,1,false);for(int i=0;i<4;i++){float h=(i+1)*.2f;Box(t,"Granary Approach Step",new Vector3(0,h*.5f,-3.9f+i*.4f),new Vector3(2.6f,h,1.1f),rLime);}Box(t,"Tall Double Storage Door",new Vector3(0,2.2f,-2.08f),new Vector3(2,2.8f,.16f),woodDark);for(int i=0;i<5;i++)Box(t,"Door Timber Plank",new Vector3(-.8f+i*.4f,2.2f,-2.18f),new Vector3(.32f,2.7f,.08f),wood);foreach(float y in new[]{1.3f,3.1f})Box(t,"Door Forged Strap",new Vector3(0,y,-2.24f),new Vector3(1.9f,.1f,.06f),rShade);for(int i=0;i<4;i++)TradeJar(t,new Vector3(-3.7f+i*.8f,0,-3),rOchre);
+   }));
+   models.Add(RomanQualityModel("Art Olive Oil Merchant Loggia",t=>{
+    RHouse(t,4.5f,6,4.3f,rWine,2,false,true);for(int i=0;i<3;i++)RColumn(t,new Vector3(3+i*1.5f,0,-2.7f),3.2f,.16f);Box(t,"Merchant Side Loggia Roof",new Vector3(4.5f,3.35f,-.5f),new Vector3(4.2f,.25f,5.1f),rRoof);TradeTable(t,new Vector3(4.5f,0,-2.6f),2.7f);for(int i=0;i<4;i++)TradeJar(t,new Vector3(3.1f+i*.8f,0,.4f),i%2==0?rSoil:rOchre);for(int i=0;i<3;i++)Cylinder(t,"Oil Measure Cup",new Vector3(3.7f+i*.7f,1.34f,-2.6f),.17f,.35f,rBronze,10);RPlanter(t,new Vector3(-3,0,-2));
+   }));
+   var list=d.landmarks.Where(p=>p).ToList();foreach(var model in models){list.RemoveAll(x=>x.name==model.name);list.Add(model);}d.landmarks=list.ToArray();d.waterMaterial=Paint("Roman River Jade",new Color(.24f,.51f,.48f),.7f);ApplyRomanPixelPaint();EditorUtility.SetDirty(d);AssetDatabase.SaveAssets();System.IO.File.WriteAllText("Docs/RomanTradeAudit.md",string.Join("\n",egyptAudit.ToArray()));return models.Count+" distinct trades added; "+d.landmarks.Length+" total structures";
+  }
+ }
+}
+#endif

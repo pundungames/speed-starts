@@ -19,6 +19,7 @@ namespace SpeedStars.Themes
         public bool streamAtRuntime=true;
         public Transform runner;
         [Min(5)]public float retireDistance=25;
+        [Min(2)]public float romanLampSpacing=11.81f;
         public const float RoadLength=20.14339f;
         public const float SectionLength=RoadLength*3;
         public const float FirstRoadCenter=-9.95f;
@@ -29,7 +30,9 @@ namespace SpeedStars.Themes
         void Update(){if(!Application.isPlaying||!streamAtRuntime||!runner||live.Count==0)return;float z=transform.InverseTransformPoint(runner.position).z;for(int n=0;n<8&&live.Count>0&&z>live[0].end+retireDistance;n++){var old=live[0];live.RemoveAt(0);old.gameObject.SetActive(false);Destroy(old.gameObject);live.Add(Build(next++));}}
         public void Generate()
         {
-            if(!theme||!theme.road)return;Clear();romanRoute.Clear();generated=Group("Generated Theme - "+theme.concept,transform);generated.gameObject.AddComponent<ThemeGeneratedRoot>();
+            if(theme&&theme.concept==EnvironmentConcept.Egypt&&Application.isPlaying&&streamAtRuntime){loopCount=Mathf.Max(4,loopCount);retireDistance=Mathf.Max(70,retireDistance);}
+            if(theme&&theme.concept==EnvironmentConcept.PirateSea&&Application.isPlaying&&streamAtRuntime){loopCount=Mathf.Max(4,loopCount);retireDistance=Mathf.Max(90,retireDistance);}
+            if(!theme||!theme.road)return;Clear();ResetRomanStreetLayout();ResetEgyptDesertLayout();ResetMarineLayout();ResetSkyLayout();generated=Group("Generated Theme - "+theme.concept,transform);generated.gameObject.AddComponent<ThemeGeneratedRoot>();
             for(int i=0;i<Mathf.Clamp(loopCount,1,20);i++)live.Add(Build(i));next=loopCount;
 #if UNITY_EDITOR
             if(!Application.isPlaying){EditorUtility.SetDirty(this);if(gameObject.scene.IsValid())EditorSceneManager.MarkSceneDirty(gameObject.scene);}
@@ -55,20 +58,23 @@ namespace SpeedStars.Themes
                 {var materials=renderer.sharedMaterials;for(int m=0;m<materials.Length;m++)materials[m]=materials[m]&&materials[m].HasProperty("_Asphalt")&&materials[m].GetFloat("_Asphalt")>.5f?theme.asphaltMaterial:theme.paletteMaterial;renderer.sharedMaterials=materials;}
             }
             var terrain=Group("Continuous Theme Setting",root);
-            if(!theme.noGround)Block(terrain,"Continuous Ground",new Vector3(-43,-.55f,(a+b)*.5f),new Vector3(64,.7f,SectionLength),theme.groundMaterial);
-            if(theme.waterAcrossRoad)Block(terrain,"Open Sea Under Road",new Vector3(-33,-.42f,(a+b)*.5f),new Vector3(110,.10f,SectionLength),theme.waterMaterial);
+            bool romanSetting=theme.concept==EnvironmentConcept.RomeByzantium;
+            bool wideGround=romanSetting||theme.concept==EnvironmentConcept.Egypt;
+            if(!theme.noGround)Block(terrain,"Continuous Ground",new Vector3(wideGround?-78:-43,-.55f,(a+b)*.5f),new Vector3(wideGround?132:64,.7f,SectionLength),theme.groundMaterial);
+            if(theme.waterAcrossRoad)Block(terrain,"Open Sea Under Road",new Vector3(-55,-.42f,(a+b)*.5f),new Vector3(154,.10f,SectionLength),theme.waterMaterial);
 
             if(!theme.noGround)Block(terrain,"Pedestrian Terrace",new Vector3(-19.5f,-.05f,(a+b)*.5f),new Vector3(16,.20f,SectionLength),theme.pathMaterial);
             else if(theme.concept==EnvironmentConcept.PirateSea){Block(terrain,"Timber Harbor Boardwalk",new Vector3(-17,-.08f,(a+b)*.5f),new Vector3(11,.20f,SectionLength),theme.pathMaterial);for(float z=a+3;z<b;z+=11.81f)foreach(float x in new[]{-12.5f,-21.5f})Block(terrain,"Boardwalk Support Pile",new Vector3(x,-1,z),new Vector3(.28f,2,.28f),theme.pathMaterial);}
 
-            if(theme.concept==EnvironmentConcept.RomeByzantium&&theme.romanComposition&&theme.romanComposition.districts.Length>0){BuildRomanComposition(root,chunk,a,b,sectionSeed);return chunk;}
-            if(theme.concept==EnvironmentConcept.Egypt){BuildEgyptLayout(root,chunk,a,b,index,sectionSeed);return chunk;}
-            var foreground=Group("Irregular Landmark Plots",root);var names=new List<string>();
+            if(theme.concept==EnvironmentConcept.RomeByzantium){BuildRomanStreetLayout(root,chunk,a,b,index,sectionSeed);return chunk;}
+            if(theme.concept==EnvironmentConcept.Egypt){BuildEgyptDesertLayout(root,chunk,a,b,index,sectionSeed);return chunk;}
+            if(theme.concept==EnvironmentConcept.PirateSea){BuildMarineLayout(root,chunk,a,b,index,sectionSeed);return chunk;}if(theme.concept==EnvironmentConcept.FloatingSky){BuildSkyLayout(root,chunk,a,b,index,sectionSeed);return chunk;}
+            var foreground=Group("Irregular Landmark Plots",root);var names=new List<string>();var naturalSelection=new RomanStreetSectionPlan();
             // Curated introduction, followed by seeded selections and varying silhouette gaps.
             float cursor=a+R(random,3,6);int placed=0;
             while(cursor<b-5)
             {
-                int choice=index==0?placed%theme.landmarks.Length:random.Next(theme.landmarks.Length);
+                var candidate=PickMeasuredRomanAsset(new List<GameObject>(theme.landmarks),random,naturalSelection);if(!candidate)break;int choice=Array.IndexOf(theme.landmarks,candidate);
                 if(theme.concept==EnvironmentConcept.RomeByzantium){
                     var candidates=new List<int>();
                     for(int c=0;c<theme.landmarks.Length;c++){
@@ -79,15 +85,15 @@ namespace SpeedStars.Themes
                     if(candidates.Count==0)break;choice=candidates[random.Next(candidates.Count)];
                 }
                 float yaw=270+R(random,-15,15),scale=R(random,.82f,1.04f);
-                if(theme.concept==EnvironmentConcept.FloatingSky)scale*=.34f;
+                if(theme.concept==EnvironmentConcept.FloatingSky)scale*=.44f;else if(theme.concept==EnvironmentConcept.PirateSea){var native=MeasuredRomanBounds(theme.landmarks[choice],Vector3.one,270);scale=Mathf.Min(scale,6.3f/Mathf.Max(1,native.size.y));scale=Mathf.Min(scale,12f/Mathf.Max(1,native.size.z));}
                 else if(theme.concept==EnvironmentConcept.Egypt)scale*=.46f;
                 var g=Item(theme.landmarks[choice],foreground,Vector3.zero,yaw,scale);Bounds bounds=BoundsIn(g,transform);
                 if(theme.concept==EnvironmentConcept.RomeByzantium){g.transform.localScale*=Mathf.Min(.62f,4.5f/Mathf.Max(1,bounds.size.y));bounds=BoundsIn(g,transform);}
                 float width=Mathf.Max(5,bounds.size.z);
                 if(cursor+width>b-2){Remove(g);break;}
-                var p=g.transform.localPosition;p.z+=cursor-bounds.min.z;p.x+=(theme.concept==EnvironmentConcept.FloatingSky?-30f:theme.concept==EnvironmentConcept.Egypt?-23f:theme.concept==EnvironmentConcept.RomeByzantium?-19f:-16.2f)-R(random,0,3)-bounds.max.x;p.y=theme.concept==EnvironmentConcept.FloatingSky?R(random,.9f,1.25f):0;g.transform.localPosition=p;
+                var p=g.transform.localPosition;p.z+=cursor-bounds.min.z;p.x+=(theme.concept==EnvironmentConcept.FloatingSky?-30f:theme.concept==EnvironmentConcept.Egypt?-23f:theme.concept==EnvironmentConcept.RomeByzantium?-19f:-23f)-R(random,0,3)-bounds.max.x;p.y=theme.concept==EnvironmentConcept.FloatingSky?R(random,.9f,1.25f):0;g.transform.localPosition=p;
 
-                cursor+=width+(theme.concept==EnvironmentConcept.RomeByzantium?R(random,3,7):R(random,4,10));placed++;names.Add(g.name);
+                cursor+=width+(theme.concept==EnvironmentConcept.RomeByzantium?R(random,3,7):R(random,4,10));placed++;names.Add(g.name);naturalSelection.buildings.Add(new RomanStreetPlacement{asset=theme.landmarks[choice]});RecordRomanModel(theme.landmarks[choice]);
             }
             chunk.landmarkSummary=string.Join(", ",names.ToArray());
             bool countryside=theme.concept==EnvironmentConcept.RomeByzantium&&theme.ruralScenes!=null&&theme.ruralScenes.Length>0&&RomanLandscapeChoice(index)<theme.ruralScenes.Length;
@@ -98,7 +104,7 @@ namespace SpeedStars.Themes
                 float z=a+(i+.5f)*SectionLength/backgroundCount+R(random,-3,3),x=R(random,-76,-53);
                 float y=theme.backgroundHeight+(theme.concept==EnvironmentConcept.FloatingSky?R(random,-1.5f,-.5f):0);
                 float yaw=270+R(random,-20,20),scale=R(random,.85f,1.35f)*(theme.concept==EnvironmentConcept.FloatingSky?.45f:theme.concept==EnvironmentConcept.Egypt?.55f:1);
-                if(!countryside){var distant=Item(theme.background[backgroundOrder[i%backgroundOrder.Count]],backdrop,new Vector3(x,y,z),yaw,scale);if(theme.concept==EnvironmentConcept.RomeByzantium)distant.transform.localScale*=Mathf.Min(.75f,8.2f/Mathf.Max(1,BoundsIn(distant,transform).size.y));}
+                if(theme.concept==EnvironmentConcept.PirateSea){var native=MeasuredRomanBounds(theme.background[backgroundOrder[i%backgroundOrder.Count]],Vector3.one,yaw);scale=Mathf.Min(scale,6.2f/Mathf.Max(1,native.size.y));}if(!countryside){var distant=Item(theme.background[backgroundOrder[i%backgroundOrder.Count]],backdrop,new Vector3(x,y,z),yaw,scale);if(theme.concept==EnvironmentConcept.RomeByzantium)distant.transform.localScale*=Mathf.Min(.75f,8.2f/Mathf.Max(1,BoundsIn(distant,transform).size.y));}
             }
             if(countryside)BuildRomanRuralScene(root,a,b,index,sectionSeed);
             if(theme.concept!=EnvironmentConcept.FloatingSky){
@@ -111,7 +117,7 @@ namespace SpeedStars.Themes
             for(int i=0;i<count;i++){var prop=theme.props[order[i%order.Count]];if(theme.concept==EnvironmentConcept.RomeByzantium&&prop.name.Contains("Statue"))prop=theme.props[(i+index)%3];Item(prop,furnishings,new Vector3(R(random,-15.0f,-13.0f),0,a+(i+.5f)*SectionLength/count+R(random,-1,1)),270+R(random,-12,12),R(random,.85f,1.1f)*(theme.concept==EnvironmentConcept.Egypt&&prop.name.Contains("Obelisk")?.45f:theme.concept==EnvironmentConcept.RomeByzantium?.65f:1));}
             }
             if(theme.concept!=EnvironmentConcept.RomeByzantium&&theme.accent!=null&&theme.accent.Length>0)
-            {var accents=Group("Signature Story Moments",root);Item(theme.accent[index%theme.accent.Length],accents,new Vector3(theme.concept==EnvironmentConcept.PirateSea?-42:-35,theme.concept==EnvironmentConcept.FloatingSky?.5f:0,a+SectionLength*.60f),270+R(random,-12,12),theme.concept==EnvironmentConcept.FloatingSky?.38f:theme.concept==EnvironmentConcept.Egypt?.8f:theme.concept==EnvironmentConcept.RomeByzantium?.55f:1);}
+            {var accents=Group("Signature Story Moments",root);Item(theme.accent[new System.Random(Hash(seed,index+814)).Next(theme.accent.Length)],accents,new Vector3(theme.concept==EnvironmentConcept.PirateSea?-42:-35,theme.concept==EnvironmentConcept.FloatingSky?.5f:0,a+SectionLength*.60f),270+R(random,-12,12),theme.concept==EnvironmentConcept.FloatingSky?.38f:theme.concept==EnvironmentConcept.PirateSea?.48f:theme.concept==EnvironmentConcept.Egypt?.8f:theme.concept==EnvironmentConcept.RomeByzantium?.55f:1);}
             if(theme.clouds!=null&&theme.clouds.Length>0)
             {
                 var clouds=Group("Independent Background Clouds",root);int cloudCount=theme.concept==EnvironmentConcept.RomeByzantium?random.Next(1,3):(index%2==0)?random.Next(1,3):random.Next(0,3);
@@ -210,7 +216,7 @@ namespace SpeedStars.Themes
                 if(island.parent.name=="Irregular Landmark Plots"){
                     var details=Group("Island Garden Details",island);
                     foreach(var prefab in theme.props){
-                        if(prefab.name.Contains("Cloud")||prefab.name.Contains("Gull"))continue;
+                        if(prefab.name.Contains("Cloud")||prefab.name.Contains("Gull")||random.NextDouble()<.55)continue;
                         var detail=Item(prefab,details,Vector3.zero,0,R(random,.65f,.9f));
                         detail.transform.localPosition=prefab.name.Contains("Chest")?new Vector3(3,.35f,-2):prefab.name.Contains("Star")?new Vector3(-3,.35f,-2):new Vector3(2,.35f,2.5f);
                         foreach(var part in detail.GetComponentsInChildren<Transform>())if(part.name=="Star Plinth"||part.name=="Star Stem")part.gameObject.SetActive(false);
