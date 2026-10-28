@@ -93,6 +93,22 @@ namespace SpeedStars.PlayTests
             Assert.IsNotNull(button, $"{what}: button is not bound.");
             yield return WaitUntil(() => button != null && button.gameObject.activeInHierarchy && button.IsInteractable(),
                 $"'{what}' to be visible and interactable");
+            // Open/stagger animations move and scale buttons: wait until the screen rect holds still for 3 frames and no parent
+            // CanvasGroup blocks raycasts, otherwise a mid-animation raycast reports a false "covered by nothing".
+            Vector2 lastCenter = ScreenCenterOf(button);
+            Vector3 lastScale = button.transform.lossyScale;
+            int still = 0;
+            yield return WaitUntil(() =>
+            {
+                if (button == null) return true;
+                Vector2 center = ScreenCenterOf(button);
+                Vector3 scale = button.transform.lossyScale;
+                bool same = (center - lastCenter).sqrMagnitude < 0.25f && (scale - lastScale).sqrMagnitude < 1e-6f;
+                lastCenter = center;
+                lastScale = scale;
+                still = same && RaycastsAllowed(button) ? still + 1 : 0;
+                return still >= 3;
+            }, $"'{what}' to hold still and accept raycasts");
             AssertReallyHittable(button, what);
 
             // The same path a finger takes: the pointer click handler of the button (Button.OnPointerClick checks interactable).
@@ -122,6 +138,16 @@ namespace SpeedStars.PlayTests
 
             string top = hits.Count == 0 || hits[0].gameObject == null ? "nothing" : PathOf(hits[0].gameObject.transform);
             Assert.Fail($"'{what}' is covered by '{top}' (a real tap at {data.position} does not reach {PathOf(self)}).");
+        }
+
+        private static bool RaycastsAllowed(Button button)
+        {
+            foreach (CanvasGroup group in button.GetComponentsInParent<CanvasGroup>(false))
+            {
+                if (!group.blocksRaycasts) return false;
+                if (group.ignoreParentGroups) break;
+            }
+            return true;
         }
 
         private static Vector2 ScreenCenterOf(Button button)
