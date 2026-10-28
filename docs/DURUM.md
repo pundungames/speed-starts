@@ -16,12 +16,10 @@ Son güncelleme: 2026-10-28 · agent-kit v2 kurulumu · dal `main` (ad3616b üst
 - Oyuncuya görünen metin dili / yerelleştirme — md'lerle netleşir.
 
 ## Gözle bakılacaklar (öncelikli)
-- Unity: Tools → Demigiant → DOTween Utility Panel → "Setup DOTween…" (paketler ve eklentiler `875aab8`'de,
-  Editor.log'da derleme temiz).
+- Yok (DOTween Setup yapıldı, `f3b5f8a`).
 
 ## Sıradaki iş
 1. Kullanıcı `docs/YOL-HARITASI.md` 5 soruyu cevaplar + sözleşmeyi onaylar → Faz 1 iskele task'ları (T-001..T-008) açılır.
-2. DOTween Setup sonrası oluşan DOTweenSettings asset'ini commit'le.
 - Gün 0 durumu: GDD `docs/gdd/`; sözleşme taslak v2; açık ürün kararları `docs/decisions/OPEN-2026-10-28-gdd-acik-kararlar.md`;
   raporlar `reports/leaderboard-tasima-*`, `reports/kozmetik-hazirlik-*`.
 3. Altyapı: `Scripts/Core/Installers` (ProjectContext + sahne installer'ları), `UiMotionConfig`, `Scenes/Menu/` ilk sahne.
