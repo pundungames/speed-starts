@@ -1,7 +1,7 @@
 ---
 id: T-033
 title: Yaris sonu ekrani v1 (Oyun_Bitis_UI_v1) + kisisel rekor kaydi
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-029]
 owns_paths:
@@ -18,7 +18,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/HomeRaceButtonSmokeTests.cs"
 touches_scene: true
 branch: agent/T-033-yaris-sonu
-commits: []
+commits: [d309b66, a851240]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Records/PersonalBestServiceTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ResultsModelTests.cs"
@@ -26,10 +26,10 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
+    durum: closed
     not: "ProjectInstaller: IPersonalBests AsSingle. Exact line, next to the other Meta services (needs ProgressRepository, already bound): Container.Bind<IPersonalBests>().To<SpeedStars.Meta.Records.PersonalBestService>().AsSingle();  -- RaceFlow takes it with [InjectOptional], so the Race scene runs without it (PERSONAL BEST shows '--', nothing is saved) until bound."
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Rebuild UI prefabs with overwrite=true (UiPrefabBuilder.BuildAll): new Rows/ResultsTableRow.prefab + rebuilt Screens/ResultsScreen.prefab (same GUID). The Race scene's ResultsScreen instance (RaceSceneInstaller.results) keeps its GUID but may carry overrides of the old fields (LeftPanel/..): check it after the rebuild, re-run the scene builder if needed. Not open for any further hand work."
 started: 2026-10-28
 finished: 2026-10-28
