@@ -1,7 +1,7 @@
 ---
 id: T-027
 title: Tema secimi ekrani (Tema_Secimi_UI_v1) - oklarla onizleme, fiyat / USE / IN USE, Back onizlemeyi iptal eder
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-023]
 owns_paths:
@@ -21,10 +21,13 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
+    durum: closed
+    not: "SceneWiring.WireHome'a themeSelectScreen atamasi + UiPrefabPaths.HomeScreens'e prefab eklendi (bu task'ta izinli); view IThemeService + IWallet + IEntryTickets + UiMotionConfig inject alir, installer baglamasi yok"
+  - tip: ASSET
     durum: open
-    not: "Home: HomeScreenView.themeSelectScreen = ThemeSelectScreen prefab'i (UiPrefabPaths.HomeScreens listesine); view IThemeService + IWallet + IEntryTickets alir"
-started:
-finished:
+    not: "Builder kopyada kosulur: UiPrefabBuilder.BuildAll ile UI/Screens/ThemeSelectScreen.prefab uretilir; sonra Home sahnesi yeniden kurulur (SceneBuilder.BuildHome: ekran listesi degisti) ve yeni .cs/.png .meta dosyalari GeriAl ile gelir"
+started: 2026-10-28
+finished: 2026-10-28
 blocked_reason:
 ---
 
@@ -57,4 +60,8 @@ KAMERA  : yok (kamera sabit)
 - Tema servisi ve sahnedeki tema/karakter gizleme (T-023), tema fiyatları (asset'te; kullanıcı vermedi)
 
 ## Calisma notu
-(Agent doldurur)
+- Yapildi: sanat UI/Art/ThemeSelect'e; saf ThemeSelectPresenter (durum->zemin/etiket/ikon/etkilesim, ok pasifligi, Open/Close/PressAction) + 10 EditMode testi (IThemeService sahtesiyle); ThemeSelectScreenView (UiScreen; Back=UiPanel.closeButton; OnDisable'da CancelBrowse yani her kapanista onizleme iptal); UiThemeSelectPrefabs builder.
+- Aksiyon butonu: tek zemin Image, sprite durumla degisir; USE basili = SpriteSwap pressedSprite (use_pressed). Yazi renkleri button_states.json (#061A41 / #FFFCEF). Fiyatsiz tema: gri, ikon/fiyat yok.
+- Geri bildirim: ok/aksiyon ButtonFeedback; satin almada USE etiketi UiMotionConfig punch sayilariyla punch (buton punch'iyla cakismasin diye etiket).
+- Kaynak kutulari kendi Text'leri (ResourceBarView yeniden kullanilmadi: geri sayim yok); Home'daki ResourceBar ile ayni bicim (HomeTexts.TicketCount).
+- Dogrulanmadi: Unity derleme/test calistirilmadi; SpeedStars.UI.Themes ad alani Serhat'in SpeedStars.Themes'i golgeleyebilir (UI kodunda niteliksiz 'Themes.' kullanilmiyor); prefab alan baglari builder'dan sonra grep'lenmeli.

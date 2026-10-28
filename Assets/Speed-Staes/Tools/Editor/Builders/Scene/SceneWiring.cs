@@ -31,6 +31,7 @@ namespace SpeedStars.Tools.Builders
             var cosmetics = RequireInstance<UiScreen>(scene, UiPrefabPaths.CosmeticsScreen);
             var highScores = RequireInstance<UiScreen>(scene, UiPrefabPaths.HighScoresScreen);
             var sevenDay = RequireInstance<UiPopup>(scene, UiPrefabPaths.SevenDayCheckInPanel);
+            var themeSelect = RequireInstance<UiScreen>(scene, UiPrefabPaths.ThemeSelectScreen);
 
             var so = new SerializedObject(homeView);
             Prop(so, "eventSelectScreen").objectReferenceValue = eventSelect;
@@ -38,6 +39,7 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "cosmeticsScreen").objectReferenceValue = cosmetics;
             Prop(so, "highScoresScreen").objectReferenceValue = highScores;
             Prop(so, "sevenDayPopup").objectReferenceValue = sevenDay;
+            Prop(so, "themeSelectScreen").objectReferenceValue = themeSelect;
             Apply(so);
             Log(nameof(SceneWiring), "Home: HomeScreenView screen/popup references wired.");
         }

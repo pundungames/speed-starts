@@ -37,6 +37,7 @@ namespace SpeedStars.Tools.Builders
                 // The screen reads the content asset (which race behind which card); seeded here when missing, never overwritten.
                 SpeedStars.UI.Home.EventSelectLayout eventSelectContent = EventSelectConfigSeed.Seed(overwrite: false);
                 run.Build(UiPrefabPaths.EventSelectScreen, root => UiEventSelectPrefabs.EventSelect(root, eventSelectContent));
+                run.Build(UiPrefabPaths.ThemeSelectScreen, UiThemeSelectPrefabs.ThemeSelect);
                 run.Build(UiPrefabPaths.CosmeticsScreen, UiScreenPrefabs.Cosmetics);
                 run.Build(UiPrefabPaths.HighScoresScreen, UiScreenPrefabs.HighScores);
                 run.Build(UiPrefabPaths.RaceHud, UiScreenPrefabs.RaceHud);
