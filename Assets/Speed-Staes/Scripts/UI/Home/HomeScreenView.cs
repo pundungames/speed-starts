@@ -10,7 +10,7 @@ namespace SpeedStars.UI.Home
 {
     /// <summary>
     /// Home screen (prefab HomeScreen, the root screen of the Home scene). Binds the existing buttons and decides what
-    /// Play does through <see cref="HomeEntryRules"/>. Edit racer, High scores and the 7-day icon only open their
+    /// Play does through <see cref="HomeEntryRules"/>; the environment button opens the theme select screen. Edit racer, High scores and the 7-day icon only open their
     /// screen/popup (their content is a later phase); a target left empty in the Inspector is skipped with a warning.
     /// </summary>
     public sealed class HomeScreenView : UiScreen
@@ -36,15 +36,15 @@ namespace SpeedStars.UI.Home
         [Tooltip("DailyReward/Notification: red dot, shown while a 7-day reward may be waiting. Optional.")]
         [SerializeField] private GameObject sevenDayRedDot;
 
+        [Tooltip("Environment (top right, picture icon): opens the theme select screen.")]
+        [SerializeField] private Button environmentButton;
+
         [Header("Buttons without a system yet (shown, not interactable)")]
         [Tooltip("Settings: no settings system yet.")]
         [SerializeField] private Button settingsButton;
 
         [Tooltip("Sound: no sound system yet.")]
         [SerializeField] private Button soundButton;
-
-        [Tooltip("Environment: no environment system yet.")]
-        [SerializeField] private Button environmentButton;
 
         [Tooltip("Upgrade: no upgrade system yet.")]
         [SerializeField] private Button upgradeButton;
@@ -87,6 +87,9 @@ namespace SpeedStars.UI.Home
         [Tooltip("High scores screen: any UiScreen; its view arrives in a later phase.")]
         [SerializeField] private UiScreen highScoresScreen;
 
+        [Tooltip("Theme select screen: any UiScreen; its view arrives with the theme select UI (T-027).")]
+        [SerializeField] private UiScreen themeSelectScreen;
+
         [Tooltip("7-day reward popup: any UiPopup; its view arrives in a later phase.")]
         [SerializeField] private UiPopup sevenDayPopup;
 
@@ -114,7 +117,8 @@ namespace SpeedStars.UI.Home
             editRacerButton.onClick.AddListener(OnEditRacer);
             highScoresButton.onClick.AddListener(OnHighScores);
             sevenDayButton.onClick.AddListener(OnSevenDay);
-            DisableUnbuilt(settingsButton, soundButton, environmentButton, upgradeButton, playersButton, emoteButton,
+            if (environmentButton != null) environmentButton.onClick.AddListener(OnEnvironment);
+            DisableUnbuilt(settingsButton, soundButton, upgradeButton, playersButton, emoteButton,
                 previousRacerButton, nextRacerButton);
         }
 
@@ -154,6 +158,7 @@ namespace SpeedStars.UI.Home
             if (editRacerButton != null) editRacerButton.onClick.RemoveListener(OnEditRacer);
             if (highScoresButton != null) highScoresButton.onClick.RemoveListener(OnHighScores);
             if (sevenDayButton != null) sevenDayButton.onClick.RemoveListener(OnSevenDay);
+            if (environmentButton != null) environmentButton.onClick.RemoveListener(OnEnvironment);
             base.OnDestroy();
         }
 
@@ -197,6 +202,8 @@ namespace SpeedStars.UI.Home
                     break;
             }
         }
+
+        private void OnEnvironment() => PushScreen(themeSelectScreen, nameof(themeSelectScreen));
 
         private void OnEventSelect() => _navigator.Push(eventSelectScreen);
 

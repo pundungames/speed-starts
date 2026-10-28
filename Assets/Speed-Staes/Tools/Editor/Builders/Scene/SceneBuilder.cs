@@ -15,9 +15,10 @@ using static SpeedStars.Tools.Builders.SceneBuilderUtil;
 namespace SpeedStars.Tools.Builders
 {
     /// <summary>
-    /// Home and Race scenes and their Build Settings entries (contract §5). Home is built from scratch; Race is a
-    /// copy of Malik's PhysicalTest scene (his file is only copied, never opened for writing) with the runner's debug
-    /// tools switched off as scene overrides and our UI layer on top. Scenes open in Single mode one at a time;
+    /// Home and Race scenes and their Build Settings entries (contract §5). Home is a copy of Serhat's theme showcase
+    /// scene (camera, light, sky, five themes, character platform; his file is only copied) with the character swapped
+    /// for Malik's runner prefab; Race is a copy of Malik's PhysicalTest scene (his file is only copied, never opened for
+    /// writing) with the runner's debug tools switched off as scene overrides. Our UI layer goes on top of both. Scenes open in Single mode one at a time;
     /// outside batchmode the builder refuses to run over unsaved scene or prefab work and puts the user's scenes
     /// back afterwards. An existing scene is skipped unless overwrite is asked for (then same path, same GUID).
     /// </summary>
@@ -28,16 +29,17 @@ namespace SpeedStars.Tools.Builders
         public const string HomeScenePath = "Assets/Speed-Staes/Scenes/Menu/Home.unity";
         public const string RaceScenePath = "Assets/Speed-Staes/Scenes/Game/Race.unity";
         public const string PhysicalTestScenePath = "Assets/Speed-Staes/Scenes/Test/PhysicalTest.unity";
+        public const string ThemeTemplateScenePath = SpeedStars.Editor.MainMenuThemeSceneBuilder.ScenePath; // Serhat's, read-only for us
 
         public static string HomeSceneName => Path.GetFileNameWithoutExtension(HomeScenePath);
         public static string RaceSceneName => Path.GetFileNameWithoutExtension(RaceScenePath);
 
-        // Flat menu background until the Home scene gets its 3D backdrop.
-        private static readonly Color HomeBackground = new Color(0.27f, 0.56f, 0.86f);
-
         public static void BuildHome(bool overwrite)
         {
-            if (FileExists(HomeScenePath) && !overwrite) { Skipped(Source, HomeScenePath); return; }
+            bool existed = FileExists(HomeScenePath);
+            if (existed && !overwrite) { Skipped(Source, HomeScenePath); return; }
+            if (!FileExists(ThemeTemplateScenePath))
+                throw new InvalidOperationException($"'{ThemeTemplateScenePath}' not found; the Home scene is a copy of it.");
 
             // Every prefab first: a missing one stops the build before any scene file is written.
             GameObject[] screens = LoadPrefabs(UiPrefabPaths.HomeScreens);
@@ -45,14 +47,25 @@ namespace SpeedStars.Tools.Builders
             GameObject[] overlay = LoadPrefabs(new[] { UiPrefabPaths.ResourceBar, UiPrefabPaths.RewardFlight });
 
             SceneSetup[] userSetup = BeginSceneWork();
+            bool copied = false;
+            bool done = false;
             try
             {
                 EnsureParentFolder(HomeScenePath);
-                Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                // Let go of every open scene first, so neither the template nor an old Home is loaded while the file is copied.
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                CopyScene(ThemeTemplateScenePath, HomeScenePath, existed);
+                copied = true;
 
-                Camera homeCamera = SceneUiLayout.CreateFlatCamera(scene, HomeBackground);
-                SceneHomeCharacter.Build(scene, homeCamera); // live runner prefab instance + pedestal + framing (T-019)
-                SceneUiLayout.CreateEventSystem(scene);
+                Scene scene = EditorSceneManager.OpenScene(HomeScenePath, OpenSceneMode.Single);
+                if (FindInScene<SceneContext>(scene) != null)
+                    throw new InvalidOperationException($"'{ThemeTemplateScenePath}' already has a SceneContext; merge the Home scene by hand.");
+
+                SceneHomeCharacter.ReplaceTemplateCharacter(scene); // Malik's prefab instance on Serhat's platform
+                SceneHomeTheme.Prepare(scene);                      // his panel off, MenuThemeView on his showcase
+
+                if (FindInScene<EventSystem>(scene) == null) SceneUiLayout.CreateEventSystem(scene);
+                else Log(Source, "The copied scene already has an EventSystem; it is kept.");
                 GameObject uiRoot = SceneUiLayout.CreateUiRoot(scene);
 
                 Transform screenCanvas = SceneUiLayout.CreateCanvas(uiRoot.transform, "Canvas Screens", SceneUiLayout.BaseCanvasOrder);
@@ -74,13 +87,17 @@ namespace SpeedStars.Tools.Builders
                 SceneUiLayout.CreateSceneContext<HomeSceneInstaller>(scene, SceneUiLayout.RootScreenOf(rootScreen, UiPrefabPaths.HomeScreens[0]));
                 SceneWiring.WireHome(scene);
                 Save(scene, HomeScenePath);
-                SceneHomeCharacter.TryCaptureShot(homeCamera);
+                done = true;
             }
             finally
             {
                 EndSceneWork(userSetup);
+                // A bare copy left behind would be skipped as "existing" by the next run: remove what this run created.
+                if (!done && copied && !existed) RemoveFailedCopy(HomeScenePath, "Home");
+                else if (!done && copied)
+                    Warn(Source, $"Home build failed after the copy; '{HomeScenePath}' now holds a bare theme-scene copy. Fix the error and rebuild with overwrite.");
             }
-            Log(Source, $"Wrote {HomeScenePath}.");
+            Log(Source, $"Wrote {HomeScenePath} (copy of {ThemeTemplateScenePath} + runner prefab + UI).");
         }
 
         public static void BuildRace(bool overwrite)
@@ -101,7 +118,7 @@ namespace SpeedStars.Tools.Builders
                 EnsureParentFolder(RaceScenePath);
                 // Let go of every open scene first, so neither PhysicalTest nor an old Race is loaded while the file is copied.
                 EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-                CopyPhysicalTest(existed);
+                CopyScene(PhysicalTestScenePath, RaceScenePath, existed);
                 copied = true;
 
                 Scene scene = EditorSceneManager.OpenScene(RaceScenePath, OpenSceneMode.Single);
@@ -131,7 +148,7 @@ namespace SpeedStars.Tools.Builders
             {
                 EndSceneWork(userSetup);
                 // A bare copy left behind would be skipped as "existing" by the next run: remove what this run created.
-                if (!done && copied && !existed) RemoveFailedCopy();
+                if (!done && copied && !existed) RemoveFailedCopy(RaceScenePath, "Race");
                 else if (!done && copied)
                     Warn(Source, $"Race build failed after the copy; '{RaceScenePath}' now holds a bare PhysicalTest copy. Fix the error and rebuild with overwrite.");
             }
@@ -176,17 +193,17 @@ namespace SpeedStars.Tools.Builders
             return scenePaths.All(p => text.Contains("path: " + p));
         }
 
-        private static void CopyPhysicalTest(bool overwriteExisting)
+        private static void CopyScene(string source, string destination, bool overwriteExisting)
         {
             if (!overwriteExisting)
             {
-                if (!AssetDatabase.CopyAsset(PhysicalTestScenePath, RaceScenePath))
-                    throw new InvalidOperationException($"Could not copy '{PhysicalTestScenePath}' to '{RaceScenePath}'.");
+                if (!AssetDatabase.CopyAsset(source, destination))
+                    throw new InvalidOperationException($"Could not copy '{source}' to '{destination}'.");
                 return;
             }
-            // Overwrite: copy the file over the old one and keep Race.unity.meta, so the scene keeps its GUID.
-            File.Copy(FullPath(PhysicalTestScenePath), FullPath(RaceScenePath), true);
-            AssetDatabase.ImportAsset(RaceScenePath, ImportAssetOptions.ForceUpdate);
+            // Overwrite: copy the file over the old one and keep the destination .meta, so the scene keeps its GUID.
+            File.Copy(FullPath(source), FullPath(destination), true);
+            AssetDatabase.ImportAsset(destination, ImportAssetOptions.ForceUpdate);
         }
 
         /// <summary>
@@ -282,18 +299,18 @@ namespace SpeedStars.Tools.Builders
             EditorSceneManager.RestoreSceneManagerSetup(saved);
         }
 
-        private static void RemoveFailedCopy()
+        private static void RemoveFailedCopy(string scenePath, string label)
         {
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
-                if (SceneManager.GetSceneAt(i).path == RaceScenePath)
+                if (SceneManager.GetSceneAt(i).path == scenePath)
                 {
                     EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); // let go of the half-built scene
                     break;
                 }
             }
-            AssetDatabase.DeleteAsset(RaceScenePath);
-            Warn(Source, $"Race build failed; the copy '{RaceScenePath}' made by this run was removed.");
+            AssetDatabase.DeleteAsset(scenePath);
+            Warn(Source, $"{label} build failed; the copy '{scenePath}' made by this run was removed.");
         }
     }
 }

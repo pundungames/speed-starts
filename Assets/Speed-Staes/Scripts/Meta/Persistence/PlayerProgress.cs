@@ -28,6 +28,8 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private List<EventBestTime> bestTimes = new List<EventBestTime>();
         [SerializeField] private List<string> processedTransactionIds = new List<string>();
         [SerializeField] private long lastSeenUtcTicks;
+        [SerializeField] private string selectedThemeId = string.Empty;
+        [SerializeField] private List<string> ownedThemeIds = new List<string>();
 
         /// <summary>Format version of this save; stamped by the repository on every save.</summary>
         public int SchemaVersion { get => schemaVersion; set => schemaVersion = value; }
@@ -59,6 +61,12 @@ namespace SpeedStars.Meta.Persistence
         /// <summary>Latest UTC the clock has handed out; lets <c>ClockService</c> notice a rolled-back device clock.</summary>
         public long LastSeenUtcTicks { get => lastSeenUtcTicks; set => lastSeenUtcTicks = value; }
 
+        /// <summary>Id of the chosen world theme. Empty = never chosen (the catalog's default applies).</summary>
+        public string SelectedThemeId { get => selectedThemeId; set => selectedThemeId = value ?? string.Empty; }
+
+        /// <summary>Ids of bought themes (the default theme is owned without being listed). Added with the theme feature; older saves open with an empty list.</summary>
+        public List<string> OwnedThemeIds => ownedThemeIds;
+
         /// <summary>
         /// JSON written by an older build may lack newer fields; JsonUtility can then leave them null.
         /// Called after every load so callers never null-check.
@@ -72,6 +80,8 @@ namespace SpeedStars.Meta.Persistence
             if (selectedCosmetics == null) selectedCosmetics = new List<SelectedCosmetic>();
             if (bestTimes == null) bestTimes = new List<EventBestTime>();
             if (processedTransactionIds == null) processedTransactionIds = new List<string>();
+            if (selectedThemeId == null) selectedThemeId = string.Empty;
+            if (ownedThemeIds == null) ownedThemeIds = new List<string>();
         }
     }
 

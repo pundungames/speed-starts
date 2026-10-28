@@ -1,7 +1,7 @@
 ---
 id: T-023
 title: Ana menu Serhat'in tema sahnesinde, karakter kaidede, tema degistirme (environment butonu)
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: []
 owns_paths:
@@ -28,12 +28,15 @@ analytics:
 needs:
   - tip: WIRING
     durum: open
-    not: "ProjectInstaller: ThemeCatalog + ThemeService (IThemeService) AsSingle; HomeSceneInstaller: MenuThemeView (Bridge) sahnedeki ornekten"
+    not: "ProjectInstaller: field [SerializeField] ThemeCatalog themes + BindConfig(themes); Container.Bind<IThemeService>().FromMethod(c => new ThemeService(c.Container.Resolve<ThemeCatalog>(), c.Container.Resolve<ProgressRepository>(), c.Container.Resolve<WalletService>(), Application.isEditor || Debug.isDebugBuild)).AsSingle() (using SpeedStars.Meta.Themes). ProjectContextBuilder: Prop(installerSo,'themes') = LoadRequired<ThemeCatalog>(ConfigAssetSeeder.ThemeCatalogPath, seeder). HomeSceneInstaller: nothing (MenuThemeView is injected by the SceneContext)."
+  - tip: SCENE
+    durum: open
+    not: "Run Faz1Builder.RebuildAll (seeds ThemeCatalog.asset, rebuilds Home from Serhat's scene). HomeScreenView.themeSelectScreen stays empty until the ThemeSelectScreen prefab exists (T-027): SceneWiring.WireHome must set it then."
   - tip: DECISION
     durum: open
     not: "Tema fiyatlari (Nakit) kullanicida; ThemeCatalog asset'inde 0 = fiyat yok. Yaris sahnesi secili temayi kullansin mi (Malik/Serhat) - bu task'ta yok"
-started:
-finished:
+started: 2026-10-28
+finished: 2026-10-28
 blocked_reason:
 ---
 
@@ -50,17 +53,21 @@ sonraki temaya geçer (5'ten sonra 1'e döner). Temalar ileride Nakit ile satın
 şimdiden taşır, ama geliştirme sürümünde (Editor ya da Development Build) bütün temalar serbest (kullanıcı: "edit mode'dayız, direkt geçiş").
 Seçili tema kayıtta durur; Home açılınca kayıttaki tema gösterilir.
 
+**Kapsam değişikliği (kullanıcı, tema seçim ekranı tasarımı geldi):** `environment` butonu döngüsel değiştirmez, `themeSelectScreen` (UiScreen, T-027) açar.
+`IThemeService`: Active (kayıtlı) / Shown (önizlenen), BeginBrowse/Preview/Step (uçta durur)/CancelBrowse/Use/TryPurchase, `ThemeActionState`
+(saf `ThemeActionRules`); geliştirmede her tema sahip sayılır. `MenuThemeView` ShownChanged'i izler, gezinirken karakter+kaideyi gizler.
+
 ## Kabul kriterleri
 - [ ] `Faz1Builder.RebuildAll` Home'u Serhat'ın sahnesinin kopyasından üretir; Serhat'ın `.unity` dosyası değişmez (`git diff` boş)
 - [ ] Home'da kamera, ışık, skybox Serhat'ınkiyle aynı; karakter kaidenin üstünde, kameraya dönük; ekran görüntüsü `docs/gdd` dışındaki
       tasarımla (`Assets/Speed-Staes/UI/Art/Home/preview.jpg`) aynı kadraj: karakter ortada, tam boy, kaide altta
 - [ ] `ThemeCatalog` (ScriptableObject, `Data/Config/ThemeCatalog.asset`): 5 tema; id (kalıcı), görünen ad (İngilizce), showcase sırası,
       Nakit fiyatı (0 = fiyat yok), varsayılan tema. Tohum builder'ı var olan asset'i ezmez
-- [ ] `IThemeService`: Selected, Changed, IsOwned, CanUse, Select(id), SelectNext(), TryPurchase(id) -> sonuç enum'u; satın alma
+- [ ] `IThemeService` (kapsam degisikligi notu: Active/Shown/Browse/Preview/Step/CancelBrowse/Use/TryPurchase/GetActionState); satın alma
       `IWallet` üzerinden Nakit, idempotent; seçim ve sahiplik `PlayerProgress`'te (yeni alanlar, eski kayıt boş listeyle açılır)
 - [ ] `MenuThemeView` (Bridge, asmdef'siz): `IThemeService.Changed`'i dinler, `MainMenuThemeShowcase.SelectTheme(index)` çağırır; açılışta
       kayıttaki temayı uygular
-- [ ] HomeScreenView: environment butonu artık "yapılmamış" listesinde değil; basınca `SelectNext()`
+- [ ] HomeScreenView: environment butonu "yapılmamış" listesinde değil; basınca `themeSelectScreen` açılır
 - [ ] EditMode testi: SelectNext döngüsü, sahip olunmayan tema geliştirme dışı modda seçilemez, satın alma parayı bir kez düşer, yetersiz
       para reddedilir, kayıt geri yüklenir. Sabit fiyat assert edilmez (fiyat test içinde kurulan katalogdan)
 - [ ] needs listesinde open WIRING/SCENE yok (WIRING süpervizörde)
@@ -78,4 +85,8 @@ KAMERA  : yok (kamera sabit; showcase kamera ön ayarları kapalı kalır)
 - Malik'in prefab'ı ve kodu (hook kilitli)
 
 ## Calisma notu
-(Agent doldurur)
+1. Home artık Serhat'ın sahnesinin kopyası (SceneBuilder.CopyScene); SceneHomeCharacter unpacked modeli Malik prefab instance'ıyla değiştirir, SceneHomeTheme showcase panelini kapatır + MenuThemeView ekler; kendi kamera/kaide/ışık kaldırıldı.
+2. Meta/Themes: ThemeCatalog, ThemeService, ThemeActionRules; PlayerProgress'e selectedThemeId/ownedThemeIds; ThemeCatalogSeed (5 tema, fiyatlar 0 = karar yok) ConfigAssetSeeder'a bağlandı.
+3. HomeScreenView: environment -> themeSelectScreen; ShotTool.CaptureHomeThemes (-shotDir, isteğe bağlı -shotUi) her tema için home_theme_N.png.
+4. Test: ThemeServiceTests (durum tablosu, Back geri yükleme, idempotent satın alma, kayıt geri yükleme). Unity/derleme ÇALIŞTIRILMADI.
+5. Açık: WIRING + SCENE (yukarıda); Serhat'ın showcase'i ok tuşları/G ile temayı servisten habersiz değiştirebilir (yalnız Play).
