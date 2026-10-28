@@ -4,6 +4,7 @@ using NUnit.Framework;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
+using SpeedStars.Tests.Meta.Config;
 
 namespace SpeedStars.Tests.Meta.Cosmetics
 {
