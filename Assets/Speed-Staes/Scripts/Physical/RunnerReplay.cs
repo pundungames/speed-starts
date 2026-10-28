@@ -10,7 +10,9 @@ namespace SpeedStars.Physical
     [DefaultExecutionOrder(-150)]
     public sealed class RunnerReplay : MonoBehaviour
     {
+        [Tooltip("A sequence's presses are fed in here, as if a player pressed them.")]
         public RunnerInput input;
+        [Tooltip("Reset to the start line before a sequence plays.")]
         public RaceController race;
 
         public ReferenceSequence Playing { get; private set; }

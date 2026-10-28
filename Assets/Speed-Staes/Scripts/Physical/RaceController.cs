@@ -11,7 +11,9 @@ namespace SpeedStars.Physical
     {
         public enum State { Ready, Running }
 
+        [Tooltip("The runner whose distance is raced.")]
         public RunnerBody body;
+        [Tooltip("Race length (m): crossing it keeps the time and puts the runner back at the start line.")]
         public float raceDistance = 100f;
         [Tooltip("Optional: placed raceDistance ahead of the runner's start at play start.")]
         public Transform finishLine;

@@ -9,11 +9,15 @@ namespace SpeedStars.Physical
     /// </summary>
     public sealed class RunnerBodyHUD : MonoBehaviour
     {
+        [Tooltip("The runner whose state the panel shows.")]
         public RunnerBody body;
+        [Tooltip("Race clock and last time shown on the panel.")]
         public RaceController race;
+        [Tooltip("Reference sequences the panel's buttons play.")]
         public RunnerReplay replay;
         [Tooltip("Seconds of history in the graphs.")]
         public float window = 6f;
+        [Tooltip("Panel shown when play starts (H toggles it).")]
         public bool visible = true;
 
         const int Samples = 240;

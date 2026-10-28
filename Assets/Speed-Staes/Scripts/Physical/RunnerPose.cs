@@ -41,7 +41,9 @@ namespace SpeedStars.Physical
         public float width;
 
         [Header("Arms (rest only: all the way back is RunnerPoseDriver → armBack / elbowBack)")]
+        [Tooltip("Left arm in this pose.")]
         public ArmPose leftArm;
+        [Tooltip("Right arm in this pose.")]
         public ArmPose rightArm;
 
         public static PoseData Lerp(PoseData a, PoseData b, float t) => new PoseData
@@ -68,6 +70,7 @@ namespace SpeedStars.Physical
     [CreateAssetMenu(menuName = "Speed Stars/Runner Pose", fileName = "RunnerPose")]
     public sealed class RunnerPose : ScriptableObject
     {
+        [Tooltip("The pose (a new asset starts from the Ready default).")]
         public PoseData pose = RunnerPoseDefaults.Ready;
 
         [ContextMenu("Mirror (swap left and right)")]

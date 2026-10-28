@@ -282,18 +282,18 @@ MonoBehaviour:
   input: {fileID: 3857996984035153175}
   tuning:
     maxSpeed: 10.5
-    pushGain: 1.4
+    pushGain: 1.2
     pushTime: 0.12
     dragConstant: 0.64
     dragLinear: 0.05
-    stanceTime: 0.12
-    hopVelocity: 1
+    stanceTime: 0.08
+    hopVelocity: 0.35
     hopAtRest: 0.8
     gravity: 7
     togetherWindow: 0.08
     earlyEfficiency: 0.15
-    lateGrace: 0.08
-    lateFloorTime: 0.45
+    lateGrace: 0.04
+    lateFloorTime: 0.2
     lateFloor: 0.55
     lateSpeed: 3
     legReadyExt: {x: 0.25, y: 0.85}
@@ -322,20 +322,20 @@ MonoBehaviour:
     leanKick: 40
     stumbleKick: 3
     releaseKick: 140
-    stumbleLean: 30
+    stumbleLean: 40
     maxForwardLean: 85
     maxBackLean: 45
     headBack: -15
     headBackSpeed: {x: 0.5, y: 3}
-    headKick: 16
+    headKick: 12
     holdPush: 70
     headReturnSpring:
-      frequency: 1
-      damping: 0.42
+      frequency: 2.25
+      damping: 0.6
     headSettleSpring:
       frequency: 0.4
       damping: 1
-    headReturnDelay: 0.08
+    headReturnDelay: 0.1
     headForwardMax: 80
     headNod: 60
     headSpring:
@@ -349,7 +349,7 @@ MonoBehaviour:
       damping: 1
     headSpoil: 90
     headSpoilPower: 1.1
-    headDrag: 0.8
+    headDrag: 1.6
     energyMax: 100
     drainPerPush: 0.25
     drainHoldPerSecond: 2
@@ -534,6 +534,10 @@ MonoBehaviour:
   airTipBack:
     frequency: 3
     damping: 1
+  settleSpring:
+    frequency: 1.5
+    damping: 1
+  settleHeadUp: 15
   headRest: 0.15
   kneeRest: 0.05
   pitchBack: 35
@@ -924,6 +928,8 @@ MonoBehaviour:
   headLead: 30
   headKeep: 0.33
   heelRock: 1
+  neckTrim: 10
+  neckTrimLean: 30
   hipFollow: 1
   hipFollowSpring:
     frequency: 4

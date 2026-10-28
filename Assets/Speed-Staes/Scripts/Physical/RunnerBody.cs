@@ -11,7 +11,9 @@ namespace SpeedStars.Physical
     [DefaultExecutionOrder(-100)]
     public sealed class RunnerBody : MonoBehaviour
     {
+        [Tooltip("Where the presses come from (keyboard N/M, touch: left/right half of the screen).")]
         public RunnerInput input;
+        [Tooltip("All the physics numbers: speed, stride, push efficiency, hold, lean, head, energy.")]
         public RunnerTuning tuning = new RunnerTuning();
         [Tooltip("Presses are ignored while false (e.g. after the finish).")]
         public bool acceptInput = true;

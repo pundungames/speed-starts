@@ -95,11 +95,15 @@ namespace SpeedStars.Physical
         [System.Serializable]
         public sealed class Leg
         {
+            [Tooltip("Leg IK (TwoBoneIK) target: the ankle is placed here.")]
             public Transform target;
+            [Tooltip("Leg IK hint: placed in front of the knee.")]
             public Transform hint;
             [Tooltip("Found by name if empty (B-shin.L/R, B-foot.L/R, B-toe.L/R).")]
             public Transform shinBone;
+            [Tooltip("Found by name if empty.")]
             public Transform footBone;
+            [Tooltip("Found by name if empty.")]
             public Transform toeBone;
 
             [HideInInspector] public Vector3 restAnkle, ballOffset, toeInFoot, restHingeInThigh, restHingeInShin;
@@ -168,6 +172,7 @@ namespace SpeedStars.Physical
         {
             [Tooltip("Found by name if empty (B-upperArm.L/R, B-forearm.L/R).")]
             public Transform upperArm;
+            [Tooltip("Found by name if empty.")]
             public Transform forearm;
             [Tooltip("Arm IK target: its constraint is turned off at runtime.")]
             public Transform ikTarget;
@@ -179,20 +184,31 @@ namespace SpeedStars.Physical
             [HideInInspector] public float swing, elbow;   // this frame's pose (deg)
         }
 
+        [Tooltip("The physics this draws (found on this object if empty). The visual never changes speed or timing.")]
         public RunnerBody body;
 
         [Header("Rig")]
+        [Tooltip("Hip target (MultiParent → B-hips): the pelvis' place and pitch.")]
         public Transform hipTarget;
+        [Tooltip("Spine Root Target (TwistChain root, B-spine): the waist base's angle.")]
         public Transform spineRootTarget;
+        [Tooltip("Spine Tip Target (TwistChain tip, B-neck): the waist top's angle; B-chest is filled in between.")]
         public Transform spineTipTarget;
+        [Tooltip("Left leg: IK target, hint and bones.")]
         public Leg leftLeg = new Leg();
+        [Tooltip("Right leg: IK target, hint and bones.")]
         public Leg rightLeg = new Leg();
+        [Tooltip("Left arm: bones and its IK target (turned off in play).")]
         public Arm leftArm = new Arm();
+        [Tooltip("Right arm: bones and its IK target (turned off in play).")]
         public Arm rightArm = new Arm();
 
         [Header("Key poses (empty = built-in default): trunk, head, arms, feet width")]
+        [Tooltip("Waiting with no input: the crouch at the line.")]
         public RunnerPose ready;
+        [Tooltip("Running at speed (fully from runPoseSpeed on).")]
         public RunnerPose run;
+        [Tooltip("Blended in while the sim's lean is past its pose's own (stumbling).")]
         public RunnerPose stumble;
 
         [Header("Blend")]
@@ -223,8 +239,7 @@ namespace SpeedStars.Physical
         public LegAngles holdSupport = new LegAngles(80f, 100f);
         [Tooltip("The knee is never quite straight (the IK snaps at full reach).")]
         public float maxKnee = 177f;
-        [Tooltip("A held leg rises behind with the hips' lean up to this angle from straight down (deg; 90 = level). " +
-                 "Set from the user's pose in play mode: 79, a little below level.")]
+        [Tooltip("A held leg rises behind with the body's lean up to this angle from straight down (deg; 90 = level).")]
         public float heldLegMaxAngle = 90f;
         [Tooltip("A held leg's thigh goes at most this far past the hips' angle (deg; − = short of it, which the slightly " +
                  "bent knee makes up): leaning, held legs trail the body in a nearly straight line instead of rising " +
@@ -257,7 +272,9 @@ namespace SpeedStars.Physical
                  "further down): the height goes through this softer spring instead (~0.5 s up off the ground). Running and " +
                  "the crouch stay above liftBelow and keep heightSpring.")]
         public SpringSettings liftSpring = new SpringSettings(0.9f, 1f);
+        [Tooltip("How far under its standing height (m) the body starts getting up through liftSpring.")]
         public float liftBelow = 0.25f;
+        [Tooltip("Over how much further down (m) liftSpring takes over fully.")]
         public float liftRange = 0.2f;
         [Tooltip("Upward speed the last foot's push gives the body as it leaves the ground with nothing left to carry it (m/s).")]
         public float liftKick = 1.5f;
@@ -266,6 +283,7 @@ namespace SpeedStars.Physical
                  "(pelvisPitchRange.y): it comes down and lies flat. It comes back once the legs carry the body again. " +
                  "The reference video: the straight body turns ~45° → ~78° over the half second in the air.")]
         public float airTip = 90f;
+        [Tooltip("Once a leg carries the body again the tip goes back to 0 through this spring.")]
         public SpringSettings airTipBack = new SpringSettings(3f, 1f);
         [Tooltip("Head on the ground with no foot carrying: the body settles through this spring — the waist's curve " +
                  "opens, the head comes up off its forward bend and the tip goes on to level — so the body comes down " +
@@ -336,6 +354,7 @@ namespace SpeedStars.Physical
                  "own angle. The head stays in line with the body, so the body, not a curled-in head, comes down to " +
                  "the ground. Comes in with the forward lean, all of it from neckTrimLean (deg) on.")]
         public float neckTrim = 10f;
+        [Tooltip("Forward lean (deg) from which all of neckTrim is in.")]
         public float neckTrimLean = 30f;
         [Tooltip("Share of the head angle the body follows, all the way (the head comes down, the body bends after it).")]
         [Range(0f, 1f)] public float hipFollow = 1f;
@@ -371,13 +390,17 @@ namespace SpeedStars.Physical
         [Tooltip("Elbow bend with the arm all the way back (deg): the forearm has turned back with the upper arm " +
                  "and points down-back (stays so while held).")]
         public float elbowBack = 30f;
+        [Tooltip("Arms angled out sideways from the body (deg), so they clear the trunk.")]
         public float armOutward = 8f;
         [Tooltip("Shoulder (clavicle) follows the arm swing (deg at full swing).")]
         public float shoulderFollow = 12f;
 
         [Header("Preview (play mode): hold one pose; edit the asset live, changes stay")]
+        [Tooltip("Play mode: hold previewPose instead of running, to edit pose assets live.")]
         public bool preview;
+        [Tooltip("The pose held while preview is on.")]
         public RunnerPose previewPose;
+        [Tooltip("Lean (deg, + = forward) put on the previewed pose.")]
         [Range(-45f, 85f)] public float previewLean;
 
         const float NeckShare = 0.5f;          // share of the head angle the neck (spine tip) bends; the head aims the rest

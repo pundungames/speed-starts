@@ -20,9 +20,10 @@ namespace SpeedStars.Physical
     public sealed class RunnerTuning
     {
         [Header("Speed (m/s)")]
+        [Tooltip("Top speed (m/s): pushes and the hold thrust give less and less toward it, nothing at it.")]
         public float maxSpeed = 10.5f;
         [Tooltip("Speed gained by a full push at 0 m/s; shrinks toward maxSpeed.")]
-        public float pushGain = 1.4f;
+        public float pushGain = 1.2f;
         [Tooltip("Time over which a push's gain is applied (s).")]
         public float pushTime = 0.12f;
         [Tooltip("Constant loss (m/s²).")]
@@ -32,12 +33,14 @@ namespace SpeedStars.Physical
 
         [Header("Stride")]
         [Tooltip("Press → take-off: how long the foot pushes on the ground (s).")]
-        public float stanceTime = 0.12f;
-        [Tooltip("Take-off vertical speed of a full push at max speed (m/s). Flight time = 2 × this / gravity.")]
-        public float hopVelocity = 1f;
+        public float stanceTime = 0.08f;
+        [Tooltip("Take-off vertical speed of a full push at max speed (m/s). Flight time = 2 × this / gravity. With " +
+                 "stanceTime it sets the rhythm: 0.08 s push + ~0.1 s flight = a press every ~0.2 s lands on time.")]
+        public float hopVelocity = 0.35f;
         [Tooltip("Share of hopVelocity at 0 m/s.")]
         [Range(0f, 1f)] public float hopAtRest = 0.8f;
-        public float gravity = 9.81f;
+        [Tooltip("Gravity (m/s²): the hop between strides here, and the body's fall in a dive (RunnerPoseDriver).")]
+        public float gravity = 7f;
 
         [Header("Push efficiency (read from the physical state, no timing curve)")]
         [Tooltip("A press this soon (s) after the other foot's is not early: the two push together. Later in " +
@@ -46,9 +49,10 @@ namespace SpeedStars.Physical
         [Tooltip("Efficiency of a press in the air or while the other foot is still pushing.")]
         [Range(0f, 1f)] public float earlyEfficiency = 0.15f;
         [Tooltip("After landing, presses within this time (s) are full.")]
-        public float lateGrace = 0.08f;
+        public float lateGrace = 0.04f;
         [Tooltip("Time after landing (s) where a late press reaches lateFloor.")]
-        public float lateFloorTime = 0.45f;
+        public float lateFloorTime = 0.2f;
+        [Tooltip("Efficiency of a press made lateFloorTime or more after landing.")]
         [Range(0f, 1f)] public float lateFloor = 0.55f;
         [Tooltip("Speed (m/s) from which lateness counts fully (no momentum to lose when slow).")]
         public float lateSpeed = 3f;
@@ -62,6 +66,7 @@ namespace SpeedStars.Physical
         public float minStepTime = 0.14f;
         [Tooltip("Forward push per held foot (m/s²), for holdThrustTime after the hold starts.")]
         public float holdThrust = 1f;
+        [Tooltip("How long the hold thrust lasts after a hold starts (s).")]
         public float holdThrustTime = 0.6f;
         [Tooltip("Extra loss in a hold pose (m/s²): the planted feet slide.")]
         public float holdDrag = 0f;
@@ -90,8 +95,10 @@ namespace SpeedStars.Physical
         [Tooltip("Backward kick when a hold is let go (deg/s × hold weight): the bent support leg straightens.")]
         public float releaseKick = 140f;
         [Tooltip("Lean past this (deg) blends in the Stumble pose (visual only; the loss comes from the head, below).")]
-        public float stumbleLean = 30f;
+        public float stumbleLean = 40f;
+        [Tooltip("Limit of the sim's lean spring forward (deg). Game logic only (stumble, HUD): the body you see leans by the head (RunnerPoseDriver).")]
         public float maxForwardLean = 85f;
+        [Tooltip("Limit of the sim's lean spring back (deg). Game logic only, like maxForwardLean.")]
         public float maxBackLean = 45f;
 
         [Header("Head (deg, + = forward): a key down takes it forward, no key down brings it back")]
@@ -101,18 +108,18 @@ namespace SpeedStars.Physical
         public Vector2 headBackSpeed = new Vector2(0.5f, 3f);
         [Tooltip("How far the first moment of a key down takes the head forward (deg, all of it within ~0.1 s), " +
                  "whatever the press, from wherever the head is.")]
-        public float headKick = 16f;
+        public float headKick = 12f;
         [Tooltip("Key still down: the head goes on forward at this rate (deg/s × the key's hold weight; both keys = twice).")]
         public float holdPush = 70f;
         [Tooltip("No key down: the head comes back to headBack through this spring. Presses before it is back pile it up.")]
-        public SpringSettings headReturnSpring = new SpringSettings(1f, 0.42f);
+        public SpringSettings headReturnSpring = new SpringSettings(2.25f, 0.6f);
         [Tooltip("Past headBack the head (and the body after it) goes on through this softer, well damped spring: it sits " +
                  "back as far as the way back threw it, then comes back slowly, never swinging forward again.")]
         public SpringSettings headSettleSpring = new SpringSettings(0.4f, 1f);
         [Tooltip("After the last key comes up the way back starts soft and reaches full strength over this long (s): " +
                  "a press coming sooner finds it still weak, so quick taps pile the head up like a hold; presses on " +
                  "the rhythm leave it time to bring the head back.")]
-        public float headReturnDelay = 0.08f;
+        public float headReturnDelay = 0.1f;
         [Tooltip("Most the head goes forward (deg).")]
         public float headForwardMax = 80f;
         [Tooltip("Small nod every press gives the head (deg/s), whatever the press: keeps it alive.")]
@@ -122,19 +129,24 @@ namespace SpeedStars.Physical
         [Tooltip("A key's hold weight (0 = up, 1 = held a while) builds up from the moment it goes down — no threshold " +
                  "between a tap and a hold — and goes away after it comes up. holdPush and the legs' hold angles use it.")]
         public SpringSettings holdIn = new SpringSettings(2f, 1f);
+        [Tooltip("How fast a key's hold weight goes away after the key comes up.")]
         public SpringSettings holdOut = new SpringSettings(4.5f, 1f);
 
         [Header("Head → speed: the further forward the head, the less a press gives and the more the runner loses")]
         [Tooltip("Head angle (deg) at which a press gives nothing; upright or back a press gives all. In between it " +
                  "falls off smoothly (no threshold): 1 − (head / headSpoil)^headSpoilPower.")]
         public float headSpoil = 90f;
+        [Tooltip("Shape of that fall-off: 1 = straight; above 1 a slightly forward head costs less, a far forward one as much.")]
         public float headSpoilPower = 1.1f;
         [Tooltip("Extra loss with the head all the way forward (m/s² at headForwardMax, in proportion below).")]
-        public float headDrag = 0.8f;
+        public float headDrag = 1.6f;
 
         [Header("Energy")]
+        [Tooltip("Full energy, at the start of a run.")]
         public float energyMax = 100f;
+        [Tooltip("Energy every press uses.")]
         public float drainPerPush = 0.25f;
+        [Tooltip("Energy used per second while a key is held.")]
         public float drainHoldPerSecond = 2f;
         [Tooltip("Recovered per second while standing still.")]
         public float regenPerSecond = 4f;
