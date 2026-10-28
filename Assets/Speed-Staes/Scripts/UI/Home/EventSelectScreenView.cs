@@ -214,7 +214,7 @@ namespace SpeedStars.UI.Home
 
             StopShake();
             _shake = rect
-                .DOShakeAnchorPos(layout.DeniedShakeDuration, new Vector2(layout.DeniedShakeStrength, 0f), layout.DeniedShakeVibrato, 0f, false, true)
+                .DOShakePosition(layout.DeniedShakeDuration, new Vector3(layout.DeniedShakeStrength, 0f, 0f), layout.DeniedShakeVibrato, 0f, false, true)
                 .SetUpdate(true)
                 .SetLink(gameObject);
         }
