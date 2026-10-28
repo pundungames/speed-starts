@@ -5,35 +5,33 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-10-28 · agent-kit v2 kurulumu · dal `main` (ad3616b üstü)
+Son güncelleme: 2026-10-28 · origin/main birleşti (881966a, push kullanıcıda) · dal `main`
+
+## Sürüyor (worktree'ler, agent'lar)
+- T-023 ana menü Serhat'ın `Scenes/Anamenu Themaları.unity` kopyasında + environment butonu temayı değiştirir — `D:\Pundun\speed-starts-t023`
+- T-024 yarış seçimi v1 (Yaris_Secimi_UI_v1) — `D:\Pundun\speed-starts-t024`
+- T-025 kozmetik çekirdeği (Custom N ön ayarları, premium satın alma, önizleme, CosmeticApplier) — `D:\Pundun\speed-starts-t025`
+- Sonra T-026 kostüm editörü UI (Kostum_Editor_UI_v1), T-025'e bağlı.
 
 ## Kullanıcıdan bekleyen kararlar
-- Başlangıç Adet Bileti (yeni kayıt) PDF'te yok → şu an 0; test için 3 öneriliyor (`EconomyConfig.startingEntryTickets`, kullanıcının sayısı).
-- Yatay ekran: `ProjectSettings` → Portrait kapalı, diske kaydedilmedi (kullanıcı Player Settings'ten).
-- Malik'ten istenecekler (UI bunlarsız kurulamaz; `docs/TEMEL-SOZLESME.md` §11): (1) yarış başladı/bitti olayı ve
-  bitişte anında başa dönmemesi (`RaceController.cs:55-58` aynı karede `ResetRace`) → sonuç ekranı için; (2) dokunma
-  UI üstündeyse ayak sayılmasın (`RunnerInput.cs:76-81` bütün ekranı dinliyor) → menü/duraklat butonu için;
-  (3) geri sayım / başlama sinyali. Kullanıcı kararı (28.10): sona bırakıldı (Faz 7, Malik ya da biz).
-- Oyuncuya görünen metin dili / yerelleştirme — md'lerle netleşir.
+- Tema fiyatları (Nakit): asset'te 0 = fiyat yok. Geliştirmede bütün temalar serbest (kullanıcı 28.10).
+- Ön ayar sayısı (Custom 1..N): tohum 3. Power/Stamina/Height PDF'te yok → yalnız gösterim. Emote içeriği yok → sekme pasif. Face = Glasses varsayımı.
+- Serhat'ın `Docs/` (büyük D) klasörü `docs/`'a taşınsın mı (index'te iki klasör; TUZAKLAR). Depo kökünde `Backups/` 370 MB.
+- Başlangıç Adet Bileti (yeni kayıt) PDF'te yok → şu an 0 (`EconomyConfig.startingEntryTickets`).
+- Malik'ten (Faz 7, sona bırakıldı): yarış başladı/bitti olayı, UI üstündeki dokunma ayak sayılmasın, geri sayım sinyali (`docs/TEMEL-SOZLESME.md` §11).
 
-## Gözle bakılacaklar (öncelikli)
-- `50e95cd` UI v2: yeni ana ekran + yarış HUD'u (sanat `UI/Art/`), kapat butonları çalışıyor, Home'da karakter örneği.
-  Bilinen: karakter T-pozda (menü duruşu yok), ışık arkadan (siyah görünüyor), kıyafet kapalı (Faz 5) — düzeltme turu sürüyor.
-- Test için bilet: `Data/Config/EconomyConfig` → Starting Entry Tickets (yalnız yeni kayıt; PDF'te değer yok, karar kullanıcıda).
-- Doğrulama artık: derleme + EditMode (218) + PlayMode (9) + Zenject + ekran görüntüsü (`pipeline-logs/shots-*`).
+## Gözle bakılacaklar
+- `298823b` menü karakteri: kollar aşağı, önden ışık (Play ekran görüntüsü `pipeline-logs/mergeshots-2026-10-28_162045`).
+- Doğrulama: derleme + EditMode (218) + PlayMode (10) + Zenject + ekran görüntüsü; merge sonrası hepsi yeşil.
 
 ## Sıradaki iş
-1. Menü karakteri: kollar aşağı duruş, önden ışık; PlayMode ekran görüntüsü (gerçek değerlerle).
-2. Faz 5 kozmetik (Serhat'ın customization UI'ı gelince) — CosmeticApplier menü karakterini giydirir.
-3. Faz 3 PDF ekonomisi, Faz 4 günlük hediye + 7 gün, Faz 6 High Scores.
+1. T-023/T-024/T-025 birleştir → kopyada builder + doğrulama + her tema için ekran görüntüsü.
+2. T-026 kostüm editörü. 3. Faz 3 PDF ekonomisi, Faz 4 günlük hediye + 7 gün, Faz 6 High Scores.
 
 ## Dikkat
-- Unity'nin commit'siz dosyası: `ProjectSettings/ProjectSettings.asset` — dokunma, commit'e katma.
-- `CLAUDE.md` Malik'in (sık değişiyor); bizim kurallar `docs/CALISMA-KURALLARI.md`, `CLAUDE.local.md` ile yüklenir.
-  `install.ps1 -Fark` → "CLAUDE.md#KURALLAR isaret-yok" bilerek (1 fark).
-- Yerel, git'e girmeyen (`.git/info/exclude`): `.claude/settings.json` (hook'lar), `.claude/settings.local.json` (pano),
-  `.claude/agents/`, `CLAUDE.local.md`, `pipeline-logs/`. Başka PC'de: kit kurulumu + `claude plugin install pano@agent-kit -s local`.
-- Malik ve Serhat aynı main'e push ediyor; pull/push kullanıcıda. Malik'in alanı hook'la kilitli (config `KorunanBelgeler`).
+- `CLAUDE.md` Malik'in; bizim kurallar `docs/CALISMA-KURALLARI.md` (`CLAUDE.local.md` ile yüklenir).
+- Yerel, git'e girmeyen: `.claude/settings.json`, `.claude/settings.local.json`, `.claude/agents/`, `CLAUDE.local.md`, `pipeline-logs/`.
+- Malik ve Serhat aynı main'e push ediyor; pull/push kullanıcıda. `docs/` altına yeni dosya: commit'ten sonra yol `Docs/`'a kaymış mı bak.
 
 <!-- OTOMATIK:BASLA -->
 (henüz çalıştırılmadı: powershell -File scripts/tur-sonu.ps1 -DurumYaz)
