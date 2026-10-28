@@ -27,6 +27,24 @@ namespace SpeedStars.Tools.Builders
         private const int LastNormalSet = 7;
         private const int LastPremiumSet = 9;
 
+        // Catalog-level seed values (they live in the asset afterwards; edit them there). Preset count is not in the PDF.
+        private const int SeedPresetCount = 3;
+        private const string SeedPresetNameFormat = "Custom {0}";
+        private static readonly string[] SeedLegacyObjects = { "Tshirt", "Short", "Leggings", "Shoes", "Glove", "Helmet" };
+        private static readonly string[] SeedPalette = { "E53935", "FB8C00", "FDD835", "43A047", "1E88E5", "8E24AA", "F5F5F5", "212121" };
+
+        // Default outfit as in the Home design (UI/Art/Home/preview.jpg): red cap, dark glasses, light tank top, red
+        // shorts, black leggings, shoes; no gloves or socks. Normal items only, so it is owned from the first launch.
+        private static readonly (CosmeticCategory category, string id, string hex)[] SeedDefaultOutfit =
+        {
+            (CosmeticCategory.Headwear, "headwear.h01", "D01818"),
+            (CosmeticCategory.Glasses, "glasses.g01", ""),
+            (CosmeticCategory.Tops, "tops.t01", "E8E4DA"),
+            (CosmeticCategory.Shorts, "shorts.s01", "CC1010"),
+            (CosmeticCategory.Leggings, "leggings.l01", "1A1A1A"),
+            (CosmeticCategory.Shoes, "shoes.sh01", ""),
+        };
+
         /// <summary>The catalog to read day 7 from: the seeded one, or the existing one when it is left as it is.</summary>
         public static CosmeticCatalog Seed(string catalogPath, string folder, bool overwrite)
         {
@@ -64,15 +82,72 @@ namespace SpeedStars.Tools.Builders
                         Warn(Source, $"{slot}: no object for set {set}; that cosmetic is not seeded.");
                         continue;
                     }
-                    items.Add(SeedItem(folder, category, slot, set, parts, overwrite));
+                    items.Add(SeedItem(folder, category, slot, set, parts, slotRoot, overwrite));
                 }
             }
 
             var so = new SerializedObject(catalog);
             SetObjectList(Prop(so, "cosmetics"), items.ToArray());
+            SeedCatalogSettings(so, items);
             Apply(so);
             Log(Source, $"Seeded {catalogPath} with {items.Count} cosmetics.");
             return catalog;
+        }
+
+        private static void SeedCatalogSettings(SerializedObject so, List<UnityEngine.Object> items)
+        {
+            Prop(so, "presetCount").intValue = SeedPresetCount;
+            Prop(so, "presetNameFormat").stringValue = SeedPresetNameFormat;
+            SetStrings(Prop(so, "colorPalette"), SeedPalette);
+            SetStrings(Prop(so, "legacyOutfitObjects"), SeedLegacyObjects);
+
+            var ids = new HashSet<string>();
+            foreach (UnityEngine.Object item in items)
+                if (item is CosmeticDefinition definition) ids.Add(definition.Id);
+
+            var entries = new List<(CosmeticCategory category, string id, string hex)>();
+            foreach (var entry in SeedDefaultOutfit)
+            {
+                if (ids.Contains(entry.id)) entries.Add(entry);
+                else Warn(Source, $"Default outfit item '{entry.id}' is not in the catalog; skipped.");
+            }
+            SerializedProperty list = Prop(so, "defaultOutfit");
+            list.arraySize = entries.Count;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                SerializedProperty element = list.GetArrayElementAtIndex(i);
+                Rel(element, "category").intValue = (int)entries[i].category;
+                Rel(element, "cosmeticId").stringValue = entries[i].id;
+                Rel(element, "colorHex").stringValue = entries[i].hex;
+            }
+        }
+
+        private static void SetStrings(SerializedProperty list, string[] values)
+        {
+            list.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++) list.GetArrayElementAtIndex(i).stringValue = values[i];
+        }
+
+        /// <summary>
+        /// The first colour channel found on the item's parts, walking the parts and their material slots in order
+        /// (material names Color1_Toon / Color2_Toon / Color3_Toon). Items without a toon colour material get Color1.
+        /// </summary>
+        private static CosmeticColorChannel PrimaryChannel(Transform slotRoot, List<string> parts, string itemName)
+        {
+            foreach (string part in parts)
+            {
+                Transform child = slotRoot.Find(part);
+                if (child == null) continue;
+                foreach (Renderer renderer in child.GetComponentsInChildren<Renderer>(true))
+                    foreach (Material material in renderer.sharedMaterials)
+                    {
+                        if (material == null) continue;
+                        foreach (CosmeticColorChannel channel in Enum.GetValues(typeof(CosmeticColorChannel)))
+                            if (material.name.StartsWith(channel.MaterialName(), StringComparison.Ordinal)) return channel;
+                    }
+            }
+            Warn(Source, $"{itemName}: no Color1-3_Toon material found; primary channel left at {CosmeticColorChannel.Color1}.");
+            return CosmeticColorChannel.Color1;
         }
 
         private static SortedDictionary<int, List<string>> GroupBySet(string slot, Transform slotRoot)
@@ -92,7 +167,7 @@ namespace SpeedStars.Tools.Builders
             return sets;
         }
 
-        private static CosmeticDefinition SeedItem(string folder, CosmeticCategory category, string slot, int set, List<string> parts, bool overwrite)
+        private static CosmeticDefinition SeedItem(string folder, CosmeticCategory category, string slot, int set, List<string> parts, Transform slotRoot, bool overwrite)
         {
             string main = MainPart(parts);
             string path = $"{folder}/{slot}_{main}.asset";
@@ -114,6 +189,7 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "price").intValue = premium ? 50 : 0;                      // PDF §1.3 Harcama: "Fiyat 50 adet"; normal: not in the PDF (OPEN #6)
             Prop(so, "currency").intValue = (int)(premium ? CosmeticCurrency.PurpleGem : CosmeticCurrency.Cash); // PDF §2.3: premium paid with Purple Gems
             Prop(so, "sortOrder").intValue = premium ? set - LastNormalSet : set; // place inside its group, from the set number
+            Prop(so, "primaryChannel").intValue = (int)PrimaryChannel(slotRoot, parts, main);
             Apply(so);
             return definition;
         }

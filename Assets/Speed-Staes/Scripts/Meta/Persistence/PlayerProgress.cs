@@ -25,6 +25,8 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private SevenDayCheckInState sevenDay = new SevenDayCheckInState();
         [SerializeField] private List<string> ownedCosmeticIds = new List<string>();
         [SerializeField] private List<SelectedCosmetic> selectedCosmetics = new List<SelectedCosmetic>();
+        [SerializeField] private List<CosmeticPreset> cosmeticPresets = new List<CosmeticPreset>();
+        [SerializeField] private int selectedPresetIndex;
         [SerializeField] private List<EventBestTime> bestTimes = new List<EventBestTime>();
         [SerializeField] private List<string> processedTransactionIds = new List<string>();
         [SerializeField] private long lastSeenUtcTicks;
@@ -52,7 +54,18 @@ namespace SpeedStars.Meta.Persistence
 
         public SevenDayCheckInState SevenDay => sevenDay;
         public List<string> OwnedCosmeticIds => ownedCosmeticIds;
+
+        /// <summary>
+        /// Schema 1 only: the single outfit of old saves. Moved into the first preset on load (<c>MigrateLegacyCosmetics</c>);
+        /// empty afterwards. New code uses <c>CosmeticPresets</c>.
+        /// </summary>
         public List<SelectedCosmetic> SelectedCosmetics => selectedCosmetics;
+
+        /// <summary>Racer presets (Custom 1..N), in order. Filled up to the configured count by the cosmetic service.</summary>
+        public List<CosmeticPreset> CosmeticPresets => cosmeticPresets;
+
+        /// <summary>Index into <c>CosmeticPresets</c> of the preset worn in menu and race.</summary>
+        public int SelectedPresetIndex { get => selectedPresetIndex; set => selectedPresetIndex = value; }
         public List<EventBestTime> BestTimes => bestTimes;
 
         /// <summary>Ids of economy transactions already applied; a repeated id must not pay or charge twice.</summary>
@@ -68,6 +81,22 @@ namespace SpeedStars.Meta.Persistence
         public List<string> OwnedThemeIds => ownedThemeIds;
 
         /// <summary>
+        /// Schema 1 to 2: a saved single outfit becomes the first preset (only when there are no presets yet), and the
+        /// legacy list is emptied so it is never migrated twice.
+        /// </summary>
+        internal void MigrateLegacyCosmetics()
+        {
+            EnsureValid();
+            if (cosmeticPresets.Count == 0 && selectedCosmetics.Count > 0)
+            {
+                var preset = new CosmeticPreset();
+                preset.Slots.AddRange(selectedCosmetics);
+                cosmeticPresets.Add(preset);
+            }
+            selectedCosmetics.Clear();
+        }
+
+        /// <summary>
         /// JSON written by an older build may lack newer fields; JsonUtility can then leave them null.
         /// Called after every load so callers never null-check.
         /// </summary>
@@ -78,10 +107,33 @@ namespace SpeedStars.Meta.Persistence
             sevenDay.EnsureValid();
             if (ownedCosmeticIds == null) ownedCosmeticIds = new List<string>();
             if (selectedCosmetics == null) selectedCosmetics = new List<SelectedCosmetic>();
+            if (cosmeticPresets == null) cosmeticPresets = new List<CosmeticPreset>();
+            for (int i = cosmeticPresets.Count - 1; i >= 0; i--)
+                if (cosmeticPresets[i] == null) cosmeticPresets.RemoveAt(i);
+            foreach (CosmeticPreset preset in cosmeticPresets) preset.EnsureValid();
             if (bestTimes == null) bestTimes = new List<EventBestTime>();
             if (processedTransactionIds == null) processedTransactionIds = new List<string>();
             if (selectedThemeId == null) selectedThemeId = string.Empty;
             if (ownedThemeIds == null) ownedThemeIds = new List<string>();
+        }
+    }
+
+    /// <summary>
+    /// One racer preset: the item and colour worn per category. A category without an entry is worn empty. Slots reuse
+    /// <c>SelectedCosmetic</c> (category stored by enum name).
+    /// </summary>
+    [System.Serializable]
+    public sealed class CosmeticPreset
+    {
+        [SerializeField] private List<SelectedCosmetic> slots = new List<SelectedCosmetic>();
+
+        public List<SelectedCosmetic> Slots => slots;
+
+        internal void EnsureValid()
+        {
+            if (slots == null) slots = new List<SelectedCosmetic>();
+            for (int i = slots.Count - 1; i >= 0; i--)
+                if (slots[i] == null) slots.RemoveAt(i);
         }
     }
 

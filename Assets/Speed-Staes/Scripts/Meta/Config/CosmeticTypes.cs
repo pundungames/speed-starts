@@ -23,4 +23,22 @@ namespace SpeedStars.Meta.Config
         Cash = 0,
         PurpleGem = 1
     }
+
+    /// <summary>
+    /// The colour channel of an item the player recolours ("Primary color"). Names the shared toon material that carries
+    /// it (<c>Color1_Toon</c> ...), because the slot order of materials differs from item to item.
+    /// Serialized as int: append only.
+    /// </summary>
+    public enum CosmeticColorChannel
+    {
+        Color1 = 0,
+        Color2 = 1,
+        Color3 = 2
+    }
+
+    public static class CosmeticColorChannelNames
+    {
+        /// <summary>Material name of the channel, e.g. <c>Color1_Toon</c>.</summary>
+        public static string MaterialName(this CosmeticColorChannel channel) => channel + "_Toon";
+    }
 }

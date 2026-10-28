@@ -1,0 +1,243 @@
+using System;
+using System.Collections.Generic;
+using SpeedStars.Meta.Config;
+using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Persistence;
+using SpeedStars.Meta.Wallet;
+
+namespace SpeedStars.Meta.Cosmetics
+{
+    /// <summary>
+    /// Racer presets, ownership and purchase over the save. Prices, preset count, default outfit and palette are read from
+    /// the cosmetic catalog on every call. Ownership: an item with no price that is not premium is owned from the start;
+    /// anything else needs its id in <c>OwnedCosmeticIds</c> (written by <c>TryPurchase</c>). Presets are filled up to the
+    /// configured count lazily, so a raised count or an old save needs no migration step beyond the repository's.
+    /// The wallet interface is read-only, so the price is taken from the save's balances and the wallet is told to redraw.
+    /// </summary>
+    public sealed class CosmeticService : ICosmeticService
+    {
+        private readonly ProgressRepository _repository;
+        private readonly WalletService _wallet;
+        private readonly CosmeticCatalog _catalog;
+
+        public CosmeticService(ProgressRepository repository, WalletService wallet, CosmeticCatalog catalog)
+        {
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+            _wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
+            _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        }
+
+        public event Action Changed;
+
+        public int PresetCount => _catalog.PresetCount;
+
+        public string GetPresetName(int index) => string.Format(_catalog.PresetNameFormat, index + 1);
+
+        public int SelectedPreset
+        {
+            get
+            {
+                EnsurePresets();
+                return Progress.SelectedPresetIndex;
+            }
+        }
+
+        public bool SelectPreset(int index)
+        {
+            if (index < 0 || index >= PresetCount) return false;
+            EnsurePresets();
+            if (Progress.SelectedPresetIndex != index)
+            {
+                Progress.SelectedPresetIndex = index;
+                _repository.Save();
+            }
+            Changed?.Invoke();
+            return true;
+        }
+
+        public CosmeticOutfit SelectedOutfit => GetOutfit(SelectedPreset);
+
+        public CosmeticOutfit DefaultOutfit
+        {
+            get
+            {
+                CosmeticOutfit outfit = CosmeticOutfit.Empty;
+                foreach (CosmeticOutfitEntry entry in _catalog.DefaultOutfit)
+                {
+                    if (entry == null || string.IsNullOrEmpty(entry.CosmeticId)) continue;
+                    outfit = outfit.With(entry.Category, entry.CosmeticId, CosmeticColor.Normalize(entry.ColorHex));
+                }
+                return outfit;
+            }
+        }
+
+        public CosmeticOutfit GetOutfit(int presetIndex)
+        {
+            if (presetIndex < 0 || presetIndex >= PresetCount) return CosmeticOutfit.Empty;
+            EnsurePresets();
+
+            CosmeticOutfit outfit = CosmeticOutfit.Empty;
+            foreach (SelectedCosmetic saved in Progress.CosmeticPresets[presetIndex].Slots)
+            {
+                if (!Enum.TryParse(saved.Category, out CosmeticCategory category)) continue;
+                // Unknown, mis-slotted or locked items (removed from the catalog, tampered file) are simply not worn.
+                if (!_catalog.TryGet(saved.CosmeticId, out CosmeticDefinition item) || item.Category != category) continue;
+                if (!IsOwned(item)) continue;
+                outfit = outfit.With(category, item.Id, CosmeticColor.Normalize(saved.ColorHex));
+            }
+            return outfit;
+        }
+
+        public CosmeticSaveResult SaveOutfit(int presetIndex, CosmeticOutfit outfit)
+        {
+            if (presetIndex < 0 || presetIndex >= PresetCount) return CosmeticSaveResult.InvalidPreset;
+            outfit = outfit ?? CosmeticOutfit.Empty;
+
+            // Validate everything before touching the save: a rejected outfit changes nothing.
+            foreach (CosmeticCategory category in CosmeticOutfit.Categories)
+            {
+                CosmeticSlot slot = outfit.Get(category);
+                if (slot.IsEmpty) continue;
+                if (!_catalog.TryGet(slot.CosmeticId, out CosmeticDefinition item) || item.Category != category)
+                    return CosmeticSaveResult.UnknownItem;
+                if (!IsOwned(item)) return CosmeticSaveResult.LockedItem;
+            }
+
+            EnsurePresets();
+            List<SelectedCosmetic> slots = Progress.CosmeticPresets[presetIndex].Slots;
+            slots.Clear();
+            foreach (CosmeticCategory category in CosmeticOutfit.Categories)
+            {
+                CosmeticSlot slot = outfit.Get(category);
+                if (slot.IsEmpty) continue;
+                slots.Add(new SelectedCosmetic(category.ToString(), slot.CosmeticId, CosmeticColor.Normalize(slot.ColorHex)));
+            }
+
+            bool persisted = _repository.Save();
+            Changed?.Invoke();
+            return persisted ? CosmeticSaveResult.Saved : CosmeticSaveResult.NotPersisted;
+        }
+
+        public IReadOnlyList<CosmeticItemInfo> GetItems(CosmeticCategory category)
+        {
+            IReadOnlyList<CosmeticDefinition> definitions = _catalog.GetByCategory(category);
+            var items = new List<CosmeticItemInfo>(definitions.Count);
+            foreach (CosmeticDefinition definition in definitions) items.Add(Describe(definition));
+            return items;
+        }
+
+        public bool TryGetItem(string cosmeticId, out CosmeticItemInfo item)
+        {
+            if (_catalog.TryGet(cosmeticId, out CosmeticDefinition definition))
+            {
+                item = Describe(definition);
+                return true;
+            }
+            item = default;
+            return false;
+        }
+
+        public bool IsOwned(string cosmeticId) => _catalog.TryGet(cosmeticId, out CosmeticDefinition item) && IsOwned(item);
+
+        public bool IsLocked(string cosmeticId) => _catalog.TryGet(cosmeticId, out CosmeticDefinition item) && !IsOwned(item);
+
+        public CosmeticPurchaseResult TryPurchase(string cosmeticId)
+        {
+            if (!_catalog.TryGet(cosmeticId, out CosmeticDefinition item)) return CosmeticPurchaseResult.UnknownItem;
+            if (IsOwned(item)) return CosmeticPurchaseResult.AlreadyOwned;
+            if (!item.IsForSale) return CosmeticPurchaseResult.NotForSale;
+
+            PlayerProgress progress = Progress;
+            switch (item.Currency)
+            {
+                case CosmeticCurrency.PurpleGem:
+                    if (progress.PurpleGems < item.Price) return CosmeticPurchaseResult.NotEnough;
+                    progress.PurpleGems -= item.Price;
+                    break;
+                case CosmeticCurrency.Cash:
+                    if (progress.Cash < item.Price) return CosmeticPurchaseResult.NotEnough;
+                    progress.Cash -= item.Price;
+                    break;
+                default:
+                    return CosmeticPurchaseResult.NotForSale;
+            }
+
+            // Money and ownership change together and are written in one save, so a crash cannot take one without the other.
+            progress.OwnedCosmeticIds.Add(item.Id);
+            _repository.Save();
+            _wallet.NotifyChanged();
+            Changed?.Invoke();
+            return CosmeticPurchaseResult.Purchased;
+        }
+
+        public IReadOnlyList<string> ColorPalette
+        {
+            get
+            {
+                var colors = new List<string>();
+                foreach (string hex in _catalog.ColorPalette)
+                {
+                    string normalized = CosmeticColor.Normalize(hex);
+                    if (normalized.Length > 0) colors.Add(normalized);
+                }
+                return colors;
+            }
+        }
+
+        public CosmeticOutfit CreateRandomOutfit(System.Random random)
+        {
+            if (random == null) throw new ArgumentNullException(nameof(random));
+            IReadOnlyList<string> palette = ColorPalette;
+            CosmeticOutfit outfit = CosmeticOutfit.Empty;
+            foreach (CosmeticCategory category in CosmeticOutfit.Categories)
+            {
+                var owned = new List<CosmeticDefinition>();
+                foreach (CosmeticDefinition item in _catalog.GetByCategory(category))
+                    if (IsOwned(item)) owned.Add(item);
+                if (owned.Count == 0) continue;
+
+                CosmeticDefinition pick = owned[random.Next(owned.Count)];
+                string color = palette.Count > 0 ? palette[random.Next(palette.Count)] : string.Empty;
+                outfit = outfit.With(category, pick.Id, color);
+            }
+            return outfit;
+        }
+
+        private bool IsOwned(CosmeticDefinition item)
+        {
+            if (!item.IsPremium && !item.IsForSale) return true;
+            return Progress.OwnedCosmeticIds.Contains(item.Id);
+        }
+
+        private CosmeticItemInfo Describe(CosmeticDefinition item)
+        {
+            string name = item.PartNames.Count > 0 ? item.PartNames[0] : item.Id;
+            return new CosmeticItemInfo(item.Id, item.Category, name, item.IsPremium, item.Price, item.Currency, IsOwned(item));
+        }
+
+        /// <summary>
+        /// Fills missing presets with the default outfit and keeps the selected index valid. Idempotent; changes the live
+        /// progress without saving (it is written with the next save, and re-derived identically if it never is).
+        /// </summary>
+        private void EnsurePresets()
+        {
+            PlayerProgress progress = Progress;
+            int count = PresetCount;
+            while (progress.CosmeticPresets.Count < count)
+            {
+                var preset = new CosmeticPreset();
+                CosmeticOutfit defaults = DefaultOutfit;
+                foreach (CosmeticCategory category in CosmeticOutfit.Categories)
+                {
+                    CosmeticSlot slot = defaults.Get(category);
+                    if (!slot.IsEmpty) preset.Slots.Add(new SelectedCosmetic(category.ToString(), slot.CosmeticId, slot.ColorHex));
+                }
+                progress.CosmeticPresets.Add(preset);
+            }
+            if (progress.SelectedPresetIndex < 0 || progress.SelectedPresetIndex >= count) progress.SelectedPresetIndex = 0;
+        }
+
+        private PlayerProgress Progress => _repository.Current
+            ?? throw new InvalidOperationException("ProgressRepository.Load() must run before the cosmetic service is used.");
+    }
+}

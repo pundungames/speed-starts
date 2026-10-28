@@ -46,7 +46,7 @@ namespace SpeedStars.Meta.Persistence
         public const string SaveKey = "progress";
 
         /// <summary>Bump when the saved shape changes, and add the migration step in <c>Load</c>.</summary>
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
 
         private readonly ISaveStore _store;
         private readonly Func<StartingBalances> _startingBalances;
@@ -87,8 +87,10 @@ namespace SpeedStars.Meta.Persistence
                 return Reject(ProgressLoadStatus.NewerSchema,
                     "schema " + progress.SchemaVersion + " is newer than " + CurrentSchemaVersion);
 
-            // Older schemas are migrated here, one version step at a time, once a version 2 exists.
+            // Older schemas are migrated here, one version step at a time.
             progress.EnsureValid();
+            // 1 -> 2 (docs/decisions/ADR-2026-10-28-kozmetik-kayit-v2.md): the single saved outfit becomes preset 0; the cosmetic service fills the other presets.
+            if (progress.SchemaVersion < 2) progress.MigrateLegacyCosmetics();
             return Use(progress, ProgressLoadStatus.Loaded);
         }
 

@@ -34,6 +34,9 @@ namespace SpeedStars.Meta.Config
         [Tooltip("Position inside its group (premium or normal) in the category list; lower comes first.")]
         [SerializeField] private int sortOrder;
 
+        [Tooltip("The colour channel the player recolours (the material named ColorN_Toon). Items differ in which channels they have.")]
+        [SerializeField] private CosmeticColorChannel primaryChannel;
+
         public string Id => cosmeticId ?? string.Empty;
         public CosmeticCategory Category => category;
         public IReadOnlyList<string> PartNames => partNames ?? Array.Empty<string>();
@@ -41,6 +44,7 @@ namespace SpeedStars.Meta.Config
         public int Price => price;
         public CosmeticCurrency Currency => currency;
         public int SortOrder => sortOrder;
+        public CosmeticColorChannel PrimaryChannel => primaryChannel;
 
         /// <summary>False when the item has no price (e.g. normal items until Cash prices are decided).</summary>
         public bool IsForSale => price > 0;

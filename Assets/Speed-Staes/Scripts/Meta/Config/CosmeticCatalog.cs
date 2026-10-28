@@ -15,6 +15,27 @@ namespace SpeedStars.Meta.Config
         [Tooltip("All cosmetics, any category. Ids must be unique; empty slots are ignored.")]
         [SerializeField] private CosmeticDefinition[] cosmetics = new CosmeticDefinition[0];
 
+        [Tooltip("How many racer presets (Custom 1..N) the player has. Not in the PDF; raising it adds default-outfit presets to existing saves.")]
+        [SerializeField, Min(1)] private int presetCount = 3;
+
+        [Tooltip("Preset name; {0} is the preset number starting at 1.")]
+        [SerializeField] private string presetNameFormat = "Custom {0}";
+
+        [Tooltip("What every new preset wears: one entry per worn category. Items must be owned from the start.")]
+        [SerializeField] private CosmeticOutfitEntry[] defaultOutfit = new CosmeticOutfitEntry[0];
+
+        [Tooltip("Colours (RRGGBB) the Random button and the colour picker draw from.")]
+        [SerializeField] private string[] colorPalette = new string[0];
+
+        [Tooltip("Names of the old base-outfit objects at the runner root (not under Accessories) that are hidden at runtime, since the wardrobe replaces them.")]
+        [SerializeField] private string[] legacyOutfitObjects = { "Tshirt", "Short", "Leggings", "Shoes", "Glove", "Helmet" };
+
+        public int PresetCount => Mathf.Max(1, presetCount);
+        public string PresetNameFormat => string.IsNullOrEmpty(presetNameFormat) ? "Custom {0}" : presetNameFormat;
+        public IReadOnlyList<CosmeticOutfitEntry> DefaultOutfit => defaultOutfit ?? Array.Empty<CosmeticOutfitEntry>();
+        public IReadOnlyList<string> ColorPalette => colorPalette ?? Array.Empty<string>();
+        public IReadOnlyList<string> LegacyOutfitObjects => legacyOutfitObjects ?? Array.Empty<string>();
+
         /// <summary>The first cosmetic with this id (ordinal); false for an empty or unknown id.</summary>
         public bool TryGet(string cosmeticId, out CosmeticDefinition definition)
         {
