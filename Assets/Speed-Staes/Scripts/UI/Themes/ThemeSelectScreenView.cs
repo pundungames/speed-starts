@@ -87,7 +87,7 @@ namespace SpeedStars.UI.Themes
         private IThemeService _themes;
         private IWallet _wallet;
         private IEntryTickets _tickets;
-        private UiMotionConfig _motion;
+        private UiMotionConfig _themeMotion;
         private Tween _stamp;
         private Vector3 _stateBaseScale;
         private bool _baseKnown;
@@ -99,7 +99,7 @@ namespace SpeedStars.UI.Themes
             _themes = themes;
             _wallet = wallet;
             _tickets = tickets;
-            _motion = motion;
+            _themeMotion = motion;
             _presenter = new ThemeSelectPresenter(themes);
         }
 
@@ -224,13 +224,13 @@ namespace SpeedStars.UI.Themes
         /// </summary>
         private void PlayStamp()
         {
-            if (_motion == null || !_baseKnown) return;
+            if (_themeMotion == null || !_baseKnown) return;
 
             KillStamp();
             Transform label = stateText.transform;
             label.localScale = _stateBaseScale;
             _stamp = label
-                .DOPunchScale(_stateBaseScale * _motion.ButtonPunchScale, _motion.ButtonPunchDuration, _motion.ButtonPunchVibrato)
+                .DOPunchScale(_stateBaseScale * _themeMotion.ButtonPunchScale, _themeMotion.ButtonPunchDuration, _themeMotion.ButtonPunchVibrato)
                 .SetUpdate(true)
                 .SetLink(gameObject);
         }

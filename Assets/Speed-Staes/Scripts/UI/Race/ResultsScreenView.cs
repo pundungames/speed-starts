@@ -87,7 +87,7 @@ namespace SpeedStars.UI.Race
         [Tooltip("Cards, panels and buttons that reveal one after another on open, in this order (each needs a CanvasGroup). Inactive ones are skipped.")]
         [SerializeField] private CanvasGroup[] revealItems;
 
-        private UiMotionConfig _motion;
+        private UiMotionConfig _resultsMotion;
         private readonly List<ResultsTableRowView> _rows = new List<ResultsTableRowView>();
         private Vector3[] _baseScales;
         private Color _normalTitleColor;
@@ -103,7 +103,7 @@ namespace SpeedStars.UI.Race
         [Inject]
         public void InjectMotion(UiMotionConfig motion)
         {
-            _motion = motion;
+            _resultsMotion = motion;
         }
 
         protected override void Awake()
@@ -174,14 +174,14 @@ namespace SpeedStars.UI.Race
 
         public void NotifyDenied()
         {
-            if (raceAgainButton == null || _motion == null || !isActiveAndEnabled) return;
+            if (raceAgainButton == null || _resultsMotion == null || !isActiveAndEnabled) return;
 
             KillDenied();
             Transform target = raceAgainButton.transform;
             _deniedBase = target.localPosition;
             float width = ((RectTransform)target).rect.width;
             Tween shake = target
-                .DOPunchPosition(Vector3.right * (width * _motion.ButtonPunchScale), _motion.ButtonPunchDuration, _motion.ButtonPunchVibrato)
+                .DOPunchPosition(Vector3.right * (width * _resultsMotion.ButtonPunchScale), _resultsMotion.ButtonPunchDuration, _resultsMotion.ButtonPunchVibrato)
                 .SetUpdate(true)
                 .SetLink(gameObject);
             shake.OnKill(() =>
@@ -228,7 +228,7 @@ namespace SpeedStars.UI.Race
         private void PlayReveal()
         {
             KillReveal();
-            if (_motion == null || revealItems == null || revealItems.Length == 0)
+            if (_resultsMotion == null || revealItems == null || revealItems.Length == 0)
             {
                 RestoreItems();
                 return;
@@ -238,8 +238,8 @@ namespace SpeedStars.UI.Race
             int count = 0;
             foreach (CanvasGroup item in revealItems)
                 if (item != null && item.gameObject.activeSelf) count++;
-            float interval = _motion.StaggerIntervalFor(count);
-            float duration = _motion.StaggerItemDuration;
+            float interval = _resultsMotion.StaggerIntervalFor(count);
+            float duration = _resultsMotion.StaggerItemDuration;
 
             Sequence seq = DOTween.Sequence();
             int index = 0;
@@ -251,19 +251,19 @@ namespace SpeedStars.UI.Race
                 Vector3 scale = _baseScales[i];
                 Transform target = group.transform;
                 group.alpha = 0f;
-                target.localScale = scale * _motion.StaggerScaleFrom;
+                target.localScale = scale * _resultsMotion.StaggerScaleFrom;
 
                 float at = index * interval;
-                seq.Insert(at, target.DOScale(scale, duration).SetEase(_motion.StaggerEase));
+                seq.Insert(at, target.DOScale(scale, duration).SetEase(_resultsMotion.StaggerEase));
                 seq.Insert(at, DOTween.To(() => group.alpha, a => group.alpha = a, 1f, duration).SetEase(Ease.OutQuad));
                 index++;
             }
 
             float end = Mathf.Max(0f, (count - 1) * interval) + duration;
             if (_punchRecord && personalBestCard != null)
-                seq.Insert(end, personalBestCard.DOPunchScale(Vector3.one * _motion.ButtonPunchScale, _motion.ButtonPunchDuration, _motion.ButtonPunchVibrato));
+                seq.Insert(end, personalBestCard.DOPunchScale(Vector3.one * _resultsMotion.ButtonPunchScale, _resultsMotion.ButtonPunchDuration, _resultsMotion.ButtonPunchVibrato));
             if (_punchGems && gemRewardRoot != null)
-                seq.Insert(end, gemRewardRoot.transform.DOPunchScale(Vector3.one * _motion.ButtonPunchScale, _motion.ButtonPunchDuration, _motion.ButtonPunchVibrato));
+                seq.Insert(end, gemRewardRoot.transform.DOPunchScale(Vector3.one * _resultsMotion.ButtonPunchScale, _resultsMotion.ButtonPunchDuration, _resultsMotion.ButtonPunchVibrato));
 
             _punchRecord = false; // once per presented result
             _punchGems = false;

@@ -134,7 +134,7 @@ namespace SpeedStars.UI.Settings
         [SerializeField] private int shakeVibrato = 20;
 
         private IPlayerSettings _settings;
-        private UiMotionConfig _motion;
+        private UiMotionConfig _settingsMotion;
         private IInstantiator _instantiator;
         private ScreenNavigator _navigator;
         private readonly List<LanguageRowView> _languageRows = new List<LanguageRowView>();
@@ -151,7 +151,7 @@ namespace SpeedStars.UI.Settings
             [InjectOptional] ScreenNavigator navigator)
         {
             _settings = settings;
-            _motion = motion;
+            _settingsMotion = motion;
             _instantiator = instantiator;
             _navigator = navigator;
         }
@@ -322,12 +322,12 @@ namespace SpeedStars.UI.Settings
             foreach (FlagCellView cell in _flagCells)
             {
                 if (cell.Code != code) continue;
-                cell.Punch(_motion.ButtonPunchScale, _motion.ButtonPunchDuration, _motion.ButtonPunchVibrato);
+                cell.Punch(_settingsMotion.ButtonPunchScale, _settingsMotion.ButtonPunchDuration, _settingsMotion.ButtonPunchVibrato);
             }
 
             // Let the punch play before the grid goes away.
             KillCloseDelay();
-            _closeDelay = DOVirtual.DelayedCall(_motion.ButtonPunchDuration, CloseFlagWindow).SetUpdate(true).SetLink(gameObject);
+            _closeDelay = DOVirtual.DelayedCall(_settingsMotion.ButtonPunchDuration, CloseFlagWindow).SetUpdate(true).SetLink(gameObject);
         }
 
         // ---------------------------------------------------------------- name, done
