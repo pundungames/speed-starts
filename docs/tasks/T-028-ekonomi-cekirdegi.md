@@ -51,7 +51,8 @@ PDF ekonomisinin (GDD §6, §7, §14) eksik kalan çekirdeği. Bugün Adet Bilet
    oyun kapalıyken de akar. Yarış ortasında biterse yarış sürer (giriş kontrolü yalnız girişte; mevcut kapı zaten öyle — testle sabitle).
 3) **Mor Mücevher ödülü** `IRaceRewardResolver.Resolve(outcome)`: yalnız `AwardsPurpleGems` etkinliklerinde, tamamlanmış yarışta sıra
    → `GemRewardConfig.GetPurpleGems(rank)`; ödeme işlem id'si = yarış oturum id'si (aynı yarış iki kez ödemez); geçersiz/tamamlanmamış = 0.
-   Dönen değer UI için (kazanılan miktar). `RaceOutcome`'da oturum id'si yoksa Core sözleşmesine ekleme gerekiyorsa BLOCKED yaz.
+   Dönen değer UI için (kazanılan miktar). `RaceOutcome`'da oturum id'si yok: imza `Resolve(RaceOutcome outcome, string payoutId)`;
+   payoutId'yi RaceFlow her yarış başlangıcında bir kez üretir (T-029). Core sözleşmesi değişmez.
 4) **Dolu envanter:** Adet Bileti tavanında günlük hediye / reklam / Nakit ile edinim reddedilir (`EntryTicketService` üzerinde tek
    `TryGrant(source)` → Granted / Full); Nakit fiyatı config'te 0 = satılmıyor (PDF'te fiyat yok).
 5) **Uç durum regresyonu** (GDD §6.5 tablosu + 50 fiyat + çift işlem): 3 tavanı, 30 dk yenilenme, 3→2'de yeni 30 dk, 1 saat Süreli,
