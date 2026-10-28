@@ -1,0 +1,173 @@
+# TUZAKLAR
+
+**Nasıl kullanılır**
+1. Her agent ve süpervizör işe başlarken bu dosyayı okur (CLAUDE.md'den sonra, task dosyasından önce).
+2. Yeni bir tuzak öğrenildiği AN ilgili bölüme tek satır eklenir; tur sonu ya da checkpoint beklenmez.
+3. Biçim: `- [ortam] **<kısa başlık>** [etiket] - <ne olur> -> <ne yap>. (<ilk tarih>; <kaynak>)`; gerekirse altında tek komut. Kitten gelen maddelerde kaynak yok, yalnız tarih.
+4. `[hook]` = kitin hook'u ya da script'i zorluyor (dolanma yok; geçmek için kullanıcıya sor). `[hook-aday]` = en az iki kez düşüldü, hook'a taşınmalı.
+5. Aynı tuzağa ikinci kez düşülürse maddeye `[hook-aday]` eklenir ve süpervizöre bildirilir. Kullanıcı tercihi, ürün/denge kararı, sayı, hatırlatma BURAYA yazılmaz (onlar hafızada).
+
+> Bu dosya agent-kit'in tohumudur: aşağıdaki maddeler önceki projede (Unity 2022.3 LTS + CoplayDev "MCP for Unity" +
+> Claude Code + Windows + PowerShell 5.1) gerçekten yaşandı; tarih ilk görüldüğü gündür. Ortam etiketi senin projene
+> uymuyorsa maddeyi silme, "bu projede geçerli değil" diye işaretle. Projeye özgü tuzaklar en alttaki bölüme yazılır;
+> genel olan tuzak `install.ps1 -GeriTasi` ile kite geri taşınır.
+
+---
+
+## 1. Unity Editor ve test koşusu
+
+- [Unity 2022.3, Test Framework] **Test koşusu kullanıcının prefab'ını geri alır** [hook] - EditMode koşusu bitince Unity "Undo after editor test run" yapar, Prefab Mode Auto Save geri alınmış hali diske yazar; `isDirty=false`, commit'li ya da stage kapalı olmak korumaz (5 kez yaşandı) -> ana Editor'de commit'siz .prefab/.unity/.asset varken test koşma, kopyada koş; kullanıcının dosyasına dokunmadan önce yedek; koşudan hemen sonra `git status -- '*.prefab' '*.unity'`. (29.09.2026)
+- [Unity 2022.3 + MCP] **refresh kaydedilmemiş prefab/sahne işini siler** [hook] - force refresh asset'leri diskten yeniden alır, derleme isteği domain reload yapar; bellekteki kaydedilmemiş düzenleme uyarısız gider -> refresh'ten önce `PrefabStageUtility.GetCurrentPrefabStage()` + `stage.scene.isDirty` ve açık sahnelerin `isDirty`'si; biri doluysa derleme tetikleme; derlemeyi turun sonunda tek sefer yap. Hook commit'siz dosyayı görür, kaydedilmemiş belleği görmez. (16.09.2026)
+- [Unity 2022.3] **Auto Refresh durumu sabit değil** - aynı makinede bir gün kapalı, başka gün açık ölçüldü; açıkken kullanıcı Editor'e odaklanınca agent'ın yarım yazdığı .cs'ler derlenir -> her seferinde `EditorUtility.IsAutoRefreshEnabled()` (internal, reflection) ile ölç; "AutoRefresh" adlı metotları reflection'la toplu çağırma (Disallow/Allow sayaçtır). (02.10.2026)
+- [Unity + MCP] **Play açıkken refresh sahte hata üretir** - Play sırasında derleme domain reload yapar, sahte NRE/ArgumentNullException çıkar -> refresh'ten önce editör durumunda `is_playing` oku; açıksa önce prefab/sahne kirli mi bak, sonra Play'i durdur. (19.10.2026)
+- [Unity batchmode] **Kilit dosyası ≠ açık Editor (ve tersi)** - batchmode yarıda kesilince `Temp/UnityLockfile` kalır ve doğrulama "Editor açık" der; tersi de olur: kontrolle koşu arasında kullanıcı Unity'yi açar -> kilidi silmeden HEMEN önce süreç listesinde komut satırını proje yoluyla eşleştir; süreç varsa kilit gerçektir. (24.08.2026)
+- [Unity Hub, Windows] **"Derleme başarısız + 0 CS hatası" = Unity hiç açılmadı** - eksik kurulumda (PackageManager sunucu klasörü yok) batchmode derlemeye başlamadan çıkar -> ortam kontrol script'i; tam kurulumun yolunu kullan ya da Hub'dan Repair. (12.08.2026)
+- [Claude Code + Unity] **Agent bitiş hook'u batchmode açarsa Editor açılamaz** - SubagentStop derleme kontrolü Unity kapalıyken ~2 dk projeyi tutar, kullanıcı Hub'dan açamaz ve bunu agent'ın işi sanar -> Unity gerektiren agent'ı başlatmadan önce Editor açık + MCP bağlı mı bak; "Unity açılmıyor" denirse Unity.exe komut satırında `-batchmode -executeMethod` ara, bitmesini bekle. (09.10.2026)
+- [Unity + MCP] **Safe Mode MCP paketini başlatmaz** - açılışta derleme hatası varsa Editor Safe Mode sorusunda bekler, MCP instance sayısı 0; Safe Mode'da Ctrl+R sonradan düzeltilen dosyayı görmez -> `%LOCALAPPDATA%\Unity\Editor\Editor.log`'da `ChangeMode(safe_mode)` ve son `error CS` ara; düzelt, kullanıcıdan Safe Mode'dan çıkmasını iste. (16.10.2026)
+- [Unity EditMode] **AddComponent Awake/OnEnable çalıştırmaz** [hook-aday] - batchmode test koşucusunda kurulumu Awake'e bırakan bileşen testte hiç kurulmaz (üç görevde gerçek hata; ders üç agent'ın hafızasında ayrı ayrı birikti) -> idempotent `Initialize()` yaz, Awake/OnEnable/Initialize üçünden çağır. (08.2026)
+- [Unity EditMode] **Test assembly'si Editor-only** - üst seviye test-çifti MonoBehaviour `AddComponent` ile eklenemez, null döner -> test sınıfının içinde `private sealed class`. (05.10.2026)
+- [Unity] **Tek bozuk test dosyası tüm EditMode derlemesini kırar** - paylaşılan test assembly'si tek dosyada kırılır -> derlenmeyen test dosyası bırakma (blocked task'ta da). (12.08.2026)
+- [Unity, açık Editor] **Yarım partial sınıf derlemeyi kırar** - yan dosyalar eksikken CS0103 yağar -> ana dosyayı EN SON yaz. (16.10.2026)
+- [Unity] **Kendi config'ini Resources'tan okuyan servis testleri toplu kırar** - config verilmezse `Resources.Load(...) ?? CreateDefault()`; bayrak asset'i açılınca "bayrak kapalı" varsayan onlarca test kırmızı -> asset'i değiştirmeden önce tam suite baseline, kırmızı listeyi dosyaya yaz, sonra farkı "test izolasyonu" / "gerçek davranış" diye ayır; testte seam ile bayrağı açıkça ver. (29.09.2026)
+- [Unity] **Gerçek PlayerPrefs'e yazan test kullanıcı kaydını siler** [hook] - SetUp/TearDown'da koşulsuz `Delete()` ya da gerçek anahtara yazan sistem testi dev save'i götürür -> anahtar soneki ile ayrı kayıt ya da yedekle/geri yaz; hook test koşusundan önce PlayerPrefs yedeği alır. (01.09.2026)
+- [Unity, çoklu kopya] **Paralel test koşuları dalgalı kırmızı verir** - aynı kimlikli kopyalar ortak kayıt klasörünü paylaşınca kırmızılar yanlış alarm -> tam suite TEK BAŞINA; dalgalı kırmızıda önce paralel koşu var mıydı bak. (19.10.2026)
+
+## 2. Prefab / asset / serialize
+
+- [Unity] **Asset yaması sessizce geri döner** [hook-aday] - SerializedObject + SaveAssets ile yamalanan .asset ~1 dk sonra diskte (bir kez bellekte de) eski değere döndü; aynı gün 4 kez -> yaz -> aynı çağrıda `File.ReadAllText` ile diski bağımsız doğrula -> saniyeler içinde commit (grep guard) -> ~20 sn sonra tekrar bak. (10.09.2026)
+- [Unity] **SaveAssets tüm kirli nesneleri yazar** - bayat başka bir nesne commit'li değeri ezebilir -> her SaveAssets sonrası `git diff` ile yalnız beklenen satırlar. (10.09.2026)
+- [Unity] **Kaydedilmiş prefab'ta C# varsayılanı etkisiz** - prefab/sahne bir kez kaydedilince o anki C# default'u YAML'a açıkça yazılır; sonra yalnız C# default'u değiştirmek oyunda hiçbir şey değiştirmez ("0 hata" ≠ uygulandı) -> değeri asset'e yaz (SerializedObject), canlı değeri okuyarak doğrula. (09.09.2026)
+- [Unity] **Asset ile C# varsayılanı ayrışmasın** - ayrışırlarsa asset silinince oyun bambaşka davranır -> asset sayısını değiştirince C# default'unu da aynı değere çek. (01.09.2026)
+- [Unity] **Kod/katalog sayısı ≠ çalışma zamanı değeri** [hook-aday] - kabul edilen sayı katalog koduna yazılıp asset'e geçmemişti; başka sefer kod yedeği 90 iken asset 0'dı ve kullanıcıya yanlış soru soruldu -> bir config sayısını söylemeden/değiştirmeden önce ASSET'i oku; sevk edilen asset'i `Resources.Load` ile okuyup assert eden test. (02.09.2026)
+- [Unity] **Kaldırılan SerializeField adını yeniden kullanma** - prefab override'ları alan adıyla eşleşir; eski ad yeni alana bayat değer taşır -> yeni ad. (29.09.2026)
+- [Unity UI] **View alanı kodda var ≠ ekranda var** - kod metni üretiyor ama prefab'ta alan `fileID: 0`, hedef obje hiç yok -> oyuncu deneyimi iddiasından önce prefab/sahne YAML'ında bağı grep'le; agent raporundaki UI iddiası da bu kontrolden geçer. (28.09.2026)
+- [Unity] **Aynı prefab'ta iki bileşen, aynı adlı iki prefab** - prefab'ta iki aynı view bileşeni (biri ölü) ya da `Resources/` altında ikinci kopya; adla aramak ölü olanı verir, test yakalamaz -> canlı bileşeni dolu alanlarından tanı, kökten al; kaydettikten sonra doğru blokta mı grep'le; hangi dosyanın yüklendiğini önce kanıtla. (09.10.2026)
+- [Unity] **"Bozuk" görünen kök transform çocukları telafi ediyor olabilir** - ışık kökünün altında zemin ve volume vardı; kökün rotasyonunu sıfırlamak sahneyi dağıttı -> sıfırlamadan önce çocuklarına bak; yönü doğrudan hedef çocuğa yaz. (02.09.2026)
+- [Unity UI] **9-dilim kenarlığı sprite pikseliyle ölçülür** - yüksek çözünürlüklü sanatta kenarlık rect'ten büyükse dilimler her şeyi yutar, hiçbir şey görünmez -> `Image.pixelsPerUnitMultiplier`: kenarlık_px / çarpan ≈ hedef kalınlık. (02.09.2026)
+- [Unity UI] **Sprite'sız Image beyaz kutu çizer** - `sprite=null` görünmez değil -> opsiyonel Image'ları `SetActive(false)` ile başlat. (01.09.2026)
+- [Unity UI] **Görünürlük için `enabled` yetmez** - çocuk prefab'ta kapalı başlayabilir -> `gameObject.SetActive(true)` da. (07.09.2026)
+- [TextMeshPro] **Statik atlasta glif yok** - statik (`m_AtlasPopulationMode: 0`) font atlaslarında × – — gibi karakterler yoktu; telefonda kare kutu, test yeşil -> UI metni ASCII ("2x", "-"); yeni özel karakterden önce font asset'inde `m_Unicode: <kod>` grep'le; toplu metin değişikliğinde aramayı hedef dosyalarla sınırla. (20.10.2026)
+- [TextMeshPro, Türkçe sistem] **UpperCase i'yi İ yapar** - `FontStyles.UpperCase` "CLASSİC" üretir -> metni veride BÜYÜK harfle yaz. (22.10.2026)
+- [Unity] **RevertObjectOverride iç içe FBX'i koparır** - `LoadPrefabContents` içinde iç içe örneğin kemiklerine revert, sarmalayıcının çocuklarını sıfırlar; `SaveAsPrefabAsset` modelsiz prefab yazar, uyarı yok -> ölçümü ayrı önizleme sahnesinde yap; kaydettikten sonra renderer/Animator sayısını doğrula. (05.10.2026)
+- [Unity] **BakeMesh ölçek semantiği** - dünya koordinatı için `smr.BakeMesh(m, false)` + `Matrix4x4.TRS(pos, rot, Vector3.one)`; diğer birleşimler SMR ölçeği kadar yanlış -> önce `renderer.bounds` (`updateWhenOffscreen=true`) ile karşılaştır. (05.10.2026)
+- [Unity] **Sahnesiz CreatePrimitive/InstantiatePrefab aktif sahneyi kirletir** -> doğrudan önizleme sahnesine yarat. (05.10.2026)
+- [Unity] **Tek çağrıda çok PreviewRenderUtility render'ı bayat poz verir** - skinned mesh ilk render'daki pozda kalır -> çağrı başına tek render. (05.10.2026)
+
+## 3. Unity MCP (CoplayDev "MCP for Unity")
+
+- [CoplayDev MCP] **MCP belleği okur, diski değil** - hiyerarşi okuması canlı Editor durumudur; kullanıcı kaydetmeden kapatınca disk farklı kaldı, task yanlış sözleşmeyle yazıldı -> prefab/sahne iddiasını dosyadan doğrula (`grep '^  m_Name: '`, script guid); çelişirse DOSYA doğrudur; çocuk adı değil atanmış referans sınanır. (04.09.2026)
+- [CoplayDev MCP] **"Başarılı" ≠ diske yazıldı** - build settings sahne ekleme yalnız belleği günceller, ProjectSettings dosyası değişmez -> `File/Save Project` menüsü, sonra `git diff --name-only`; sahne/asset/ProjectSettings iddia eden her raporu böyle doğrula. (12.08.2026)
+- [CoplayDev MCP] **Bazı araçlar yalnız batch_execute ile** - menü ve ScriptableObject araçları istemcinin doğrudan listesinde olmayabilir; `manage_asset create` ScriptableObject alt sınıfını desteklemez -> `batch_execute({"tool": "<ad>", ...})`. (12.08.2026)
+- [CoplayDev MCP] **run_tests bayat assembly'de sahte yeşil** - Editor odakta değilken yazılan script'ler içe aktarılmaz -> önce force refresh + derleme + hazır bekle; kanıt test SAYISIDIR, artmadıysa koşu bayat. (12.08.2026)
+- [CoplayDev MCP] **Test sonucu kırmızıda 25'te kesilir** - `failures_capped: true`, `result: null`; tam sonuç Editor belleğinde -> `execute_code` ile paketin `TestJobManager.GetJob(jobId).Result.Results`'ını reflection ile oku, baseline ile fark al. (29.09.2026)
+- [CoplayDev MCP] **Doğrulama kopyaları ayrı instance olarak bağlanır** - hedef sabit değilken yazı kopyaya ya da başka projeye gider, "başarılı" yanıltır -> yazmadan önce instance listesini oku, ana projeyi `set_active_instance` ile sabitle; reload sürerken hazır olmayı bekle; sonra `git diff`. (02.09.2026)
+- [CoplayDev MCP] **MCP ile Play'de kare işlemez** - Editor odakta değilken `Time.frameCount` takılı kalır, sahte "çalışmıyor" bulgusu -> ölçümden önce `Application.runInBackground = true`, ayrı çağrıda frameCount arttı mı bak. (03.09.2026)
+- [CoplayDev MCP] **execute_code kısıtları** - CodeDom = C# 6 (yerel fonksiyon yok), `Object` belirsiz (`UnityEngine.Object`), `Activator` opsiyonel kurucu parametrelerini doldurmaz (`GetParameters()` + `DefaultValue`), `AssetDatabase.DeleteAsset` engelli (dosya sisteminden sil). (30.09.2026)
+- [Unity + MCP] **Play'e girmeden ölç: önizleme sahnesi** - gerçek prefab/bileşeni `EditorSceneManager.NewPreviewScene()` içinde kur, oku, `ClosePreviewScene`; açık sahne kirlenmez -> sonra isDirty + konsol. (30.09.2026)
+  `var p = EditorSceneManager.NewPreviewScene(); try { /* kur + oku */ } finally { EditorSceneManager.ClosePreviewScene(p); }`
+- [CoplayDev MCP] **Bağlantı kesintisi yazının başarısız olduğu anlamına gelmez** - tekrar deneme çift nesne üretir -> create hatasından sonra nesneleri yeniden say. (15.09.2026)
+- [CoplayDev MCP] **İnaktif ata altındaki nesne bulunmaz** - gameobject düzenleme aracı inaktif ebeveyn altını görmez -> prefab içeriğini headless düzenleyen aracı kullan; açık prefab stage ile karıştırma. (02.09.2026)
+- [Claude Code + MCP] **Agent tanımındaki MCP araç adları harf duyarlı** - `tools:` satırındaki sunucu adı makinedeki kayıttan harf farkıyla ayrılınca alt agent iki hafta hiç Unity aracı alamadı; tanımlar oturum başında önbelleğe alınır -> yeni oturumda ilk sahne işinden önce kısa yoklama agent'ı; iki yazımı da listele. (29.09.2026)
+- [Claude Code + MCP] **Araçlar alt agent'ta gelmiyorsa üst süreci yeniden başlat** - MCP yapılandırması doğruyken araçlar alt agent'a gelmedi -> Claude Code üst sürecini yeniden başlat. (12.10.2026)
+- [Claude Code] **SendMessage ile sürdürülen MCP agent'ı takılabilir** - 600 sn ilerlemeden durdu -> küçük prefab işini süpervizör `execute_code` ile yapar (`LoadPrefabContents` -> SerializedObject -> `SaveAsPrefabAsset` -> diskten grep). (09.10.2026)
+- [Unity 2022.3] **Resmi Unity agent plugin'i Unity 6+ ister** - 2022.3'te Editor tarafı bağlanmaz -> CoplayDev MCP'de kal. (15.09.2026)
+
+## 4. Doğrulama kopyaları, worktree, robocopy
+
+- [Unity + kopya] **Kopya kullanıcının kaydını ezer** [hook] - kopya aynı companyName/productName taşıyınca Editor PlayerPrefs'i (registry) ve persistentDataPath ORTAK; kopyadaki tam suite kullanıcının dev save'ini sildi -> kopyanın productName'ine ek (`kopya.ps1 -Senkron`, ekleyemezse durur); elle kurulan kopyada batchmode'dan önce doğrula. (21.10.2026)
+- [Unity + MCP] **Ana Editor'de test koşusu da kaydı siler** [hook] - ~900 testlik grup ilerleme anahtarını sildi -> koşudan önce yedek (hook otomatik `prefs-yedek.ps1 -Al`), sonra satır bazında karşılaştır (hash değil), fark varsa hemen geri yükle. (27.10.2026)
+  `powershell -File scripts/prefs-yedek.ps1 -Karsilastir`
+- [Unity] **Ana projede verify yok; kopya HEAD'i doğrular** - ana projenin Library kilidi tekil; head-only senkron commit'siz dosyaları HEAD haline döndürür -> agent'lar ana projede doğrulama koşmaz; önce worktree'de commit, sonra kopyada (`kopya.ps1 -Al -> -Senkron -HeadOnly -> -Dogrula -> -Birak`). (20.10.2026)
+- [Windows robocopy] **Kopyadan geri alma .cs'leri ezer** [hook] - robocopy farklı olanı her iki yönde kopyalar (`/XX` yalnız fazlalığı korur); senkrondan sonra worktree'de değişen .cs'ler eski haliyle ezildi -> önce `/L` liste, listede .cs varsa DUR; `/XO` + `/XF *.cs` ya da yalnız builder çıktısını tek tek. (23.10.2026)
+- [Unity batchmode] **Kullanıcı Editor'deyken prefab/sahne kurulumu kopyada** - tek seferlik builder'ı (repoya girmez) kopyada `-batchmode -nographics -executeMethod` ile koş; görsel kontrol `-nographics` OLMADAN RenderTexture -> PNG; üretilenleri `/L` listesiyle al (.cs.meta GUID'leri dahil); yeniden senkron (MIR) builder çıktısını siler. (22.10.2026)
+- [Windows + PowerShell/.NET] **.NET göreli yolu süreç CWD'sine çözer** - `Set-Location` sonrası `[IO.File]::WriteAllText('Assets\...')` dosyayı ANA klasöre yazdı -> .NET dosya API'lerinde, python ve robocopy argümanlarında HEP mutlak yol; ana klasörde beklenmedik değişiklik görürsen önce kendi komutundan şüphelen. (22.10.2026)
+- [Claude Code + git worktree] **Kilitli agent worktree'sini elle silme** - `git worktree remove` "locked (claude agent ...)" reddederken `Remove-Item \\?\...` kilidi tanımadan klasörün bir kısmını sildi -> "locked" olana dokunma (harness temizler); kilitsizi yalnız `git worktree remove`; merge'den önce `git branch --contains`. (08.10.2026)
+- [git worktree] **Worktree bayat tabandan başlayabilir** - beklenen dosyalar yoksa taban eskidir -> önce ana HEAD'e `git merge --ff-only`. (19.10.2026)
+- [git + Unity] **Kullanıcı aynı dosyayı commit'siz düzenliyorsa ff reddeder** -> scratchpad'de `git merge-file` (kullanıcı / HEAD / benim) -> çatışma 0 + yerel fileID'ler tam + kullanıcı satırı silinmemiş mi -> prefab stage kirli değilse kapat -> `git checkout -- <dosya>` -> `merge --ff-only` -> birleşik dosyayı yaz -> numstat kullanıcının eski farkıyla aynı mı -> refresh + konsol. (21.10.2026)
+
+## 5. Git ve paralel oturum
+
+- [git, paylaşılan checkout] **Bare commit başkasının stage'ini yutar** [hook] - paralel oturumun stage'li dosyaları ve silmeleri commit'e girdi (3 kez) -> her commit `git commit -F <mesaj> -- <yollar>`; commit'ten hemen önce `git diff --cached --name-only`; karışık dosyada kendi hunk'ını `git apply --cached`; index temiz değilse cherry-pick `-n` + `git commit -- <yollar>`. `git add -A` / `.` / `commit -a` hook'la engelli. (24.08.2026)
+- [Claude Code] **"Dosya okunduktan sonra değişti" = başkası yazdı** -> `git add`'leme, önce kimin yazdığına bak. (07.10.2026)
+- [Unity + git] **Sahne kaydı yabancı değişiklikleri de yazar** - Editor'deki başka işlerin bekleyen değişiklikleri aynı dosyaya girer -> kayıttan sonra `git diff` ile yalnız kendi hunk'ın. (24.08.2026)
+- [Claude Code, paralel oturum] **Yabancı değişiklik ve CS hatası başka oturumun olabilir** - kullanıcı başka cihazdan oturum açabilir; devir notu yalnız yazıldığı anı bilir -> tur başında `ListAgents`; "running" peer varsa `git status` + mtime ile dosyaları ayır, o yolları stage'leme; derleme kırıkken test/Play anlamsız. (04.09.2026)
+- [Claude Code, iki süpervizör] **İki süpervizör aynı dosyalara commit'siz yazar** -> `ListAgents` + `git -C <worktree> status`; SendMessage ile dosya paylaşımı; kendi worktree'ni onun commit'inin üstüne kur, doğrulamayı ayrı kopyada yap; merge sırası birlikte. (22.10.2026)
+- [agent-kit hook] **Commit komutunda 'main' kelimesi hook'a takılır** - `hook-guard-command` `git commit ... main` kalıbını main dalına commit sayar; mesaj dosyasının adı 'main' içerirse yanlış alarm verir -> mesaj dosyasına başka ad ver. (28.10.2026)
+
+## 6. PowerShell / Bash / Windows
+
+- [Windows + PowerShell] **PATH'te uzantısız boş `git` dosyası** - PowerShell uzantısız dosyayı da çalıştırılabilir sayar; sade `git` sessizce boş döner, git çıktısına dayanan koruma kapanır -> `$git = (Get-Command git.exe).Source; & $git ...`; her git tabanlı kontrol fail-closed. (11.08.2026)
+- [PowerShell 5.1] **Native argümanda çift tırnak argümanı böler** - here-string commit mesajındaki `"` "pathspec did not match" üretir -> çift tırnak kullanma ya da mesajı dosyadan ver. (26.08.2026)
+- [PowerShell 5.1] **`-Encoding utf8` BOM yazar** [hook-aday] - `git commit -F` mesajının başına görünmez U+FEFF girer -> `[IO.File]::WriteAllText($yol, $metin, (New-Object System.Text.UTF8Encoding($false)))`; sonra `git log --format=%s -1`. (16.10.2026)
+- [PowerShell 5.1] **pwsh yoksa 5.1 operatörleri** - `??`, `?:`, `?.`, `-AsHashtable` yok; native exe'de `2>&1` ErrorRecord üretir -> script'leri 5.1'e göre yaz, pwsh varsa ona geç. (11.08.2026)
+- [Windows] **Büyük/küçük harf ayrımı yok: `Logs/` = `logs/`** - Unity'nin `Logs/` klasörüyle pipeline log'ları karışır -> pipeline log'ları ayrı adlı klasöre (`pipeline-logs/`). (11.08.2026)
+- [Claude Code Bash aracı] **150+ satırlık heredoc kırılır** [hook] - "unexpected EOF while looking for matching quote", komutun hiçbir parçası çalışmaz, mesaj yanıltıcı -> 100+ satırlık dosyayı Write ile yaz; literal çok satırlı değişiklik için scratchpad'de tam-1-eşleşmeli değiştirme betiği. (04.09.2026)
+- [Claude Code Bash aracı] **Heredoc'ta python `\\n` kaçışı yutulur** -> python script'ini Write ile `.py` dosyasına yaz, `python -I <dosya>`. (13.10.2026)
+- [Claude Code, arka plan komutu] **Etkileşimli python diski doldurur** [hook-aday] - argümansız `python` stdin'siz sonsuz readline hatası basar, task `.output` dosyaları GB'larca şişip diski doldurdu; `python3 - <<EOF` süreçleri stdin bekleyerek takıldı -> python'u yalnız `python -c` / script yoluyla; disk/IO hatasında oturumun `tasks\` klasöründeki en büyük `.output`'lara bak; MCP sunucusunun python süreçlerine dokunma. (15.10.2026)
+- [Git Bash] **CRLF tespiti** - `grep $'\r'` güvenilmez -> `tr -cd '\r' < dosya | wc -c`. (02.10.2026)
+
+## 7. Claude Code: izin sınıflandırıcısı ve hook'lar
+
+- [Claude Code auto-mode] **Hook kesince başka araçla dolanma** [hook] - korunan dosyayı hook kesince PowerShell ile düzenlemek "bypass" diye reddedildi, sonra ilgili dosyayı okumak bile reddedildi -> önce kullanıcıya söyle; açık "sen değiştir" gelirse tek satırı birebir eşleşmeyle (sayı 1 değilse ABORT) BOM/CRLF koruyarak değiştir + `git diff`. Reddedilen sonucu başka araç/alt agent ile deneme. (28.09.2026)
+- [Claude Code auto-mode] **Genel izin sınıflandırıcıya yetmez** - `execute_code` ile prefab kaydı, prefab YAML Edit'i, hatta yamalı kopyayı scratchpad'e yazan script "Modify Shared Resources" diye reddedildi; kullanıcı o oturumda "yap" deyince geçti -> prefab/sahne kaydı gerekecekse işe başlarken oturum içi açık onay iste; ret anında yarım düzenlemeyi geri al. (29.09.2026)
+
+## 8. Analytics / SDK
+
+- [GameAnalytics] **Panelde customFields görünmez** - yalnız olay adı sayılır; ham veri/export organizasyonda kapalı olabilir; custom dimension design event'e eklenmez -> analize gereken boyut (gün, en iyi gün, id, kademe) design event ID hiyerarşisine ya da progression/resource olayına; yüksek kardinalite (kullanıcı/kariyer id, zaman) ASLA ID'ye girmez. (28.09.2026)
+- [GameAnalytics] **customFields bool alanı düşürür** -> değer dönüşüm katmanı + çapraz tutarlılık testi. (16.09.2026)
+- [Analytics] **Whitelist'li normalizer yeni değeri sessizce düşürür** -> yeni alan değeri gönderirken normalizer'ı ara ve ekle. (13.10.2026)
+- [Google Mobile Ads Unity v11.5 + UMP] **`RaiseAdEventsOnUnityMainThread` Initialize'dan önce açılırsa UMP callback gelmez** - callback'ler executor kuyruğundan geçer, executor'ı yalnız `MobileAds.Initialize` kurar; kayıtlı onayı olmayan cihazda reklam SDK'sı hiç başlamaz (önceki onay hatayı gizler; EditMode yakalamaz) -> bayrağı Initialize'dan hemen önce aç; cihazda iki sinyal: logcat'te Initialize satırı + onay olayı; eklenti davranışını DLL IL'inden oku (`GetMethodBody().GetILAsByteArray()` + `Module.ResolveMethod`). (09.10.2026)
+- [RevenueCat Unity, Android] **İki yol iki ayrı işlem kimliği** - müşteri bilgisi dinleyicisindeki `transactionIdentifier` ile satın alma callback'indeki `TransactionIdentifier` farklı; aynı kimliği varsayan defter çift teslim yaptı -> callback kimliğini müşteri bilgisindeki aynı ürünün ±120 sn içindeki en yakın işlemine eşle; cihazda bakiyeyi önce/sonra karşılaştır, teslim olayını logda say. (09.10.2026)
+- [Unity Android] **logcat'te Debug.Log ~1000 karakterde kesilir** -> uzun JSON için alan bazlı log ya da `grep -o`. (09.10.2026)
+- [RevenueCat panel] **Sandbox görünümü gerçek alımı göstermez** - liste yalnız "Test:" siparişleriyse panel sandbox'tadır -> görünüm anahtarını değiştir. (27.10.2026)
+- [AppsFlyer Purchase Connector] **Sandbox bayrağı mağaza build'inde kalırsa gelir sessizce kaybolur** - sideload APK + License Tester alımı Connector'da doğrulanmaz (yayıncı) -> her mağaza build'inden önce sandbox kapalı mı bak. (19.10.2026)
+- [Android] **Güç tasarrufu yerel bildirim alarmını erteler** - `dumpsys alarm` battery saver altında çok uzun erteleme -> cihaz testinde güç tasarrufunu kapat; gün/saat testinde saati ileri alma, config'te süreyi düşür. (23.10.2026)
+
+## 9. Android build ve cihaz
+
+- [EDM4U] **"Delete Resolved Libraries" gradle bloklarını siler** - dosya bulamasa bile `mainTemplate.gradle` / `settingsTemplate.gradle` içindeki Android Resolver bloklarını söker; sağlıklı görünen APK açılışta `NoClassDefFoundError` ile ölür -> APK'yı zip aç: tek ve ~0,4 MB'lık `classes.dex` = Java bağımlılıkları yok (string tablosunda `androidx/` ara); çözüm Force Resolve (otomatik çözüm kapalıysa kendiliğinden gelmez); EDM4U ile uğraşırken `git add -A` yapma, önce `git diff -- Assets/Plugins/Android/*.gradle`. (15.09.2026)
+- [Android] **Release build'de `run-as` yok** - PlayerPrefs adb ile düzenlenemez -> dev build ya da oyun içi yol. (09.10.2026)
+- [Unity Android] **adb PATH'te değil, Unity'nin SDK'sında** - `<Unity kurulumu>\Editor\Data\PlaybackEngines\AndroidPlayer\SDK\platform-tools\adb.exe`; ekran görüntüsü `adb exec-out screencap -p > <scratchpad>/x.png`. (09.10.2026)
+- [Google Play Console] **Satın alma SEÇENEĞİ kimliği alt çizgi almaz** -> tire kullan. (26.10.2026)
+
+## 10. C# / Unity API (asmdef, DOTween, EditMode, yaşam döngüsü)
+
+- [C# + Unity] **`Object` / `Random` / `Debug` belirsizliği** [hook-aday] - `using System;` + `using UnityEngine;` olan dosyada niteliksiz ad CS0104 (dört agent + süpervizör bağımsızca düştü) -> `UnityEngine.Object`, `System.Random`, `UnityEngine.Debug` tam nitele. (08.2026)
+- [Unity test] **Fake varsayılanını "gerçek config'i kopyala" diye seçme** - testin başlangıç durumuyla çatışır, test sessizce yanlış yolu ölçer -> test double varsayılanını testin niyetine göre seç. (08.2026)
+- [Unity test] **Testi geçirmek için assert gevşetme** - sahte geçen güvenlik testi hiçbir şey kanıtlamadı -> önce doğru davranışa karar ver. (08.2026)
+- [DOTween + asmdef] **UI kısayolları asmdef'ten görünmez** - `DOFade` gibi UI/TMP kısayolları asmdef'siz modül dosyasında (Assembly-CSharp); asmdef'li assembly Assembly-CSharp'ı göremez, CS1929 -> `DOTween.To(() => cg.alpha, v => cg.alpha = v, hedef, sure)`. (14.09.2026)
+- [Unity] **Instantiate edilen objenin instance ID'si negatif** [hook-aday] - prefab asset'i pozitif, sahnedeki kopya negatif; `-1 = yok` / `>= 0 = var` sentineli gerçek hedefleri yok saydı, iki özellik oyunda hiç çalışmadı, testler pozitif sahte kimlikle yeşildi -> varlık için ayrı bool ya da `int?`; sahte kimliklere en az bir NEGATİF değer; incelemede `Id\s*(>=|<)\s*0` grep'i. (05.10.2026)
+- [Unity] **`enabled=false` bileşende OnEnable/OnDisable kaydı boş kalır** - kompozisyon kökü bileşeni disable edip Tick'i merkezi saate devredince OnEnable'a bağlı statik defter gerçek oyunda hiç dolmadı, testler bileşeni disable etmediği için yeşildi -> ömür boyu kayıt `Awake`/`OnEnable`/`Initialize`, silme `OnDestroy`; testte de bileşeni `enabled=false` yaparak gerçek kalıbı kur. (02.09.2026)
+- [Unity] **Tek seferlik bind Awake sırasına takılır** - kurulumda bir kez çağrılan bind, bağımlılık hazır değilse sessizce döner ve olay sıfır aboneyle kalır -> hazır olana kadar tekrar dene, referansı tut, yeni oturumda yeniden bağla; abone sayısını reflection'la okumak kök sebebi gösterir. (03.09.2026)
+- [Unity] **Simülasyon saatine bağlı sunum kodu donar** - saat yalnız oyun durumu "aktif" iken dağıtım yaparsa wave sonu sunumu hiç ilerlemez -> sunumu gerçek zamanlı Update'ten sür. (03.09.2026)
+- [C#] **Boru hattında yanlış dala yama** - olay türe göre ayrı metotlara dağıtılıyor, her birinde ayrı istek; parametre yalnız birine eklendi, özellik üç tur düzelmedi -> olayın hangi dalda aktığını doğrula, `grep -c` ile çağrı noktalarını say, hepsine bak; çeviri için "olayda ne varsa isteğe geçiyor mu" testi. (02.09.2026)
+- [Unity, nesne havuzu] **Havuzdan çıkan nesnede OnEnable dönüşten önce koşar** - havuz nesneyi kendi içinde aktive eder, alanları sıfırlayan OnEnable yapılandırmadan önce koşar -> yapılandırmayı spawn dönüşünden sonra yap. (02.09.2026)
+- [Unity Input] **Global Input UI dokunuşunu da okur** - elle kontrol girdisi global Input'tan okununca UI dokunuşları oyuna geçer -> UI dokunuşunu filtrele. (16.10.2026)
+- [Unity .NET 4.x] **Default interface method yok** -> yan arayüz + cast + varsayılan davranış. (28.09.2026)
+- [C# + asmdef] **XML doc `<see cref>` asmdef sınırında CS1574** -> `<c>Tam.Ad</c>`. (10.09.2026)
+- [dotnet CLI] **dotnet build yeni dosyayı sessizce atlayabilir** - `.csproj`'da `<Compile Include>` yoksa "0 hata" yanıltıcı -> dosyanın derlemede olduğunu doğrula. (10.09.2026)
+- [Unity] **Public metoda Unity mesaj adı verme** - `Reset` / `Awake` / `Update` Unity'nin özel mesajıyla çakışır -> farklı ad. (10.09.2026)
+- [Unity UI] **Selectable ColorTint CanvasRenderer'ı boyar** - `Image.color` ile çarpılır -> `Image.color`'a yazma; `transition=None` + `targetGraphic.CrossFadeColor`. (29.09.2026)
+- [DOTween, EditMode] **DOTween.Kill no-op** - `DOTween.Init` `Application.isPlaying` ister -> testte reflection ile `initialized=true`. (10.09.2026)
+
+## 11. Süreç ve doğrulama disiplini
+
+- [pipeline] **Tur başı rapora/commit mesajına güvenme** - "düzeltme turu" commit'i doğru teşhisi yazmış ama tek satır koda dokunmamıştı -> tur başı doğrulama + `git show --stat`; kırık test teşhisini task dosyasına yaz. (12.08.2026)
+- [pipeline] **Agent'ın "testler etkilenmez" iddiası kanıt değil** - denge sayısı değişti, "marjlar geniş" denen üç test kırmızıydı (davranış flip'i) -> denge değişen turda tam suite; kırılanları sabit-sayı drift'i / davranış flip'i diye ayır, assert gevşetme. (08.09.2026)
+- [pipeline] **Açık NEEDS_WIRING = özellik oyunda yok** [hook] - seam'i doğrudan çağıran testler yeşil, özellik kompozisyon köküne bağlanmadığı için oyunda hiç çalışmadı -> açık WIRING/SCENE varken tur kapanmaz (`tur-sonu.ps1` çıkış 1); bağlantı satırını gözünle gör. (04.09.2026)
+- [pipeline] **Yeşil suite ≠ oyunda çalışıyor** - tam suite yeşilken değişiklik oyunda hiçbir şey yapmadı -> görsel/oynanış etkili değişiklikte gerçek prefab/config ile sayıyla ölç (önizleme sahnesi; Play yalnız kullanıcı izniyle); sayıyı değiştirip "düzeldi" deme. (02.09.2026)
+- [Unity batchmode] **EditMode oyun içi hatayı yakalamaz: gerçek Play kopyada** - kullanıcının Editor'üne dokunmadan, ayrı kimlikli kopyada batchmode Play taraması koş (izole PlayerPrefs; ham log'u commit'leme). (14.10.2026)
+- [Unity render] **Performans için görünümü kesmek kazanç değildir** - shader uniform'unu 0 yapmak koşulsuz hesaplanan terimi sıfırla çarpar, maliyet düşmez -> görsel bir şeyi kapatmadan önce maliyetin düştüğünü göster (variant/keyword, draw call, gölge geçişi, instance sayısı). (19.10.2026)
+- [Unity fizik] **Hızlandırmada fizik adımı katlanır** - `timeScale` artıp `fixedDeltaTime` ölçeklenmezse 3x'te fizik adımı 3 kat -> hızlandırmalı modda fizik maliyetini buna göre ölç. (20.10.2026)
+- [pipeline] **Kullanıcının Downloads'a bıraktığı brif oturum değişince kaybolur** - devir notu yalnız repoda olanı bilir; bir brif hiç uygulanmadı -> brif verildiği tur `docs/` altına kopyala, devir notuna "uygulandı / uygulanmadı"; oturum başında son günlerin indirmelerini `docs/` ile karşılaştır. (02.10.2026)
+
+---
+
+## 12. Bu projeye özgü
+
+(Proje adı, sınıf adı, yol içeren tuzaklar buraya. Biçim aynı; kaynak sütunu dolu.)
+
+- [speed-starts, git] **main ortak, CLAUDE.md Malik'in** [hook] - Malik CLAUDE.md'yi sık baştan yazıyor (28.10'da 211 satır); `.claude/settings.json` commit'lenirse hook'lar ve push yasağı onun Claude oturumuna da gider -> bizim kurallar `docs/CALISMA-KURALLARI.md` (CLAUDE.local.md'deki `@` import ile yüklenir); `.claude/*`, `CLAUDE.local.md`, `pipeline-logs/` yalnız `.git/info/exclude`'da. `install.ps1 -Fark`'taki "CLAUDE.md#KURALLAR isaret-yok" bilerek. (28.10.2026; kit kurulumu)
+- [speed-starts, Unity Hub] **2022.3.62f2 klasörü eksik kurulum** - `C:\Program Files\Unity\Hub\Editor\2022.3.62f2` altında PackageManager\Server yok; batchmode derlemeye başlamadan çıkar -> batchmode/doğrulama `2022.3.62f2-x86_64` kurulumunu kullanır (`scripts/unity-verify.ps1` seçer). (28.10.2026; kurulum taraması)
+- [speed-starts, asmdef] **Mekanik kodu Assembly-CSharp'ta** - Malik/Serhat kodu asmdef'siz; asmdef'li bir assembly (bizim kod ya da test) Assembly-CSharp'a referans veremez -> mekaniğe dokunan bizim kod da asmdef'siz kalır; test yerleşimi ilk test işinde denenip buraya yazılır. (28.10.2026; kurulum)
+- [speed-starts, Claude Code] **Oturum ortasında kurulan eklenti ve MCP araçları gelmez** - pano (`local` kapsam) ve UnityMCP (`claude mcp list`: bağlı) oturum açılırken yoksa araç listesine girmez; hook'lar ise settings.json yazılınca hemen devreye girdi -> pano/Unity araçları için oturumu yeniden aç. (28.10.2026; kit kurulumu)
