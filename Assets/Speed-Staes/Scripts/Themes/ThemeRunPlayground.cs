@@ -23,10 +23,15 @@ namespace SpeedStars.Themes
         public bool demoRunning=true;
         string[] names={"STANDART SEHIR","MISIR","ROMA / BIZANS","DENIZ / KORSAN","GOKYUZU ADALARI"};
         int demoLeg,heldLeg=-1;double nextTap,releaseAt;
+        int appliedTheme=-1;
+        bool appliedDemoRunning;
+        void SyncDemoMode(){appliedDemoRunning=demoRunning;if(input){input.enabled=!demoRunning;input.Clear();for(int leg=0;leg<2;leg++)input.Inject(leg,false,Time.timeAsDouble);}heldLeg=-1;demoLeg=0;nextTap=Time.timeAsDouble+.2;}
         GUIStyle title,label,small;Texture2D pixel;
-        void Start(){Application.runInBackground=true;if(wardrobe){wardrobe.handleInput=false;wardrobe.showControls=false;}SelectTheme(activeTheme);if(demoRunning){input.enabled=false;input.Clear();demoLeg=0;nextTap=Time.timeAsDouble+.2;}}
+        void Start(){Application.runInBackground=true;if(wardrobe){wardrobe.handleInput=false;wardrobe.showControls=false;}SelectTheme(activeTheme);SyncDemoMode();}
         void Update()
         {
+            if(activeTheme!=appliedTheme)SelectTheme(activeTheme);
+            if(demoRunning!=appliedDemoRunning)SyncDemoMode();
 #if ENABLE_INPUT_SYSTEM
             var k=Keyboard.current;if(k!=null){if(k.gKey.wasPressedThisFrame)NextTheme();if(k.cKey.wasPressedThisFrame&&wardrobe)wardrobe.NextSet();if(k.rKey.wasPressedThisFrame)ResetRun();if(k.tKey.wasPressedThisFrame)ToggleDemo();if(k.hKey.wasPressedThisFrame)showHelp=!showHelp;if(k.digit0Key.wasPressedThisFrame&&wardrobe)wardrobe.SelectSet(0);for(int i=0;i<9;i++)if(k[(Key)((int)Key.Digit1+i)].wasPressedThisFrame&&wardrobe)wardrobe.SelectSet(i+1);}
 #else
@@ -38,13 +43,13 @@ namespace SpeedStars.Themes
             double now=Time.timeAsDouble;
             for(int n=0;n<512;n++){
                 if(heldLeg>=0){if(releaseAt>now)break;input.Inject(heldLeg,false,releaseAt);heldLeg=-1;}
-                else {if(nextTap>now)break;heldLeg=demoLeg;demoLeg=1-demoLeg;input.Inject(heldLeg,true,nextTap);releaseAt=nextTap+.10;nextTap+=.24;}
+                else {if(nextTap>now)break;heldLeg=demoLeg;demoLeg=1-demoLeg;input.Inject(heldLeg,true,nextTap);releaseAt=nextTap+.10;nextTap+=.32;}
             }
         }
         public void NextTheme(){if(ThemeCount>0)SelectTheme((activeTheme+1)%ThemeCount);}
         public void SelectTheme(int index)
         {
-            int count=ThemeCount;if(count==0)return;activeTheme=(index%count+count)%count;
+            int count=ThemeCount;if(count==0)return;activeTheme=(index%count+count)%count;appliedTheme=activeTheme;
             int themedIndex=activeTheme-(standardTheme?1:0);
             if(standardTheme)standardTheme.gameObject.SetActive(activeTheme==0);
             if(themes!=null)for(int i=0;i<themes.Length;i++)if(themes[i])themes[i].gameObject.SetActive(i==themedIndex);
@@ -61,8 +66,7 @@ namespace SpeedStars.Themes
         }
         public void ToggleDemo(){
             demoRunning=!demoRunning;
-            if(input){input.enabled=!demoRunning;input.Clear();for(int leg=0;leg<2;leg++)input.Inject(leg,false,Time.timeAsDouble);}
-            heldLeg=-1;demoLeg=0;nextTap=Time.timeAsDouble+.2;
+            SyncDemoMode();
         }
         public void ResetRun(){if(heldLeg>=0&&input)input.Inject(heldLeg,false,Time.timeAsDouble);heldLeg=-1;demoLeg=0;nextTap=Time.timeAsDouble+.2;if(race)race.ResetRace();else if(body)body.ResetRun();SelectTheme(activeTheme);SnapCamera();}
         public void SnapCamera(){if(!followCamera||!followCamera.target)return;var t=followCamera.target;followCamera.transform.position=t.position+t.forward*followCamera.leadAhead+t.right*followCamera.distance+Vector3.up*followCamera.height;followCamera.transform.rotation=Quaternion.LookRotation(-t.right,Vector3.up)*Quaternion.Euler(Mathf.Atan2(followCamera.height-followCamera.lookHeight,followCamera.distance)*Mathf.Rad2Deg,0,0);}

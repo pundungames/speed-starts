@@ -13,202 +13,159 @@ MonoBehaviour:
   m_Name: RomanComposition
   m_EditorClassIdentifier: 
   districts:
-  - name: Market Neighborhood
-    length: 58
+  - name: Via dei Mercanti - Living Roman Street
+    length: 69
     slots:
-    - role: Shop Cluster
-      asset: Roman Insula Shops
-      alternatives:
-      - Roman Insula Shops
-      - Striped Roman Market
-      - Ceramic Kiln Workshop
-      - Courtyard Roman Villa
+    - role: Ochre Corner House
+      asset: Art Ochre Arcade Insula
+      alternatives: []
       layer: 0
       distance: 7
-      x: -24.5
-      scale: 0.62
-      yaw: 270
-      focal: 0
-    - role: Shop Cluster
-      asset: Striped Roman Market
-      alternatives:
-      - Roman Insula Shops
-      - Striped Roman Market
-      - Ceramic Kiln Workshop
-      - Courtyard Roman Villa
-      layer: 0
-      distance: 18
-      x: -24.5
-      scale: 0.79
-      yaw: 270
-      focal: 0
-    - role: Craft Cluster
-      asset: Ceramic Kiln Workshop
-      alternatives:
-      - Roman Insula Shops
-      - Striped Roman Market
-      - Ceramic Kiln Workshop
-      - Courtyard Roman Villa
-      layer: 0
-      distance: 30
-      x: -25
-      scale: 0.72
-      yaw: 270
-      focal: 0
-    - role: Residential Edge
-      asset: Courtyard Roman Villa
-      alternatives:
-      - Roman Insula Shops
-      - Striped Roman Market
-      - Ceramic Kiln Workshop
-      - Courtyard Roman Villa
-      layer: 0
-      distance: 51
       x: -26
-      scale: 0.72
+      scale: 0.68
       yaw: 270
       focal: 0
-    - role: Well Court
-      asset: Stone Well With Winch
+    - role: Wine Merchants
+      asset: Art Red Plaster Tabernae
       alternatives: []
-      layer: 1
-      distance: 40
-      x: -19
-      scale: 0.88
+      layer: 0
+      distance: 23
+      x: -27
+      scale: 0.76
       yaw: 270
       focal: 0
-    - role: Well Court
-      asset: Carved Marble Bench
+    - role: Baker Courtyard
+      asset: Art Baker Oven Courtyard
       alternatives: []
-      layer: 1
+      layer: 0
       distance: 43
-      x: -17
-      scale: 0.82
-      yaw: 270
-      focal: 0
-    - role: Market Goods
-      asset: Roman Produce Cart
-      alternatives: []
-      layer: 1
-      distance: 21
-      x: -17
-      scale: 0.82
-      yaw: 270
-      focal: 0
-    - role: Market Goods
-      asset: Roman Amphora
-      alternatives: []
-      layer: 1
-      distance: 14
-      x: -18
-      scale: 0.78
-      yaw: 270
-      focal: 0
-    - role: Market Goods
-      asset: Roman Amphora
-      alternatives: []
-      layer: 1
-      distance: 16
-      x: -18.4
-      scale: 0.62
-      yaw: 270
-      focal: 0
-    - role: Shop Entry
-      asset: Terracotta Garden Planter
-      alternatives: []
-      layer: 1
-      distance: 4
-      x: -17
+      x: -27
       scale: 0.85
       yaw: 270
       focal: 0
-    - role: Shop Entry
-      asset: Terracotta Garden Planter
+    - role: Merchant Loggia
+      asset: Art Terraced Merchant Loggia
       alternatives: []
-      layer: 1
-      distance: 10
-      x: -17
-      scale: 0.85
-      yaw: 270
-      focal: 0
-    - role: Well Court
-      asset: Excavated Column Fragments
-      alternatives: []
-      layer: 1
-      distance: 45
-      x: -22
+      layer: 0
+      distance: 61
+      x: -35
       scale: 0.66
       yaw: 270
       focal: 0
-    - role: Court Frame
-      asset: Olive Tree
+    - role: Wine Delivery
+      asset: Art Wine Amphora Stack
       alternatives: []
-      layer: 2
-      distance: 35
-      x: -22
-      scale: 0.74
+      layer: 1
+      distance: 13
+      x: -21
+      scale: 0.85
       yaw: 270
       focal: 0
-    - role: Residential Frame
-      asset: Cypress Tree
+    - role: Street Fruit Market
+      asset: Art Fruit Merchant Stall
       alternatives: []
-      layer: 2
-      distance: 55
-      x: -24
-      scale: 0.63
-      yaw: 270
-      focal: 0
-    - role: Town Backdrop
-      asset: Horizon Gabled Merchant Quarter
-      alternatives:
-      - Horizon Stepped Hill Town
-      - Horizon Long Roof Warehouses
-      - Horizon Citadel Ridge
-      - Horizon Abandoned Roofless Hall
-      - Horizon River Quarter Roofline
-      - Horizon Twin Slender Spires
-      - Horizon Garden Wall Pavilions
-      - Horizon Ancient Terraced Ruins
-      - Horizon Hillside Monastery
-      - Horizon Terraced Imperial Palace
-      - Horizon Round Tower City Gate
-      layer: 3
-      distance: 10
-      x: -64
-      scale: 0.9
-      yaw: 270
-      focal: 0
-    - role: Town Backdrop
-      asset: Horizon Stepped Hill Town
-      alternatives:
-      - Horizon Long Roof Warehouses
-      - Horizon Citadel Ridge
-      - Horizon Abandoned Roofless Hall
-      - Horizon River Quarter Roofline
-      - Horizon Twin Slender Spires
-      - Horizon Garden Wall Pavilions
-      - Horizon Ancient Terraced Ruins
-      - Horizon Hillside Monastery
-      - Horizon Terraced Imperial Palace
-      - Horizon Round Tower City Gate
-      - Horizon Gabled Merchant Quarter
-      layer: 3
-      distance: 37
-      x: -68
+      layer: 1
+      distance: 30
+      x: -21
       scale: 0.92
       yaw: 270
       focal: 0
+    - role: Loggia Patron
+      asset: Art Senator Marble Bust
+      alternatives: []
+      layer: 1
+      distance: 53
+      x: -23
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Shop Entrance
+      asset: Art Oleander Urn
+      alternatives: []
+      layer: 1
+      distance: 3
+      x: -21
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Shop Entrance
+      asset: Art Oleander Urn
+      alternatives: []
+      layer: 1
+      distance: 10
+      x: -21
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Communal Drinking Fountain
+      asset: Art Lion Wall Fountain
+      alternatives: []
+      layer: 1
+      distance: 36
+      x: -23
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Loggia Pine Frame
+      asset: Art Umbrella Pine
+      alternatives: []
+      layer: 2
+      distance: 53
+      x: -34
+      scale: 0.92
+      yaw: 270
+      focal: 0
+    - role: Street Garden
+      asset: Art Oleander Flower Bed
+      alternatives: []
+      layer: 2
+      distance: 18
+      x: -22
+      scale: 0.65
+      yaw: 270
+      focal: 0
+    - role: Layered Roofline
+      asset: Horizon Gabled Merchant Quarter
+      alternatives: []
+      layer: 3
+      distance: 10
+      x: -61
+      scale: 1.15
+      yaw: 270
+      focal: 0
+    - role: Layered Roofline
+      asset: Horizon Stepped Hill Town
+      alternatives: []
+      layer: 3
+      distance: 44
+      x: -72
+      scale: 1.2
+      yaw: 270
+      focal: 0
+    - role: Street Courtyard Boundary
+      asset: Art Ivy Garden Wall
+      alternatives: []
+      layer: 1
+      distance: 34
+      x: -39
+      scale: 1.2
+      yaw: 270
+      focal: 0
+    - role: Loggia Mosaic
+      asset: Art Mosaic Ground Medallion
+      alternatives: []
+      layer: 1
+      distance: 52
+      x: -25
+      scale: 0.9
+      yaw: 270
+      focal: 0
     courts:
-    - name: Market Forecourt
-      distance: 20
-      length: 33
-      x: -23
-      width: 19
-    - name: Well Court Opening
-      distance: 40
-      length: 13
-      x: -23
-      width: 18
+    - name: Merchant Street Stone Apron
+      distance: 32
+      length: 67
+      x: -26
+      width: 25
   - name: Arena and Processional Walk
     length: 66
     slots:
@@ -232,7 +189,9 @@ MonoBehaviour:
       focal: 1
     - role: Sculpture Terrace
       asset: Statue and Mosaic Plaza
-      alternatives: []
+      alternatives:
+      - Art Garden Peristyle
+      - Tiered Fountain Garden
       layer: 0
       distance: 56
       x: -27
@@ -285,7 +244,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Arena Tree Frame
-      asset: Cypress Tree
+      asset: Art Tall Cypress Pair
       alternatives: []
       layer: 2
       distance: 43
@@ -333,12 +292,165 @@ MonoBehaviour:
       scale: 0.85
       yaw: 270
       focal: 0
+    - role: Court Mosaic
+      asset: Art Mosaic Ground Medallion
+      alternatives: []
+      layer: 1
+      distance: 34.32
+      x: -24
+      scale: 1.25
+      yaw: 270
+      focal: 0
     courts:
     - name: Arena Arrival Terrace
       distance: 29
       length: 42
       x: -30
       width: 30
+  - name: Water Gardens and Peristyle
+    length: 67
+    slots:
+    - role: Focus Nymphaeum
+      asset: Art Marble Nymphaeum
+      alternatives: []
+      layer: 0
+      distance: 15
+      x: -31
+      scale: 0.95
+      yaw: 270
+      focal: 1
+    - role: Open Peristyle
+      asset: Art Garden Peristyle
+      alternatives: []
+      layer: 0
+      distance: 46
+      x: -31
+      scale: 0.95
+      yaw: 270
+      focal: 0
+    - role: Garden Statue
+      asset: Art Senator Marble Bust
+      alternatives: []
+      layer: 1
+      distance: 31
+      x: -23
+      scale: 0.95
+      yaw: 270
+      focal: 0
+    - role: Water Garden Flowers
+      asset: Art Oleander Urn
+      alternatives: []
+      layer: 1
+      distance: 5
+      x: -23
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Water Garden Flowers
+      asset: Art Oleander Urn
+      alternatives: []
+      layer: 1
+      distance: 25
+      x: -23
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Wayside Fountain
+      asset: Art Lion Wall Fountain
+      alternatives: []
+      layer: 1
+      distance: 59
+      x: -23
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Garden Seating
+      asset: Carved Marble Bench
+      alternatives: []
+      layer: 1
+      distance: 34
+      x: -20
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Garden Pine Canopy
+      asset: Art Umbrella Pine
+      alternatives: []
+      layer: 2
+      distance: 34
+      x: -40
+      scale: 1.1
+      yaw: 270
+      focal: 0
+    - role: Garden Border
+      asset: Art Oleander Flower Bed
+      alternatives: []
+      layer: 2
+      distance: 60
+      x: -27
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Water Garden Frame
+      asset: Art Tall Cypress Pair
+      alternatives: []
+      layer: 2
+      distance: 2
+      x: -34
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Garden Backdrop
+      asset: Horizon Garden Wall Pavilions
+      alternatives: []
+      layer: 3
+      distance: 12
+      x: -68
+      scale: 1.1
+      yaw: 270
+      focal: 0
+    - role: Garden Backdrop
+      asset: Horizon Hillside Monastery
+      alternatives: []
+      layer: 3
+      distance: 52
+      x: -80
+      scale: 1.15
+      yaw: 270
+      focal: 0
+    - role: Garden Boundary
+      asset: Art Ivy Garden Wall
+      alternatives: []
+      layer: 1
+      distance: 3
+      x: -40
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Garden Boundary
+      asset: Art Ivy Garden Wall
+      alternatives: []
+      layer: 1
+      distance: 61
+      x: -43
+      scale: 1.15
+      yaw: 270
+      focal: 0
+    - role: Court Mosaic
+      asset: Art Mosaic Ground Medallion
+      alternatives: []
+      layer: 1
+      distance: 34.84
+      x: -24
+      scale: 1.25
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Water Garden Walk
+      distance: 32
+      length: 62
+      x: -27
+      width: 29
   - name: Forum Square
     length: 64
     slots:
@@ -353,9 +465,7 @@ MonoBehaviour:
       focal: 0
     - role: Focus Forum Monument
       asset: Marble Forum Temple
-      alternatives:
-      - Turquoise Dome Basilica
-      - Circular Copper Roof Shrine
+      alternatives: []
       layer: 0
       distance: 31
       x: -43
@@ -374,7 +484,7 @@ MonoBehaviour:
     - role: Square Exit
       asset: Roman Insula Shops
       alternatives:
-      - Courtyard Roman Villa
+      - Art Terraced Merchant Loggia
       layer: 0
       distance: 57
       x: -27
@@ -382,7 +492,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Left Monument Frame
-      asset: Cypress Tree
+      asset: Art Tall Cypress Pair
       alternatives: []
       layer: 2
       distance: 16
@@ -391,7 +501,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Right Monument Frame
-      asset: Cypress Tree
+      asset: Art Tall Cypress Pair
       alternatives: []
       layer: 2
       distance: 47
@@ -445,7 +555,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Fountain Approach
-      asset: Terracotta Garden Planter
+      asset: Art Oleander Urn
       alternatives: []
       layer: 1
       distance: 20
@@ -454,7 +564,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Fountain Approach
-      asset: Terracotta Garden Planter
+      asset: Art Oleander Urn
       alternatives: []
       layer: 1
       distance: 44
@@ -502,6 +612,24 @@ MonoBehaviour:
       scale: 0.94
       yaw: 270
       focal: 0
+    - role: Rear Civic Gallery
+      asset: Art Civic Colonnade
+      alternatives: []
+      layer: 1
+      distance: 44.8
+      x: -48
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Court Mosaic
+      asset: Art Mosaic Ground Medallion
+      alternatives: []
+      layer: 1
+      distance: 33.28
+      x: -24
+      scale: 1.25
+      yaw: 270
+      focal: 0
     courts:
     - name: Forum Entrance Paving
       distance: 9
@@ -513,6 +641,143 @@ MonoBehaviour:
       length: 34
       x: -28
       width: 32
+  - name: Curia and Civic Procession
+    length: 73
+    slots:
+    - role: City Gate
+      asset: Art Imperial Gatehouse
+      alternatives: []
+      layer: 0
+      distance: 9
+      x: -42
+      scale: 0.75
+      yaw: 270
+      focal: 0
+    - role: Focus Senate Curia
+      asset: Art Senate Curia
+      alternatives: []
+      layer: 0
+      distance: 38
+      x: -37
+      scale: 0.76
+      yaw: 270
+      focal: 1
+    - role: Civic Sculpture Court
+      asset: Statue and Mosaic Plaza
+      alternatives:
+      - Art Garden Peristyle
+      - Tiered Fountain Garden
+      layer: 0
+      distance: 64
+      x: -28
+      scale: 0.65
+      yaw: 270
+      focal: 0
+    - role: Imperial Procession
+      asset: Art Bronze Horse Monument
+      alternatives: []
+      layer: 1
+      distance: 24
+      x: -25
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Senate Sculpture
+      asset: Art Senator Marble Bust
+      alternatives: []
+      layer: 1
+      distance: 52
+      x: -22
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Senate Standards
+      asset: Roman Red Standard
+      alternatives: []
+      layer: 1
+      distance: 32
+      x: -24
+      scale: 0.72
+      yaw: 270
+      focal: 0
+    - role: Senate Standards
+      asset: Roman Red Standard
+      alternatives: []
+      layer: 1
+      distance: 44
+      x: -24
+      scale: 0.72
+      yaw: 270
+      focal: 0
+    - role: Civic Seating
+      asset: Carved Marble Bench
+      alternatives: []
+      layer: 1
+      distance: 58
+      x: -19
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Gate Garden
+      asset: Art Tall Cypress Pair
+      alternatives: []
+      layer: 2
+      distance: 19
+      x: -31
+      scale: 0.85
+      yaw: 270
+      focal: 0
+    - role: Civic Pine
+      asset: Art Umbrella Pine
+      alternatives: []
+      layer: 2
+      distance: 58
+      x: -37
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Capitoline Backdrop
+      asset: Horizon Terraced Imperial Palace
+      alternatives: []
+      layer: 3
+      distance: 20
+      x: -75
+      scale: 1.1
+      yaw: 270
+      focal: 0
+    - role: Capitoline Backdrop
+      asset: Horizon Round Tower City Gate
+      alternatives: []
+      layer: 3
+      distance: 61
+      x: -85
+      scale: 1.05
+      yaw: 270
+      focal: 0
+    - role: Rear Civic Gallery
+      asset: Art Civic Colonnade
+      alternatives: []
+      layer: 1
+      distance: 51.1
+      x: -48
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Court Mosaic
+      asset: Art Mosaic Ground Medallion
+      alternatives: []
+      layer: 1
+      distance: 37.96
+      x: -24
+      scale: 1.25
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Civic Travertine Square
+      distance: 34
+      length: 65
+      x: -30
+      width: 35
   - name: Baths and Sculpture Gardens
     length: 62
     slots:
@@ -563,7 +828,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Baths Garden Frame
-      asset: Olive Tree
+      asset: Art Umbrella Pine
       alternatives: []
       layer: 2
       distance: 4
@@ -572,7 +837,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Baths Garden Frame
-      asset: Cypress Tree
+      asset: Art Tall Cypress Pair
       alternatives: []
       layer: 2
       distance: 41
@@ -590,7 +855,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Baths Garden
-      asset: Terracotta Garden Planter
+      asset: Art Oleander Urn
       alternatives: []
       layer: 1
       distance: 31
@@ -638,140 +903,39 @@ MonoBehaviour:
       scale: 0.85
       yaw: 270
       focal: 0
+    - role: Garden Boundary
+      asset: Art Ivy Garden Wall
+      alternatives: []
+      layer: 1
+      distance: 3
+      x: -40
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Garden Boundary
+      asset: Art Ivy Garden Wall
+      alternatives: []
+      layer: 1
+      distance: 56
+      x: -43
+      scale: 1.15
+      yaw: 270
+      focal: 0
+    - role: Court Mosaic
+      asset: Art Mosaic Ground Medallion
+      alternatives: []
+      layer: 1
+      distance: 32.239998
+      x: -24
+      scale: 1.25
+      yaw: 270
+      focal: 0
     courts:
     - name: Baths Garden Terrace
       distance: 24
       length: 36
       x: -28
       width: 28
-  - name: Villas and City Edge
-    length: 55
-    slots:
-    - role: Villa Garden
-      asset: Courtyard Roman Villa
-      alternatives:
-      - Roman Insula Shops
-      layer: 0
-      distance: 6
-      x: -25
-      scale: 0.76
-      yaw: 270
-      focal: 0
-    - role: Rural Craft Yard
-      asset: Ceramic Kiln Workshop
-      alternatives:
-      - Striped Roman Market
-      - Roman Insula Shops
-      layer: 0
-      distance: 21
-      x: -26
-      scale: 0.74
-      yaw: 270
-      focal: 0
-    - role: Roadside Garden
-      asset: Tiered Fountain Garden
-      alternatives:
-      - Courtyard Roman Villa
-      - Statue and Mosaic Plaza
-      layer: 0
-      distance: 43
-      x: -29
-      scale: 0.7
-      yaw: 270
-      focal: 0
-    - role: Garden Frame
-      asset: Olive Tree
-      alternatives: []
-      layer: 2
-      distance: 15
-      x: -21
-      scale: 0.82
-      yaw: 270
-      focal: 0
-    - role: Garden Frame
-      asset: Olive Tree
-      alternatives: []
-      layer: 2
-      distance: 50
-      x: -25
-      scale: 0.78
-      yaw: 270
-      focal: 0
-    - role: Workshop Deliveries
-      asset: Roman Produce Cart
-      alternatives: []
-      layer: 1
-      distance: 28
-      x: -18
-      scale: 0.9
-      yaw: 270
-      focal: 0
-    - role: Roadside Water
-      asset: Stone Well With Winch
-      alternatives: []
-      layer: 1
-      distance: 37
-      x: -18
-      scale: 0.9
-      yaw: 270
-      focal: 0
-    - role: Villa Entry
-      asset: Terracotta Garden Planter
-      alternatives: []
-      layer: 1
-      distance: 2
-      x: -17
-      scale: 0.9
-      yaw: 270
-      focal: 0
-    - role: Villa Entry
-      asset: Terracotta Garden Planter
-      alternatives: []
-      layer: 1
-      distance: 10
-      x: -17
-      scale: 0.9
-      yaw: 270
-      focal: 0
-    - role: Workshop Goods
-      asset: Roman Amphora
-      alternatives: []
-      layer: 1
-      distance: 24
-      x: -19
-      scale: 0.8
-      yaw: 270
-      focal: 0
-    - role: Workshop Goods
-      asset: Roman Amphora
-      alternatives: []
-      layer: 1
-      distance: 25.5
-      x: -19.2
-      scale: 0.65
-      yaw: 270
-      focal: 0
-    - role: Edge Farmland
-      asset: Countryside Terraced Vineyard
-      alternatives:
-      - Countryside Fenced Farmstead
-      layer: 4
-      distance: 30
-      x: -54
-      scale: 0.9
-      yaw: 270
-      focal: 0
-    courts:
-    - name: Villa Garden Apron
-      distance: 10
-      length: 19
-      x: -23
-      width: 20
-    - name: Workshop Yard
-      distance: 28
-      length: 16
-      x: -24
-      width: 22
   - name: Basilica and Bell Courtyard
     length: 70
     slots:
@@ -812,7 +976,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Basilica Frame
-      asset: Cypress Tree
+      asset: Art Tall Cypress Pair
       alternatives: []
       layer: 2
       distance: 10
@@ -821,7 +985,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Basilica Frame
-      asset: Cypress Tree
+      asset: Art Tall Cypress Pair
       alternatives: []
       layer: 2
       distance: 41
@@ -830,7 +994,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Belfry Garden
-      asset: Olive Tree
+      asset: Art Umbrella Pine
       alternatives: []
       layer: 2
       distance: 66
@@ -848,7 +1012,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Belfry Entry
-      asset: Terracotta Garden Planter
+      asset: Art Oleander Urn
       alternatives: []
       layer: 1
       distance: 52
@@ -896,6 +1060,15 @@ MonoBehaviour:
       scale: 0.9
       yaw: 270
       focal: 0
+    - role: Court Mosaic
+      asset: Art Mosaic Ground Medallion
+      alternatives: []
+      layer: 1
+      distance: 36.399998
+      x: -24
+      scale: 1.25
+      yaw: 270
+      focal: 0
     courts:
     - name: Basilica Forecourt
       distance: 26
@@ -907,116 +1080,236 @@ MonoBehaviour:
       length: 17
       x: -27
       width: 24
-  - name: Pasture and Village
-    length: 65
+  - name: Olive Estate and Vineyard
+    length: 75
     slots:
-    - role: Village Home
-      asset: Courtyard Roman Villa
+    - role: Olive Estate
+      asset: Art Olive Press Estate
       alternatives:
-      - Ceramic Kiln Workshop
+      - Art Terraced Merchant Loggia
+      - Courtyard Roman Villa
       layer: 0
-      distance: 5
-      x: -27
-      scale: 0.7
+      distance: 17
+      x: -30
+      scale: 0.85
       yaw: 270
       focal: 0
-    - role: Farm Produce Stall
-      asset: Striped Roman Market
+    - role: Senator Estate
+      asset: Art Senator Garden Villa
       alternatives:
-      - Ceramic Kiln Workshop
+      - Art Terraced Merchant Loggia
+      - Courtyard Roman Villa
       layer: 0
-      distance: 57
-      x: -28
-      scale: 0.64
+      distance: 53
+      x: -35
+      scale: 0.78
       yaw: 270
       focal: 0
-    - role: Open Pasture View
-      asset: Countryside Shepherd Flock
-      alternatives:
-      - Countryside Open Olive Meadow
-      - Countryside Mountain Pasture
-      layer: 4
-      distance: 23
-      x: -46
-      scale: 0.94
-      yaw: 270
-      focal: 0
-    - role: Village Horizon
-      asset: Countryside Village Chapel
-      alternatives:
-      - Countryside Fenced Farmstead
-      - Countryside Terraced Vineyard
-      layer: 4
-      distance: 49
-      x: -65
-      scale: 0.76
-      yaw: 270
-      focal: 0
-    - role: Pasture Left Frame
-      asset: Olive Tree
-      alternatives: []
-      layer: 2
-      distance: 12
-      x: -24
-      scale: 0.8
-      yaw: 270
-      focal: 0
-    - role: Village Frame
-      asset: Olive Tree
-      alternatives: []
-      layer: 2
-      distance: 44
-      x: -25
-      scale: 0.72
-      yaw: 270
-      focal: 0
-    - role: Wayside Water
-      asset: Stone Well With Winch
+    - role: Estate Harvest
+      asset: Art Wine Amphora Stack
       alternatives: []
       layer: 1
-      distance: 34
-      x: -18
-      scale: 0.9
+      distance: 29
+      x: -23
+      scale: 1
       yaw: 270
       focal: 0
-    - role: Wayside Rest
-      asset: Carved Marble Bench
-      alternatives: []
-      layer: 1
-      distance: 37
-      x: -17
-      scale: 0.9
-      yaw: 270
-      focal: 0
-    - role: Farm Produce
+    - role: Harvest Deliveries
       asset: Roman Produce Cart
       alternatives: []
       layer: 1
-      distance: 53
-      x: -18
-      scale: 0.82
+      distance: 35
+      x: -24
+      scale: 1
       yaw: 270
       focal: 0
-    - role: Farm Produce
-      asset: Terracotta Garden Planter
+    - role: Country Road Marker
+      asset: Art Travertine Milestone
       alternatives: []
       layer: 1
-      distance: 60
-      x: -18
-      scale: 0.9
+      distance: 69
+      x: -20
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Estate Grove
+      asset: Art Old Olive Grove
+      alternatives: []
+      layer: 2
+      distance: 36
+      x: -43
+      scale: 1.25
+      yaw: 270
+      focal: 0
+    - role: Villa Gate
+      asset: Art Oleander Urn
+      alternatives: []
+      layer: 1
+      distance: 44
+      x: -25
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Villa Gate
+      asset: Art Oleander Urn
+      alternatives: []
+      layer: 1
+      distance: 62
+      x: -25
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Vineyard Landscape
+      asset: Countryside Terraced Vineyard
+      alternatives:
+      - Countryside Open Olive Meadow
+      layer: 4
+      distance: 21
+      x: -65
+      scale: 1.2
+      yaw: 270
+      focal: 0
+    - role: Estate Horizon
+      asset: Horizon Hillside Monastery
+      alternatives: []
+      layer: 3
+      distance: 56
+      x: -90
+      scale: 1.1
+      yaw: 270
+      focal: 0
+    - role: Garden Boundary
+      asset: Art Ivy Garden Wall
+      alternatives: []
+      layer: 1
+      distance: 3
+      x: -40
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Garden Boundary
+      asset: Art Ivy Garden Wall
+      alternatives: []
+      layer: 1
+      distance: 69
+      x: -43
+      scale: 1.15
+      yaw: 270
+      focal: 0
+    - role: Court Mosaic
+      asset: Art Mosaic Ground Medallion
+      alternatives: []
+      layer: 1
+      distance: 39
+      x: -24
+      scale: 1.25
       yaw: 270
       focal: 0
     courts:
-    - name: Village Entrance Apron
+    - name: Estate Forecourt
+      distance: 18
+      length: 31
+      x: -26
+      width: 24
+  - name: Ancient Sanctuary and Olive Grove
+    length: 76
+    slots:
+    - role: Focus Ancient Sanctuary
+      asset: Art Broken Sanctuary
+      alternatives: []
+      layer: 0
+      distance: 25
+      x: -34
+      scale: 0.95
+      yaw: 270
+      focal: 1
+    - role: Focus Round Mausoleum
+      asset: Art Round Brick Mausoleum
+      alternatives: []
+      layer: 0
+      distance: 59
+      x: -39
+      scale: 0.81
+      yaw: 270
+      focal: 1
+    - role: Ancient Road Marker
+      asset: Art Travertine Milestone
+      alternatives: []
+      layer: 1
       distance: 6
-      length: 15
-      x: -23
-      width: 18
-    - name: Wayside Well Apron
-      distance: 34
-      length: 12
-      x: -21
-      width: 16
+      x: -20
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Excavation Stones
+      asset: Excavated Column Fragments
+      alternatives: []
+      layer: 1
+      distance: 43
+      x: -28
+      scale: 1.1
+      yaw: 270
+      focal: 0
+    - role: Archaeological Finds
+      asset: Art Wine Amphora Stack
+      alternatives: []
+      layer: 1
+      distance: 69
+      x: -24
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Ancient Olive Grove
+      asset: Art Old Olive Grove
+      alternatives: []
+      layer: 2
+      distance: 9
+      x: -40
+      scale: 1.2
+      yaw: 270
+      focal: 0
+    - role: Sanctuary Canopy
+      asset: Art Umbrella Pine
+      alternatives: []
+      layer: 2
+      distance: 44
+      x: -44
+      scale: 1.2
+      yaw: 270
+      focal: 0
+    - role: Mausoleum Garden
+      asset: Art Oleander Flower Bed
+      alternatives: []
+      layer: 2
+      distance: 70
+      x: -29
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Archaeological Backdrop
+      asset: Horizon Ancient Terraced Ruins
+      alternatives: []
+      layer: 3
+      distance: 21
+      x: -72
+      scale: 1.25
+      yaw: 270
+      focal: 0
+    - role: Archaeological Backdrop
+      asset: Horizon Citadel Ridge
+      alternatives: []
+      layer: 3
+      distance: 60
+      x: -83
+      scale: 1.15
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Archaeological Entrance
+      distance: 13
+      length: 19
+      x: -24
+      width: 20
   - name: Shrine and Ancient Waterworks
     length: 67
     slots:
@@ -1057,7 +1350,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Shrine Offering
-      asset: Roman Amphora
+      asset: Art Wine Amphora Stack
       alternatives: []
       layer: 1
       distance: 6
@@ -1084,7 +1377,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Shrine Frame
-      asset: Olive Tree
+      asset: Art Umbrella Pine
       alternatives: []
       layer: 2
       distance: 31
@@ -1093,7 +1386,7 @@ MonoBehaviour:
       yaw: 270
       focal: 0
     - role: Waterworks Frame
-      asset: Cypress Tree
+      asset: Art Tall Cypress Pair
       alternatives: []
       layer: 2
       distance: 64
@@ -1147,4 +1440,270 @@ MonoBehaviour:
       length: 26
       x: -28
       width: 27
+  - name: Villas and City Edge
+    length: 55
+    slots:
+    - role: Villa Garden
+      asset: Courtyard Roman Villa
+      alternatives:
+      - Roman Insula Shops
+      layer: 0
+      distance: 6
+      x: -25
+      scale: 0.76
+      yaw: 270
+      focal: 0
+    - role: Rural Craft Yard
+      asset: Ceramic Kiln Workshop
+      alternatives:
+      - Art Baker Oven Courtyard
+      - Art Red Plaster Tabernae
+      layer: 0
+      distance: 21
+      x: -26
+      scale: 0.74
+      yaw: 270
+      focal: 0
+    - role: Roadside Garden
+      asset: Tiered Fountain Garden
+      alternatives:
+      - Courtyard Roman Villa
+      - Statue and Mosaic Plaza
+      layer: 0
+      distance: 43
+      x: -29
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Garden Frame
+      asset: Art Umbrella Pine
+      alternatives: []
+      layer: 2
+      distance: 15
+      x: -21
+      scale: 0.82
+      yaw: 270
+      focal: 0
+    - role: Garden Frame
+      asset: Art Umbrella Pine
+      alternatives: []
+      layer: 2
+      distance: 50
+      x: -25
+      scale: 0.78
+      yaw: 270
+      focal: 0
+    - role: Workshop Deliveries
+      asset: Roman Produce Cart
+      alternatives: []
+      layer: 1
+      distance: 28
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Roadside Water
+      asset: Stone Well With Winch
+      alternatives: []
+      layer: 1
+      distance: 37
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Villa Entry
+      asset: Art Oleander Urn
+      alternatives: []
+      layer: 1
+      distance: 2
+      x: -17
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Villa Entry
+      asset: Art Oleander Urn
+      alternatives: []
+      layer: 1
+      distance: 10
+      x: -17
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Workshop Goods
+      asset: Art Wine Amphora Stack
+      alternatives: []
+      layer: 1
+      distance: 24
+      x: -19
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Workshop Goods
+      asset: Art Wine Amphora Stack
+      alternatives: []
+      layer: 1
+      distance: 25.5
+      x: -19.2
+      scale: 0.65
+      yaw: 270
+      focal: 0
+    - role: Edge Farmland
+      asset: Countryside Terraced Vineyard
+      alternatives:
+      - Countryside Fenced Farmstead
+      layer: 4
+      distance: 30
+      x: -54
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Garden Boundary
+      asset: Art Ivy Garden Wall
+      alternatives: []
+      layer: 1
+      distance: 3
+      x: -40
+      scale: 1
+      yaw: 270
+      focal: 0
+    - role: Garden Boundary
+      asset: Art Ivy Garden Wall
+      alternatives: []
+      layer: 1
+      distance: 49
+      x: -43
+      scale: 1.15
+      yaw: 270
+      focal: 0
+    - role: Court Mosaic
+      asset: Art Mosaic Ground Medallion
+      alternatives: []
+      layer: 1
+      distance: 28.599998
+      x: -24
+      scale: 1.25
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Villa Garden Apron
+      distance: 10
+      length: 19
+      x: -23
+      width: 20
+    - name: Workshop Yard
+      distance: 28
+      length: 16
+      x: -24
+      width: 22
+  - name: Pasture and Village
+    length: 65
+    slots:
+    - role: Village Home
+      asset: Courtyard Roman Villa
+      alternatives:
+      - Art Olive Press Estate
+      - Art Senator Garden Villa
+      layer: 0
+      distance: 5
+      x: -27
+      scale: 0.7
+      yaw: 270
+      focal: 0
+    - role: Farm Produce Stall
+      asset: Striped Roman Market
+      alternatives:
+      - Ceramic Kiln Workshop
+      layer: 0
+      distance: 57
+      x: -28
+      scale: 0.64
+      yaw: 270
+      focal: 0
+    - role: Open Pasture View
+      asset: Countryside Shepherd Flock
+      alternatives:
+      - Countryside Open Olive Meadow
+      - Countryside Mountain Pasture
+      layer: 4
+      distance: 23
+      x: -46
+      scale: 0.94
+      yaw: 270
+      focal: 0
+    - role: Village Horizon
+      asset: Countryside Village Chapel
+      alternatives:
+      - Countryside Fenced Farmstead
+      - Countryside Terraced Vineyard
+      layer: 4
+      distance: 49
+      x: -65
+      scale: 0.76
+      yaw: 270
+      focal: 0
+    - role: Pasture Left Frame
+      asset: Art Umbrella Pine
+      alternatives: []
+      layer: 2
+      distance: 12
+      x: -24
+      scale: 0.8
+      yaw: 270
+      focal: 0
+    - role: Village Frame
+      asset: Art Umbrella Pine
+      alternatives: []
+      layer: 2
+      distance: 44
+      x: -25
+      scale: 0.72
+      yaw: 270
+      focal: 0
+    - role: Wayside Water
+      asset: Stone Well With Winch
+      alternatives: []
+      layer: 1
+      distance: 34
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Wayside Rest
+      asset: Carved Marble Bench
+      alternatives: []
+      layer: 1
+      distance: 37
+      x: -17
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    - role: Farm Produce
+      asset: Roman Produce Cart
+      alternatives: []
+      layer: 1
+      distance: 53
+      x: -18
+      scale: 0.82
+      yaw: 270
+      focal: 0
+    - role: Farm Produce
+      asset: Art Oleander Urn
+      alternatives: []
+      layer: 1
+      distance: 60
+      x: -18
+      scale: 0.9
+      yaw: 270
+      focal: 0
+    courts:
+    - name: Village Entrance Apron
+      distance: 6
+      length: 15
+      x: -23
+      width: 18
+    - name: Wayside Well Apron
+      distance: 34
+      length: 12
+      x: -21
+      width: 16
   lampSpacing: 11.81

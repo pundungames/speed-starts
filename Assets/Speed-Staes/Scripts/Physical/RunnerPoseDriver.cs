@@ -16,7 +16,9 @@ namespace SpeedStars.Physical
     ///      of the knee). Phases (see OnTapped / TickLegs / Target):
     ///        press        — that leg pushes: thigh back, knee opens straight (Push); the other leg reaches:
     ///                       its thigh stays forward, only the shin opens forward and the foot lands ahead
-    ///                       (Reach → Front);
+    ///                       (Reach → Front). A leg still going back (Push, Recover) finishes that and then
+    ///                       reaches instead of going to mid; a leg already coming forward (Mid) turns its way
+    ///                       to the front at the speed it has — never a snap (ReachOn);
     ///        after a push — the thigh stays back while the shin folds up (Recover), then the leg goes on its
     ///                       own to a mid angle (Mid) and home (Rest);
     ///        held         — the pushed leg goes on to the hold angles (Hold) and rises behind with the waist
@@ -127,6 +129,9 @@ namespace SpeedStars.Physical
             [HideInInspector] public float swingAnkle;  // ankle bend relative to the shin in the air (deg)
             [HideInInspector] public float swingW;      // 1 = ankle follows swingAnkle, 0 = foot pitch
             [HideInInspector] public float swingToe;    // toe bend in the air (deg, + = toes up)
+            [HideInInspector] public bool reachNext;    // the other key went down while this leg was going back: reach once back
+            [HideInInspector] public bool easeOut;      // this phase starts at the leg's own speed and slows into its target
+            [HideInInspector] public float thighRate;   // the thigh's angular speed last frame (deg/s, + = forward)
             public Vector3 RestBall => restAnkle + ballOffset;
             public double EndTime => phaseTime + duration;
             /// <summary>Push, recover, mid and reach run their time and hand over; the others wait.</summary>
@@ -409,6 +414,7 @@ namespace SpeedStars.Physical
         const float HeelBehindAnkle = 0.05f;   // heel contact point behind the ankle joint (m)
         const float ToesUpFree = 5f;           // foot this far toes up (deg) keeps its toes in line instead of flat
         const float MinPelvis = 0.1f;          // the pelvis never goes lower than this above the ground (m)
+        const float MinFlowRate = 50f;         // a leg turning forward slower than this (deg/s) starts its reach from rest
         const float FollowRate = 6f;           // a leg changes between turning with the hips and keeping to the ground this fast (1/s)
 
         Vector3 _restHip;
@@ -518,6 +524,7 @@ namespace SpeedStars.Physical
         {
             leg.phase = LegPhase.Rest;
             leg.phaseTime = 0.0;
+            leg.reachNext = false;
             leg.duration = 0f;
             leg.held = false;
             leg.angles = leg.from = crouch;
@@ -576,10 +583,37 @@ namespace SpeedStars.Physical
                 return;
             }
             l.held = true;
-            float push = Mathf.Lerp(pushTime.x, pushTime.y, Speed01());
-            Enter(l, LegPhase.Push, time, push);
+            l.reachNext = false;
+            Enter(l, LegPhase.Push, time, PushTime());
             var other = Legs(1 - leg);
-            if (!other.HeldBack) Enter(other, LegPhase.Reach, time, push);
+            if (other.HeldBack) return;
+            // A leg still going back finishes that first; one coming forward turns to the front as it goes.
+            if (other.phase == LegPhase.Push || other.phase == LegPhase.Recover) other.reachNext = true;
+            else if (other.phase == LegPhase.Mid) ReachOn(other, time);
+            else Enter(other, LegPhase.Reach, time, PushTime());
+        }
+
+        float PushTime() => Mathf.Lerp(pushTime.x, pushTime.y, Speed01());
+
+        /// <summary>
+        /// A leg in the air heads for the front instead of mid, without a snap: coming forward it goes on at the
+        /// speed it has and slows into the reach (its time is whatever that speed needs); from rest (just back
+        /// from recovering) it starts as its way to mid would, at mid's pace over the longer way. Never quicker
+        /// than a push.
+        /// </summary>
+        void ReachOn(Leg leg, double time)
+        {
+            leg.reachNext = false;
+            float dist = Mathf.Abs(reach.thigh - leg.angles.thigh);
+            float push = PushTime();
+            if (leg.thighRate > MinFlowRate)
+            {
+                Enter(leg, LegPhase.Reach, time, Mathf.Clamp(2f * dist / leg.thighRate, push, 2f * AirTime(midTime)));
+                leg.easeOut = true;
+            }
+            else
+                Enter(leg, LegPhase.Reach, time,
+                    Mathf.Max(push, AirTime(midTime) * dist / Mathf.Max(1f, Mathf.Abs(mid.thigh - recover.thigh))));
         }
 
         void OnRunReset()
@@ -610,6 +644,7 @@ namespace SpeedStars.Physical
             leg.duration = duration;
             leg.from = leg.angles;
             leg.fromPitch = leg.pitch;
+            leg.easeOut = false;
         }
 
         /// <summary>
@@ -646,7 +681,8 @@ namespace SpeedStars.Physical
                             else Enter(leg, LegPhase.Recover, end, AirTime(recoverTime));
                             break;
                         case LegPhase.Recover:
-                            Enter(leg, LegPhase.Mid, end, AirTime(midTime));
+                            if (leg.reachNext) ReachOn(leg, end);
+                            else Enter(leg, LegPhase.Mid, end, AirTime(midTime));
                             break;
                         case LegPhase.Mid:
                             Enter(leg, LegPhase.Rest, end, homeTime);
@@ -686,7 +722,11 @@ namespace SpeedStars.Physical
         void UpdateLeg(Leg leg, double now, float dt, float legTurn, float ownHold, float otherHold)
         {
             float s = leg.duration > 0f ? Mathf.Clamp01((float)(now - leg.phaseTime) / leg.duration) : 1f;
-            leg.angles = LegAngles.Lerp(leg.from, Target(leg, ownHold, otherHold), Mathf.SmoothStep(0f, 1f, s));
+            float lastThigh = leg.angles.thigh;
+            // Phases start and end at rest (smooth step); one that takes over a moving leg starts at its speed.
+            float ease = leg.easeOut ? 1f - (1f - s) * (1f - s) : Mathf.SmoothStep(0f, 1f, s);
+            leg.angles = LegAngles.Lerp(leg.from, Target(leg, ownHold, otherHold), ease);
+            leg.thighRate = dt > 0f ? (leg.angles.thigh - lastThigh) / dt : 0f;
             leg.angles.knee = Mathf.Min(leg.angles.knee, maxKnee);
 
             // Foot: heel up through the push; the reaching foot lands heel first, toes up, and stays so while it

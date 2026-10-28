@@ -86,6 +86,8 @@ namespace SpeedStars.Runner
         }
         static int ChunkSeed(int baseSeed,int index)
         {unchecked{return (baseSeed*73856093)^(index*19349663)^83492791;}}
+        int DepthPhase(int index){return (index+(seed%5+5)%5)%5;}
+        int DepthBudget(int index){return new[]{2,2,1,2,3}[DepthPhase(index)];}
         float Range(System.Random r,float min,float max){return Mathf.Lerp(min,max,(float)r.NextDouble());}
         GameObject Spawn(LoopWayAsset asset,Transform parent,float offset=0)
         {
@@ -112,26 +114,26 @@ namespace SpeedStars.Runner
             Stretch(bank,infrastructure,Mathf.Max(a,bankEnd),b);
             BuildBridge(infrastructure,Mathf.Max(a,bridgeEnd),b);
             var lighting=Group("Evenly Spaced Street Lamps",root);
-            int first=Mathf.CeilToInt((a-lampAnchor)/lampSpacing);
-            for(int k=first;lampAnchor+k*lampSpacing<b-.001f;k++)
-            {var g=Spawn(lamp,lighting);var p=g.transform.localPosition;p.z=lampAnchor+k*lampSpacing;g.transform.localPosition=p;}
+            float visualLampSpacing=lampSpacing*1.75f;int first=Mathf.CeilToInt((a-lampAnchor)/visualLampSpacing);
+            for(int k=first;lampAnchor+k*visualLampSpacing<b-.001f;k++)
+            {var g=Spawn(lamp,lighting);var p=g.transform.localPosition;p.z=lampAnchor+k*visualLampSpacing;p.x-=2.5f;g.transform.localPosition=p;g.transform.localScale*=.78f;}
             var skyline=Group("Background City",root);var cityObject=Spawn(city,skyline,segmentLength*index);
             var row=cityObject.GetComponent<PastelBuildingRow>();row.automaticUpdate=false;row.variationSeed=r.Next();
             var districtRandom=new System.Random(ChunkSeed(seed,index)^17095733);
             int districtType=districtRandom.Next(3);
             int countDelta=districtType==0?districtRandom.Next(-6,-2):districtType==1?districtRandom.Next(-2,3):districtRandom.Next(3,7);
-            row.buildingCount=Mathf.Clamp(cityBaseline+countDelta,5,100);
+            row.buildingCount=Mathf.Clamp(Mathf.RoundToInt((cityBaseline+countDelta)*.58f),3,60);
             row.positionJitter=Range(districtRandom,1.5f,4.0f);
             row.layerStagger=Range(districtRandom,1.5f,6);
             row.gap=Range(districtRandom,.7f,2.8f);
             row.heightRange=city.prefab.GetComponent<PastelBuildingRow>().heightRange*Range(districtRandom,.80f,1.22f);
-            row.Rebuild();info.cityCount=row.buildingCount;
+            row.Rebuild();info.cityCount=row.buildingCount;SpeedStars.Themes.ThemeAtmosphere.Set(cityObject,new Color(.64f,.78f,.86f),.8f);
             // Fit the district to its section, retaining facade rotations and depth layers.
             Bounds district=LocalBounds(cityObject,transform);
             float coverage=Range(districtRandom,.78f,.97f);
             float factor=segmentLength*coverage/Mathf.Max(1,district.size.z);
             var scale=cityObject.transform.localScale;scale.z*=factor;cityObject.transform.localScale=scale;
-            district=LocalBounds(cityObject,transform);var cp=cityObject.transform.localPosition;cp.z+=(a+b)*.5f-district.center.z;cityObject.transform.localPosition=cp;
+            district=LocalBounds(cityObject,transform);var cp=cityObject.transform.localPosition;cp.z+=(a+b)*.5f-district.center.z;cp.x-=DepthPhase(index)==4?5:Range(districtRandom,10,18);cityObject.transform.localPosition=cp;
             var sky=Group("Independent Cloud Variations",root);
             int cmin=Mathf.Clamp(Mathf.RoundToInt(cloudCountRange.x),0,2),cmax=Mathf.Clamp(Mathf.RoundToInt(cloudCountRange.y),cmin,2);
             int cloudCount=CloudCount(index,cmin,cmax);info.cloudCount=cloudCount;
@@ -152,7 +154,7 @@ namespace SpeedStars.Runner
             else BuildLandmark(frontage,frontageKind==1?busStop:frontageKind==2?park:hospital,a,b,index,frontageKind);
             // Street props use spaced curb-side bays. Deep building frontage stays separate.
             var vegetation=Group("Visible Foreground Hedge Groups",root);
-            int hedgeCount=r.Next(3,6);info.hedgeCount=hedgeCount;
+            int phase=DepthPhase(index);int hedgeCount=phase==4?2:1;info.hedgeCount=hedgeCount;
             var bays=new List<float>();
             for(int slot=0;slot<16;slot++)bays.Add(a+(slot+.5f)*segmentLength/16+Range(r,-.45f,.45f));
             Shuffle(bays,r);
@@ -161,16 +163,16 @@ namespace SpeedStars.Runner
                 var g=Spawn(hedge,vegetation);var p=g.transform.localPosition;p.z=bays[j];
                 p.x=lamp.position.x-Range(r,1.1f,2.1f);p.y=sidewalk.position.y+.15f;g.transform.localPosition=p;
                 var plant=g.GetComponent<PastelPlantGenerator>();plant.automaticUpdate=false;plant.variationSeed=r.Next();
-                plant.width=Range(r,4.5f,6.5f);plant.height=Range(r,1.7f,2.6f);plant.Rebuild();
+                plant.width=phase==4?Range(r,3.5f,4.5f):Range(r,2.2f,3.5f);plant.height=phase==4?Range(r,1.4f,1.9f):Range(r,.85f,1.35f);plant.Rebuild();
             }
             var furnishings=Group("Street Props - Varied Street Activity",root);
-            int propCount=r.Next(6,9);info.propCount=propCount;
+            int propCount=phase==4?3:r.Next(1,3);info.propCount=propCount;
             var propOrder=new List<int>();for(int p=0;p<props.Length;p++)propOrder.Add(p);
-            for(int p=propOrder.Count-1;p>0;p--){int q=r.Next(p+1);int value=propOrder[p];propOrder[p]=propOrder[q];propOrder[q]=value;}
+            var propRandom=new System.Random(ChunkSeed(seed,381));for(int p=propOrder.Count-1;p>0;p--){int q=propRandom.Next(p+1);int value=propOrder[p];propOrder[p]=propOrder[q];propOrder[q]=value;}
             for(int j=0;j<propCount;j++)
             {
-                int choice=propOrder[j%propOrder.Count];
-                var g=Spawn(props[choice],furnishings);var p=g.transform.localPosition;p.z=bays[hedgeCount+j]+Range(r,-.5f,.5f);g.transform.localPosition=p;
+                int choice=propOrder[(index*3+j)%propOrder.Count];
+                var g=Spawn(props[choice],furnishings);var p=g.transform.localPosition;p.z=bays[hedgeCount+j]+Range(r,-.5f,.5f);p.x-=Range(r,.4f,2.2f);g.transform.localPosition=p;g.transform.localScale*=Range(r,.72f,.90f);
                 g.transform.localRotation=props[choice].rotation*Quaternion.Euler(0,Range(r,-9,9),0);
                 // Keep furniture in front of the building line, including wide benches and containers.
                 var furnitureBounds=LocalBounds(g,transform);
@@ -209,12 +211,12 @@ namespace SpeedStars.Runner
         void BuildLandmark(Transform parent,LoopWayAsset asset,float a,float b,int index,int kind)
         {
             var random=new System.Random(ChunkSeed(seed,index)^661427);
-            var landmark=Spawn(asset,parent);var bounds=LocalBounds(landmark,transform);
+            var landmark=Spawn(asset,parent);landmark.transform.localScale*=DepthPhase(index)==4?.9f:.78f;var bounds=LocalBounds(landmark,transform);
             var p=landmark.transform.localPosition;
             p.z+=(a+b)*.5f+Range(random,-5,5)-bounds.center.z;
             // Keep the public-space entrance aligned to the sidewalk and leave the curb-side furniture strip clear.
-            p.x+=sidewalk.position.x+sidewalk.scale.x*.5f-7.0f-bounds.max.x;
-            landmark.transform.localPosition=p;
+            p.x+=sidewalk.position.x+sidewalk.scale.x*.5f-(DepthPhase(index)==4?8:11)-bounds.max.x;
+            landmark.transform.localPosition=p;SupportRiverfrontPlot(landmark,parent);
         }
         void BuildFrontage(Transform parent,float a,float b,int index,LoopWayChunk info)
         {
@@ -223,29 +225,30 @@ namespace SpeedStars.Runner
             for(int i=order.Count-1;i>0;i--){int j=random.Next(i+1);int t=order[i];order[i]=order[j];order[j]=t;}
             float cursor=a+Range(random,1.5f,6);
             int placed=0,clusterLeft=random.Next(2,4),headingOffset=random.Next(3);
-            while(cursor<b-4)
+            while(cursor<b-4&&placed<DepthBudget(index))
             {
                 int type=order[placed%order.Count];var building=Spawn(buildings[type],parent);
                 // Front-facing facades and opposite corner views, rather than the same right-facing angle.
                 int heading=(placed+headingOffset)%3;
                 float yaw=(heading==0?246:heading==1?270:294)+Range(random,-3,3);
                 building.transform.localRotation=Quaternion.Euler(0,yaw,0);
-                building.transform.localScale*=Range(random,.84f,1.08f);
+                building.transform.localScale*=DepthPhase(index)==4?Range(random,.76f,.9f):Range(random,.60f,.74f);
                 var bounds=LocalBounds(building,transform);
                 if(cursor+bounds.size.z>b-1.5f)
                 {building.SetActive(false);if(Application.isPlaying)Destroy(building);else DestroyImmediate(building);break;}
                 var p=building.transform.localPosition;
                 p.z+=cursor-bounds.min.z;
                 // Align the visible facade to irregular setbacks, keeping a clear pedestrian strip.
-                float facadeX=sidewalk.position.x+sidewalk.scale.x*.5f-7.3f-Range(random,0,2.6f);
+                float facadeX=sidewalk.position.x+sidewalk.scale.x*.5f-(DepthPhase(index)==4?8.5f:11f)-Range(random,0,1.5f);
                 p.x+=facadeX-bounds.max.x;building.transform.localPosition=p;
-                bounds=LocalBounds(building,transform);placed++;clusterLeft--;
-                float gap=clusterLeft>0?Range(random,.55f,2.8f):Range(random,6.5f,13.5f);
+                SupportRiverfrontPlot(building,parent);bounds=LocalBounds(building,transform);placed++;clusterLeft--;
+                float gap=clusterLeft>0?Range(random,7,12):Range(random,19,30);
                 if(clusterLeft<=0)clusterLeft=random.Next(2,4);
                 cursor=bounds.max.z+gap;
             }
             info.buildingType=-1;
         }
+        void SupportRiverfrontPlot(GameObject item,Transform parent){var b=LocalBounds(item,transform);float bankEdge=sidewalk.position.x-sidewalk.scale.x*.5f;if(b.min.x>=bankEdge)return;var foundation=GameObject.CreatePrimitive(PrimitiveType.Cube);foundation.name="Grounded Riverside Terrace - "+item.name;foundation.transform.SetParent(parent,false);float bottom=water.position.y-.16f,top=b.min.y+.025f;foundation.transform.localPosition=new Vector3(b.center.x,(bottom+top)*.5f,b.center.z);foundation.transform.localScale=new Vector3(b.size.x+.15f,Mathf.Max(.2f,top-bottom),b.size.z+.15f);var source=sidewalk.prefab.GetComponentInChildren<Renderer>();if(source)foundation.GetComponent<Renderer>().sharedMaterial=source.sharedMaterial;var collider=foundation.GetComponent<Collider>();if(Application.isPlaying)Destroy(collider);else DestroyImmediate(collider);}
         int CloudCount(int index,int min,int max)
         {
             max=Mathf.Max(1,max);int current=new System.Random(ChunkSeed(seed,index)^915488749).Next(min,max+1);

@@ -32,11 +32,19 @@ namespace SpeedStars.Editor
         static GameObject MeshObject(Transform parent,string name,List<Vector3> vertices,List<int> triangles,Material mat,bool flat=true)
         {
             if(flat){var vv=new List<Vector3>();var tt=new List<int>();for(int i=0;i<triangles.Count;i++){tt.Add(vv.Count);vv.Add(vertices[triangles[i]]);}vertices=vv;triangles=tt;}
-            var mesh=new Mesh();mesh.name=name;mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.RecalculateNormals();mesh.RecalculateBounds();Folder(themeFolder+"/Meshes");string path=themeFolder+"/Meshes/"+modelName+"_"+(meshNumber++).ToString("000")+".asset";var old=AssetDatabase.LoadAssetAtPath<Mesh>(path);if(old){EditorUtility.CopySerialized(mesh,old);UnityEngine.Object.DestroyImmediate(mesh);mesh=old;}else AssetDatabase.CreateAsset(mesh,path);
+            var mesh=new Mesh();mesh.name=name;mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.RecalculateNormals();mesh.RecalculateBounds();Folder(themeFolder+"/Meshes");string path=themeFolder+"/Meshes/"+modelName+"_"+(meshNumber++).ToString("000")+".asset";mesh.name=System.IO.Path.GetFileNameWithoutExtension(path);var old=AssetDatabase.LoadAssetAtPath<Mesh>(path);if(old){RefreshGeneratedMesh(mesh,old);UnityEngine.Object.DestroyImmediate(mesh);mesh=old;}else AssetDatabase.CreateAsset(mesh,path);
             var g=new GameObject(name);g.transform.SetParent(parent,false);g.AddComponent<MeshFilter>().sharedMesh=mesh;var r=g.AddComponent<MeshRenderer>();r.sharedMaterial=mat;r.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;r.receiveShadows=false;return g;
         }
         static void Beam(Transform parent,string name,Vector3 a,Vector3 b,float width,Material mat)
         {var g=Box(parent,name,(a+b)*.5f,new Vector3(width,(b-a).magnitude,width),mat);g.transform.localRotation=Quaternion.FromToRotation(Vector3.up,b-a);}
+        static void RefreshGeneratedMesh(Mesh source,Mesh target)
+        {
+            // CopySerialized alone can leave a regenerated mesh's render buffers stale.
+            target.Clear();target.name=source.name;target.indexFormat=source.indexFormat;
+            target.vertices=source.vertices;target.normals=source.normals;target.uv=source.uv;target.uv2=source.uv2;target.colors=source.colors;target.tangents=source.tangents;
+            target.subMeshCount=source.subMeshCount;for(int i=0;i<source.subMeshCount;i++)target.SetTriangles(source.GetTriangles(i),i);
+            target.RecalculateNormals();target.RecalculateBounds();target.UploadMeshData(false);EditorUtility.SetDirty(target);
+        }
         static GameObject Lathe(Transform parent,string name,Vector3 pos,float[] heights,float[] radii,Material mat,int sides=12)
         {
             var v=new List<Vector3>();var t=new List<int>();for(int y=0;y<heights.Length;y++)for(int i=0;i<sides;i++){float a=i*Mathf.PI*2/sides;v.Add(new Vector3(Mathf.Cos(a)*radii[y],heights[y],Mathf.Sin(a)*radii[y]));}

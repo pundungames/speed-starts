@@ -282,14 +282,18 @@ MonoBehaviour:
   input: {fileID: 3857996984035153175}
   tuning:
     maxSpeed: 10.5
-    pushGain: 1.2
+    pushGain: 1.5
     pushTime: 0.12
-    dragConstant: 0.64
-    dragLinear: 0.05
+    dragConstant: 0.4
+    dragLinear: 0
+    dragQuadratic: 0.1
+    stopBrake: 3.5
+    stopDelay: 0.6
+    stopRamp: 0.3
     stanceTime: 0.08
     hopVelocity: 0.35
     hopAtRest: 0.8
-    gravity: 7
+    gravity: 5
     togetherWindow: 0.08
     earlyEfficiency: 0.15
     lateGrace: 0.04
@@ -349,7 +353,7 @@ MonoBehaviour:
       damping: 1
     headSpoil: 90
     headSpoilPower: 1.1
-    headDrag: 1.6
+    headDrag: 0.8
     energyMax: 100
     drainPerPush: 0.25
     drainHoldPerSecond: 2
@@ -413,6 +417,9 @@ MonoBehaviour:
     swingAnkle: 0
     swingW: 0
     swingToe: 0
+    reachNext: 0
+    easeOut: 0
+    thighRate: 0
   rightLeg:
     target: {fileID: 8906041045948842906}
     hint: {fileID: 2310025347976299736}
@@ -453,6 +460,9 @@ MonoBehaviour:
     swingAnkle: 0
     swingW: 0
     swingToe: 0
+    reachNext: 0
+    easeOut: 0
+    thighRate: 0
   leftArm:
     upperArm: {fileID: 0}
     forearm: {fileID: 0}

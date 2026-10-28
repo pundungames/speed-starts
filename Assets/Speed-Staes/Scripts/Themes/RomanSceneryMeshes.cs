@@ -12,6 +12,8 @@ namespace SpeedStars.Themes {
    foreach(var filter in scenery.GetComponentsInChildren<MeshFilter>()){
     if(filter.name=="Soft Meadow Ground"){filter.gameObject.SetActive(false);continue;}
     if(!(filter.name.Contains("Ridge")||filter.name.Contains("Peaks")||filter.name.Contains("Low Hills")))continue;
+    // The continuous terrain replaces the old detached diorama ground plates.
+    if(theme.concept==EnvironmentConcept.RomeByzantium){filter.gameObject.SetActive(false);continue;}
     float stretch=R(random,.85f,1.22f),height=R(random,.8f,1.2f),phase=R(random,-10,10);
     if(!Application.isPlaying){
      filter.transform.localScale=Vector3.Scale(filter.transform.localScale,new Vector3(stretch,height,1));

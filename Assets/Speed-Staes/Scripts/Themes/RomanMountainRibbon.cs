@@ -13,8 +13,8 @@ namespace SpeedStars.Themes {
    for(int i=0;i<=segments;i++){
     float z=Mathf.Lerp(start,end,(float)i/segments);
     float broad=Mathf.PerlinNoise(phase,z*.009f+17),detail=Mathf.PerlinNoise(phase+37,z*.026f+61);
-    float peaks=1-Mathf.Abs(Mathf.Repeat(z/(layer==0?39f:57f)+phase*.1f,2)-1);
-    float h=(layer==0?3f:5f)+broad*3+peaks*(layer==0?9f:12f)+detail;
+    float peaks=Mathf.PerlinNoise(phase+83,z*.043f+9);
+    float h=(layer==0?2.5f:4f)+broad*(layer==0?3:5)+peaks*peaks*(layer==0?7:9)+detail;
     float x=layer==0?-107:-134;
     vertices[i*3]=new Vector3(x+14,-4f,z);vertices[i*3+1]=new Vector3(x-2+broad*4,h,z);vertices[i*3+2]=new Vector3(x-17,-4f,z);
     if(i<segments){int k=i*3,j=i*6;front[j]=k;front[j+1]=k+1;front[j+2]=k+3;front[j+3]=k+1;front[j+4]=k+4;front[j+5]=k+3;back[j]=k+1;back[j+1]=k+2;back[j+2]=k+4;back[j+3]=k+2;back[j+4]=k+5;back[j+5]=k+4;}
@@ -29,7 +29,7 @@ namespace SpeedStars.Themes {
   void BuildRomanMountains(Transform section,float a,float b){
    if(theme.mountainMaterials==null||theme.mountainMaterials.Length<4)return;
    var mountains=Group("Continuous Distant Mountain Range",section);
-   for(int i=1;i>=0;i--){var go=new GameObject(i==0?"Near Olive Mountains":"Far Hazy Mountains");go.transform.SetParent(mountains,false);var ridge=go.AddComponent<RomanMountainRibbon>();ridge.seed=seed;ridge.layer=i;ridge.start=a;ridge.end=b;ridge.lightMaterial=theme.mountainMaterials[i*2];ridge.shadeMaterial=theme.mountainMaterials[i*2+1];ridge.Rebuild();}
+   for(int i=1;i>=0;i--){var go=new GameObject(i==0?"Near Olive Mountains":"Far Hazy Mountains");go.transform.SetParent(mountains,false);var ridge=go.AddComponent<RomanMountainRibbon>();ridge.seed=seed;ridge.layer=i;ridge.start=a;ridge.end=b;ridge.lightMaterial=theme.mountainMaterials[i*2];ridge.shadeMaterial=theme.mountainMaterials[i*2+1];ridge.Rebuild();ApplyRomanDepthPaint(go,i==0?.08f:.24f);}
   }
  }
 }

@@ -11,21 +11,24 @@ namespace SpeedStars.Editor
             Box(t,"Raised Temple Terrace",new Vector3(0,.18f,0),new Vector3(17,.36f,7.5f),sandLight);
             foreach(float x in new[]{-5.5f,5.5f})
             {
-                var p=Lathe(t,"Tapered Pylon",new Vector3(x,.35f,.5f),new[]{0f,8f},new[]{3.3f,2.65f},sand,4);p.transform.localRotation=Quaternion.Euler(0,45,0);p.transform.localScale=new Vector3(1,1,.72f);
+                ETaperedPylon(t,new Vector3(x,.35f,.5f));
                 Box(t,"Pylon Cornice",new Vector3(x,8.5f,.5f),new Vector3(5.5f,.45f,4.0f),sandLight);
-                for(int row=0;row<4;row++){Box(t,"Recessed Glyph Panel",new Vector3(x,1.7f+row*1.3f,-1.87f),new Vector3(2.2f,.7f,.055f),row%2==0?teal:wood);Cylinder(t,"Sun Disc Relief",new Vector3(x,6.9f,-1.95f),.45f,.06f,gold,12).transform.localRotation=Quaternion.Euler(90,0,0);}
+                float tilt=Mathf.Atan(.65f/8*.7071f*.72f)*Mathf.Rad2Deg;
+                for(int row=0;row<4;row++){float y=1.7f+row*1.3f,z=.5f-Mathf.Lerp(3.3f,2.65f,(y-.35f)/8)*.7071f*.72f;var panel=Box(t,"Attached Glyph Panel",new Vector3(x,y,z-.018f),new Vector3(2.2f,.7f,.055f),row%2==0?teal:wood);panel.transform.localRotation=Quaternion.Euler(tilt,0,0);}
+                float discZ=.5f-Mathf.Lerp(3.3f,2.65f,(6.9f-.35f)/8)*.7071f*.72f;var disc=new GameObject("Attached Pylon Sun Disc");disc.transform.SetParent(t,false);disc.transform.localPosition=new Vector3(x,6.9f,discZ-.025f);disc.transform.localRotation=Quaternion.Euler(90+tilt,0,0);EClosedCylinder(disc.transform,"Closed Sun Disc Relief",Vector3.zero,.45f,.06f,gold,12);
             }
-            Box(t,"Gateway Lintel",new Vector3(0,5.4f,.3f),new Vector3(6.2f,.8f,3.6f),sandLight);Box(t,"Dark Recessed Door",new Vector3(0,2.5f,1.5f),new Vector3(4.2f,4.6f,.2f),woodDark);
-            for(int step=0;step<3;step++)Box(t,"Approach Stair",new Vector3(0,.13f+step*.12f,-3.3f+step*.43f),new Vector3(6.2f,.24f,1.4f),sandLight);
-            Cylinder(t,"Winged Sun",new Vector3(0,5.4f,-1.58f),.45f,.07f,gold,12).transform.localRotation=Quaternion.Euler(90,0,0);
-            foreach(float sign in new[]{-1f,1f}){var wing=Box(t,"Winged Sun Feathers",new Vector3(sign*1.0f,5.45f,-1.58f),new Vector3(1.4f,.20f,.10f),teal);wing.transform.localRotation=Quaternion.Euler(0,0,sign*8);}
+            Box(t,"Supported Gateway Lintel",new Vector3(0,5.4f,.3f),new Vector3(7.7f,.8f,3.6f),sandLight);Box(t,"Dark Recessed Door",new Vector3(0,2.5f,1.5f),new Vector3(4.2f,4.6f,.2f),woodDark);
+            for(int step=0;step<3;step++){float h=(step+1)*.12f;Box(t,"Grounded Approach Stair",new Vector3(0,h*.5f,-3.3f+step*.43f),new Vector3(6.2f,h,1.4f),sandLight);}
+            var sun=new GameObject("Attached Winged Sun");sun.transform.SetParent(t,false);sun.transform.localPosition=new Vector3(0,5.4f,-1.54f);sun.transform.localRotation=Quaternion.Euler(90,0,0);EClosedCylinder(sun.transform,"Closed Winged Sun Disc",Vector3.zero,.45f,.07f,gold,12);
+            foreach(float sign in new[]{-1f,1f}){var wing=Box(t,"Winged Sun Feathers",new Vector3(sign*1.0f,5.45f,-1.54f),new Vector3(1.4f,.20f,.10f),teal);wing.transform.localRotation=Quaternion.Euler(0,0,sign*8);}
         }
         static void Obelisk(Transform t,float height=10)
-        {Box(t,"Obelisk Base",new Vector3(0,.25f,0),new Vector3(2.4f,.5f,2.4f),sandLight);var shaft=Lathe(t,"Tapered Stone Obelisk",new Vector3(0,.5f,0),new[]{0f,height-1.2f},new[]{1.15f,.75f},sand,4);shaft.transform.localRotation=Quaternion.Euler(0,45,0);Pyramid(t,"Golden Pyramidion",new Vector3(0,height-.7f,0),1.08f,1.2f,gold);for(int i=0;i<5;i++){Box(t,"Vertical Glyph Relief",new Vector3(0,1.6f+i*1.4f,-.59f),new Vector3(.15f,.45f,.04f),teal);Box(t,"Glyph Crossbar",new Vector3(0,1.85f+i*1.4f,-.6f),new Vector3(.45f,.10f,.04f),teal);}}
+        {Box(t,"Obelisk Base",new Vector3(0,.25f,0),new Vector3(2.4f,.5f,2.4f),sandLight);var shaft=Lathe(t,"Tapered Stone Obelisk",new Vector3(0,.5f,0),new[]{0f,height-1.2f},new[]{1.15f,.75f},sand,4);shaft.transform.localRotation=Quaternion.Euler(0,45,0);Pyramid(t,"Golden Pyramidion",new Vector3(0,height-.7f,0),1.08f,1.2f,gold);for(int i=0;1.85f+i*1.4f<height-1.1f;i++){float y=1.6f+i*1.4f,z=-Mathf.Lerp(1.15f,.75f,(y-.5f)/(height-1.2f))*.7071f-.012f;Box(t,"Vertical Glyph Relief",new Vector3(0,y,z),new Vector3(.15f,.45f,.04f),teal);y+=.25f;z=-Mathf.Lerp(1.15f,.75f,(y-.5f)/(height-1.2f))*.7071f-.012f;Box(t,"Glyph Crossbar",new Vector3(0,y,z),new Vector3(.45f,.10f,.04f),teal);}}
         static void Sphinx(Transform t)
         {
             Box(t,"Sphinx Plinth",new Vector3(0,.2f,0),new Vector3(10,.4f,4.8f),sandLight);
             Ball(t,"Lion Body",new Vector3(-1,1.6f,.2f),new Vector3(6,2.8f,3),sand);
+            Tube(t,"Connected Sphinx Neck",new List<Vector3>{new Vector3(.8f,1.8f,0),new Vector3(1.35f,2.65f,0),new Vector3(1.9f,3.25f,0)},.72f,sand,12,.58f);
             foreach(float z in new[]{-1.1f,1.1f})Box(t,"Long Lion Paw",new Vector3(2.0f,.7f,z),new Vector3(4.0f,.95f,.95f),sandLight);
             var head=Ball(t,"Pharaoh Face",new Vector3(1.9f,3.5f,0),new Vector3(1.8f,2.1f,1.6f),sandLight);
             Box(t,"Nemes Headdress",new Vector3(1.75f,3.9f,.10f),new Vector3(2.8f,1.8f,1.95f),sand);

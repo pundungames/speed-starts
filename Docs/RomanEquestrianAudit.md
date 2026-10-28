@@ -1,0 +1,1 @@
+| Art Bronze Horse Monument | 188 | 0 | 0 | pass |

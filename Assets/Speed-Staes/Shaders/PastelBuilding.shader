@@ -17,9 +17,10 @@ Shader "Speed Stars/Pastel Building"
    #pragma vertex vert
    #pragma fragment frag
    #include "UnityCG.cginc"
+   #include "ThemeAerial.cginc"
    float4 _FrontColor,_SideColor,_WindowColor,_BuildingSize,_Pattern;
-   struct v2f {float4 pos:SV_POSITION;float3 local:TEXCOORD0;float3 normal:TEXCOORD1;};
-   v2f vert(appdata_base v){v2f o;o.pos=UnityObjectToClipPos(v.vertex);o.local=v.vertex.xyz+0.5;o.normal=v.normal;return o;}
+   struct v2f {float4 pos:SV_POSITION;float3 local:TEXCOORD0;float3 normal:TEXCOORD1;float3 world:TEXCOORD2;};
+   v2f vert(appdata_base v){v2f o;o.pos=UnityObjectToClipPos(v.vertex);o.world=mul(unity_ObjectToWorld,v.vertex).xyz;o.local=v.vertex.xyz+0.5;o.normal=v.normal;return o;}
    float hash(float2 p){return frac(sin(dot(p,float2(127.1,311.7)))*43758.5453);}
    fixed4 frag(v2f i):SV_Target
    {
@@ -29,13 +30,13 @@ Shader "Speed Stars/Pastel Building"
     float2 uv=float2(front?i.local.z:i.local.x,i.local.y);
     // Deliberately flat, face-dependent paint, independent of scene exposure.
     float3 color=front?_FrontColor.rgb:_SideColor.rgb;
-    if(roof) return float4(lerp(_FrontColor.rgb,1,0.12),1);
-    if(_Pattern.w<0) return float4(color,1);
+    if(roof) return float4(ThemeAerial(lerp(_FrontColor.rgb,1,0.12),i.world),1);
+    if(_Pattern.w<0) return float4(ThemeAerial(color,i.world),1);
     float columns=max(1,_Pattern.x),floors=max(1,_Pattern.y);
     float2 grid=float2(uv.x*columns,(uv.y-0.10)*floors/0.83);
     float2 cell=floor(grid),f=frac(grid);
     float style=_Pattern.z;
-    if(abs(style-3)<0.1) return float4(color,1);
+    if(abs(style-3)<0.1) return float4(ThemeAerial(color,i.world),1);
     bool corner=abs(style-4)<0.1;
     float width=style>1.5?0.87:(style>0.5?0.72:0.62);
     float h=style>1.5?0.48:0.40;
@@ -53,7 +54,7 @@ Shader "Speed Stars/Pastel Building"
     // Tiny painterly offsets, without outlines, reflections or black recesses.
     float grain=hash(floor(uv*float2(140,220))+_Pattern.w);
     color+=(grain-0.5)*0.006;
-    return float4(color,1);
+    return float4(ThemeAerial(color,i.world),1);
    }
    ENDCG
   }

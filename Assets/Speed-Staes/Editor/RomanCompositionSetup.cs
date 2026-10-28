@@ -89,6 +89,7 @@ namespace SpeedStars.Editor {
     if(slot.role=="Village Home")slot.alternatives=new[]{"Ceramic Kiln Workshop"};
     if(slot.role=="Roadside Garden")slot.alternatives=new[]{"Courtyard Roman Villa","Statue and Mosaic Plaza"};
    }
+   RomanArtComposition.Enrich(plan,library);
    EditorUtility.SetDirty(plan);var d=AssetDatabase.LoadAssetAtPath<LoopThemeDefinition>(folder+"/Definition.asset");d.romanComposition=plan;EditorUtility.SetDirty(d);AssetDatabase.SaveAssets();return path;
   }
  }
