@@ -4,6 +4,7 @@ using SpeedStars.Meta.Clock;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Cosmetics;
+using SpeedStars.Meta.Economy;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.Meta.Race;
 using SpeedStars.Meta.Themes;
@@ -67,8 +68,13 @@ namespace SpeedStars.Installers
             Container.Bind<SceneFlow>().AsSingle();
 
             // Faz 2 (T-010): one EntryTicketService instance serves the UI (IEntryTickets) and the gate (concrete TrySpend).
-            Container.Bind(typeof(IEntryTickets), typeof(EntryTicketService)).To<EntryTicketService>().AsSingle();
+            Container.Bind(typeof(IEntryTickets), typeof(EntryTicketService), typeof(IEntryTicketSource)).To<EntryTicketService>().AsSingle();
             Container.Bind(typeof(IWallet), typeof(WalletService)).To<WalletService>().AsSingle();
+            // T-028: the only writer of Cash / Purple Gems / Timed Tickets (idempotent by transaction id).
+            Container.Bind<IEconomyLedger>().To<EconomyLedger>().AsSingle();
+            Container.Bind<ITimedAccess>().To<TimedAccessService>().AsSingle();
+            Container.Bind<IRaceRewardResolver>().To<RaceRewardResolver>().AsSingle();
+            Container.Bind<IEntryTicketShop>().To<EntryTicketShop>().AsSingle();
             Container.Bind<IRaceSelection>().To<RaceSelection>().AsSingle();
 
             // T-025: presets, ownership, premium purchase; the preview is what the menu character wears right now.
@@ -105,7 +111,7 @@ namespace SpeedStars.Installers
         private ThemeService CreateThemes(InjectContext context)
         {
             var c = context.Container;
-            return new ThemeService(c.Resolve<ThemeCatalog>(), c.Resolve<ProgressRepository>(), c.Resolve<WalletService>(),
+            return new ThemeService(c.Resolve<ThemeCatalog>(), c.Resolve<ProgressRepository>(), c.Resolve<IEconomyLedger>(),
                 Application.isEditor || Debug.isDebugBuild);
         }
 
