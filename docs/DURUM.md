@@ -33,7 +33,7 @@ Son güncelleme: 2026-10-28 · agent-kit v2 kurulumu · dal `main` (ad3616b üst
 - Yerel, git'e girmeyen (`.git/info/exclude`): `.claude/settings.json` (hook'lar), `.claude/settings.local.json` (pano),
   `.claude/agents/`, `CLAUDE.local.md`, `pipeline-logs/`. Başka PC'de: kit kurulumu + `claude plugin install pano@agent-kit -s local`.
 - Malik ve Serhat aynı main'e push ediyor; pull/push kullanıcıda. Malik'in alanı hook'la kilitli (config `KorunanBelgeler`).
-- Doğrulama kopyaları: `D:\Pundun\speed-starts-verify-1..2` (henüz açılmadı).
+- Tur kapısı kapalı (bilerek): T-005 SCENE ihtiyacı açık, T-006/T-007 ile kapanır.
 
 <!-- OTOMATIK:BASLA -->
 (henüz çalıştırılmadı: powershell -File scripts/tur-sonu.ps1 -DurumYaz)
