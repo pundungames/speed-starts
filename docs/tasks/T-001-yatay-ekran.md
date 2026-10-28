@@ -1,7 +1,7 @@
 ---
 id: T-001
 title: Ekran yonu yatay + referans cozunurluk
-status: todo
+status: blocked
 owner: scene-integrator
 depends_on: []
 owns_paths:
@@ -15,11 +15,11 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: DECISION
-    durum: open
-    not: "Ana klasorde ProjectSettings.asset'te kullanicinin/Unity'nin commit'siz degisikligi var; once git diff ile bak, kullaniciya sor"
+    durum: closed
+    not: "Ana klasorde ProjectSettings.asset'te kullanicinin/Unity'nin commit'siz degisikligi var; once git diff ile bak, kullaniciya sor -> 058ec2d commit'lendi, merge 881966a"
 started:
 finished:
-blocked_reason:
+blocked_reason: "Kullanici Player Settings > Resolution and Presentation'da Portrait ve Portrait Upside Down'u kapatir (Editor acikken dosya disaridan yazilmaz, Editor ezer)"
 ---
 
 ## Hedef

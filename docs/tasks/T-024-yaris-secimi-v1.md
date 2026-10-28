@@ -1,7 +1,7 @@
 ---
 id: T-024
 title: Yaris secimi ekrani v1 - kategori kartlari (Sprints/Hurdles/Relays), mesafe, Race of the Day, Practice, Continue
-status: review
+status: merged
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -17,7 +17,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/EventSelect*.cs"
 touches_scene: true
 branch: agent/T-024-yaris-secimi
-commits: []
+commits: [0fc8f43]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/EventSelectModelTests.cs"
 analytics:
@@ -27,8 +27,8 @@ needs:
     durum: closed
     not: "EventSelectLayout view'a SerializeField (layout) olarak baglandi, builder prefab'a atar; installer baglamasi GEREKMIYOR"
   - tip: ASSET
-    durum: open
-    not: "Builder kopyada (batchmode) kosulur: UiPrefabBuilder.BuildAll ile UI/Screens/EventSelectScreen.prefab YENIDEN uretilir (diskteki eski liste surumu overwrite olmadan korunur; yalniz bu prefab icin silinip uretilmeli, Home vb. kullanici duzenlemesi ezilmesin) + ConfigAssetSeeder.SeedAll(false) ile Data/Config/EventSelectLayout.asset + yeni .cs/.png .meta dosyalari (GeriAl ile gelir). Sonra Home sahnesinde EventSelectScreen ornegi prefab'dan guncel mi bak (SceneBuilder ya da prefab ornegi)"
+    durum: closed
+    not: "Builder kopyada (batchmode) kosulur: UiPrefabBuilder.BuildAll ile UI/Screens/EventSelectScreen.prefab YENIDEN uretilir (diskteki eski liste surumu overwrite olmadan korunur; yalniz bu prefab icin silinip uretilmeli, Home vb. kullanici duzenlemesi ezilmesin) + ConfigAssetSeeder.SeedAll(false) ile Data/Config/EventSelectLayout.asset + yeni .cs/.png .meta dosyalari (GeriAl ile gelir). Sonra Home sahnesinde EventSelectScreen ornegi prefab'dan guncel mi bak (SceneBuilder ya da prefab ornegi) -> 0fc8f43"
 started: 2026-10-28
 finished: 2026-10-28
 blocked_reason:

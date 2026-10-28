@@ -1,7 +1,7 @@
 ---
 id: T-023
 title: Ana menu Serhat'in tema sahnesinde, karakter kaidede, tema degistirme (environment butonu)
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: []
 owns_paths:
@@ -20,21 +20,21 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/**"
 touches_scene: true
 branch: agent/T-023-ana-menu-tema
-commits: []
+commits: [0fc8f43]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/ThemeServiceTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
-    not: "ProjectInstaller: field [SerializeField] ThemeCatalog themes + BindConfig(themes); Container.Bind<IThemeService>().FromMethod(c => new ThemeService(c.Container.Resolve<ThemeCatalog>(), c.Container.Resolve<ProgressRepository>(), c.Container.Resolve<WalletService>(), Application.isEditor || Debug.isDebugBuild)).AsSingle() (using SpeedStars.Meta.Themes). ProjectContextBuilder: Prop(installerSo,'themes') = LoadRequired<ThemeCatalog>(ConfigAssetSeeder.ThemeCatalogPath, seeder). HomeSceneInstaller: nothing (MenuThemeView is injected by the SceneContext)."
+    durum: closed
+    not: "ProjectInstaller: field [SerializeField] ThemeCatalog themes + BindConfig(themes); Container.Bind<IThemeService>().FromMethod(c => new ThemeService(c.Container.Resolve<ThemeCatalog>(), c.Container.Resolve<ProgressRepository>(), c.Container.Resolve<WalletService>(), Application.isEditor || Debug.isDebugBuild)).AsSingle() (using SpeedStars.Meta.Themes). ProjectContextBuilder: Prop(installerSo,'themes') = LoadRequired<ThemeCatalog>(ConfigAssetSeeder.ThemeCatalogPath, seeder). HomeSceneInstaller: nothing (MenuThemeView is injected by the SceneContext). -> 0fc8f43"
   - tip: SCENE
-    durum: open
-    not: "Run Faz1Builder.RebuildAll (seeds ThemeCatalog.asset, rebuilds Home from Serhat's scene). HomeScreenView.themeSelectScreen stays empty until the ThemeSelectScreen prefab exists (T-027): SceneWiring.WireHome must set it then."
+    durum: closed
+    not: "Run Faz1Builder.RebuildAll (seeds ThemeCatalog.asset, rebuilds Home from Serhat's scene). HomeScreenView.themeSelectScreen stays empty until the ThemeSelectScreen prefab exists (T-027): SceneWiring.WireHome must set it then. -> 0fc8f43"
   - tip: DECISION
-    durum: open
-    not: "Tema fiyatlari (Nakit) kullanicida; ThemeCatalog asset'inde 0 = fiyat yok. Yaris sahnesi secili temayi kullansin mi (Malik/Serhat) - bu task'ta yok"
+    durum: closed
+    not: "Tema fiyatlari (Nakit) kullanicida; ThemeCatalog asset'inde 0 = fiyat yok. Yaris sahnesi secili temayi kullansin mi (Malik/Serhat) - bu task'ta yok -> 0fc8f43"
 started: 2026-10-28
 finished: 2026-10-28
 blocked_reason:

@@ -1,7 +1,7 @@
 ---
 id: T-025
 title: Kozmetik cekirdegi - yarisci on ayarlari (Custom N), sahiplik, premium satin alma, onizleme, CosmeticApplier
-status: review
+status: merged
 owner: systems-agent
 depends_on: []
 owns_paths:
@@ -18,7 +18,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Cosmetics/**"
 touches_scene: true
 branch: agent/T-025-kozmetik-cekirdek
-commits: []
+commits: [0fc8f43]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Cosmetics/CosmeticServiceTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Cosmetics/CosmeticPreviewAndPlanTests.cs"
@@ -26,17 +26,17 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
-    not: "ProjectInstaller.InstallBindings, WalletService bind'inin altina: Container.Bind<ICosmeticService>().To<CosmeticService>().AsSingle(); Container.Bind<ICosmeticPreview>().To<CosmeticPreview>().AsSingle(); (using SpeedStars.Meta.Cosmetics; CosmeticService ctor: ProgressRepository, WalletService [concrete, zaten bagli], CosmeticCatalog [zaten BindConfig]). SceneBuilder.BuildRace: DisableRunnerDebugTools(scene) satirindan sonra tek satir: SceneCosmetics.AddToRaceRunner(scene);"
+    durum: closed
+    not: "ProjectInstaller.InstallBindings, WalletService bind'inin altina: Container.Bind<ICosmeticService>().To<CosmeticService>().AsSingle(); Container.Bind<ICosmeticPreview>().To<CosmeticPreview>().AsSingle(); (using SpeedStars.Meta.Cosmetics; CosmeticService ctor: ProgressRepository, WalletService [concrete, zaten bagli], CosmeticCatalog [zaten BindConfig]). SceneBuilder.BuildRace: DisableRunnerDebugTools(scene) satirindan sonra tek satir: SceneCosmetics.AddToRaceRunner(scene); -> 0fc8f43"
   - tip: ASSET
-    durum: open
-    not: "Data/Config/CosmeticCatalog.asset + Data/Config/Cosmetics/*.asset yeniden tohumlanmali (ConfigAssetSeeder overwrite, CosmeticCatalogSeed.Seed): yeni alanlar presetCount (3), presetNameFormat, defaultOutfit (6 kayit), colorPalette (8 renk), legacyOutfitObjects, ve oge basina primaryChannel. Tohumlanana kadar asset'te bunlar kod varsayilaninda: varsayilan kiyafet BOS, palet BOS, primaryChannel hep Color1. Yeniden tohumlama 7. gun odulu ve diger config referanslarini korur (CreateOrReset yerinde sifirlar)."
+    durum: closed
+    not: "Data/Config/CosmeticCatalog.asset + Data/Config/Cosmetics/*.asset yeniden tohumlanmali (ConfigAssetSeeder overwrite, CosmeticCatalogSeed.Seed): yeni alanlar presetCount (3), presetNameFormat, defaultOutfit (6 kayit), colorPalette (8 renk), legacyOutfitObjects, ve oge basina primaryChannel. Tohumlanana kadar asset'te bunlar kod varsayilaninda: varsayilan kiyafet BOS, palet BOS, primaryChannel hep Color1. Yeniden tohumlama 7. gun odulu ve diger config referanslarini korur (CreateOrReset yerinde sifirlar). -> 0fc8f43"
   - tip: ASSET
-    durum: open
-    not: "Yeni .cs dosyalarinin .meta'lari Unity'de uretilmeli (kopyada derle, .meta'yi al): Scripts/Meta/Cosmetics/*, Meta/Config/CosmeticOutfitEntry.cs, Meta/Contracts/CosmeticContracts.cs, Bridge/CosmeticApplier.cs, Bridge/RaceRunnerOutfit.cs, Tools/Editor/Builders/Scene/SceneCosmetics.cs, Tests/EditMode/Meta/Cosmetics/*, Scripts/Meta/Cosmetics klasoru"
+    durum: closed
+    not: "Yeni .cs dosyalarinin .meta'lari Unity'de uretilmeli (kopyada derle, .meta'yi al): Scripts/Meta/Cosmetics/*, Meta/Config/CosmeticOutfitEntry.cs, Meta/Contracts/CosmeticContracts.cs, Bridge/CosmeticApplier.cs, Bridge/RaceRunnerOutfit.cs, Tools/Editor/Builders/Scene/SceneCosmetics.cs, Tests/EditMode/Meta/Cosmetics/*, Scripts/Meta/Cosmetics klasoru -> 0fc8f43"
   - tip: DECISION
-    durum: open
-    not: "On ayar sayisi (Custom 1..N) PDF'te yok: config'te, tohum 3. Normal kozmetiklerin fiyati yok (OPEN #6): normal = sahip, premium = 50 Mor Mucevher (PDF)"
+    durum: closed
+    not: "On ayar sayisi (Custom 1..N) PDF'te yok: config'te, tohum 3. Normal kozmetiklerin fiyati yok (OPEN #6): normal = sahip, premium = 50 Mor Mucevher (PDF) -> 0fc8f43"
 started: 2026-10-28
 finished: 2026-10-28
 blocked_reason:

@@ -1,7 +1,7 @@
 ---
 id: T-027
 title: Tema secimi ekrani (Tema_Secimi_UI_v1) - oklarla onizleme, fiyat / USE / IN USE, Back onizlemeyi iptal eder
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-023]
 owns_paths:
@@ -14,7 +14,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Themes/**"
 touches_scene: true
 branch: agent/T-027-tema-secimi
-commits: []
+commits: [0fc8f43]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Themes/ThemeSelectPresenterTests.cs"
 analytics:
@@ -24,8 +24,8 @@ needs:
     durum: closed
     not: "SceneWiring.WireHome'a themeSelectScreen atamasi + UiPrefabPaths.HomeScreens'e prefab eklendi (bu task'ta izinli); view IThemeService + IWallet + IEntryTickets + UiMotionConfig inject alir, installer baglamasi yok"
   - tip: ASSET
-    durum: open
-    not: "Builder kopyada kosulur: UiPrefabBuilder.BuildAll ile UI/Screens/ThemeSelectScreen.prefab uretilir; sonra Home sahnesi yeniden kurulur (SceneBuilder.BuildHome: ekran listesi degisti) ve yeni .cs/.png .meta dosyalari GeriAl ile gelir"
+    durum: closed
+    not: "Builder kopyada kosulur: UiPrefabBuilder.BuildAll ile UI/Screens/ThemeSelectScreen.prefab uretilir; sonra Home sahnesi yeniden kurulur (SceneBuilder.BuildHome: ekran listesi degisti) ve yeni .cs/.png .meta dosyalari GeriAl ile gelir -> 0fc8f43"
 started: 2026-10-28
 finished: 2026-10-28
 blocked_reason:
