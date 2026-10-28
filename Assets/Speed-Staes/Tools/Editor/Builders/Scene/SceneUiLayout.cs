@@ -29,8 +29,8 @@ namespace SpeedStars.Tools.Builders
         public const int OverlayCanvasOrder = 20;
 
         // Landscape reference resolution (contract §5, T-007 layouts) and an even width/height match.
-        private static readonly Vector2 ReferenceResolution = new Vector2(1920f, 1080f);
-        private const float WidthHeightMatch = 0.5f;
+        private static readonly Vector2 ReferenceResolution = new Vector2(2400f, 1080f);
+        private const float WidthHeightMatch = 1f;
 
         // The scene being built is the active one (Single mode), so new objects land in it; the explicit move only
         // guarantees it. new GameObject(name, types) is used because it swaps Transform for RectTransform cleanly.
