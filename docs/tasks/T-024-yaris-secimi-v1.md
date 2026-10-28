@@ -1,7 +1,7 @@
 ---
 id: T-024
 title: Yaris secimi ekrani v1 - kategori kartlari (Sprints/Hurdles/Relays), mesafe, Race of the Day, Practice, Continue
-status: todo
+status: review
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -24,10 +24,13 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
+    durum: closed
+    not: "EventSelectLayout view'a SerializeField (layout) olarak baglandi, builder prefab'a atar; installer baglamasi GEREKMIYOR"
+  - tip: ASSET
     durum: open
-    not: "ProjectInstaller: EventSelectLayout config asset'i bind (ya da view'a SerializeField; hangisi secildiyse calisma notunda)"
-started:
-finished:
+    not: "Builder kopyada (batchmode) kosulur: UiPrefabBuilder.BuildAll ile UI/Screens/EventSelectScreen.prefab YENIDEN uretilir (diskteki eski liste surumu overwrite olmadan korunur; yalniz bu prefab icin silinip uretilmeli, Home vb. kullanici duzenlemesi ezilmesin) + ConfigAssetSeeder.SeedAll(false) ile Data/Config/EventSelectLayout.asset + yeni .cs/.png .meta dosyalari (GeriAl ile gelir). Sonra Home sahnesinde EventSelectScreen ornegi prefab'dan guncel mi bak (SceneBuilder ya da prefab ornegi)"
+started: 2026-10-28
+finished: 2026-10-28
 blocked_reason:
 ---
 
@@ -66,4 +69,8 @@ KAMERA  : yok
 - Home ekranının diğer butonları
 
 ## Calisma notu
-(Agent doldurur)
+- Yapildi: sanat UI/Art/EventSelect'e kopyalandi; saf EventSelectModel (+15 EditMode testi), EventSelectLayout SO (kategori->yaris esleme, sabit etiketler, deny-shake sayilari) + seed; EventCategoryCardView + yeni EventSelectScreenView (UiScreen, Back = UiPanel.closeButton); UiEventSelectPrefabs builder (layout.json + PNG alfa sinirlarindan yerlesim).
+- Karar: layout asset'i installer yerine view'a SerializeField (builder atar) -> WIRING yok; smoke test sozlesmesi ayni (eventSelectScreen, Back kapatir).
+- Geri bildirim: kart secimi = ButtonFeedback punch (UiMotionConfig); oynanamayan yarista Continue DOShakeAnchorPos + gri 'Dimmed' katman. UiMotionConfig'te deny-shake tarifi yok (dosya owns disi): sayilar EventSelectLayout'ta.
+- Birakilan: EventRowView.cs + UiRowPrefabs.EventRow + UiViewBinder.BindEventSelect + UiScreenPrefabs.EventSelect artik kullanilmiyor (owns disi oldugu icin silinmedi; EventRow prefab'i builder'da artik uretilmiyor). Bottom butonlarin secili sanati yok: kirmizi Outline ile isaretleniyor. Yeni .cs'lerin .meta'si yok (hook), kopyada uretilmeli.
+- Dogrulanmadi: Unity derleme/test calistirilmadi; prefab'ta alan baglari (fileID) builder kosulduktan sonra grep'lenmeli.

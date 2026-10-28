@@ -59,6 +59,7 @@ namespace SpeedStars.Tools.Builders
             SeedSevenDay(overwrite, cosmetics);
             SeedRaceEvents(overwrite);
             SeedUiMotion(overwrite);
+            EventSelectConfigSeed.Seed(overwrite);
             AssetDatabase.SaveAssets();
         }
 

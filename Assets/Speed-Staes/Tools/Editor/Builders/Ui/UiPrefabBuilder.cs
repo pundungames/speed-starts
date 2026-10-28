@@ -24,7 +24,7 @@ namespace SpeedStars.Tools.Builders
             var run = new Run(scene, overwrite);
             try
             {
-                GameObject eventRow = run.Build(UiPrefabPaths.EventRow, UiRowPrefabs.EventRow);
+                // EventRow is no longer built: the event select screen (T-024) has cards, not a list.
                 GameObject highScoreRow = run.Build(UiPrefabPaths.HighScoreRow, UiRowPrefabs.HighScoreRow);
                 run.Build(UiPrefabPaths.CosmeticCell, UiRowPrefabs.CosmeticCell);
                 GameObject sevenDayCell = run.Build(UiPrefabPaths.SevenDayCell, UiRowPrefabs.SevenDayCell);
@@ -34,8 +34,9 @@ namespace SpeedStars.Tools.Builders
                 run.Build(UiPrefabPaths.RewardFlight, UiWidgetPrefabs.RewardFlight);
 
                 run.Build(UiPrefabPaths.HomeScreen, UiScreenPrefabs.Home);
-                run.Build(UiPrefabPaths.EventSelectScreen,
-                    root => UiScreenPrefabs.EventSelect(root, UiViewBinder.RowComponent<SpeedStars.UI.Home.EventRowView>(eventRow, UiPrefabPaths.EventRow)));
+                // The screen reads the content asset (which race behind which card); seeded here when missing, never overwritten.
+                SpeedStars.UI.Home.EventSelectLayout eventSelectContent = EventSelectConfigSeed.Seed(overwrite: false);
+                run.Build(UiPrefabPaths.EventSelectScreen, root => UiEventSelectPrefabs.EventSelect(root, eventSelectContent));
                 run.Build(UiPrefabPaths.CosmeticsScreen, UiScreenPrefabs.Cosmetics);
                 run.Build(UiPrefabPaths.HighScoresScreen, UiScreenPrefabs.HighScores);
                 run.Build(UiPrefabPaths.RaceHud, UiScreenPrefabs.RaceHud);

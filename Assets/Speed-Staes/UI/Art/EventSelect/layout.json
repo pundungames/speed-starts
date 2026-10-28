@@ -1,0 +1,173 @@
+{
+  "reference_size": [
+    1678,
+    937
+  ],
+  "components": [
+    {
+      "name": "screen_heading",
+      "rect": [
+        331,
+        86,
+        1016,
+        138
+      ],
+      "layers": [
+        "screen_heading_background.png"
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "name": "back",
+      "rect": [
+        31,
+        26,
+        113,
+        101
+      ],
+      "layers": [
+        "back_background.png",
+        "back_icon.png"
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "name": "race_of_day",
+      "rect": [
+        454,
+        738,
+        382,
+        147
+      ],
+      "layers": [
+        "race_of_day_background.png",
+        "race_of_day_icon.png"
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "name": "practice",
+      "rect": [
+        845,
+        739,
+        383,
+        145
+      ],
+      "layers": [
+        "practice_background.png",
+        "practice_icon.png"
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "name": "continue",
+      "rect": [
+        1281,
+        752,
+        367,
+        139
+      ],
+      "layers": [
+        "continue_background.png",
+        "continue_arrow.png"
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "name": "sprints",
+      "rect": [
+        70,
+        231,
+        532,
+        483
+      ],
+      "layers": [
+        "sprints_card_normal.png",
+        "sprints_card_selected.png",
+        "sprints_header_normal.png",
+        "sprints_header_selected.png",
+        "sprints_illustration.png",
+        "sprints_distance_1_normal.png",
+        "sprints_distance_1_selected.png",
+        "sprints_distance_2_normal.png",
+        "sprints_distance_2_selected.png",
+        "sprints_distance_3_normal.png",
+        "sprints_distance_3_selected.png"
+      ],
+      "note": "Use exactly one card state and one header state. Distance layers visible only for active category. Distance labels assigned at runtime."
+    },
+    {
+      "name": "hurdles",
+      "rect": [
+        602,
+        239,
+        482,
+        465
+      ],
+      "layers": [
+        "hurdles_card_normal.png",
+        "hurdles_card_selected.png",
+        "hurdles_header_normal.png",
+        "hurdles_header_selected.png",
+        "hurdles_illustration.png",
+        "hurdles_distance_1_normal.png",
+        "hurdles_distance_1_selected.png",
+        "hurdles_distance_2_normal.png",
+        "hurdles_distance_2_selected.png",
+        "hurdles_distance_3_normal.png",
+        "hurdles_distance_3_selected.png"
+      ],
+      "note": "Use exactly one card state and one header state. Distance layers visible only for active category. Distance labels assigned at runtime."
+    },
+    {
+      "name": "relays",
+      "rect": [
+        1086,
+        239,
+        520,
+        465
+      ],
+      "layers": [
+        "relays_card_normal.png",
+        "relays_card_selected.png",
+        "relays_header_normal.png",
+        "relays_header_selected.png",
+        "relays_illustration.png",
+        "relays_distance_1_normal.png",
+        "relays_distance_1_selected.png",
+        "relays_distance_2_normal.png",
+        "relays_distance_2_selected.png",
+        "relays_distance_3_normal.png",
+        "relays_distance_3_selected.png"
+      ],
+      "note": "Use exactly one card state and one header state. Distance layers visible only for active category. Distance labels assigned at runtime."
+    }
+  ],
+  "runtime_labels": [
+    "SELECT EVENT",
+    "SPRINTS",
+    "HURDLES",
+    "RELAYS",
+    "100m",
+    "200m",
+    "400m",
+    "RACE OF THE DAY",
+    "PRACTICE",
+    "CONTINUE"
+  ]
+}
