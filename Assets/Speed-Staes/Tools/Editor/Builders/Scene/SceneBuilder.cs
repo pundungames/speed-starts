@@ -85,6 +85,7 @@ namespace SpeedStars.Tools.Builders
                 SceneUiLayout.CreateTransitionBlocker(uiRoot, overlayCanvas);
 
                 SceneUiLayout.CreateSceneContext<HomeSceneInstaller>(scene, SceneUiLayout.RootScreenOf(rootScreen, UiPrefabPaths.HomeScreens[0]));
+                SceneHomeDim.Create(scene);  // T-026: dim canvas behind the character, wired to the costume screen below
                 SceneWiring.WireHome(scene);
                 Save(scene, HomeScenePath);
                 done = true;

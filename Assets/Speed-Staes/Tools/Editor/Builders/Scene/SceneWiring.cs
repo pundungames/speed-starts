@@ -41,6 +41,10 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "sevenDayPopup").objectReferenceValue = sevenDay;
             Prop(so, "themeSelectScreen").objectReferenceValue = themeSelect;
             Apply(so);
+            var costume = RequireOne<SpeedStars.UI.Costume.CostumeEditorScreenView>(scene, "Costume editor screen (CosmeticsScreen prefab instance)");
+            var costumeSo = new SerializedObject(costume);
+            Prop(costumeSo, "dimBackdrop").objectReferenceValue = SceneHomeDim.Find(scene);
+            Apply(costumeSo);
             Log(nameof(SceneWiring), "Home: HomeScreenView screen/popup references wired.");
         }
 
