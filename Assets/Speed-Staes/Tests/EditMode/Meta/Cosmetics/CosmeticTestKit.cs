@@ -1,5 +1,6 @@
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Cosmetics;
+using SpeedStars.Meta.Economy;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.Meta.Wallet;
 using SpeedStars.Tests.Meta.Config;
@@ -29,6 +30,7 @@ namespace SpeedStars.Tests.Meta.Cosmetics
         public readonly CosmeticCatalog Catalog;
         public ProgressRepository Repository;
         public WalletService Wallet;
+        public EconomyLedger Ledger;
         public CosmeticService Service;
 
         public CosmeticTestKit(int startingGems)
@@ -43,7 +45,8 @@ namespace SpeedStars.Tests.Meta.Cosmetics
             Repository = new ProgressRepository(Store, () => new StartingBalances(0, startingGems, 0, 0));
             Repository.Load();
             Wallet = new WalletService(Repository, Clock);
-            Service = new CosmeticService(Repository, Wallet, Catalog);
+            Ledger = new EconomyLedger(Repository, Wallet, Fixture.Create<EconomyConfig>());
+            Service = new CosmeticService(Repository, Ledger, Catalog);
         }
 
         public PlayerProgress Progress => Repository.Current;

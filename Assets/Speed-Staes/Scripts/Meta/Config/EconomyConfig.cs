@@ -65,6 +65,10 @@ namespace SpeedStars.Meta.Config
         [Tooltip("Entry Tickets one rewarded ad gives. 0 = option closed even when enabled.")]
         [SerializeField, Min(0)] private int rewardedAdEntryTickets;
 
+        [Header("Transaction log")]
+        [Tooltip("How many processed transaction ids the save remembers (duplicate protection). The oldest are dropped first. Technical limit, not balance; keep it well above the number of purchases a player can repeat within one session.")]
+        [SerializeField, Min(1)] private int processedTransactionCap = 200;
+
         [Header("Day boundary")]
         [Tooltip("When the daily gift and the 7-day check-in roll over to a new day.")]
         [SerializeField] private DayBoundaryPolicy dayBoundary;
@@ -78,6 +82,8 @@ namespace SpeedStars.Meta.Config
         public int StartingPurpleGems => startingPurpleGems;
         public int StartingEntryTickets => startingEntryTickets;
         public int StartingTimedTickets => startingTimedTickets;
+
+        public int ProcessedTransactionCap => processedTransactionCap < 1 ? 1 : processedTransactionCap;
 
         public DayBoundaryPolicy DayBoundary => dayBoundary;
 

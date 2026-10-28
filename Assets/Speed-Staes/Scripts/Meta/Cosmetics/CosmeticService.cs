@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
-using SpeedStars.Meta.Wallet;
 
 namespace SpeedStars.Meta.Cosmetics
 {
@@ -12,18 +11,18 @@ namespace SpeedStars.Meta.Cosmetics
     /// the cosmetic catalog on every call. Ownership: an item with no price that is not premium is owned from the start;
     /// anything else needs its id in <c>OwnedCosmeticIds</c> (written by <c>TryPurchase</c>). Presets are filled up to the
     /// configured count lazily, so a raised count or an old save needs no migration step beyond the repository's.
-    /// The wallet interface is read-only, so the price is taken from the save's balances and the wallet is told to redraw.
+    /// The price is charged through the economy ledger (transaction id "cosmetic:<id>"), which also tells the wallet to redraw.
     /// </summary>
     public sealed class CosmeticService : ICosmeticService
     {
         private readonly ProgressRepository _repository;
-        private readonly WalletService _wallet;
+        private readonly IEconomyLedger _ledger;
         private readonly CosmeticCatalog _catalog;
 
-        public CosmeticService(ProgressRepository repository, WalletService wallet, CosmeticCatalog catalog)
+        public CosmeticService(ProgressRepository repository, IEconomyLedger ledger, CosmeticCatalog catalog)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-            _wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
+            _ledger = ledger ?? throw new ArgumentNullException(nameof(ledger));
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         }
 
@@ -147,25 +146,25 @@ namespace SpeedStars.Meta.Cosmetics
             if (IsOwned(item)) return CosmeticPurchaseResult.AlreadyOwned;
             if (!item.IsForSale) return CosmeticPurchaseResult.NotForSale;
 
-            PlayerProgress progress = Progress;
+            EconomyCurrency currency;
             switch (item.Currency)
             {
-                case CosmeticCurrency.PurpleGem:
-                    if (progress.PurpleGems < item.Price) return CosmeticPurchaseResult.NotEnough;
-                    progress.PurpleGems -= item.Price;
-                    break;
-                case CosmeticCurrency.Cash:
-                    if (progress.Cash < item.Price) return CosmeticPurchaseResult.NotEnough;
-                    progress.Cash -= item.Price;
-                    break;
-                default:
-                    return CosmeticPurchaseResult.NotForSale;
+                case CosmeticCurrency.PurpleGem: currency = EconomyCurrency.PurpleGem; break;
+                case CosmeticCurrency.Cash: currency = EconomyCurrency.Cash; break;
+                default: return CosmeticPurchaseResult.NotForSale;
+            }
+
+            switch (_ledger.TrySpend(currency, item.Price, "cosmetic:" + item.Id))
+            {
+                case TransactionResult.Done: break;
+                case TransactionResult.NotEnough: return CosmeticPurchaseResult.NotEnough;
+                case TransactionResult.AlreadyProcessed: return CosmeticPurchaseResult.AlreadyOwned;
+                default: return CosmeticPurchaseResult.NotForSale;
             }
 
             // Money and ownership change together and are written in one save, so a crash cannot take one without the other.
-            progress.OwnedCosmeticIds.Add(item.Id);
+            Progress.OwnedCosmeticIds.Add(item.Id);
             _repository.Save();
-            _wallet.NotifyChanged();
             Changed?.Invoke();
             return CosmeticPurchaseResult.Purchased;
         }

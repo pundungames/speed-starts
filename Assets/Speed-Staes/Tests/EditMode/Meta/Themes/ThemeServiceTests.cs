@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Economy;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.Meta.Themes;
 using SpeedStars.Meta.Wallet;
@@ -44,7 +45,7 @@ namespace SpeedStars.Tests.Meta.Themes
                 ConfigFixture.Find(so, "defaultThemeId").stringValue = "a";
             });
             _wallet = new WalletService(_kit.Repository, _kit.Clock);
-            return new ThemeService(_catalog, _kit.Repository, _wallet, allOwned);
+            return new ThemeService(_catalog, _kit.Repository, new EconomyLedger(_kit.Repository, _wallet, _kit.Economy), allOwned);
         }
 
         [Test]
@@ -168,7 +169,8 @@ namespace SpeedStars.Tests.Meta.Themes
 
             var reloaded = new ProgressRepository(_kit.Store, () => new StartingBalances(0, 0, 0, 0));
             reloaded.Load();
-            var again = new ThemeService(_catalog, reloaded, new WalletService(reloaded, _kit.Clock), false);
+            var again = new ThemeService(_catalog, reloaded,
+                new EconomyLedger(reloaded, new WalletService(reloaded, _kit.Clock), _kit.Economy), false);
             Assert.AreEqual("b", again.ActiveId);
             Assert.AreEqual("b", again.ShownId);
             Assert.AreEqual(1, again.ShownShowcaseIndex);

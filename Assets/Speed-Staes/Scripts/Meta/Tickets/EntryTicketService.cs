@@ -13,7 +13,7 @@ namespace SpeedStars.Meta.Tickets
     /// (due = 0); dropping below the cap starts a fresh full interval. A regen interval of 0 means regen is off.
     /// The clock never goes back (<c>IClock</c>), so a rolled-back device clock cannot produce tickets.
     /// </summary>
-    public sealed class EntryTicketService : IEntryTickets
+    public sealed class EntryTicketService : IEntryTickets, IEntryTicketSource
     {
         private readonly ProgressRepository _repository;
         private readonly IClock _clock;
@@ -110,6 +110,33 @@ namespace SpeedStars.Meta.Tickets
 
             Changed?.Invoke();
             return true;
+        }
+
+        /// <summary>
+        /// Acquisition gate: refuses while the inventory is full (PDF §6: gift, ad and Cash purchase are closed at the cap),
+        /// otherwise adds what the source is configured to give, never past the cap. Does NOT save; the caller does.
+        /// </summary>
+        public TicketGrantResult TryGrant(TicketGrantSource source)
+        {
+            Refresh();
+            PlayerProgress p = Progress;
+            if (p.EntryTickets >= Cap) return TicketGrantResult.Full;
+
+            int amount;
+            switch (source)
+            {
+                case TicketGrantSource.DailyGift: amount = _config.DailyGiftEntryTickets; break;
+                case TicketGrantSource.RewardedAd: _config.TryGetRewardedAdEntryTickets(out amount); break;
+                case TicketGrantSource.CashPurchase: amount = 1; break;
+                default: amount = 0; break;
+            }
+            if (amount < 1) return TicketGrantResult.NotAvailable;
+
+            p.EntryTickets = Math.Min(Cap, p.EntryTickets + amount);
+            // Reaching the cap stops the regen timer (same rule as Refresh).
+            if (p.EntryTickets >= Cap) p.EntryRegenDueUtcTicks = 0;
+            Changed?.Invoke();
+            return TicketGrantResult.Granted;
         }
 
         private PlayerProgress Progress => _repository.Current

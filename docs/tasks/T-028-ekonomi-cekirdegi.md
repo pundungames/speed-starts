@@ -1,7 +1,7 @@
 ---
 id: T-028
 title: Faz 3 ekonomi cekirdegi - tek islem yolu (idempotent), Sureli Bilet etkinlestirme, Mor Mucevher odulu, dolu envanterde edinim kapali
-status: todo
+status: review
 owner: systems-agent
 depends_on: [T-025, T-023]
 owns_paths:
@@ -31,9 +31,9 @@ analytics:
 needs:
   - tip: WIRING
     durum: open
-    not: "ProjectInstaller: IEconomyLedger, ITimedAccess, IRaceRewardResolver AsSingle; Cosmetic/Theme servisleri yeni imzayla"
-started:
-finished:
+    not: "ProjectInstaller (exact lines in Calisma notu): IEconomyLedger, ITimedAccess, IRaceRewardResolver, IEntryTicketShop AsSingle; EntryTicketService also as IEntryTicketSource; CreateThemes passes IEconomyLedger instead of WalletService"
+started: 2026-10-28
+finished: 2026-10-28
 blocked_reason:
 ---
 
@@ -69,4 +69,8 @@ PDF ekonomisinin (GDD §6, §7, §14) eksik kalan çekirdeği. Bugün Adet Bilet
 - Mekanik: yarış sırası/rakipler Malik'te; sıra bugün `RaceOutcome.Rank`'tan okunur
 
 ## Calisma notu
-(Agent doldurur)
+1. Ledger (`Meta/Economy/EconomyLedger.cs`) is the only writer of Cash/PurpleGems/TimedTickets; it applies + records the id + notifies the wallet but does NOT save (callers save balance+purchase together). Cosmetic/Theme take `IEconomyLedger` instead of `WalletService` (ids `cosmetic:<id>`, `theme:<id>`).
+2. New: TimedAccessService, RaceRewardResolver (`Resolve(outcome, payoutId)`, id `race-payout:<payoutId>`), EntryTicketShop (Cash ticket, 0 price = NotForSale, full = not charged), `EntryTicketService.TryGrant(source)` (IEntryTicketSource). Contracts in `Contracts/EconomyContracts.cs`. `EconomyConfig.ProcessedTransactionCap` (code default 200, field `processedTransactionCap`; no seeder line needed, missing field keeps 200).
+3. Existing tests adapted only for the new constructor (CosmeticTestKit, ThemeServiceTests); behaviour unchanged. New tests in Tests/EditMode/Meta/Economy (kit + 4 files). Nothing was run (central verification); full suite needed (economy/save change).
+4. Rank "finished" = Rank >= 1 and TimeSeconds > 0 (RaceOutcome has no finished flag). Zero-duration timed config returns NotAvailable without spending.
+5. WIRING lines (ProjectInstaller): `Container.Bind<IEconomyLedger>().To<EconomyLedger>().AsSingle();` `Container.Bind<ITimedAccess>().To<TimedAccessService>().AsSingle();` `Container.Bind<IRaceRewardResolver>().To<RaceRewardResolver>().AsSingle();` `Container.Bind<IEntryTicketShop>().To<EntryTicketShop>().AsSingle();` change the EntryTicketService bind to `Container.Bind(typeof(IEntryTickets), typeof(EntryTicketService), typeof(IEntryTicketSource)).To<EntryTicketService>().AsSingle();` and in CreateThemes replace `c.Resolve<WalletService>()` with `c.Resolve<IEconomyLedger>()`. Usings: SpeedStars.Meta.Economy.

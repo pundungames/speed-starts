@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
-using SpeedStars.Meta.Wallet;
 
 namespace SpeedStars.Meta.Themes
 {
     /// <summary>
     /// Active (saved) and shown (previewed) world theme, ownership and Cash purchases. Save: <c>PlayerProgress</c>;
-    /// prices: <c>ThemeCatalog</c>. The default theme is always owned. Buying spends Cash through the wallet and is
+    /// prices: <c>ThemeCatalog</c>. The default theme is always owned. Buying spends Cash through the economy ledger and is
     /// idempotent: an owned theme is never charged again. <c>allThemesOwned</c> is the development switch (Editor /
     /// Development Build): every theme counts as owned; the caller decides, so tests control it.
     /// </summary>
@@ -16,16 +15,16 @@ namespace SpeedStars.Meta.Themes
     {
         private readonly ThemeCatalog _catalog;
         private readonly ProgressRepository _repository;
-        private readonly WalletService _wallet;
+        private readonly IEconomyLedger _ledger;
         private readonly bool _allThemesOwned;
 
         private string _previewId; // null = showing the active theme
 
-        public ThemeService(ThemeCatalog catalog, ProgressRepository repository, WalletService wallet, bool allThemesOwned)
+        public ThemeService(ThemeCatalog catalog, ProgressRepository repository, IEconomyLedger ledger, bool allThemesOwned)
         {
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-            _wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
+            _ledger = ledger ?? throw new ArgumentNullException(nameof(ledger));
             _allThemesOwned = allThemesOwned;
         }
 
@@ -142,10 +141,16 @@ namespace SpeedStars.Meta.Themes
             if (entry.CashPrice <= 0) return ThemePurchaseResult.NotForSale;
             if (Progress.Cash < entry.CashPrice) return ThemePurchaseResult.NotEnoughCash;
 
-            Progress.Cash -= entry.CashPrice;
+            switch (_ledger.TrySpend(EconomyCurrency.Cash, entry.CashPrice, "theme:" + entry.Id))
+            {
+                case TransactionResult.Done: break;
+                case TransactionResult.NotEnough: return ThemePurchaseResult.NotEnoughCash;
+                case TransactionResult.AlreadyProcessed: return ThemePurchaseResult.AlreadyOwned;
+                default: return ThemePurchaseResult.NotForSale;
+            }
+
             Progress.OwnedThemeIds.Add(entry.Id);
             _repository.Save();
-            _wallet.NotifyChanged();
             OwnershipChanged?.Invoke();
             return ThemePurchaseResult.Purchased;
         }
