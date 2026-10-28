@@ -96,13 +96,25 @@ namespace SpeedStars.Tools.Builders
             fillImage.fillAmount = amount;
         }
 
-        /// <summary>A button of the shared 491x486 card canvas: alpha hit test so overlapping canvases still tap separately.</summary>
+        /// <summary>
+        /// A button of the shared 491x486 card canvas: the node covers only the alpha bounds of its art (background + icon), so
+        /// buttons never overlap the whole card; art layers are drawn on the full canvas from there and never catch taps.
+        /// An invisible hit Image on the node catches them; the background Image is the tint target (disabled look).
+        /// </summary>
         private static void CardButton(Transform card, string name, string background, string icon, bool interactable)
         {
-            RectTransform node = Kit.Stretch(Kit.Node(card, name));
-            Image image = UiArt.Paint(node.gameObject, UiArt.Home(background), raycast: true);
-            UiArt.Layer(node, "Icon", UiArt.Home(icon));
-            UiArt.MakeButton(node.gameObject, image, interactable, alphaHit: true);
+            Vector4 b = UiArt.AlphaBounds(UiArt.HomeArt + "/" + background + ".png");
+            Vector4 i = UiArt.AlphaBounds(UiArt.HomeArt + "/" + icon + ".png");
+            var bounds = new Vector4(Mathf.Min(b.x, i.x), Mathf.Min(b.y, i.y), Mathf.Max(b.z, i.z), Mathf.Max(b.w, i.w));
+
+            RectTransform node = Kit.Span(Kit.Node(card, name), new Vector2(bounds.x, bounds.y), new Vector2(bounds.z, bounds.w));
+            Image hit = node.gameObject.AddComponent<Image>();
+            hit.color = new Color(1f, 1f, 1f, 0f);
+            hit.raycastTarget = true;
+
+            Image image = UiArt.CanvasLayer(node, "Background", UiArt.Home(background), bounds);
+            UiArt.CanvasLayer(node, "Icon", UiArt.Home(icon), bounds);
+            UiArt.MakeButton(node.gameObject, image, interactable, alphaHit: false);
         }
 
         /// <summary>Screen-level button: background on the node, "Icon" child on the same rect, placed from layout.json.</summary>

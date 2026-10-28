@@ -146,6 +146,54 @@ namespace SpeedStars.Tools.Builders
             return image;
         }
 
+        /// <summary>
+        /// Bounds of the visible (alpha &gt; 0) pixels of an art PNG as fractions of its canvas: x, y (from bottom), x2, y2.
+        /// Shared by every builder whose buttons sit on a canvas shared with other art (hit rect = these bounds).
+        /// </summary>
+        public static Vector4 AlphaBounds(string assetPath)
+        {
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            try
+            {
+                if (!ImageConversion.LoadImage(texture, File.ReadAllBytes(Kit.FullPath(assetPath))))
+                    throw new InvalidOperationException($"UiArt: '{assetPath}' could not be read.");
+
+                int width = texture.width, height = texture.height;
+                Color32[] pixels = texture.GetPixels32();
+                int minX = width, minY = height, maxX = -1, maxY = -1;
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        if (pixels[y * width + x].a == 0) continue;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+                if (maxX < 0) throw new InvalidOperationException($"UiArt: '{assetPath}' is fully transparent.");
+                return new Vector4(minX / (float)width, minY / (float)height, (maxX + 1) / (float)width, (maxY + 1) / (float)height);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+        }
+
+        /// <summary>
+        /// A layer drawn on the whole art canvas while its parent covers only <paramref name="bounds"/> (fractions of that
+        /// canvas): anchors extend past the parent by the same fractions, offsets stay zero. Never catches taps.
+        /// </summary>
+        public static Image CanvasLayer(RectTransform parent, string name, Sprite sprite, Vector4 bounds)
+        {
+            float w = bounds.z - bounds.x;
+            float h = bounds.w - bounds.y;
+            RectTransform rt = Kit.Node(parent, name);
+            Kit.Span(rt, new Vector2(-bounds.x / w, -bounds.y / h), new Vector2((1f - bounds.x) / w, (1f - bounds.y) / h));
+            return Paint(rt.gameObject, sprite, raycast: false);
+        }
+
         /// <summary>A child stretched over its parent that shows one art layer. Never catches taps.</summary>
         public static Image Layer(Transform parent, string name, Sprite sprite)
         {

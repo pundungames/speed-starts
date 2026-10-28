@@ -1,7 +1,7 @@
 ---
 id: T-034
 title: Karakter karti butonlari tum karti kapliyor (Emote tiklamayi yutuyor) + testte gercek isin kontrolu
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-031]
 owns_paths:
@@ -18,8 +18,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-10-28
+finished: 2026-10-28
 blocked_reason:
 ---
 
@@ -44,4 +44,8 @@ tüm kartın tıklamasını yutuyor; tişört ve oklar gerçek dokunuşta çalı
 - Yeni özellik
 
 ## Calisma notu
-(Agent doldurur)
+1. UiV2Prefabs.CardButton: Previous, Next, EditRacer, Emote artik PNG alfa sinirlarina (arka plan + ikon birlesimi) oturuyor; gorsel katmanlar UiArt.CanvasLayer ile tam tuvalde, raycast kapali; tiklamayi node'daki saydam Image alir. UiArt.AlphaBounds/CanvasLayer ortak yardimci oldu (diger builder'lardaki kopyalara dokunulmadi).
+2. Diger builder'lar tarandi (Costume, ThemeSelect, Settings, Results, EventSelect, UiV2 ArtButton/Race HUD): dugmeler layout.json'daki kendi rect'lerinde ya da alfa-sinirli hit alaninda; baska ortak tuval dugmesi yok.
+3. PlaySmokeSupport.Tap: ekran merkezinden RaycastAll, ustteki buton/cocugu degilse "'X' is covered by '<yol>'"; tiklama ExecuteEvents.pointerClickHandler ile.
+4. CostumeEditorScreenView._motion -> _cardMotion. Ayni cakisma ThemeSelectScreenView, SettingsPopupView, ResultsScreenView icin de var (UiPanel turevi): owns_paths disi, dokunulmadi.
+5. Unity/test calistirilmadi; HomeScreen prefab'i builder ile yeniden kurulmali.

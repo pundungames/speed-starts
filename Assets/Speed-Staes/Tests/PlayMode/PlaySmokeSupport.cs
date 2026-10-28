@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -92,8 +93,53 @@ namespace SpeedStars.PlayTests
             Assert.IsNotNull(button, $"{what}: button is not bound.");
             yield return WaitUntil(() => button != null && button.gameObject.activeInHierarchy && button.IsInteractable(),
                 $"'{what}' to be visible and interactable");
-            button.onClick.Invoke();
+            AssertReallyHittable(button, what);
+
+            // The same path a finger takes: the pointer click handler of the button (Button.OnPointerClick checks interactable).
+            var pointer = new PointerEventData(EventSystem.current)
+            {
+                button = PointerEventData.InputButton.Left,
+                position = ScreenCenterOf(button),
+                clickCount = 1
+            };
+            ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler);
             yield return null;
+        }
+
+        /// <summary>
+        /// A raycast from the button's screen centre must reach the button (or one of its children). Calling onClick.Invoke()
+        /// hides art layers that cover a button and swallow the real tap.
+        /// </summary>
+        private static void AssertReallyHittable(Button button, string what)
+        {
+            Assert.IsNotNull(EventSystem.current, $"{what}: there is no EventSystem in the scene.");
+            var data = new PointerEventData(EventSystem.current) { position = ScreenCenterOf(button) };
+            var hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(data, hits);
+
+            Transform self = button.transform;
+            if (hits.Count > 0 && hits[0].gameObject != null && hits[0].gameObject.transform.IsChildOf(self)) return;
+
+            string top = hits.Count == 0 || hits[0].gameObject == null ? "nothing" : PathOf(hits[0].gameObject.transform);
+            Assert.Fail($"'{what}' is covered by '{top}' (a real tap at {data.position} does not reach {PathOf(self)}).");
+        }
+
+        private static Vector2 ScreenCenterOf(Button button)
+        {
+            var rect = (RectTransform)button.transform;
+            Canvas canvas = button.GetComponentInParent<Canvas>();
+            Canvas root = canvas != null ? canvas.rootCanvas : null;
+            Camera camera = null;
+            if (root != null && root.renderMode != RenderMode.ScreenSpaceOverlay)
+                camera = root.worldCamera != null ? root.worldCamera : Camera.main;
+            return RectTransformUtility.WorldToScreenPoint(camera, rect.TransformPoint(rect.rect.center));
+        }
+
+        private static string PathOf(Transform t)
+        {
+            string path = t.name;
+            for (Transform p = t.parent; p != null; p = p.parent) path = p.name + "/" + path;
+            return path;
         }
 
         public static IEnumerator WaitOpen(Component panel, string what)

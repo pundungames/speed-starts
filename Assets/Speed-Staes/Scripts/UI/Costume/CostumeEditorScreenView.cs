@@ -91,7 +91,7 @@ namespace SpeedStars.UI.Costume
         private ICosmeticService _service;
         private ICosmeticPreview _preview;
         private IInstantiator _instantiator;
-        private UiMotionConfig _motion;
+        private UiMotionConfig _cardMotion;
         private CostumeEditorModel _model;
         private CostumeTab _tab;
         private DeniedFeedback _saveDenied;
@@ -105,7 +105,7 @@ namespace SpeedStars.UI.Costume
             _service = service;
             _preview = preview;
             _instantiator = instantiator;
-            _motion = motion;
+            _cardMotion = motion;
             _model = new CostumeEditorModel(service);
         }
 
@@ -335,7 +335,7 @@ namespace SpeedStars.UI.Costume
             {
                 if (card.gameObject.activeSelf && card.CosmeticId == cosmeticId)
                 {
-                    card.Punch(_motion);
+                    card.Punch(_cardMotion);
                     return;
                 }
             }
