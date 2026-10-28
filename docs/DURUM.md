@@ -20,8 +20,10 @@ Son güncelleme: 2026-10-28 · agent-kit v2 kurulumu · dal `main` (ad3616b üst
   Editor.log'da derleme temiz).
 
 ## Sıradaki iş
-1. Tasarım md'leri → Gün 0 (gdd-bootstrap): TEMEL-SOZLESME'yi md'lerle birleştir, ilk task'lar.
+1. Kullanıcı `docs/YOL-HARITASI.md` 5 soruyu cevaplar + sözleşmeyi onaylar → Faz 1 iskele task'ları (T-001..T-008) açılır.
 2. DOTween Setup sonrası oluşan DOTweenSettings asset'ini commit'le.
+- Gün 0 durumu: GDD `docs/gdd/`; sözleşme taslak v2; açık ürün kararları `docs/decisions/OPEN-2026-10-28-gdd-acik-kararlar.md`;
+  raporlar `reports/leaderboard-tasima-*`, `reports/kozmetik-hazirlik-*`.
 3. Altyapı: `Scripts/Core/Installers` (ProjectContext + sahne installer'ları), `UiMotionConfig`, `Scenes/Menu/` ilk sahne.
 
 ## Dikkat
