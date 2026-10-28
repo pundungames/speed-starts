@@ -26,6 +26,7 @@ namespace SpeedStars.Tools.Builders
         public const string RunnerPrefabPath = "Assets/Speed-Staes/Prefabs/Character/HumanCharacterDummy_F.prefab";
         private const string PedestalMaterialPath = "Assets/Speed-Staes/Scenes/Menu/Materials/HomePedestal.mat";
         private const string MenuCharacterType = "SpeedStars.Bridge.MenuCharacter";
+        private const string MenuIdlePoseType = "SpeedStars.Bridge.MenuIdlePose";
         private const string ScreenshotPath = "Temp/shots/home.png";
 
         // Prefab forward is +Z (RunnerBody advances along transform.forward); the camera looks along +Z, so turn around.
@@ -39,6 +40,11 @@ namespace SpeedStars.Tools.Builders
         private const float CameraDistance = 5f;
         private const float CameraLookHeight = 1.0f;
         private const float RunnerHeightGuess = 1.9f;
+
+        // Light relative to the camera view direction: pitch down from above, yaw to the side.
+        private const float LightPitch = 40f;
+        private const float LightYawOffset = 30f;
+        private static readonly Color AmbientColor = new Color(0.78f, 0.80f, 0.85f);
 
         private static readonly Color PedestalColor = new Color(0.93f, 0.95f, 0.98f);
 
@@ -73,8 +79,12 @@ namespace SpeedStars.Tools.Builders
             target.objectReferenceValue = ResolveTarget(menuCharacter, target.name, runner);
             Apply(so);
 
-            CreateLight(scene);
+            // The idle pose (T-020) is added here, not at runtime, so its angles are editable in the Inspector before Play.
+            Type idlePose = FindType(MenuIdlePoseType);
+            if (idlePose != null && runner.GetComponent(idlePose) == null) runner.AddComponent(idlePose);
+
             FrameCamera(camera);
+            CreateLight(scene, camera);
             Log(Source, $"Home: '{runner.name}' prefab instance on '{pedestal.name}', {menuCharacter.Name}.{target.name} -> runner root.");
         }
 
@@ -149,7 +159,7 @@ namespace SpeedStars.Tools.Builders
                 Warn(Source, "Home camera frames less than the runner's height; raise CameraDistance.");
         }
 
-        private static void CreateLight(Scene scene)
+        private static void CreateLight(Scene scene, Camera camera)
         {
             var go = SceneUiLayout.CreateRoot(scene, "Directional Light", typeof(Light));
             var light = go.GetComponent<Light>();
@@ -157,7 +167,14 @@ namespace SpeedStars.Tools.Builders
             light.intensity = 1.1f;
             light.color = new Color(1f, 0.97f, 0.92f);
             light.shadows = LightShadows.Soft;
-            go.transform.rotation = Quaternion.Euler(40f, 150f, 0f); // from camera side, slightly above
+            // Derived from the camera: the light travels along the camera's view direction (so it hits the figure's
+            // front), pitched down LightPitch and turned LightYawOffset to the side. Camera must be framed first.
+            float cameraYaw = camera.transform.eulerAngles.y;
+            go.transform.rotation = Quaternion.Euler(LightPitch, cameraYaw + LightYawOffset, 0f);
+
+            // Bright flat ambient (this scene only: NewScene made it the active scene) so shadow sides keep detail.
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = AmbientColor;
         }
 
         private static Material PedestalMaterial()

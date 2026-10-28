@@ -263,7 +263,9 @@ namespace SpeedStars.Tools.Builders
             label.text = text;
             label.fontStyle = FontStyle.BoldAndItalic;
             label.fontSize = Mathf.RoundToInt(size);
-            label.resizeTextForBestFit = text.Length > 2;
+            // Always best fit (never above the design size): runtime numbers grow ("0" -> "1234") and a label whose line does
+            // not fit its rect vertically is not drawn at all with Truncate (Race HUD cash showed nothing).
+            label.resizeTextForBestFit = true;
             label.resizeTextMaxSize = Mathf.RoundToInt(size);
             label.resizeTextMinSize = Mathf.RoundToInt(Mathf.Max(12f, size * 0.4f));
             label.color = color;

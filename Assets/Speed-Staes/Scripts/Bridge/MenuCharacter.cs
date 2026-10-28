@@ -39,6 +39,8 @@ namespace SpeedStars.Bridge
                 body.acceptInput = false;
                 body.enabled = false;
             }
+            // Relaxed arms instead of the T-pose; added on the runner so no scene wiring is needed. Menu instance only.
+            if (!root.GetComponent<MenuIdlePose>()) root.AddComponent<MenuIdlePose>().Initialize();
             _applied = true;
         }
 
