@@ -57,11 +57,11 @@ bitiş → Sonuç ekranı → Ana ekran; bilet sayısı ve 30 dk sayacı uygulam
 - **Kapı:** döngü baştan sona oynanır; bilet testleri yeşil. **Burada GDD'nin yetkisi biter** (sonrası kod + asset).
 
 ## Faz 3 — PDF ekonomisi (tamamı)
-- [ ] `TimedTicketService` — gerçek zamanda 60 dk, oyun kapalıyken de akar; aktifken ikinci kullanım yok; yarış ortasında dolarsa yarış sürer
-- [ ] `CashWallet` + `PurpleGemWallet` — ayrı bakiye, işlem günlüğü, `PayoutTransactionId` ile çift ödül yok
-- [ ] `RaceRewardResolver` — Mor Mücevher yalnız 400m / 60mH / Medley tek yarış sırası 1-2-3; diğer etkinlikler 0
-- [ ] Adet Bileti doluyken günlük/reklam/Nakit edinimi pasif + "Adet Bileti Dolu" (fiyatlar OPEN → config boş)
-- [ ] Ekonomi uç durum regresyonu (HTML Faz 08: 3 sınırı, 30 dk, 1 saat, yarış ortası dolma, 50 fiyat, çift işlem)
+- [x] `TimedTicketService` — gerçek zamanda 60 dk, oyun kapalıyken de akar; aktifken ikinci kullanım yok; yarış ortasında dolarsa yarış sürer
+- [x] `CashWallet` + `PurpleGemWallet` — ayrı bakiye, işlem günlüğü, `PayoutTransactionId` ile çift ödül yok
+- [x] `RaceRewardResolver` — Mor Mücevher yalnız 400m / 60mH / Medley tek yarış sırası 1-2-3; diğer etkinlikler 0
+- [x] Adet Bileti doluyken günlük/reklam/Nakit edinimi pasif + "Adet Bileti Dolu" (fiyatlar OPEN → config boş)
+- [x] Ekonomi uç durum regresyonu (HTML Faz 08: 3 sınırı, 30 dk, 1 saat, yarış ortası dolma, 50 fiyat, çift işlem)
 
 ## Faz 4 — Günlük ödüller
 - [ ] Giriş Hediyesi popup'ı: günün ilk girişi, CLAIM → 1 Adet Bileti (doluysa yok), kapanınca bilet ortadan kaynak çubuğuna **bir kez** uçar

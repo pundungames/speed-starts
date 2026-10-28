@@ -1,7 +1,7 @@
 ---
 id: T-026
 title: Kostum editoru ekrani (Edit racer) - kategori, oge izgarasi, renk secici, on ayar, Random/Save, satin alma
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-025]
 owns_paths:
@@ -15,7 +15,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/**"
 touches_scene: true
 branch: agent/T-026-kostum-editoru
-commits: []
+commits: [f8c025a, 6b1d803, 4d0e331]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/CostumeEditorModelTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/HsvColorTests.cs"
@@ -24,17 +24,17 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
-    not: "ProjectInstaller -> Container.Bind<ICosmeticService>().To<CosmeticService>().AsSingle() ve Container.Bind<ICosmeticPreview>().To<CosmeticPreview>().AsSingle() (CosmeticService(ProgressRepository, WalletService, CosmeticCatalog); CostumeEditorScreenView + CostumeResourceView bunlari ve IWallet/IEntryTickets/IInstantiator/UiMotionConfig'i [Inject] ile alir). Home tarafi degismez: SceneWiring zaten CosmeticsScreen yolunu UiScreen olarak baglar, yeni prefab bir UiScreen"
+    durum: closed
+    not: "ProjectInstaller -> Container.Bind<ICosmeticService>().To<CosmeticService>().AsSingle() ve Container.Bind<ICosmeticPreview>().To<CosmeticPreview>().AsSingle() (CosmeticService(ProgressRepository, WalletService, CosmeticCatalog); CostumeEditorScreenView + CostumeResourceView bunlari ve IWallet/IEntryTickets/IInstantiator/UiMotionConfig'i [Inject] ile alir). Home tarafi degismez: SceneWiring zaten CosmeticsScreen yolunu UiScreen olarak baglar, yeni prefab bir UiScreen -> 4d0e331"
   - tip: SCENE
-    durum: open
-    not: "Dimscreen karakterin ARKASINDA olmali (overlay tuvalde karakteri de karartir): Home sahnesine Screen Space - Camera 'Canvas Dim' (plane distance: karakterden uzak, dekordan yakin, yani karakter dim'in onunde cizilir) + icinde stretch Image (UI/Art/Costume/dimscreen.png, raycast kapali), baslangicta kapali; CostumeEditorScreenView.dimBackdrop = o nesne. Bos birakilirsa ekran calisir, yalniz karartma olmaz"
+    durum: closed
+    not: "Dimscreen karakterin ARKASINDA olmali (overlay tuvalde karakteri de karartir): Home sahnesine Screen Space - Camera 'Canvas Dim' (plane distance: karakterden uzak, dekordan yakin, yani karakter dim'in onunde cizilir) + icinde stretch Image (UI/Art/Costume/dimscreen.png, raycast kapali), baslangicta kapali; CostumeEditorScreenView.dimBackdrop = o nesne. Bos birakilirsa ekran calisir, yalniz karartma olmaz -> 4d0e331"
   - tip: ASSET
-    durum: open
-    not: "Kopyada builder: UiPrefabBuilder.BuildAll(overwrite: true) -> yalniz UI/Screens/CosmeticsScreen.prefab, UI/Rows/CostumeItemCard.prefab, UI/Rows/CostumePresetRow.prefab ve Data/Config/CostumeEditorConfig.asset (+ .meta'lar) ana agaca alinir; digerleri (kullanicinin duzenledigi prefablar) alinmaz. Art PNG/.json/.jpg .meta'lari Unity uretir"
+    durum: closed
+    not: "Kopyada builder: UiPrefabBuilder.BuildAll(overwrite: true) -> yalniz UI/Screens/CosmeticsScreen.prefab, UI/Rows/CostumeItemCard.prefab, UI/Rows/CostumePresetRow.prefab ve Data/Config/CostumeEditorConfig.asset (+ .meta'lar) ana agaca alinir; digerleri (kullanicinin duzenledigi prefablar) alinmaz. Art PNG/.json/.jpg .meta'lari Unity uretir -> 4d0e331"
   - tip: DECISION
-    durum: open
-    not: "Power/Stamina/Height PDF'te yok: panel yalniz gosterim (config'teki yer tutucu degerler). Emote kategorisinin icerigi yok: sekme pasif. Face = Glasses varsayimi"
+    durum: closed
+    not: "Power/Stamina/Height PDF'te yok: panel yalniz gosterim (config'teki yer tutucu degerler). Emote kategorisinin icerigi yok: sekme pasif. Face = Glasses varsayimi -> 4d0e331"
 started: 2026-10-28
 finished: 2026-10-28
 blocked_reason:

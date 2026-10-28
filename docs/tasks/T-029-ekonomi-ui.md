@@ -1,7 +1,7 @@
 ---
 id: T-029
 title: Faz 3 ekonomi UI - giris kapisinda Sureli Bilet kullan, dolu envanter uyarisi, sonuc ekraninda Mor Mucevher
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-028]
 owns_paths:
@@ -15,7 +15,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/HomeRaceButtonSmokeTests.cs"
 touches_scene: true
 branch: agent/T-029-ekonomi-ui
-commits: []
+commits: [8f98b4c, 4d0e331]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/EntryGateModelTests.cs"
 analytics:
@@ -25,8 +25,8 @@ needs:
     durum: closed
     not: "RaceFlow ctor'una IRaceRewardResolver eklendi; Zenject kurucu enjeksiyonu ProjectInstaller'daki mevcut baglamayi kullanir (RaceSceneInstaller degismedi). Gate view: ITimedAccess, IEntryTicketShop, EconomyConfig, IClock, UiMotionConfig (hepsi ProjectInstaller'da bagli)"
   - tip: ASSET
-    durum: open
-    not: "Builder kopyada kosulur: UI/Popups/EntryGateModal.prefab (UseTimedTicket, Caption/Price baglari, pencere 960x960) ve UI/Screens/ResultsScreen.prefab (LeftPanel/GemReward) yeniden uretilmeli; mevcut prefab'lar overwrite olmadan korunur (yalniz bu ikisi silinip uretilmeli) + yeni .cs/.meta GeriAl ile"
+    durum: closed
+    not: "Builder kopyada kosulur: UI/Popups/EntryGateModal.prefab (UseTimedTicket, Caption/Price baglari, pencere 960x960) ve UI/Screens/ResultsScreen.prefab (LeftPanel/GemReward) yeniden uretilmeli; mevcut prefab'lar overwrite olmadan korunur (yalniz bu ikisi silinip uretilmeli) + yeni .cs/.meta GeriAl ile -> 4d0e331"
 started: 2026-10-28
 finished: 2026-10-28
 blocked_reason:

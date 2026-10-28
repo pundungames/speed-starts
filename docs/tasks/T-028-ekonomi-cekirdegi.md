@@ -1,7 +1,7 @@
 ---
 id: T-028
 title: Faz 3 ekonomi cekirdegi - tek islem yolu (idempotent), Sureli Bilet etkinlestirme, Mor Mucevher odulu, dolu envanterde edinim kapali
-status: review
+status: merged
 owner: systems-agent
 depends_on: [T-025, T-023]
 owns_paths:
@@ -20,7 +20,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/**"
 touches_scene: false
 branch: agent/T-028-ekonomi
-commits: []
+commits: [fd7e927, e6b9b7e, 3ca2d73]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Economy/EconomyLedgerTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Economy/TimedAccessTests.cs"
@@ -30,8 +30,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
-    not: "ProjectInstaller (exact lines in Calisma notu): IEconomyLedger, ITimedAccess, IRaceRewardResolver, IEntryTicketShop AsSingle; EntryTicketService also as IEntryTicketSource; CreateThemes passes IEconomyLedger instead of WalletService"
+    durum: closed
+    not: "ProjectInstaller (exact lines in Calisma notu): IEconomyLedger, ITimedAccess, IRaceRewardResolver, IEntryTicketShop AsSingle; EntryTicketService also as IEntryTicketSource; CreateThemes passes IEconomyLedger instead of WalletService -> 3ca2d73"
 started: 2026-10-28
 finished: 2026-10-28
 blocked_reason:
