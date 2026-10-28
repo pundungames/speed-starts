@@ -16,15 +16,16 @@ Son güncelleme: 2026-10-28 · agent-kit v2 kurulumu · dal `main` (ad3616b üst
 - Oyuncuya görünen metin dili / yerelleştirme — md'lerle netleşir.
 
 ## Gözle bakılacaklar (öncelikli)
-- Unity'ye geçince Faz 1 kodu derlenir (`c3dbe46`, kopyada 116 test yeşil): konsol temiz mi. Görülecek ekran yok (T-006/T-007 bekliyor).
+- `87dd96d` Faz 1 içerik: `Scenes/Menu/Home.unity`'yi aç → Play: ProjectContext kurulur, HomeScreen görünür, konsol temiz mi; butonlar
+  punch yapar (view mantığı Faz 2'de). `Scenes/Game/Race.unity` → Play: Malik'in koşucusu koşar, üstte RaceHud yer tutucusu.
+- Prefab'lar `Assets/Speed-Staes/UI/` (16 yer tutucu, yatay), config'ler `Data/Config/` (PDF değerleri; 6. gün boş, fiyatlar 0 = kapalı).
+- T-001 yatay ekran: kullanıcı Player Settings'ten yapacak, sonra `ProjectSettings.asset` commit'lenir.
 
 ## Sıradaki iş
-1. **Oturumu yeniden aç** (pano + Unity MCP yüklenir) → T-001 yatay ekran, T-006 Home/Race sahneleri + config asset'leri (PDF değerleri) +
-   ProjectContext, T-007 yer tutucu UI prefab'ları — scene-integrator, sırayla (sahneye dokunan iş tek başına).
-2. Faz 2 dikey dilim task'ları (`docs/YOL-HARITASI.md`): EntryTicketService, RaceEntryGate, kaynak çubukları, Event Select, Entry Gate,
-   Race HUD (Bridge adaptörü), Results, Dev bitiş.
-- Faz 1 kod: T-002/3/4 done, T-005/T-008 merged (gözle bakılacak yanı T-006/T-007'de). Doğrulama kopyası `D:\Pundun\speed-starts-verify-1`
-  (Library hazır, ~30 sn derleme).
+1. Faz 2 dikey dilim task'ları (`docs/YOL-HARITASI.md`): EntryTicketService + RaceEntryGate (Meta, testli), Home/EventSelect/EntryGate/
+   ResourceBar view'ları, Race HUD + Bridge `RaceSessionAdapter`, Results view, Dev bitiş tetikleyicisi, Home↔Race akışı.
+- Faz 1: T-002/3/4 done; T-005/6/7/8 merged (gözle bakılacak). Builder'lar: Tools → Speed Stars → Build (var olanı ezmez).
+- Font: LiberationSans SDF'de ğ ı ş İ yok → Türkçe metin için font kararı (Faz 2/8).
 
 ## Dikkat
 - Unity'nin commit'siz dosyası: `ProjectSettings/ProjectSettings.asset` — dokunma, commit'e katma.
@@ -33,7 +34,6 @@ Son güncelleme: 2026-10-28 · agent-kit v2 kurulumu · dal `main` (ad3616b üst
 - Yerel, git'e girmeyen (`.git/info/exclude`): `.claude/settings.json` (hook'lar), `.claude/settings.local.json` (pano),
   `.claude/agents/`, `CLAUDE.local.md`, `pipeline-logs/`. Başka PC'de: kit kurulumu + `claude plugin install pano@agent-kit -s local`.
 - Malik ve Serhat aynı main'e push ediyor; pull/push kullanıcıda. Malik'in alanı hook'la kilitli (config `KorunanBelgeler`).
-- Tur kapısı kapalı (bilerek): T-005 SCENE ihtiyacı açık, T-006/T-007 ile kapanır.
 
 <!-- OTOMATIK:BASLA -->
 (henüz çalıştırılmadı: powershell -File scripts/tur-sonu.ps1 -DurumYaz)

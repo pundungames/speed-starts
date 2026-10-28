@@ -8,7 +8,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/**"
 touches_scene: false
 branch: agent/faz1-ui
-commits: []
+commits: [87dd96d]
 tests:
   - "gerekmiyor: editor builder'i; kabul supervizorun batchmode kosusu + prefab'larin gozle kontrolu"
 analytics:
