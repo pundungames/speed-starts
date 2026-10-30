@@ -57,9 +57,11 @@ namespace SpeedStars.Tests.Meta.Rewards
         public void NextUtcDay_OffersTheGiftAgain()
         {
             _gift.Claim();
-            // Keep the inventory below the cap: a full inventory is "Full" on any day, which is a different rule.
-            _k.Progress.EntryTickets = 0;
             _k.Kit.Clock.UtcNow = new DateTime(2030, 3, 2, 0, 0, 1, DateTimeKind.Utc);
+            // A day away refills the tickets (30-minute regen) and a full inventory is "Full" on any day — a different rule.
+            // Empty it and push the next regen out so this test only sees the day change.
+            _k.Progress.EntryTickets = 0;
+            _k.Progress.EntryRegenDueUtcTicks = _k.Kit.Clock.UtcNow.AddHours(1).Ticks;
 
             Assert.AreEqual(DailyGiftState.Available, _gift.State);
             Assert.AreEqual(DailyGiftResult.Granted, _gift.Claim());
