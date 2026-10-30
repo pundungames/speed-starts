@@ -28,10 +28,6 @@ namespace SpeedStars.Tools.Builders
         public const string RewardFlight = Root + "/Widgets/RewardFlight.prefab";
         public const string RaceStart = Root + "/Widgets/RaceStart.prefab";
 
-        public const string EventRow = Root + "/Rows/EventRow.prefab";
-        public const string CosmeticCell = Root + "/Rows/CosmeticCell.prefab";
-        public const string SevenDayCell = Root + "/Rows/SevenDayCell.prefab";
-        public const string HighScoreRow = Root + "/Rows/HighScoreRow.prefab";
         public const string SettingsRow = Root + "/Rows/SettingsRow.prefab";
         public const string LanguageRow = Root + "/Rows/LanguageRow.prefab";
         public const string FlagCell = Root + "/Rows/FlagCell.prefab";

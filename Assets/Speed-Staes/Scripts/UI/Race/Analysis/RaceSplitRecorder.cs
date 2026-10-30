@@ -34,8 +34,11 @@ namespace SpeedStars.UI.Race
         public bool Finished { get; }
         public double FinishSeconds { get; }
 
-        /// <summary>A line needs two points; fewer is an empty (or one-point) run that draws nothing.</summary>
-        public bool HasLine => Points.Count >= 2;
+        /// <summary>
+        /// A line needs a finished run with two points. A run that did not finish (DNF, dev force-finish at 0 s) draws no
+        /// line and no balloon: missing samples are never read as 0 s.
+        /// </summary>
+        public bool HasLine => Finished && Points.Count >= 2;
 
         public SplitPoint Last => Points.Count > 0 ? Points[Points.Count - 1] : default(SplitPoint);
     }

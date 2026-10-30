@@ -1,7 +1,7 @@
 ---
 id: T-049
 title: Cila - olu kod temizligi, analizde DNF cizgisi, READY/SET/GO olcegi, emote kart yerlesimi
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-036, T-039, T-040]
 owns_paths:
@@ -30,9 +30,15 @@ tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/AnalysisChartModelTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "Data/Config/RaceStartConfig.asset: groupScale 0.55 -> 0.8, holdTensionMinAlpha 0.6 -> 0.85 (asset still holds the old defaults; all other fields are default, so re-seed with overwrite or edit in the Inspector). Then rebuild UiRaceStartPrefabs so Widgets/RaceStart.prefab Group scale follows (0.8)."
+  - tip: SCENE
+    durum: open
+    not: "Rebuild UI prefabs (EmoteCard.prefab, EmoteScreen.prefab changed: name above lock, price beside it, list from the panel top, Equipped label inside the button) and commit with the scene; take Race_countdown, Race_analysis, Home_emote screenshots."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -55,4 +61,8 @@ Bitenleri `_backlog.md`'den sil.
 - [ ] Görüntüler: `Race_countdown`, `Race_analysis`, `Home_emote` düzelmiş
 
 ## Calisma notu
-(Agent doldurur)
+- Olu kod silindi (grep ile referanssiz kanitlandi, .cs + builder): EventRowView.cs, ResultRowView.cs (.meta'lari supervizor silsin), UiRowPrefabs sinifi (EventRow, CosmeticCell, SevenDayCell, HighScoreRow), UiWidgetPrefabs.RewardFlight (UiRewardPrefabs.Flight kullaniliyor), UiScreenPrefabs.EventSelect/Cosmetics/HighScores/Results + yardimcilari, UiPopupPrefabs.DailyGift/SevenDayCheckIn, UiViewBinder.BindEventSelect/BindResults/BindEventRow/BindResultRow, UiPrefabPaths.EventRow/CosmeticCell/SevenDayCell/HighScoreRow.
+- Artik uretilmeyen prefab dosyalari (supervizor silsin, .meta ile): Assets/Speed-Staes/UI/Rows/EventRow.prefab, Rows/HighScoreRow.prefab, Rows/CosmeticCell.prefab, Rows/SevenDayCell.prefab. (Eski EventRow/HighScoreRow prefab'lari silinen scriptlere baglidir; silinmeden Missing Script uyarisi verir.)
+- Analiz DNF: SplitSeries.HasLine artik Finished ister; bitirmeyen seri cizgi, nokta ve balon cizmez (3 test: DNF oyuncu, DNF rakip, duz 0 s serisi). Ekran: _hasCursor da HasLine'a bagli.
+- READY/SET/GO: RaceStartConfig varsayilanlari groupScale 0.8, holdTensionMinAlpha 0.85 (mevcut asset eski degerde: needs ASSET). Ekran goruntusu eldeki worktree'de yok, onizleme storyboard ile karsilastirildi.
+- Emote karti: ad kilidin ustunde tam genislik, fiyat kilidin solunda (kilit art'indan hesaplanir); liste panel ustunden baslar; Equipped etiketi 40 pt, sag kenar 0.86, ortali. Gorsel dogrulama yapilmadi (Unity calistirilmadi).

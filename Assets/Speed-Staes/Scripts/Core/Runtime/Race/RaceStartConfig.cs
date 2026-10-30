@@ -55,7 +55,7 @@ namespace SpeedStars.Core.Race
 
         [Tooltip("While SET waits, the tension lines pulse between this alpha and 1.")]
         [Range(0f, 1f)]
-        [SerializeField] private float holdTensionMinAlpha = 0.6f;
+        [SerializeField] private float holdTensionMinAlpha = 0.85f;
 
         [Tooltip("Width of the small horizontal shake while SET waits (UI units; at most 2 per the art's notes).")]
         [Range(0f, 2f)]
@@ -91,9 +91,9 @@ namespace SpeedStars.Core.Race
         [SerializeField] private float releaseScaleTo = 1.35f;
 
         [Header("Look")]
-        [Tooltip("Scale of the whole group (words and lines). The art's own canvas is 1024x576.")]
+        [Tooltip("Scale of the whole group (words and lines). The art's own canvas is 1024x576; 0.8 reads like the design preview on a 2400x1080 screen (0.55 looked small).")]
         [Min(0.05f)]
-        [SerializeField] private float groupScale = 0.55f;
+        [SerializeField] private float groupScale = 0.8f;
 
         [Tooltip("READY and SET fill colour (#FFFCEF).")]
         [SerializeField] private Color wordColor = new Color(1f, 0.988f, 0.937f, 1f);

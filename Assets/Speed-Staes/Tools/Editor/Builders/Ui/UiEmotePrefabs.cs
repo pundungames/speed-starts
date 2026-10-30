@@ -28,16 +28,19 @@ namespace SpeedStars.Tools.Builders
         private const float PriceSize = 34f;
         private const float ValueSize = 48f;
         private const float PurchasePriceSize = 56f;
-        private const float ActionLabelSize = 44f;
+        private const float ActionLabelSize = 40f;
         private const float TabLabelSize = 34f;
         private const float LabelGap = 0.03f;
         private const float PriceGap = 0.03f;
         private const float PriceEdge = 0.94f;
+        private const float ActionLabelEdge = 0.86f; // keeps "Equipped" inside the button's thick border
+        private const float LockGap = 0.02f;
 
-        // Text slots as fractions of their art (min, max; y from the bottom).
-        private static readonly Vector2 NameMin = new Vector2(0.05f, 0.03f), NameMax = new Vector2(0.95f, 0.25f);
-        private static readonly Vector2 PriceMin = new Vector2(0.15f, 0.25f), PriceMax = new Vector2(0.85f, 0.42f);
-        private static readonly Vector2 IconMin = new Vector2(0.2f, 0.4f), IconMax = new Vector2(0.8f, 0.94f);
+        // Text slots as fractions of their art (min, max; y from the bottom). The card's bottom-right corner belongs to the lock:
+        // the name sits above it (full width) and the price beside it, both computed from the lock art in Card().
+        private const float NameHeight = 0.2f;
+        private const float PriceBottom = 0.03f;
+        private static readonly Vector2 IconMin = new Vector2(0.2f, 0.52f), IconMax = new Vector2(0.8f, 0.95f);
         private static readonly Vector2 ValueMin = new Vector2(0.06f, 0.05f);
         private const float ValueTop = 0.04f;
 
@@ -75,8 +78,11 @@ namespace SpeedStars.Tools.Builders
             lockOverlay.SetActive(false);
             check.SetActive(false);
 
-            Text nameText = UiArt.Slot(root, "Name", "Emote", NameSize, NameMin, NameMax);
-            Text priceText = UiArt.Slot(root, "Price", "0", PriceSize, PriceMin, PriceMax);
+            Vector4 lockBounds = UiArt.AlphaBounds(ArtPath("item_locked_icon")); // x, y (from bottom), x2, y2 of the lock on the card
+            float nameBottom = lockBounds.w + LockGap;
+            Text nameText = UiArt.Slot(root, "Name", "Emote", NameSize, new Vector2(0.04f, nameBottom), new Vector2(0.96f, nameBottom + NameHeight));
+            Text priceText = UiArt.Slot(root, "Price", "0", PriceSize, new Vector2(0.06f, PriceBottom), new Vector2(lockBounds.x - LockGap, lockBounds.w),
+                TextAnchor.MiddleLeft);
             priceText.gameObject.SetActive(false);
 
             var so = new SerializedObject(view);
@@ -184,8 +190,8 @@ namespace SpeedStars.Tools.Builders
             Image background = UiArt.Paint(node.gameObject, Art("save_background"), raycast: true);
             UiArt.Layer(node, "Icon", Art("save_icon"));
             Vector4 icon = UiArt.AlphaBounds(ArtPath("save_icon"));
-            label = UiArt.Slot(node, "Label", EmoteTexts.Equip, ActionLabelSize, new Vector2(icon.z + LabelGap, 0.12f), new Vector2(0.96f, 0.88f),
-                TextAnchor.MiddleLeft, Color.white);
+            label = UiArt.Slot(node, "Label", EmoteTexts.Equip, ActionLabelSize, new Vector2(icon.z + LabelGap, 0.12f), new Vector2(ActionLabelEdge, 0.88f),
+                TextAnchor.MiddleCenter, Color.white);
             return UiArt.MakeButton(node.gameObject, background, true, alphaHit: false);
         }
 
@@ -215,13 +221,18 @@ namespace SpeedStars.Tools.Builders
             Vector4 all = layout.Bounds("item_ivory", "item_red", "item_black", "item_gray", "item_blue", "item_green", "item_yellow", "item_purple");
             int rows = Mathf.RoundToInt((all.w - all.y + gapY) / (first.rect[3] + gapY));
 
+            // The art's first row sits under the costume editor's tab row, which this screen does not have: the list starts at the
+            // panel's top edge instead (same margin as the side margin), keeping the art's bottom edge.
+            UiArt.LayoutComponent panel = layout.Get("wardrobe");
+            int top = Mathf.RoundToInt(panel.rect[1] + (first.rect[0] - panel.rect[0]));
+            int bottom = Mathf.RoundToInt(first.rect[1] + rows * first.rect[3] + (rows - 1) * gapY);
             var viewportRect = new UiArt.LayoutComponent
             {
                 rect = new[]
                 {
-                    first.rect[0], first.rect[1],
+                    first.rect[0], top,
                     Columns * first.rect[2] + Mathf.RoundToInt((Columns - 1) * gapX),
-                    rows * first.rect[3] + Mathf.RoundToInt((rows - 1) * gapY)
+                    Mathf.Max(first.rect[3], bottom - top)
                 }
             };
 

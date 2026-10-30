@@ -256,7 +256,27 @@ namespace SpeedStars.Tests.UI.Race
 
             Assert.AreEqual(AnalysisModel.DidNotFinish, data.Runners[0].TimeText);
             Assert.AreEqual(0, data.Runners[0].Rank);
-            Assert.IsTrue(data.HasChartData); // the partial line is real data and is drawn
+            Assert.IsFalse(data.HasChartData); // a DNF run has no line and no balloon (missing samples are not 0 s)
+            Assert.IsFalse(data.Runners[0].Series.HasLine);
+        }
+
+        [Test]
+        public void Build_DnfRival_DrawsNoLine_ButFinishersStillDo()
+        {
+            var rivals = new List<AnalysisRival> { new AnalysisRival("Slow", NotFinished(1, 70f, 12d)) };
+            AnalysisData data = AnalysisModel.Build("100m", 0, 100f, "P", 1, Finished(0, 10d), rivals);
+
+            Assert.IsTrue(data.HasChartData);
+            Assert.IsTrue(data.Runners[0].Series.HasLine);
+            Assert.IsFalse(data.Runners[1].Series.HasLine);
+        }
+
+        [Test]
+        public void HasLine_FlatDnfSeriesAtZeroSeconds_IsFalse()
+        {
+            var points = new List<SplitPoint> { new SplitPoint(0f, 0d), new SplitPoint(50f, 0d), new SplitPoint(100f, 0d) };
+
+            Assert.IsFalse(new SplitSeries(0, points, false, 0d).HasLine);
         }
 
         [Test]

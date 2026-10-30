@@ -9,8 +9,7 @@ namespace SpeedStars.Tools.Builders
     /// <summary>
     /// Writes the 16 placeholder UI prefabs of contract §5 to the paths in UiPrefabPaths (editor time; nothing here runs
     /// in the game, so the "UI is never built at runtime" rule holds: views bind these prefabs with [SerializeField]).
-    /// Order matters: rows and widgets first, because screens and panels nest them (RedDot in Home, SevenDayCell × 7
-    /// in the check-in panel). Objects are built in a preview scene, so the open scene is never left with leftovers.
+    /// Order matters: widgets first, because screens nest them (RedDot in Home). Objects are built in a preview scene, so the open scene is never left with leftovers.
     /// overwrite == false: an existing prefab is kept as it is (the user may have edited it) and reused for nesting.
     /// overwrite == true: rebuilt and saved to the same path, which keeps its GUID and therefore every reference to it.
     /// </summary>
@@ -24,11 +23,6 @@ namespace SpeedStars.Tools.Builders
             var run = new Run(scene, overwrite);
             try
             {
-                // EventRow is no longer built: the event select screen (T-024) has cards, not a list.
-                GameObject highScoreRow = run.Build(UiPrefabPaths.HighScoreRow, UiRowPrefabs.HighScoreRow);
-                run.Build(UiPrefabPaths.CosmeticCell, UiRowPrefabs.CosmeticCell);
-                run.Build(UiPrefabPaths.SevenDayCell, UiRowPrefabs.SevenDayCell); // placeholder row, no longer nested (T-043 cards are their own prefabs)
-
                 run.Build(UiPrefabPaths.RedDot, UiWidgetPrefabs.RedDot);
                 run.Build(UiPrefabPaths.ResourceBar, UiWidgetPrefabs.ResourceBar);
 

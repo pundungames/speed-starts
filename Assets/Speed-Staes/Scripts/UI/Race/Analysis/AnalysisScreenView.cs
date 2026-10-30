@@ -162,7 +162,7 @@ namespace SpeedStars.UI.Race
             int player = data.PlayerIndex;
             _selectedRunnerId = player >= 0 ? data.Runners[player].RunnerId : (data.Runners.Count > 0 ? data.Runners[0].RunnerId : -1);
             SplitSeries series = SelectedSeries();
-            _hasCursor = series != null && series.Points.Count > 0;
+            _hasCursor = series != null && series.HasLine;
             _cursorDistance = _hasCursor ? series.Last.Distance : 0f; // opens on the finish
 
             RebuildChart();

@@ -46,15 +46,6 @@ namespace SpeedStars.Tools.Builders
             b.Apply();
         }
 
-        public static void BindEventSelect(RectTransform root, EventRowView rowPrefab)
-        {
-            var b = new Binding(root, typeof(EventSelectScreenView));
-            b.Set("content", b.Child<RectTransform>("Panel/List/Viewport/Content"));
-            b.Set("rowPrefab", rowPrefab);
-            b.Set("backButton", b.Child<Button>("Back"));
-            b.Apply();
-        }
-
         public static void BindEntryGate(RectTransform root)
         {
             var b = new Binding(root, typeof(EntryGateModalView));
@@ -91,51 +82,7 @@ namespace SpeedStars.Tools.Builders
             b.Apply();
         }
 
-        /// <summary>
-        /// resultsContent is the scroll list's Content (Results/Viewport/Content), not the Results ScrollRect itself: that is
-        /// where the layout group lives, so the row gets its width and height there.
-        /// </summary>
-        public static void BindResults(RectTransform root, ResultRowView rowPrefab)
-        {
-            var b = new Binding(root, typeof(ResultsScreenView));
-            b.Set("eventTitleText", b.Child<Text>("LeftPanel/EventTitle/Label"));
-            b.Set("personalBestText", b.Child<Text>("LeftPanel/PersonalBest/Value"));
-            b.Set("worldRecordText", b.Child<Text>("LeftPanel/WorldRecord/Value"));
-            b.Set("resultsContent", b.Child<RectTransform>("LeftPanel/Results/Viewport/Content"));
-            b.Set("rowPrefab", rowPrefab);
-            b.Set("gemRewardRoot", b.Child<Transform>("LeftPanel/GemReward").gameObject);
-            b.Set("gemRewardText", b.Child<Text>("LeftPanel/GemReward/Value"));
-            b.Set("watchReplayButton", b.Child<Button>("Buttons/WatchReplay"));
-            b.Set("raceAgainButton", b.Child<Button>("Buttons/RaceAgain"));
-            b.Set("highScoresButton", b.Child<Button>("Buttons/HighScores"));
-            b.Set("practiceButton", b.Child<Button>("Buttons/Practice"));
-            b.Set("mainMenuButton", b.Child<Button>("Buttons/MainMenu"));
-            b.Apply();
-        }
-
         // ---------------------------------------------------------------- rows and widgets
-
-        public static void BindEventRow(RectTransform root)
-        {
-            var b = new Binding(root, typeof(EventRowView));
-            b.Set("button", b.Child<Button>(""));
-            b.Set("nameText", b.Child<Text>("Name"));
-            b.Set("distanceText", b.Child<Text>("Distance"));
-            b.Set("ticketBadge", b.Child<Transform>("TicketBadge").gameObject);
-            b.Set("lockOverlay", b.Child<Transform>("Lock").gameObject);
-            b.Apply();
-        }
-
-        public static void BindResultRow(RectTransform root)
-        {
-            var b = new Binding(root, typeof(ResultRowView));
-            b.Set("rankText", b.Child<Text>("Rank"));
-            b.Set("nameText", b.Child<Text>("Name"));
-            b.Set("timeText", b.Child<Text>("Time"));
-            b.Set("dateText", b.Child<Text>("Date"));
-            b.Set("personalBestMark", b.Child<Transform>("PbMark").gameObject);
-            b.Apply();
-        }
 
         public static void BindResourceBar(RectTransform root)
         {
