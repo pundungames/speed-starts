@@ -113,6 +113,7 @@ GameObject:
   - component: {fileID: 2034175899099249921}
   - component: {fileID: 7448625200600496552}
   - component: {fileID: 27333316320439865}
+  - component: {fileID: 3372148629572116700}
   m_Layer: 0
   m_Name: HumanCharacterDummy_F
   m_TagString: Untagged
@@ -1004,6 +1005,33 @@ MonoBehaviour:
   replay: {fileID: 7448625200600496552}
   window: 6
   visible: 1
+--- !u!114 &3372148629572116700
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 177233082680704457}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f28cdbf58de6c7468f387765517b112, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  body: {fileID: 8299590372514495271}
+  input: {fileID: 3857996984035153175}
+  clips:
+  - {fileID: 11400000, guid: ffd346c2084d4e74d9d4a4bf6cc41f0a, type: 2}
+  - {fileID: 11400000, guid: b61f65417635437449ef27fcf0f0812f, type: 2}
+  - {fileID: 11400000, guid: 481de6469358cd44bb5408d1c4ac8c09, type: 2}
+  - {fileID: 11400000, guid: 89cb89c4a88acda46b8e247d7d2cb1d9, type: 2}
+  - {fileID: 11400000, guid: 44f2b839ab53cec44bc7840f581c7293, type: 2}
+  - {fileID: 11400000, guid: 195c9f293d3453c47acf36e33fd75387, type: 2}
+  - {fileID: 11400000, guid: 12453cb980a3a154d9a542e557f1a4a2, type: 2}
+  - {fileID: 11400000, guid: b266bdce8c3e8d94599abbccee16ef81, type: 2}
+  - {fileID: 11400000, guid: 520ccb3df2f405e4abfa9e4164b76edd, type: 2}
+  fadeTime: 0.25
+  uprightAngle: 30
+  showName: 1
 --- !u!1 &342526744463229415
 GameObject:
   m_ObjectHideFlags: 0
