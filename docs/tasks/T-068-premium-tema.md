@@ -1,7 +1,7 @@
 ---
 id: T-068
 title: Premium tema (Premium_Tema_UI_v1) - Sky Islands premium; tema adi ve islem butonu altin (normal) / kirmizi (kullanimda) cerceve, pasif ortu
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-027]
 owns_paths:
@@ -17,12 +17,24 @@ owns_paths:
 touches_scene: true
 branch: agent/T-068-premium-tema
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/ThemeServiceTests.cs (Premium_* : para birimi, fiyatsiz, idempotent, yetersiz bakiye)"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Themes/ThemeSelectPresenterTests.cs (Premium_*: altin/kirmizi asla birlikte, ortu)"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Home_themeselect_premium, Home_themeselect_premium_inuse)"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "ThemeSelectScreen prefab'i UiThemeSelectPrefabs ile yeniden uretilecek: ThemeName ve ThemeAction altinda 'Premium' grubu (Fill, FrameGold, FrameRed, [DisabledOverlay]) + ThemeAction/GemIcon; ThemeSelectScreenView alanlari nameBackground, namePremiumGroup, nameFrameGold, nameFrameRed, actionPremiumGroup, actionFrameGold, actionFrameRed, actionDisabledOverlay, gemIcon baglanir. T-067 ayni builder/prefabi degistiriyor: birlesince tek sefer uretilsin."
+  - tip: ASSET
+    durum: open
+    not: "8 PNG Unity'ye alinacak (UiArt.ImportAll: Sprite/Single/FullRect/alpha/mipmap kapali/ASTC). ThemeCatalog.asset: sky_islands girdisinde premium=true, priceCurrency=PurpleGem(1); diger temalar premium=false, priceCurrency=Cash(0). cashPrice alani artik 'fiyat miktari' (serilestirilmis ad ayni). Mevcut asset kullanicinin: ThemeCatalogSeed overwrite etmez, elle ya da overwrite ile."
+  - tip: DECISION
+    durum: open
+    not: "Sky Islands fiyati (Mor Mucevher miktari). Verilmedi: 0 = satin alinamaz. Paket: kozmetigin 50'sini kopyalama."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -61,3 +73,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+- Veri: ThemeEntry'ye premium + priceCurrency (Cash|PurpleGem); ThemeInfo Price/Currency/IsPremium (CashPrice geriye uyum); ThemeService.TryPurchase para birimine gore EconomyLedger'dan, ayni "theme:<id>" islem kimligiyle (idempotent). Arayuz IThemeService degismedi.
+- Gorunum: ThemeSelectPresenter'a saf PremiumLook (altin normal, kirmizi kullanimda, ortu yalniz basilamayan ve kullanimda olmayan butonda); View sadece cizer, alanlar bos ise premium kapali (prefab yenilenene dek eski gorunum).
+- Builder: Premium grubu (preserveAspect, metinden once) + GemIcon (AspectRatioFitter); seed sky_islands premium/PurpleGem/fiyat 0.
+- Zorlandigim: Unity calistirilmadi; derleme dogrulamasi supervizorde. T-067 ayni view/builder dosyalarina dokunuyor, birlesmede cakisma olabilir (ayri bolgeler).
+- Birakilan: prefab/asset uretimi ve fiyat karari (needs).

@@ -20,6 +20,7 @@ namespace SpeedStars.Tools.Builders
     {
         public const string ArtFolder = UiArt.ArtRoot + "/ThemeSelect";
         private const string LayoutPath = ArtFolder + "/layout.json";
+        private const string PremiumFolder = ArtFolder + "/Premium";
 
         private const float ValueSize = 48f;
         private const float NameSize = 56f;
@@ -51,7 +52,8 @@ namespace SpeedStars.Tools.Builders
 
             RectTransform nameNode = Kit.Node(root, "ThemeName");
             layout.PlaceOnScreen(nameNode, layout.Get("theme_name"));
-            UiArt.Paint(nameNode.gameObject, Art("theme_name_background"), raycast: false);
+            Image nameBackground = UiArt.Paint(nameNode.gameObject, Art("theme_name_background"), raycast: false);
+            PremiumLayers namePremium = PremiumGroup(nameNode, "theme_name", withOverlay: false); // before the label: text stays on top
             Text nameLabel = UiArt.Slot(nameNode, "Label", "CITY", NameSize, NameMin, NameMax);
 
             Button previous = ArrowButton(root, layout, "ThemePrevious", "theme_previous");
@@ -63,8 +65,10 @@ namespace SpeedStars.Tools.Builders
             Image actionImage = UiArt.Paint(action.gameObject, Art("theme_action_background"), raycast: true);
             Button actionButton = UiArt.MakeButton(action.gameObject, actionImage, true, alphaHit: false);
             actionButton.transition = Selectable.Transition.SpriteSwap; // pressed USE shows its own art; the view fills the SpriteState
+            PremiumLayers actionPremium = PremiumGroup(action, "theme_action", withOverlay: true);
             Image icon = UiArt.Layer(action, "CurrencyIcon", Art("theme_action_icon"));
             Vector4 iconBounds = AlphaBounds("theme_action_icon");
+            RectTransform gemIcon = GemIcon(action, iconBounds);
             Text price = UiArt.Slot(action, "PriceLabel", "0", ActionSize,
                 new Vector2(iconBounds.z + ActionGap, 0.10f), new Vector2(ActionEdge, 0.90f), TextAnchor.MiddleCenter);
             Text state = UiArt.Slot(action, "StateLabel", "USE", ActionSize,
@@ -86,6 +90,15 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "usePressedSprite", Art("theme_use_pressed_background"));
             Ref(so, "inUseSprite", Art("theme_in_use_background"));
             Ref(so, "disabledSprite", Art("theme_disabled_background"));
+            Ref(so, "nameBackground", nameBackground);
+            Ref(so, "namePremiumGroup", namePremium.Group);
+            Ref(so, "nameFrameGold", namePremium.Gold);
+            Ref(so, "nameFrameRed", namePremium.Red);
+            Ref(so, "actionPremiumGroup", actionPremium.Group);
+            Ref(so, "actionFrameGold", actionPremium.Gold);
+            Ref(so, "actionFrameRed", actionPremium.Red);
+            Ref(so, "actionDisabledOverlay", actionPremium.Overlay);
+            Ref(so, "gemIcon", gemIcon.gameObject);
             Ref(so, "purpleGemText", purpleGem);
             Ref(so, "entryTicketText", entryTicket);
             Ref(so, "timedTicketText", timedTicket);
@@ -93,6 +106,72 @@ namespace SpeedStars.Tools.Builders
             so.ApplyModifiedPropertiesWithoutUndo();
 
             UiViewBinder.BindClose(root, "Back"); // base UiPanel.closeButton: the same close rule as every screen
+        }
+
+        /// <summary>The premium layers of one control (all start hidden; the view shows them).</summary>
+        private readonly struct PremiumLayers
+        {
+            public readonly GameObject Group, Gold, Red, Overlay;
+
+            public PremiumLayers(GameObject group, GameObject gold, GameObject red, GameObject overlay)
+            {
+                Group = group;
+                Gold = gold;
+                Red = red;
+                Overlay = overlay;
+            }
+        }
+
+        /// <summary>
+        /// Premium_Tema_UI_v1 layers (fill, gold frame, red frame, optional disabled overlay) as a "Premium" child over the
+        /// control. All layers of a group share one canvas, so each keeps its aspect (the frame is never squashed) and they
+        /// stay aligned with each other. Created before the labels, so the text is drawn on top.
+        /// </summary>
+        private static PremiumLayers PremiumGroup(RectTransform parent, string group, bool withOverlay)
+        {
+            RectTransform node = Kit.Stretch(Kit.Node(parent, "Premium"));
+            PremiumLayer(node, "Fill", group + "_fill");
+            Image gold = PremiumLayer(node, "FrameGold", group + "_frame_gold");
+            Image red = PremiumLayer(node, "FrameRed", group + "_frame_red");
+            Image overlay = withOverlay ? PremiumLayer(node, "DisabledOverlay", group + "_disabled_overlay") : null;
+            gold.gameObject.SetActive(false);
+            red.gameObject.SetActive(false);
+            if (overlay != null) overlay.gameObject.SetActive(false);
+            node.gameObject.SetActive(false);
+            return new PremiumLayers(node.gameObject, gold.gameObject, red.gameObject, overlay != null ? overlay.gameObject : null);
+        }
+
+        private static Image PremiumLayer(Transform parent, string name, string file)
+        {
+            string path = PremiumFolder + "/" + file + ".png";
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite == null) throw new InvalidOperationException($"UiThemeSelectPrefabs: sprite '{path}' not found or not imported as a Sprite.");
+            Image image = UiArt.Layer(parent, name, sprite);
+            image.preserveAspect = true;
+            return image;
+        }
+
+        /// <summary>
+        /// Purple Gem price icon: the gem art sits on the resource box canvas, so a fitter keeps its visible shape inside the
+        /// same area the cash icon uses (no stretching).
+        /// </summary>
+        private static RectTransform GemIcon(RectTransform action, Vector4 area)
+        {
+            RectTransform holder = Kit.Span(Kit.Node(action, "GemIcon"), new Vector2(area.x, area.y), new Vector2(area.z, area.w));
+            string path = ArtFolder + "/purple_gem_icon.png";
+            Vector4 bounds = AlphaBounds("purple_gem_icon");
+            UiArt.ReadPngSize(path, out int width, out int height);
+            float visibleWidth = (bounds.z - bounds.x) * width;
+            float visibleHeight = (bounds.w - bounds.y) * height;
+
+            RectTransform fit = Kit.Node(holder, "Fit");
+            fit.anchorMin = fit.anchorMax = fit.pivot = new Vector2(0.5f, 0.5f);
+            var fitter = fit.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = visibleWidth / visibleHeight;
+            UiArt.CanvasLayer(fit, "Art", Art("purple_gem_icon"), bounds);
+            holder.gameObject.SetActive(false);
+            return holder;
         }
 
         /// <summary>Resource box: background, icon, and a left-aligned value text right of the icon.</summary>

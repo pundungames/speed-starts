@@ -93,6 +93,7 @@ namespace SpeedStars.PlayTests
                 // Home screens: open, shoot, close (same buttons and close path as the smoke tests).
                 yield return ShootScreen(dir, home, "eventSelectButton", "eventSelectScreen", "Home_eventselect");
                 yield return ShootScreen(dir, home, "environmentButton", "themeSelectScreen", "Home_themeselect");
+                yield return ShootPremiumTheme(dir, home, container);
                 yield return ShootScreen(dir, home, "editRacerButton", "cosmeticsScreen", "Home_costume");
                 yield return ShootScreen(dir, home, "highScoresButton", "highScoresScreen", "Home_leaderboard");
                 yield return ShootScreen(dir, home, "emoteButton", "emoteScreen", "Home_emote");
@@ -654,6 +655,42 @@ namespace SpeedStars.PlayTests
 
             yield return Tap(CloseButtonOf(screen), $"{screenField} Back");
             yield return WaitClosed(screen, screenField);
+            yield return WaitOpen(home, "HomeScreen to come back");
+            yield return Settle();
+        }
+
+        /// <summary>
+        /// Theme select on the premium theme: gold frames while it is only previewed, red once it is the theme in use (the
+        /// editor owns every theme). The previous active theme is put back so later shots are unchanged.
+        /// </summary>
+        private static IEnumerator ShootPremiumTheme(string dir, HomeScreenView home, DiContainer container)
+        {
+            const string premiumId = "sky_islands";
+            var themes = container.Resolve<IThemeService>();
+            bool hasPremium = false;
+            foreach (ThemeInfo info in themes.Themes) hasPremium |= info.Id == premiumId && info.IsPremium;
+            Assert.IsTrue(hasPremium, "ThemeCatalog: sky_islands must be a premium theme (T-068 ASSET need).");
+            string before = themes.ActiveId;
+
+            UiScreen screen = RequireField<UiScreen>(home, "themeSelectScreen");
+            yield return Tap(RequireField<Button>(home, "environmentButton"), "environmentButton");
+            yield return WaitOpen(screen, "themeSelectScreen");
+            yield return WaitClosed(home, "HomeScreen to step aside");
+
+            Assert.IsTrue(themes.Preview(premiumId));
+            yield return Settle();
+            yield return Capture(dir, "Home_themeselect_premium");
+
+            if (themes.IsOwned(premiumId))
+            {
+                themes.Use(premiumId);
+                yield return Settle();
+                yield return Capture(dir, "Home_themeselect_premium_inuse");
+                themes.Use(before);
+            }
+
+            yield return Tap(CloseButtonOf(screen), "themeSelectScreen Back");
+            yield return WaitClosed(screen, "themeSelectScreen");
             yield return WaitOpen(home, "HomeScreen to come back");
             yield return Settle();
         }

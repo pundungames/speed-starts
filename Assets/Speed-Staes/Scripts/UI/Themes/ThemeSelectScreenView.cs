@@ -70,6 +70,34 @@ namespace SpeedStars.UI.Themes
         [Tooltip("theme_disabled_background: not enough Cash / not for sale.")]
         [SerializeField] private Sprite disabledSprite;
 
+        [Header("Premium layers (Sky Islands; optional: empty = premium look off)")]
+        [Tooltip("ThemeName background Image: made invisible (not disabled) while the premium fill shows, so layout stays.")]
+        [SerializeField] private Image nameBackground;
+
+        [Tooltip("ThemeName/Premium: group with the name fill; shown for premium themes only.")]
+        [SerializeField] private GameObject namePremiumGroup;
+
+        [Tooltip("ThemeName/Premium/FrameGold: normal premium frame.")]
+        [SerializeField] private GameObject nameFrameGold;
+
+        [Tooltip("ThemeName/Premium/FrameRed: frame of the theme in use (gold is off then).")]
+        [SerializeField] private GameObject nameFrameRed;
+
+        [Tooltip("ThemeAction/Premium: group with the action fill; shown for premium themes only.")]
+        [SerializeField] private GameObject actionPremiumGroup;
+
+        [Tooltip("ThemeAction/Premium/FrameGold: normal premium frame.")]
+        [SerializeField] private GameObject actionFrameGold;
+
+        [Tooltip("ThemeAction/Premium/FrameRed: frame of the theme in use (gold is off then).")]
+        [SerializeField] private GameObject actionFrameRed;
+
+        [Tooltip("ThemeAction/Premium/DisabledOverlay: dims the button when it cannot be pressed (not the in-use one).")]
+        [SerializeField] private GameObject actionDisabledOverlay;
+
+        [Tooltip("ThemeAction/GemIcon: price icon when the theme costs Purple Gems (the cash icon is CurrencyIcon).")]
+        [SerializeField] private GameObject gemIcon;
+
         [Header("Resources (left column)")]
         [Tooltip("PurpleGem/Value.")]
         [SerializeField] private Text purpleGemText;
@@ -91,6 +119,9 @@ namespace SpeedStars.UI.Themes
         private Tween _stamp;
         private Vector3 _stateBaseScale;
         private bool _baseKnown;
+        private bool _plainColorsKnown;
+        private Color _plainNameColor;
+        private Color _plainActionColor;
         private bool _subscribed;
 
         [Inject]
@@ -193,7 +224,9 @@ namespace SpeedStars.UI.Themes
 
             Color tone = look.Tone == ThemeActionTone.Light ? lightTextColor : darkTextColor;
             bool price = look.Label == ThemeActionLabel.Price;
-            currencyIcon.SetActive(look.ShowsCurrencyIcon);
+            bool gemPrice = snapshot.Premium.Currency == ThemePriceCurrency.PurpleGem && gemIcon != null;
+            currencyIcon.SetActive(look.ShowsCurrencyIcon && !gemPrice);
+            if (gemIcon != null) gemIcon.SetActive(look.ShowsCurrencyIcon && gemPrice);
             priceText.gameObject.SetActive(price);
             stateText.gameObject.SetActive(!price);
             priceText.color = tone;
@@ -201,10 +234,42 @@ namespace SpeedStars.UI.Themes
             priceText.text = snapshot.Price > 0 ? snapshot.Price.ToString() : string.Empty;
             stateText.text = look.Label == ThemeActionLabel.InUse ? inUseLabel : useLabel;
 
+            DrawPremium(snapshot.Premium);
+
             purpleGemText.text = _wallet.PurpleGems.ToString();
             cashText.text = _wallet.Cash.ToString();
             timedTicketText.text = _wallet.TimedTickets.ToString();
             entryTicketText.text = HomeTexts.TicketCount(_tickets.Count, _tickets.Cap);
+        }
+
+        /// <summary>
+        /// Premium layers follow the presenter's look: one frame at a time (gold or red), overlay only on a button that
+        /// cannot be pressed. The plain backgrounds go invisible (not off: the button still needs its hit area).
+        /// </summary>
+        private void DrawPremium(PremiumLook premium)
+        {
+            if (!_plainColorsKnown)
+            {
+                _plainNameColor = nameBackground != null ? nameBackground.color : Color.white;
+                _plainActionColor = actionBackground.color;
+                _plainColorsKnown = true;
+            }
+
+            if (nameBackground != null) nameBackground.color = premium.IsPremium && namePremiumGroup != null ? Color.clear : _plainNameColor;
+            actionBackground.color = premium.IsPremium && actionPremiumGroup != null ? Color.clear : _plainActionColor;
+
+            SetActive(namePremiumGroup, premium.IsPremium);
+            SetActive(nameFrameGold, premium.ShowsGold);
+            SetActive(nameFrameRed, premium.ShowsRed);
+            SetActive(actionPremiumGroup, premium.IsPremium);
+            SetActive(actionFrameGold, premium.ShowsGold);
+            SetActive(actionFrameRed, premium.ShowsRed);
+            SetActive(actionDisabledOverlay, premium.ActionOverlay);
+        }
+
+        private static void SetActive(GameObject go, bool active)
+        {
+            if (go != null) go.SetActive(active);
         }
 
         private Sprite SpriteFor(ThemeActionBackground background)

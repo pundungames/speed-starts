@@ -1,3 +1,4 @@
+using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Themes;
 using UnityEditor;
 using static SpeedStars.Tools.Builders.SceneBuilderUtil;
@@ -13,6 +14,9 @@ namespace SpeedStars.Tools.Builders
     internal static class ThemeCatalogSeed
     {
         private const string Source = nameof(ThemeCatalogSeed);
+
+        // Premium theme (user, 30.10): priced in Purple Gems, same family as cosmetics. The price is still open (0).
+        private const string PremiumId = "sky_islands";
 
         // Showcase index = position in MainMenuThemeShowcase.themeDisplays (its titles array has the same order).
         private static readonly (string Id, string Name)[] Seeds =
@@ -39,6 +43,9 @@ namespace SpeedStars.Tools.Builders
                 Rel(entry, "displayName").stringValue = Seeds[i].Name;
                 Rel(entry, "showcaseIndex").intValue = i;
                 Rel(entry, "cashPrice").intValue = 0; // price not decided: 0 = cannot be bought yet
+                bool premium = Seeds[i].Id == PremiumId;
+                Rel(entry, "premium").boolValue = premium;
+                Rel(entry, "priceCurrency").enumValueIndex = (int)(premium ? ThemePriceCurrency.PurpleGem : ThemePriceCurrency.Cash);
             }
             Prop(so, "defaultThemeId").stringValue = Seeds[0].Id;
             Apply(so);

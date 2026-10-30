@@ -262,5 +262,43 @@ namespace SpeedStars.Tests.UI.Themes
                 Assert.AreEqual(look.Interactable, look.Click != ThemeActionClick.None, state.ToString());
             }
         }
+
+        [Test]
+        public void Premium_NormalIsGold_InUseIsRed_NeverBoth()
+        {
+            foreach (ThemeActionState state in Enum.GetValues(typeof(ThemeActionState)))
+            {
+                bool interactable = ThemeSelectPresenter.LookFor(state).Interactable;
+                PremiumLook look = PremiumLook.For(true, ThemePriceCurrency.PurpleGem, state, interactable);
+
+                Assert.IsTrue(look.IsPremium);
+                Assert.IsFalse(look.ShowsGold && look.ShowsRed, state.ToString());
+                Assert.AreEqual(state == ThemeActionState.Active, look.ShowsRed, state.ToString());
+                Assert.AreEqual(state != ThemeActionState.Active, look.ShowsGold, state.ToString());
+            }
+        }
+
+        [Test]
+        public void Premium_OverlayOnlyWhenNotPressableAndNotInUse()
+        {
+            foreach (ThemeActionState state in Enum.GetValues(typeof(ThemeActionState)))
+            {
+                bool interactable = ThemeSelectPresenter.LookFor(state).Interactable;
+                PremiumLook look = PremiumLook.For(true, ThemePriceCurrency.PurpleGem, state, interactable);
+                Assert.AreEqual(!interactable && state != ThemeActionState.Active, look.ActionOverlay, state.ToString());
+            }
+        }
+
+        [Test]
+        public void NonPremium_HasNoPremiumLayers()
+        {
+            foreach (ThemeActionState state in Enum.GetValues(typeof(ThemeActionState)))
+            {
+                PremiumLook look = PremiumLook.For(false, ThemePriceCurrency.Cash, state, false);
+                Assert.IsFalse(look.IsPremium);
+                Assert.AreEqual(PremiumFrame.None, look.Frame);
+                Assert.IsFalse(look.ActionOverlay);
+            }
+        }
     }
 }

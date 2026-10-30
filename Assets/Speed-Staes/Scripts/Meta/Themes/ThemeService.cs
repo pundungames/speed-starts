@@ -6,8 +6,8 @@ using SpeedStars.Meta.Persistence;
 namespace SpeedStars.Meta.Themes
 {
     /// <summary>
-    /// Active (saved) and shown (previewed) world theme, ownership and Cash purchases. Save: <c>PlayerProgress</c>;
-    /// prices: <c>ThemeCatalog</c>. The default theme is always owned. Buying spends Cash through the economy ledger and is
+    /// Active (saved) and shown (previewed) world theme, ownership and purchases (Cash, or Purple Gems for premium themes). Save: <c>PlayerProgress</c>;
+    /// prices and currency: <c>ThemeCatalog</c>. The default theme is always owned. Buying spends the price currency through the economy ledger and is
     /// idempotent: an owned theme is never charged again. <c>allThemesOwned</c> is the development switch (Editor /
     /// Development Build): every theme counts as owned; the caller decides, so tests control it.
     /// </summary>
@@ -41,7 +41,7 @@ namespace SpeedStars.Meta.Themes
             {
                 var list = new List<ThemeInfo>();
                 foreach (ThemeEntry e in _catalog.GetThemes())
-                    list.Add(new ThemeInfo(e.Id, e.DisplayName, e.ShowcaseIndex, e.CashPrice));
+                    list.Add(new ThemeInfo(e.Id, e.DisplayName, e.ShowcaseIndex, e.Price, e.PriceCurrency, e.IsPremium));
                 return list;
             }
         }
@@ -138,10 +138,11 @@ namespace SpeedStars.Meta.Themes
         {
             if (!_catalog.TryGet(id, out ThemeEntry entry)) return ThemePurchaseResult.UnknownTheme;
             if (IsOwned(id)) return ThemePurchaseResult.AlreadyOwned;
-            if (entry.CashPrice <= 0) return ThemePurchaseResult.NotForSale;
-            if (Progress.Cash < entry.CashPrice) return ThemePurchaseResult.NotEnoughCash;
+            if (entry.Price <= 0) return ThemePurchaseResult.NotForSale;
+            if (BalanceOf(entry.PriceCurrency) < entry.Price) return ThemePurchaseResult.NotEnoughCash;
 
-            switch (_ledger.TrySpend(EconomyCurrency.Cash, entry.CashPrice, "theme:" + entry.Id))
+            // Same transaction id for every currency: one theme can only ever be paid for once.
+            switch (_ledger.TrySpend(ToEconomy(entry.PriceCurrency), entry.Price, "theme:" + entry.Id))
             {
                 case TransactionResult.Done: break;
                 case TransactionResult.NotEnough: return ThemePurchaseResult.NotEnoughCash;
@@ -161,9 +162,15 @@ namespace SpeedStars.Meta.Themes
             return ThemeActionRules.Decide(
                 IsOwned(id),
                 string.Equals(id, ActiveId, StringComparison.Ordinal),
-                known ? entry.CashPrice : 0,
-                Progress.Cash);
+                known ? entry.Price : 0,
+                known ? BalanceOf(entry.PriceCurrency) : 0);
         }
+
+        private int BalanceOf(ThemePriceCurrency currency) =>
+            currency == ThemePriceCurrency.PurpleGem ? Progress.PurpleGems : Progress.Cash;
+
+        private static EconomyCurrency ToEconomy(ThemePriceCurrency currency) =>
+            currency == ThemePriceCurrency.PurpleGem ? EconomyCurrency.PurpleGem : EconomyCurrency.Cash;
 
         /// <summary>null = back to the active theme.</summary>
         private void SetShown(string previewId)

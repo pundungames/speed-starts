@@ -195,5 +195,81 @@ namespace SpeedStars.Tests.Meta.Themes
             Assert.AreEqual(ThemeActionState.UnownedAffordable, ThemeActionRules.Decide(false, false, 10, 10));
             Assert.AreEqual(ThemeActionState.UnownedInsufficient, ThemeActionRules.Decide(false, false, 10, 9));
         }
+
+        private const int GemPrice = 25;
+
+        // Themes: a (default, free), p (premium, GemPrice Purple Gems), q (premium, no price yet).
+        private ThemeService PremiumService(int gems, int cash = 0)
+        {
+            _kit = new TicketTestKit(0);
+            _kit.Progress.Cash = cash;
+            _kit.Progress.PurpleGems = gems;
+            _catalog = _kit.Fixture.Create<ThemeCatalog>();
+            ConfigFixture.Edit(_catalog, so =>
+            {
+                var list = ConfigFixture.Find(so, "themes");
+                string[] ids = { "a", "p", "q" };
+                int[] prices = { 0, GemPrice, 0 };
+                list.arraySize = ids.Length;
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    var e = list.GetArrayElementAtIndex(i);
+                    e.FindPropertyRelative("themeId").stringValue = ids[i];
+                    e.FindPropertyRelative("displayName").stringValue = ids[i];
+                    e.FindPropertyRelative("showcaseIndex").intValue = i;
+                    e.FindPropertyRelative("cashPrice").intValue = prices[i];
+                    e.FindPropertyRelative("premium").boolValue = i > 0;
+                    e.FindPropertyRelative("priceCurrency").enumValueIndex = i > 0 ? (int)ThemePriceCurrency.PurpleGem : (int)ThemePriceCurrency.Cash;
+                }
+                ConfigFixture.Find(so, "defaultThemeId").stringValue = "a";
+            });
+            _wallet = new WalletService(_kit.Repository, _kit.Clock);
+            return new ThemeService(_catalog, _kit.Repository, new EconomyLedger(_kit.Repository, _wallet, _kit.Economy), false);
+        }
+
+        [Test]
+        public void Premium_ThemesListTheirCurrencyAndFlag()
+        {
+            var s = PremiumService(0);
+            Assert.IsFalse(s.Themes[0].IsPremium);
+            Assert.IsTrue(s.Themes[1].IsPremium);
+            Assert.AreEqual(ThemePriceCurrency.PurpleGem, s.Themes[1].Currency);
+            Assert.AreEqual(0, s.Themes[1].CashPrice, "a gem price is not a cash price");
+        }
+
+        [Test]
+        public void Premium_Unpriced_CannotBeBought()
+        {
+            var s = PremiumService(1000, cash: 1000);
+            Assert.AreEqual(ThemeActionState.NotForSale, s.GetActionState("q"));
+            Assert.AreEqual(ThemePurchaseResult.NotForSale, s.TryPurchase("q"));
+            Assert.AreEqual(1000, _kit.Progress.PurpleGems);
+            Assert.AreEqual(1000, _kit.Progress.Cash);
+        }
+
+        [Test]
+        public void Premium_PaidInGems_NotCash_AndIdempotent()
+        {
+            var s = PremiumService(GemPrice * 3, cash: 5);
+            Assert.AreEqual(ThemeActionState.UnownedAffordable, s.GetActionState("p"));
+
+            Assert.AreEqual(ThemePurchaseResult.Purchased, s.TryPurchase("p"));
+            Assert.AreEqual(GemPrice * 2, _kit.Progress.PurpleGems);
+            Assert.AreEqual(5, _kit.Progress.Cash, "cash is untouched");
+            Assert.AreEqual(ThemePurchaseResult.AlreadyOwned, s.TryPurchase("p"));
+            Assert.AreEqual(GemPrice * 2, _kit.Progress.PurpleGems, "a repeat never pays twice");
+            Assert.AreEqual(ThemeActionState.OwnedInactive, s.GetActionState("p"));
+        }
+
+        [Test]
+        public void Premium_NotEnoughGems_ChangesNothing_EvenWithPlentyOfCash()
+        {
+            var s = PremiumService(GemPrice - 1, cash: 100000);
+            Assert.AreEqual(ThemeActionState.UnownedInsufficient, s.GetActionState("p"));
+            Assert.AreEqual(ThemePurchaseResult.NotEnoughCash, s.TryPurchase("p"));
+            Assert.AreEqual(GemPrice - 1, _kit.Progress.PurpleGems);
+            Assert.AreEqual(100000, _kit.Progress.Cash);
+            Assert.IsFalse(s.IsOwned("p"));
+        }
     }
 }

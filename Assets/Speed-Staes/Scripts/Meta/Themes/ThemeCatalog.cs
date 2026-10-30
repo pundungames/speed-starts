@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SpeedStars.Meta.Config;
+using SpeedStars.Meta.Contracts;
 using UnityEngine;
 
 namespace SpeedStars.Meta.Themes
 {
-    /// <summary>One world theme: a stable save id, a name, its place in the showcase scene and its Cash price.</summary>
+    /// <summary>One world theme: a stable save id, a name, its place in the showcase scene and its price.</summary>
     [Serializable]
     public sealed class ThemeEntry
     {
@@ -19,13 +20,22 @@ namespace SpeedStars.Meta.Themes
         [Tooltip("Index of this theme in the main menu showcase's theme list (Anamenu Themalari scene). Also the cycling order.")]
         [SerializeField, Min(0)] private int showcaseIndex;
 
-        [Tooltip("Price in Cash. 0 = no price: the theme cannot be bought yet.")]
+        // Serialized name stays "cashPrice" so saved assets keep their prices; it is the amount in priceCurrency.
+        [Tooltip("Price amount in the price currency below. 0 = no price: the theme cannot be bought yet.")]
         [SerializeField, Min(0)] private int cashPrice;
+
+        [Tooltip("Currency the price is paid in. Premium themes use PurpleGem.")]
+        [SerializeField] private ThemePriceCurrency priceCurrency = ThemePriceCurrency.Cash;
+
+        [Tooltip("Premium theme: its name and action button wear the gold frame (red while in use).")]
+        [SerializeField] private bool premium;
 
         public string Id => themeId ?? string.Empty;
         public string DisplayName => displayName ?? string.Empty;
         public int ShowcaseIndex => showcaseIndex;
-        public int CashPrice => cashPrice;
+        public int Price => cashPrice;
+        public ThemePriceCurrency PriceCurrency => priceCurrency;
+        public bool IsPremium => premium;
     }
 
     /// <summary>

@@ -29,6 +29,49 @@ namespace SpeedStars.UI.Themes
         Light
     }
 
+    /// <summary>Which premium frame wraps a control. Gold and red are alternatives, never both.</summary>
+    public enum PremiumFrame
+    {
+        None,
+        Gold,
+        Red
+    }
+
+    /// <summary>
+    /// Premium layers of the theme name and the action button (Premium_Tema_UI_v1): normal = fill + gold frame, the theme
+    /// in use = fill + red frame (gold off), no interaction = the same plus a disabled overlay on the action button.
+    /// </summary>
+    public readonly struct PremiumLook
+    {
+        public readonly bool IsPremium;
+        public readonly PremiumFrame Frame;
+        public readonly bool ActionOverlay;
+        /// <summary>Which currency icon the price shows.</summary>
+        public readonly ThemePriceCurrency Currency;
+
+        public PremiumLook(bool isPremium, PremiumFrame frame, bool actionOverlay, ThemePriceCurrency currency)
+        {
+            IsPremium = isPremium;
+            Frame = frame;
+            ActionOverlay = actionOverlay;
+            Currency = currency;
+        }
+
+        public bool ShowsGold => Frame == PremiumFrame.Gold;
+        public bool ShowsRed => Frame == PremiumFrame.Red;
+
+        /// <summary>
+        /// Layers for one theme. The red frame belongs to the theme in use; the overlay dims an action button that cannot be
+        /// pressed for another reason (too poor, not for sale), not the in-use one, which stays red and bright.
+        /// </summary>
+        public static PremiumLook For(bool isPremium, ThemePriceCurrency currency, ThemeActionState state, bool interactable)
+        {
+            if (!isPremium) return new PremiumLook(false, PremiumFrame.None, false, currency);
+            bool active = state == ThemeActionState.Active;
+            return new PremiumLook(true, active ? PremiumFrame.Red : PremiumFrame.Gold, !interactable && !active, currency);
+        }
+    }
+
     /// <summary>What a tap on the action button does.</summary>
     public enum ThemeActionClick
     {
@@ -75,11 +118,13 @@ namespace SpeedStars.UI.Themes
         public readonly ThemeActionLook Action;
         public readonly bool CanPrevious;
         public readonly bool CanNext;
+        public readonly PremiumLook Premium;
 
-        public ThemeSelectSnapshot(string name, int price, ThemeActionLook action, bool canPrevious, bool canNext)
+        public ThemeSelectSnapshot(string name, int price, ThemeActionLook action, bool canPrevious, bool canNext, PremiumLook premium = default)
         {
             Name = name;
             Price = price;
+            Premium = premium;
             Action = action;
             CanPrevious = canPrevious;
             CanNext = canNext;
@@ -117,9 +162,13 @@ namespace SpeedStars.UI.Themes
             int index = _themes.ShownListIndex;
             bool known = index >= 0 && index < _themes.Themes.Count;
             string name = known ? _themes.Themes[index].DisplayName : string.Empty;
-            int price = known ? _themes.Themes[index].CashPrice : 0;
+            int price = known ? _themes.Themes[index].Price : 0;
             ThemeActionState state = known ? _themes.GetActionState(_themes.ShownId) : ThemeActionState.NotForSale;
-            return new ThemeSelectSnapshot(name, price, LookFor(state), _themes.CanStep(-1), _themes.CanStep(1));
+            ThemeActionLook look = LookFor(state);
+            PremiumLook premium = known
+                ? PremiumLook.For(_themes.Themes[index].IsPremium, _themes.Themes[index].Currency, state, look.Interactable)
+                : default;
+            return new ThemeSelectSnapshot(name, price, look, _themes.CanStep(-1), _themes.CanStep(1), premium);
         }
 
         /// <summary>Action button tap: buys or uses the shown theme, whatever the button state allows.</summary>

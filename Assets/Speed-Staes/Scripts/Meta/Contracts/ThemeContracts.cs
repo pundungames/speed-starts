@@ -3,6 +3,13 @@ using System.Collections.Generic;
 
 namespace SpeedStars.Meta.Contracts
 {
+    /// <summary>What a theme is priced in. Premium themes use PurpleGem (same family as cosmetics); the rest Cash.</summary>
+    public enum ThemePriceCurrency
+    {
+        Cash,
+        PurpleGem
+    }
+
     public enum ThemeSelectResult
     {
         /// <summary>The theme is now the active one.</summary>
@@ -17,13 +24,13 @@ namespace SpeedStars.Meta.Contracts
 
     public enum ThemePurchaseResult
     {
-        /// <summary>Cash was spent once and the theme is owned now.</summary>
+        /// <summary>The price was spent once and the theme is owned now.</summary>
         Purchased,
         /// <summary>Already owned: nothing was charged (a repeated call cannot pay twice).</summary>
         AlreadyOwned,
         /// <summary>The theme has no price (0 in the catalog), so it cannot be bought yet.</summary>
         NotForSale,
-        /// <summary>Not enough Cash; nothing changed.</summary>
+        /// <summary>Not enough of the theme's price currency (Cash or Purple Gem); nothing changed.</summary>
         NotEnoughCash,
         UnknownTheme
     }
@@ -31,9 +38,9 @@ namespace SpeedStars.Meta.Contracts
     /// <summary>What the shown theme's action button does and looks like (theme select screen).</summary>
     public enum ThemeActionState
     {
-        /// <summary>Not owned, enough Cash: price label + currency icon, click buys.</summary>
+        /// <summary>Not owned, enough of the price currency: price label + currency icon, click buys.</summary>
         UnownedAffordable,
-        /// <summary>Not owned, not enough Cash: price label, not interactable.</summary>
+        /// <summary>Not owned, not enough of the price currency: price label, not interactable.</summary>
         UnownedInsufficient,
         /// <summary>Not owned and no price (0 in the catalog): not interactable.</summary>
         NotForSale,
@@ -49,22 +56,36 @@ namespace SpeedStars.Meta.Contracts
         public readonly string Id;
         public readonly string DisplayName;
         public readonly int ShowcaseIndex;
-        public readonly int CashPrice;
+        /// <summary>Price amount in <see cref="Currency"/>; 0 = no price (cannot be bought).</summary>
+        public readonly int Price;
+        public readonly ThemePriceCurrency Currency;
+        /// <summary>Premium themes get the gold / red framed name and action button.</summary>
+        public readonly bool IsPremium;
 
         public ThemeInfo(string id, string displayName, int showcaseIndex, int cashPrice)
+            : this(id, displayName, showcaseIndex, cashPrice, ThemePriceCurrency.Cash, false)
+        {
+        }
+
+        public ThemeInfo(string id, string displayName, int showcaseIndex, int price, ThemePriceCurrency currency, bool isPremium)
         {
             Id = id;
             DisplayName = displayName;
             ShowcaseIndex = showcaseIndex;
-            CashPrice = cashPrice;
+            Price = price;
+            Currency = currency;
+            IsPremium = isPremium;
         }
+
+        /// <summary>The price when it is in Cash, else 0 (kept for callers that only know Cash prices).</summary>
+        public int CashPrice => Currency == ThemePriceCurrency.Cash ? Price : 0;
     }
 
     /// <summary>
     /// World themes (main menu now, race later). Two ideas: the ACTIVE theme (saved, what the menu shows when the
     /// player is not choosing) and the SHOWN theme (what the world displays right now). Browsing (theme select screen)
     /// lets the shown theme move through the list without saving or spending; leaving without Use restores the active
-    /// one. Themes are bought with Cash; in development builds every theme counts as owned.
+    /// one. Themes are bought with Cash (premium ones with Purple Gems); in development builds every theme counts as owned.
     /// </summary>
     public interface IThemeService
     {
@@ -114,7 +135,7 @@ namespace SpeedStars.Meta.Contracts
         /// <summary>Makes an owned theme the active one (saved) and shows it. Browsing stays as it is.</summary>
         ThemeSelectResult Use(string id);
 
-        /// <summary>Buys a theme with Cash: once, and nothing changes on failure. Does not make it active.</summary>
+        /// <summary>Buys a theme with its price currency: once, and nothing changes on failure. Does not make it active.</summary>
         ThemePurchaseResult TryPurchase(string id);
 
         /// <summary>Button state for a theme (the shown one for the screen's action button).</summary>
