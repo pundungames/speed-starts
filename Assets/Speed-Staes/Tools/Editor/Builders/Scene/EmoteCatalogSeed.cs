@@ -23,8 +23,8 @@ namespace SpeedStars.Tools.Builders
         public const string CatalogPath = ConfigAssetSeeder.Folder + "/EmoteCatalog.asset";
         public const string ScreenConfigPath = ConfigAssetSeeder.Folder + "/EmoteScreenConfig.asset";
 
-        private static readonly EmoteBone SR = EmoteBone.ShoulderR, UR = EmoteBone.UpperArmR, FR = EmoteBone.ForearmR, HR = EmoteBone.HandR;
-        private static readonly EmoteBone SL = EmoteBone.ShoulderL, UL = EmoteBone.UpperArmL, FL = EmoteBone.ForearmL, HL = EmoteBone.HandL;
+        private static readonly EmoteBone SR = EmoteBone.ShoulderR, UR = EmoteBone.UpperArmR, FR = EmoteBone.ForearmR;
+        private static readonly EmoteBone SL = EmoteBone.ShoulderL, UL = EmoteBone.UpperArmL, FL = EmoteBone.ForearmL;
         private static readonly EmoteBone Spine = EmoteBone.Spine, Chest = EmoteBone.Chest, Head = EmoteBone.Head;
 
         private sealed class EmoteSeed

@@ -44,7 +44,7 @@ namespace SpeedStars.Tools.Builders
         public static void BuildAll(Func<string, Action<RectTransform>, GameObject> build)
         {
             EmoteScreenConfig config = EmoteCatalogSeed.SeedScreenConfig(overwrite: false);
-            UiArt.Layout layout = UiArt.ReadLayout();
+            UiArt.Layout layout = ReadCostumeLayout();
 
             GameObject card = build(EmoteCardPath, root => Card(root, layout));
             var cardView = UiViewBinder.RowComponent<EmoteCardView>(card, EmoteCardPath);
@@ -292,6 +292,18 @@ namespace SpeedStars.Tools.Builders
         }
 
         // ---------------------------------------------------------------- helpers
+
+        /// <summary>The costume editor's own layout.json (the Home one has no wardrobe / item rects).</summary>
+        private static UiArt.Layout ReadCostumeLayout()
+        {
+            string path = ArtFolder + "/layout.json";
+            string full = Kit.FullPath(path);
+            if (!System.IO.File.Exists(full)) throw new InvalidOperationException($"UiEmotePrefabs: '{path}' not found.");
+            var file = JsonUtility.FromJson<UiArt.LayoutFile>(System.IO.File.ReadAllText(full));
+            if (file == null || file.reference_size == null || file.reference_size.Length < 2 || file.components == null)
+                throw new InvalidOperationException($"UiEmotePrefabs: '{path}' could not be read.");
+            return new UiArt.Layout(file);
+        }
 
         private static string ArtPath(string file) => ArtFolder + "/" + file + ".png";
 
