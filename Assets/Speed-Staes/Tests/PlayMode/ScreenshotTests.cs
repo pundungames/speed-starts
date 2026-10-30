@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 using SpeedStars.Core.Race;
+using SpeedStars.Core.Services;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
@@ -213,6 +214,111 @@ namespace SpeedStars.PlayTests
             }
         }
 
+        /// <summary>
+        /// T-054 evidence: the entry gate in every state it can show, opened straight from the view (Play skips the gate while
+        /// Timed access runs): Home_entrygate_ready (tickets, USE TICKET works), _full (TICKETS FULL, offers closed), _timed
+        /// (a Timed Ticket in stock: USE TIMED TICKET shows) and _timedactive (the window runs: ticket button hidden).
+        /// Home_entrygate (no ticket) is taken by Shots_HomeAndRace.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Shots_EntryGateStates()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            bool captured = false;
+            int entryTickets = 0, timedTickets = 0;
+            long regenDue = 0, timedExpires = 0;
+            RaceEventId selected = default;
+            try
+            {
+                yield return LoadScene(HomeScene);
+
+                DiContainer container = ProjectContext.Instance.Container;
+                PlayerProgress progress = container.Resolve<ProgressRepository>().Current;
+                IEntryTickets tickets = container.Resolve<IEntryTickets>();
+                entryTickets = progress.EntryTickets;
+                timedTickets = progress.TimedTickets;
+                regenDue = progress.EntryRegenDueUtcTicks;
+                timedExpires = progress.TimedAccessExpiresUtcTicks;
+                selected = container.Resolve<IRaceSelection>().Selected;
+                captured = true;
+
+                RaceEventDefinition definition = SelectTicketEvent(container);
+                HomeScreenView home = Require<HomeScreenView>();
+                yield return WaitUntil(() => home.IsVisible, "HomeScreen to be visible");
+                EntryGateModalView gate = RequireField<EntryGateModalView>(home, "entryGateModal");
+
+                // 1. Tickets in hand, no Timed Ticket: USE TICKET works.
+                SetGateState(progress, tickets, 1, 0, 0L);
+                gate.Open(definition);
+                yield return WaitOpen(gate, "entry gate");
+                yield return Settle();
+                yield return Capture(dir, "Home_entrygate_ready");
+                yield return CloseGate(gate);
+
+                // 2. Inventory full: TICKETS FULL, both offers closed.
+                SetGateState(progress, tickets, tickets.Cap, 0, 0L);
+                gate.Open(definition);
+                yield return WaitOpen(gate, "entry gate");
+                yield return Settle();
+                yield return Capture(dir, "Home_entrygate_full");
+                yield return CloseGate(gate);
+
+                // 3. A Timed Ticket in stock: USE TIMED TICKET shows between the buttons.
+                SetGateState(progress, tickets, 1, 2, 0L);
+                gate.Open(definition);
+                yield return WaitOpen(gate, "entry gate");
+                yield return Settle();
+                yield return Capture(dir, "Home_entrygate_timed");
+                yield return CloseGate(gate);
+
+                // 4. The Timed window runs: the ticket button is gone, the Timed row counts down.
+                long end = container.Resolve<IClock>().UtcNow.Ticks + TimeSpan.FromMinutes(25).Ticks;
+                SetGateState(progress, tickets, 1, 1, end);
+                gate.Open(definition);
+                yield return WaitOpen(gate, "entry gate");
+                yield return Settle();
+                yield return Capture(dir, "Home_entrygate_timedactive");
+                yield return CloseGate(gate);
+            }
+            finally
+            {
+                if (ProjectContext.HasInstance)
+                {
+                    DiContainer container = ProjectContext.Instance.Container;
+                    if (captured)
+                    {
+                        PlayerProgress progress = container.Resolve<ProgressRepository>().Current;
+                        progress.EntryTickets = entryTickets;
+                        progress.TimedTickets = timedTickets;
+                        progress.EntryRegenDueUtcTicks = regenDue;
+                        progress.TimedAccessExpiresUtcTicks = timedExpires;
+                        container.Resolve<IEntryTickets>().Refresh();
+                        if (!selected.IsEmpty) container.Resolve<IRaceSelection>().Select(selected);
+                    }
+                }
+                saveFiles.Restore();
+            }
+        }
+
+        private static void SetGateState(PlayerProgress progress, IEntryTickets tickets, int entry, int timedStock, long timedExpiresTicks)
+        {
+            progress.EntryTickets = entry;
+            progress.TimedTickets = timedStock;
+            progress.EntryRegenDueUtcTicks = 0;
+            progress.TimedAccessExpiresUtcTicks = timedExpiresTicks;
+            tickets.Refresh();
+        }
+
+        private static IEnumerator CloseGate(EntryGateModalView gate)
+        {
+            yield return Tap(CloseButtonOf(gate), "entry gate Close");
+            yield return WaitClosed(gate, "entry gate");
+        }
+
         private static IEnumerator ShootScreen(string dir, HomeScreenView home, string buttonField, string screenField, string shotName)
         {
             UiScreen screen = RequireField<UiScreen>(home, screenField);
@@ -285,16 +391,17 @@ namespace SpeedStars.PlayTests
             }
         }
 
-        private static void SelectTicketEvent(DiContainer container)
+        private static RaceEventDefinition SelectTicketEvent(DiContainer container)
         {
             RaceEventCatalog catalog = container.Resolve<RaceEventCatalog>();
             foreach (RaceEventDefinition definition in catalog.GetEvents())
             {
                 if (!definition.IsPlayable || !definition.RequiresTicket) continue;
                 container.Resolve<IRaceSelection>().Select(definition.Id);
-                return;
+                return definition;
             }
             Assert.Ignore("The event catalog has no playable event that requires a ticket; the Race shot cannot be taken.");
+            return null;
         }
 
         private static string ArgValue(string name)

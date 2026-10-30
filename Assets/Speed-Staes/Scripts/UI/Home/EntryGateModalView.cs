@@ -17,7 +17,7 @@ namespace SpeedStars.UI.Home
     /// "Tickets 2/3" with the next-ticket countdown, Timed Ticket status (with "Use Timed Ticket" and the running window's
     /// countdown), "Use Ticket" and the ways to get tickets (Cash and the rewarded ad; both closed while the inventory is
     /// full). Confirm goes through <see cref="HomeEntryFlow"/>; a refused entry shakes the window and writes a warning into
-    /// the Remaining line (the prefab has no separate warning text). While Timed access runs the ticket button is hidden:
+    /// the Remaining line (hidden otherwise: the count above already says it; the prefab has no separate warning text). While Timed access runs the ticket button is hidden:
     /// nothing is spent then (PDF 1.1). WATCH AD runs <see cref="EntryGateAdFlow"/>: the button shows a spinner while the
     /// ad runs; a granted ticket punches the ticket icon, anything else shakes the window. The ad rules live in the flow;
     /// this view only shows them.
@@ -42,13 +42,19 @@ namespace SpeedStars.UI.Home
         [Tooltip("Window/Refill: 'Next ticket in mm:ss'; hidden when the inventory is full.")]
         [SerializeField] private Text refillText;
 
-        [Tooltip("Window/UseEntryTicket: confirm button; hidden while Timed access is active, not interactable with no ticket.")]
+        [Tooltip("Window/Actions/UseEntryTicket: confirm button; hidden while Timed access is active, not interactable with no ticket.")]
         [SerializeField] private Button useTicketButton;
 
-        [Tooltip("Window/UseEntryTicket/Label.")]
+        [Tooltip("Window/Actions/UseEntryTicket/Label.")]
         [SerializeField] private Text useTicketLabel;
 
-        [Tooltip("Window/Remaining: tickets left, or the refusal warning.")]
+        [Tooltip("USE TICKET label colour while the button works (white on the red art).")]
+        [SerializeField] private Color useTicketLabelReady = Color.white;
+
+        [Tooltip("USE TICKET label colour while the button is disabled: white would vanish on the pale grey disabled art.")]
+        [SerializeField] private Color useTicketLabelDisabled = new Color(0.38f, 0.44f, 0.56f, 1f);
+
+        [Tooltip("Window/Remaining: the refusal warning only; hidden the rest of the time (the ticket count already shows what is left).")]
         [SerializeField] private Text remainingText;
 
         [Tooltip("Window/TimedTicketStatus/Label: 'Timed Ticket' or 'Timed Ticket active'.")]
@@ -57,10 +63,10 @@ namespace SpeedStars.UI.Home
         [Tooltip("Window/TimedTicketStatus/Value: Timed Ticket stock.")]
         [SerializeField] private Text timedValue;
 
-        [Tooltip("Window/UseTimedTicket: starts the Timed Ticket window; shown only with a ticket in stock and no window running.")]
+        [Tooltip("Window/Actions/UseTimedTicket: starts the Timed Ticket window; shown only with a ticket in stock and no window running.")]
         [SerializeField] private Button useTimedButton;
 
-        [Tooltip("Window/UseTimedTicket/Label.")]
+        [Tooltip("Window/Actions/UseTimedTicket/Label.")]
         [SerializeField] private Text useTimedLabel;
 
         [Tooltip("Window/TimedTicketStatus: punched when a Timed Ticket window starts.")]
@@ -248,7 +254,8 @@ namespace SpeedStars.UI.Home
             SetSpinner(ad.IsBusy);
             useTicketButton.gameObject.SetActive(model.ShowUseTicketButton);
             useTicketButton.interactable = model.UseTicketInteractable;
-            remainingText.text = model.RemainingText;
+            remainingText.gameObject.SetActive(false); // a refusal warning (OnUseTicket) lives until the next redraw
+            useTicketLabel.color = model.UseTicketInteractable ? useTicketLabelReady : useTicketLabelDisabled;
             timedLabel.text = model.TimedStatusText;
             timedValue.text = model.TimedValueText;
         }
@@ -265,6 +272,8 @@ namespace SpeedStars.UI.Home
             }
 
             remainingText.text = HomeEntryRules.WarningFor(outcome);
+            remainingText.gameObject.SetActive(true);
+            refillText.gameObject.SetActive(false); // the warning takes the refill line's place
             Shake();
         }
 

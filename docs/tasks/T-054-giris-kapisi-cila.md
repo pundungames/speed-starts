@@ -1,7 +1,7 @@
 ---
 id: T-054
 title: Giris kapisi cilasi - tasan buton yazisi, gereksiz satir, bosluk, ikincil buton etiketleri; butun durumlarin ekran goruntusu
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-050]
 owns_paths:
@@ -14,12 +14,17 @@ owns_paths:
 touches_scene: true
 branch: agent/T-054-giris-kapisi-cila
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_EntryGateStates: Home_entrygate_ready/_full/_timed/_timedactive; -shotDir ile)"
+  - "mevcut EntryGateModel EditMode + EntryGateAdSmokeTests degismedi"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "EntryGateModal prefab'i yeniden uret (UiEntryGatePrefabs.EntryGate, overwrite) ve Home'u yeniden uret. Yeni yol: Window/Actions/{UseEntryTicket,UseTimedTicket} (VerticalLayoutGroup); Window/Remaining baslangicta pasif; TicketIcon RectMask2D ile alttan kirpildi. Sonra Shots_EntryGateStates + Shots_HomeAndRace ile 5 goruntuyu al; Home_entrygate_ready'de biletin altindaki cikinti gittiyse TicketTabCrop (0.10) dogru, kesiliyorsa dusur"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -54,3 +59,7 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+- 1) USE TICKET etiketi 52->42, rim icinde (0.14-0.86 x 0.16-0.84); pasifte etiket rengi koyu gri-mavi (view'da iki Color alani), aktifte beyaz.
+- 2) "Left" satiri her zaman gizli; yalniz reddedilen giriste uyari olarak Refill satirinin yerinde gorunur. 3) Butonlar Window/Actions VerticalLayoutGroup'unda, gizli buton yer tutmaz; ust satirlar sikistirildi.
+- 4) BUY WITH CASH / WATCH AD ayni boy (26), ayni dikey ortalama; fiyat butonun sag ucunda. 5) Ticket ikonu: ticket_flight_icon'da da ayni cikinti var, bu yuzden RectMask2D ile alttan %10 kirpildi. 6) Baslik 64->50, iki yandan icerde.
+- Prefab/sahne uretilmedi (needs SCENE); gercek goruntu gelince kirpma orani ve yerlesim ayarlanabilir. Unity calistirilmadi.

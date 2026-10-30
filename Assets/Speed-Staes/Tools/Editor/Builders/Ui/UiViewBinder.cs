@@ -55,13 +55,13 @@ namespace SpeedStars.Tools.Builders
             b.Set("ticketCountText", b.Child<Text>("Window/TicketCount"));
             b.Set("ticketIcon", b.Child<RectTransform>("Window/TicketIcon"));
             b.Set("refillText", b.Child<Text>("Window/Refill"));
-            b.Set("useTicketButton", b.Child<Button>("Window/UseEntryTicket"));
-            b.Set("useTicketLabel", b.Child<Text>("Window/UseEntryTicket/Label"));
+            b.Set("useTicketButton", b.Child<Button>("Window/Actions/UseEntryTicket"));
+            b.Set("useTicketLabel", b.Child<Text>("Window/Actions/UseEntryTicket/Label"));
             b.Set("remainingText", b.Child<Text>("Window/Remaining"));
             b.Set("timedLabel", b.Child<Text>("Window/TimedTicketStatus/Label"));
             b.Set("timedValue", b.Child<Text>("Window/TimedTicketStatus/Value"));
-            b.Set("useTimedButton", b.Child<Button>("Window/UseTimedTicket"));
-            b.Set("useTimedLabel", b.Child<Text>("Window/UseTimedTicket/Label"));
+            b.Set("useTimedButton", b.Child<Button>("Window/Actions/UseTimedTicket"));
+            b.Set("useTimedLabel", b.Child<Text>("Window/Actions/UseTimedTicket/Label"));
             b.Set("timedStatus", b.Child<RectTransform>("Window/TimedTicketStatus"));
             b.Set("offersCaption", b.Child<Text>("Window/GetTickets/Caption"));
             b.Set("buyWithCashButton", b.Child<Button>("Window/GetTickets/BuyWithCash"));
