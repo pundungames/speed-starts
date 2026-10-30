@@ -1,7 +1,7 @@
 ---
 id: T-047
 title: Yaris sonu - oyuncu satirinda PB (yeni kisisel rekor) ve DB (gunun en iyisi) rozetleri
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-033, T-037]
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/**"
 touches_scene: true
 branch: agent/T-047-pb-db
-commits: []
+commits: [280ec1c]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ResultsModelTests.cs"
 analytics:
@@ -21,7 +21,7 @@ needs:
     durum: closed
     not: "RaceFlowLogic.BuildResults (Scripts/UI/Race/RaceFlowLogic.cs, owns_paths disinda) -> ResultsInput isDayBest: Record sonrasi IDayBestSource.CopyDayBests(eventId) ile bugunun (IClock.UtcNow.Date.Ticks) kaydini bul, ResultsModel.IsDayBest(has, ms, outcome.TimeSeconds) sonucunu ResultsInput'un son parametresine ver. IPersonalBests isNewRecord zaten geciyor (PB hazir)."
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "ResultsTableRow prefab'i ve Race_results sahnesini builder ile yeniden uret (PersonalBestBadge/DayBestBadge Text'leri ve personalBestBadge/dayBestBadge alanlari yeni)"
 
 started: 2026-10-30

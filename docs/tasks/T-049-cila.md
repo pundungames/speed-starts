@@ -1,7 +1,7 @@
 ---
 id: T-049
 title: Cila - olu kod temizligi, analizde DNF cizgisi, READY/SET/GO olcegi, emote kart yerlesimi
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-036, T-039, T-040]
 owns_paths:
@@ -25,17 +25,17 @@ owns_paths:
   - "docs/tasks/_backlog.md"
 touches_scene: true
 branch: agent/T-049-cila
-commits: []
+commits: [280ec1c]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/AnalysisChartModelTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "Data/Config/RaceStartConfig.asset: groupScale 0.55 -> 0.8, holdTensionMinAlpha 0.6 -> 0.85 (asset still holds the old defaults; all other fields are default, so re-seed with overwrite or edit in the Inspector). Then rebuild UiRaceStartPrefabs so Widgets/RaceStart.prefab Group scale follows (0.8)."
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Rebuild UI prefabs (EmoteCard.prefab, EmoteScreen.prefab changed: name above lock, price beside it, list from the panel top, Equipped label inside the button) and commit with the scene; take Race_countdown, Race_analysis, Home_emote screenshots."
 started: 2026-10-30
 finished: 2026-10-30

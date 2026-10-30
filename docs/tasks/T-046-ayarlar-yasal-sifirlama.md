@@ -1,7 +1,7 @@
 ---
 id: T-046
 title: Ayarlar - Privacy Policy / Terms of Use / Support baglantilari + Reset Progress / Reset Personal Bests (onay penceresiyle)
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-031]
 owns_paths:
@@ -17,7 +17,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-046-ayarlar-yasal
-commits: []
+commits: [280ec1c]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Persistence/ProgressResetTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Settings/LinkRulesTests.cs"
@@ -27,10 +27,10 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
+    durum: closed
     not: "ProjectInstaller -> Container.Bind<IProgressReset>().To<SpeedStars.Meta.Settings.ProgressResetService>().AsSingle(); (ProjectInstaller.cs, next to the IPlayerSettings bind; needs ProgressRepository, already bound). Without it the two reset rows are greyed out."
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Rebuild SettingsPopup prefab with the builder (UiSettingsPrefabs): 5 new rows (PrivacyRow, TermsRow, SupportRow, ResetBestsRow, ResetAllRow, each with a Hit child = SettingsActionRowView) + PopupLayer/ConfirmDialog (ConfirmDialogView); panel_single_9slice gets its 9-slice border. Check no field is fileID 0 in the prefab. Then run SettingsResetSmokeTests and take Home_settings."
   - tip: DECISION
     durum: open
