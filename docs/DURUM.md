@@ -5,10 +5,10 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-10-30 (akşam) · main d2d89003 (push kullanıcıda) · dal `main`
+Son güncelleme: 2026-10-30 (akşam) · main 08174171 (push kullanıcıda) · dal `main`
 
 ## Sürüyor
-- T-058 mağaza build metodu (yalnız o build için IL2CPP+ARM64+paket adı, AAB; proje ayarı kalıcı değişmez).
+- Yok (bütün worktree'ler kapandı).
 
 ## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
 - Tema fiyatı yok → 0; geliştirmede bütün temalar serbest. Normal kozmetik bedava, premium 50 Mor Mücevher (PDF).
@@ -22,16 +22,18 @@ Son güncelleme: 2026-10-30 (akşam) · main d2d89003 (push kullanıcıda) · da
 - Malik'ten (Faz 7): yarış saati GO'da başlasın, UI üstündeki dokunma ayak sayılmasın, rakipler/sıra (`docs/TEMEL-SOZLESME.md` §11).
 - Serhat'a: `PastelBuildingRow` sahne açılınca binaları yeniden üretiyor (bizim Home kopyasında kaldırıldı).
 
-## Gözle bakılacaklar (main d2d89003; kopyada yeşil: EditMode 796, PlayMode 25, Zenject)
+## Gözle bakılacaklar (main 08174171; kopyada yeşil: EditMode 796, PlayMode 25, Zenject)
 - APK: geliştirme (Mono/ARMv7) 64 MB; IL2CPP+ARM64 71 MB kopyada derlendi, cihazda denenmedi (telefon bağlı değildi).
   UI dokuları Android'de ASTC 4x4 (T-057). Günlük build Mono kalır (IL2CPP 9.5 dk).
+- Mağaza build'i: `scripts/android-release.ps1 -ProjectPath <kopya>` → AAB 57 MB (IL2CPP ARMv7+ARM64); ayarlar
+  `Data/Release/ReleaseBuildConfig.asset`, parola ortam değişkeni (SPEEDSTARS_KEYSTORE_PASS / SPEEDSTARS_KEY_PASS). Şu an debug imzalı.
 - 30.10 akşam: giriş kapısı yeni görünüm + Watch Ad (editörde sahte reklam, 1 bilet), güvenli alan (çentik), UI sesleri + titreşim
   (yer tutucu sesler `scripts/sfx-uret.py`), kapat-aç/saat regresyon testleri. Malik yarış içi emote ekledi (J, eeb4b57).
 - 30.10: ayarlarda gizlilik/şartlar/destek + iki sıfırlama (onay penceresi), yarış sonunda PB/DB rozetleri, READY/SET/GO ölçeği,
   emote kartı yerleşimi, analizde DNF çizgisi, günlük hediye + 7 gün, ses kapalı ikonu + premium kart.
 
 ## Sıradaki iş
-1. T-058 birleştir; telefon bağlanınca APK'yı cihazda dene (Zenject + IL2CPP).
+1. Telefon bağlanınca APK/AAB'yi cihazda dene (Zenject + IL2CPP, ses, titreşim, güvenli alan).
 2. eksik-ui: Race of the Day kartı (içerik Malik), kazanç dökümü (Nakit kuralı yok), para mağazası/Upgrade (PDF'te yok).
 3. Faz 8: kill/restart, saat kayması, çevrimdışı regresyonu; APK öncesi tam tur.
 
