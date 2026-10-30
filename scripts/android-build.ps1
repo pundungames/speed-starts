@@ -65,6 +65,7 @@ try {
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $p = Start-Process -FilePath $unityExe -ArgumentList $satir -PassThru -NoNewWindow
+    $null = $p.Handle  # PowerShell 5.1: without the cached handle ExitCode stays empty after the process ends
     $bitti = $p.WaitForExit($TimeoutMinutes * 60 * 1000)
     if (-not $bitti) {
         try { Stop-Process -Id $p.Id -Force } catch { }
@@ -93,7 +94,8 @@ try {
         Write-Host "UYARI: log'da ortam imzasi var (UPM/paket/lisans/coklu Unity); sonuc guvenilmez olabilir. Log: $log"
     }
     $ok = [regex]::IsMatch($metin, '(?m)^ANDROID_BUILD_OK')
-    if ($ok -and $cikis -eq 0 -and (Test-Path -LiteralPath $OutApk -PathType Leaf)) {
+    # The method exits 0/1 itself; an empty exit code (handle lost) is not a failure when the OK line and the APK are there.
+    if ($ok -and ($cikis -eq 0 -or $null -eq $cikis) -and (Test-Path -LiteralPath $OutApk -PathType Leaf)) {
         Write-Host "SONUC: YESIL (exit 0) - APK: $OutApk"; exit 0
     }
     Write-Host "SONUC: KIRMIZI (exit 1) - build basarisiz (Unity cikis $cikis). Log: $log"
