@@ -1,7 +1,7 @@
 ---
 id: T-043
 title: Faz 4 UI (Gunluk_Odul_UI_v2) - gunluk hediye popup'i + bilet ucusu, 7 gunluk odul paneli, takvim kirmizi noktasi
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-042]
 owns_paths:
@@ -17,7 +17,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-043-gunluk-oduller-ui
-commits: []
+commits: [8f7d8a9]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Rewards/RewardPanelsModelTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/RewardPanelsSmokeTests.cs"
@@ -25,10 +25,10 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "UI prefab builder overwrite=true: DailyGiftPopup + SevenDayCheckInPanel + RewardFlight (same paths, now with views), new Rows/RewardDayCard + Rows/RewardPremiumCard, Data/Config/RewardUiConfig.asset seed, Art/Rewards sprite import (UiArt.ImportAll). Then Home scene rebuild/wiring (SceneWiring.WireDailyGift binds HomeScreenView.dailyGiftPopup, DailyGiftPopupView.flight, TicketFlightView.resourceBar). Prefabs/scene/.meta/.asset are not writable for the UI agent."
   - tip: WIRING
-    durum: open
+    durum: closed
     not: "T-042's ProjectInstaller binding IDailyGift + ISevenDayRewards AsSingle: SevenDayPanelView and DailyGiftPopupView inject them (Home itself uses InjectOptional); without it the Home scene reports missing bindings"
 started: 2026-10-30
 finished: 2026-10-30

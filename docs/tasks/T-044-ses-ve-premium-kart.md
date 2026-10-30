@@ -1,7 +1,7 @@
 ---
 id: T-044
 title: Ses kapali ikonu + premium kostum karti durumlari (Ses_Kapali_ve_Premium_UI_v1)
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-031, T-041]
 owns_paths:
@@ -16,7 +16,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-044-ses-premium
-commits: []
+commits: [8f7d8a9]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/PremiumCardStateTests.cs"
 analytics:

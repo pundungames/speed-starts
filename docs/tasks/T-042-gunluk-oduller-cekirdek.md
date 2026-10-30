@@ -1,7 +1,7 @@
 ---
 id: T-042
 title: Faz 4 cekirdek - gunluk giris hediyesi (1 Adet Bileti) ve 7 gunluk odul servisi
-status: review
+status: merged
 owner: systems-agent
 depends_on: [T-028]
 owns_paths:
@@ -18,7 +18,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Cosmetics/**"
 touches_scene: false
 branch: agent/T-042-gunluk-oduller
-commits: []
+commits: [8f7d8a9]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Rewards/DailyGiftServiceTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Rewards/SevenDayRewardServiceTests.cs"
@@ -26,7 +26,7 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
+    durum: closed
     not: "ProjectInstaller: Container.BindInterfacesAndSelfTo<DailyGiftService>().AsSingle(); Container.BindInterfacesAndSelfTo<SevenDayRewardService>().AsSingle(); (SevenDayRewardConfig asset must be bound as an instance; IClock, IEconomyLedger, ICosmeticService, IEntryTickets, IEntryTicketSource, EconomyConfig, ProgressRepository already exist)"
 started: 2026-10-30
 finished: 2026-10-30

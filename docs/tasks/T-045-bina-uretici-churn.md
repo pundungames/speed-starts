@@ -1,7 +1,7 @@
 ---
 id: T-045
 title: Home kopyasinda Serhat'in bina ureticisi (PastelBuildingRow) sahne her acilista binalari yeniden uretiyor - kopyadan cikar
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-023]
 owns_paths:
@@ -9,7 +9,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/SceneBuilder.cs"
 touches_scene: true
 branch: agent/T-045-bina-churn
-commits: []
+commits: [8f7d8a9]
 tests:
   - "gerekmiyor: builder sahne ayari; kabul = Home'u acip kaydedince bina nesneleri degismiyor (iki build arasi Home.unity'de bina diff'i yok)"
 analytics:
