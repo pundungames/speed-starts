@@ -1,5 +1,6 @@
 using System;
 using SpeedStars.Bridge;
+using SpeedStars.Runner;
 using SpeedStars.Themes;
 using UnityEditor;
 using UnityEngine;
@@ -59,6 +60,25 @@ namespace SpeedStars.Tools.Builders
             throw new InvalidOperationException($"No camera in '{scene.path}'.");
         }
 
+        /// <summary>
+        /// Removes every <see cref="PastelBuildingRow"/> from the copy. Its OnValidate/delayCall rebuilds "Generated Buildings"
+        /// with fresh fileIDs on each editor load, which dirties Home.unity with a ~140-object diff. The generated buildings
+        /// stay; on prefab instances this is a removed-component override (Undo.DestroyObjectImmediate is the supported path).
+        /// </summary>
+        public static int RemoveBuildingGenerators(Scene scene)
+        {
+            int removed = 0;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                foreach (var row in root.GetComponentsInChildren<PastelBuildingRow>(true))
+                {
+                    Undo.DestroyObjectImmediate(row);
+                    removed++;
+                }
+            }
+            return removed;
+        }
+
         /// <summary>Hides Serhat's IMGUI panel and adds the MenuThemeView that drives the showcase from the saved theme.</summary>
         public static MenuThemeView Prepare(Scene scene)
         {
@@ -77,6 +97,8 @@ namespace SpeedStars.Tools.Builders
                 ?? throw new InvalidOperationException($"'{SceneHomeCharacter.PlatformName}' not found in '{scene.path}'.");
             Prop(viewSo, "characterPlatform").objectReferenceValue = platform.gameObject;
             Apply(viewSo);
+            int rows = RemoveBuildingGenerators(scene);
+            Log(Source, $"Home: removed {rows} PastelBuildingRow generator(s) (editor-load rebuild churn).");
             Log(Source, $"Home: showcase panel off, MenuThemeView on '{showcase.name}' ({showcase.themeDisplays.Length} theme displays).");
             return view;
         }

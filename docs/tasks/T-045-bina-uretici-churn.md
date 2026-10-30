@@ -1,7 +1,7 @@
 ---
 id: T-045
 title: Home kopyasinda Serhat'in bina ureticisi (PastelBuildingRow) sahne her acilista binalari yeniden uretiyor - kopyadan cikar
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-023]
 owns_paths:
@@ -15,8 +15,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -34,4 +34,8 @@ override'ı; üretilmiş binalar sahnede kalır). Serhat'ın sahnesine, prefab'�
 - [ ] Oyunda (Play) şehir binaları görünür (ekran görüntüsü)
 
 ## Calisma notu
-(Agent doldurur)
+- SceneHomeTheme.Prepare now calls RemoveBuildingGenerators: Undo.DestroyObjectImmediate on every PastelBuildingRow (removed-component override on prefab instances; DestroyImmediate on instance components can error, Undo path is the supported one). Buildings stay.
+- LoopWayGenerator/ThemedLoopWay autoPreview is only read from custom inspectors and undo recovery (not on load), so left alone. PastelPlantGenerator rebuilds are hash-guarded, left alone.
+- Not run in Unity: unverified; check that the removal logs a count and a second build leaves buildings unchanged.
+- Home.unity not regenerated here (builder output comes with the next build).
+- Open: none.
