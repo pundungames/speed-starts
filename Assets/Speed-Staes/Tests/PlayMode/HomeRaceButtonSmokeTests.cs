@@ -128,7 +128,9 @@ namespace SpeedStars.PlayTests
             yield return Tap(RequireField<Button>(screen, "periodButton"), "period field");
             yield return WaitOpen(window, "period window");
 
-            yield return Tap(CloseButtonOf(screen), "Back (window open)");
+            // The window's catcher covers the on-screen Back, so the first press is the device Back / Escape path
+            // (BackKeyReader calls exactly ScreenNavigator.Back()).
+            Assert.IsTrue(Container.Resolve<ScreenNavigator>().Back(), "device Back with a window open");
             yield return WaitClosed(window, "period window");
             Assert.IsTrue(screen.gameObject.activeInHierarchy, "the first Back only closes the window");
 
