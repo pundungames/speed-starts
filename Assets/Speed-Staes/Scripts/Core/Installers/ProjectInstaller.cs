@@ -5,6 +5,7 @@ using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Cosmetics;
 using SpeedStars.Meta.Economy;
+using SpeedStars.Meta.Emotes;
 using SpeedStars.Meta.Leaderboard;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.Meta.Race;
@@ -40,6 +41,8 @@ namespace SpeedStars.Installers
         [SerializeField] private SettingsConfig settings;
         [Tooltip("Local leaderboard (T-037): bot fields per event (placeholder times), day-best cap, page size.")]
         [SerializeField] private LeaderboardConfig leaderboard;
+        [Tooltip("Menu emotes (T-040): procedural pose tracks, prices (placeholder Cash), free set.")]
+        [SerializeField] private EmoteCatalog emotes;
 
         [Header("Scenes")]
         [SerializeField] private SceneFlowScenes scenes = new SceneFlowScenes();
@@ -66,6 +69,7 @@ namespace SpeedStars.Installers
             BindConfig(themes);
             BindConfig(settings);
             BindConfig(leaderboard);
+            BindConfig(emotes);
 
             Container.Bind<ISaveStore>().FromMethod(_ => FileSaveStore.CreateDefault()).AsSingle();
             Container.Bind<ProgressRepository>().FromMethod(CreateProgress).AsSingle();
@@ -87,6 +91,9 @@ namespace SpeedStars.Installers
             Container.Bind(typeof(IPersonalBests), typeof(IDayBestSource)).To<SpeedStars.Meta.Records.PersonalBestService>().AsSingle();
             // T-037: local leaderboard (bots + the player's day bests); a server source can replace it behind the same interface.
             Container.Bind(typeof(ILeaderboard), typeof(System.IDisposable)).To<LocalLeaderboard>().AsSingle();
+            // T-040: emote ownership/equip (Cash via the ledger) and the preview the menu character plays.
+            Container.Bind<IEmoteService>().To<EmoteService>().AsSingle();
+            Container.Bind<IEmotePreview>().To<EmotePreview>().AsSingle();
             Container.Bind<IRaceSelection>().To<RaceSelection>().AsSingle();
 
             // T-025: presets, ownership, premium purchase; the preview is what the menu character wears right now.
