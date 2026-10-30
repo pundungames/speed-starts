@@ -11,6 +11,7 @@ using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
+using SpeedStars.UI.Leaderboard;
 using SpeedStars.UI.Race;
 using SpeedStars.UI.Rewards;
 using UnityEngine;
@@ -301,6 +302,208 @@ namespace SpeedStars.PlayTests
                     }
                 }
                 saveFiles.Restore();
+            }
+        }
+
+        /// <summary>
+        /// T-060 evidence: the leaderboard's filter windows and table states. Home_lb_region, _region_search_empty, _period,
+        /// _event_sprints / _hurdles / _relays come from the real local leaderboard with real taps (a category tab that is not
+        /// on offer is skipped). _empty, _notranked, _loading and _error need a source answer the local one never gives, so a
+        /// fake ILeaderboard is put in the screen's private field before its first opening (no product seam exists for it).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Shots_LeaderboardStates()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            try
+            {
+                // ---- real source: the three filter windows ----
+                yield return LoadScene(HomeScene);
+                HomeScreenView home = Require<HomeScreenView>();
+                yield return WaitUntil(() => home.IsVisible, "HomeScreen to be visible");
+                UiScreen screen = RequireField<UiScreen>(home, "highScoresScreen");
+                yield return Tap(RequireField<Button>(home, "highScoresButton"), "highScoresButton");
+                yield return WaitOpen(screen, "highScoresScreen");
+                yield return WaitClosed(home, "HomeScreen to step aside");
+                yield return Settle();
+                ScreenNavigator navigator = SceneNavigator();
+
+                // Region window, then the search with no match.
+                UiPopup region = RequireField<UiPopup>(screen, "regionPopup");
+                yield return Tap(RequireField<Button>(screen, "regionButton"), "region field");
+                yield return WaitOpen(region, "region window");
+                yield return Settle();
+                yield return Capture(dir, "Home_lb_region");
+                InputField search = RequireField<InputField>(screen, "searchInput");
+                search.text = "xyz";
+                yield return Settle();
+                yield return Capture(dir, "Home_lb_region_search_empty");
+                search.text = string.Empty;
+                yield return CloseWindow(navigator, region, "region window");
+
+                // Period window.
+                UiPopup period = RequireField<UiPopup>(screen, "periodPopup");
+                yield return Tap(RequireField<Button>(screen, "periodButton"), "period field");
+                yield return WaitOpen(period, "period window");
+                yield return Settle();
+                yield return Capture(dir, "Home_lb_period");
+                yield return CloseWindow(navigator, period, "period window");
+
+                // Event modal: one shot per category tab, then Cancel (the active filter stays).
+                UiPopup eventModal = RequireField<UiPopup>(screen, "eventModal");
+                yield return Tap(RequireField<Button>(screen, "eventButton"), "event field");
+                yield return WaitOpen(eventModal, "event modal");
+                yield return Settle();
+                LeaderboardChoiceView[] tabs = RequireField<LeaderboardChoiceView[]>(screen, "categoryTabs");
+                string[] tabShots = { "Home_lb_event_sprints", "Home_lb_event_hurdles", "Home_lb_event_relays" };
+                for (int i = 0; i < tabs.Length && i < tabShots.Length; i++)
+                {
+                    if (tabs[i] == null || !tabs[i].gameObject.activeSelf)
+                    {
+                        Debug.Log($"SHOT_SKIP {tabShots[i]}: category tab {i} is not on offer.");
+                        continue;
+                    }
+                    yield return Tap(RequireField<Button>(tabs[i], "button"), $"category tab {i}");
+                    yield return Settle();
+                    yield return Capture(dir, tabShots[i]);
+                }
+                yield return Tap(RequireField<Button>(screen, "cancelButton"), "event modal Cancel");
+                yield return WaitClosed(eventModal, "event modal");
+                yield return Settle();
+
+                yield return Tap(CloseButtonOf(screen), "highScoresScreen Back");
+                yield return WaitClosed(screen, "highScoresScreen");
+                yield return WaitOpen(home, "HomeScreen to come back");
+
+                // ---- fake source: states the local leaderboard cannot produce ----
+                yield return ShootFakeLeaderboard(dir, "Home_lb_empty", new FakeLeaderboard(FakeAnswer.Empty));
+                yield return ShootFakeLeaderboard(dir, "Home_lb_notranked", new FakeLeaderboard(FakeAnswer.RowsWithoutOwn));
+                yield return ShootFakeLeaderboard(dir, "Home_lb_loading", new FakeLeaderboard(FakeAnswer.Never));
+                yield return ShootFakeLeaderboard(dir, "Home_lb_error", new FakeLeaderboard(FakeAnswer.Error));
+            }
+            finally
+            {
+                saveFiles.Restore();
+            }
+        }
+
+        /// <summary>Fresh Home, the fake put in before the screen's first opening (the presenter is built then), open, shoot, Back.</summary>
+        private static IEnumerator ShootFakeLeaderboard(string dir, string shotName, ILeaderboard fake)
+        {
+            yield return LoadScene(HomeScene);
+            HomeScreenView home = Require<HomeScreenView>();
+            yield return WaitUntil(() => home.IsVisible, "HomeScreen to be visible");
+            UiScreen screen = RequireField<UiScreen>(home, "highScoresScreen");
+            Assert.IsNull(GetPrivate(screen, "_presenter"), $"{shotName}: the leaderboard screen was opened before the fake was put in.");
+            SetPrivate(screen, "_leaderboard", fake);
+
+            yield return Tap(RequireField<Button>(home, "highScoresButton"), "highScoresButton");
+            yield return WaitOpen(screen, "highScoresScreen");
+            yield return WaitClosed(home, "HomeScreen to step aside");
+            yield return Settle();
+            yield return Capture(dir, shotName);
+
+            yield return Tap(CloseButtonOf(screen), "highScoresScreen Back");
+            yield return WaitClosed(screen, "highScoresScreen");
+            yield return WaitOpen(home, "HomeScreen to come back");
+        }
+
+        /// <summary>Back / Escape path: the window's catcher sits under the window, so a centre tap on it would hit the window.</summary>
+        private static IEnumerator CloseWindow(ScreenNavigator navigator, UiPopup window, string what)
+        {
+            Assert.IsTrue(navigator.Back(), $"{what}: device Back with the window open.");
+            yield return WaitClosed(window, what);
+            yield return Settle();
+        }
+
+        private static ScreenNavigator SceneNavigator()
+        {
+            SceneContext context = UnityEngine.Object.FindObjectOfType<SceneContext>();
+            Assert.IsNotNull(context, "Home SceneContext");
+            return context.Container.Resolve<ScreenNavigator>();
+        }
+
+        private const System.Reflection.BindingFlags AnyInstance =
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+            | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+
+        private static object GetPrivate(object owner, string name)
+        {
+            for (Type type = owner.GetType(); type != null; type = type.BaseType)
+            {
+                System.Reflection.FieldInfo field = type.GetField(name, AnyInstance);
+                if (field != null) return field.GetValue(owner);
+            }
+            Assert.Fail($"{owner.GetType().Name} has no field '{name}'.");
+            return null;
+        }
+
+        private static void SetPrivate(object owner, string name, object value)
+        {
+            for (Type type = owner.GetType(); type != null; type = type.BaseType)
+            {
+                System.Reflection.FieldInfo field = type.GetField(name, AnyInstance);
+                if (field == null) continue;
+                field.SetValue(owner, value);
+                return;
+            }
+            Assert.Fail($"{owner.GetType().Name} has no field '{name}'.");
+        }
+
+        private enum FakeAnswer
+        {
+            Empty,
+            RowsWithoutOwn,
+            Never,
+            Error
+        }
+
+        /// <summary>A leaderboard source with a fixed behaviour: no rows, rows with no own entry, no answer (loading) or an error.</summary>
+        private sealed class FakeLeaderboard : ILeaderboard
+        {
+            private readonly FakeAnswer _answer;
+
+            public FakeLeaderboard(FakeAnswer answer) { _answer = answer; }
+
+            public event Action Changed { add { } remove { } }
+
+            public void Query(LeaderboardQuery query, Action<LeaderboardPage> onDone, Action<string> onError)
+            {
+                var when = new DateTime(2026, 10, 29, 0, 0, 0, DateTimeKind.Utc);
+                switch (_answer)
+                {
+                    case FakeAnswer.Empty:
+                        onDone(new LeaderboardPage(new List<LeaderboardRow>(), 0, -1, null, when));
+                        break;
+                    case FakeAnswer.RowsWithoutOwn:
+                        var rows = new List<LeaderboardRow>();
+                        for (int i = 0; i < 12; i++)
+                            rows.Add(new LeaderboardRow("fake:" + i, i + 1, "RUNNER " + (i + 1), "US", 9500L + i * 37L, when, false));
+                        onDone(new LeaderboardPage(rows, rows.Count, -1, null, when));
+                        break;
+                    case FakeAnswer.Error:
+                        onError?.Invoke("fake error");
+                        break;
+                    default:
+                        break; // never answers: the screen stays on Loading
+                }
+            }
+
+            public bool TryGetStanding(RaceEventId eventId, out int rank, out int total)
+            {
+                rank = 0;
+                total = 0;
+                return false;
+            }
+
+            public bool TryGetBestOfDay(RaceEventId eventId, out LeaderboardRow best)
+            {
+                best = null;
+                return false;
             }
         }
 

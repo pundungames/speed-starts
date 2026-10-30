@@ -1,7 +1,7 @@
 ---
 id: T-060
 title: Liderlik - acilir pencerelerin ve durumlarin ekran goruntusu (bolge+arama, donem, etkinlik sekmeleri, bos, yukleniyor, hata, siralamasiz)
-status: todo
+status: review
 owner: test-agent
 depends_on: [T-038]
 owns_paths:
@@ -9,12 +9,13 @@ owns_paths:
 touches_scene: false
 branch: agent/T-060-liderlik-goruntuleri
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_LeaderboardStates, yalniz -shotDir)"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -45,3 +46,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+1. `ScreenshotTests.Shots_LeaderboardStates` eklendi (yalniz -shotDir; koşulmadı, derlenmedi). Gercek yerel liderlikle: Home_lb_region, _region_search_empty, _period, _event_sprints/_hurdles/_relays (gercek isinli Tap; sunulmayan sekme atlanir, SHOT_SKIP loglanir).
+2. Home_lb_empty, _notranked, _loading, _error: yerel liderlik bunlari uretmez; ekranin ozel `_leaderboard` alani reflection ile sahte ILeaderboard'a cevrilir (ilk acilistan once, taze Home sahnesi). Urun koduna dokunulmadi; resmi seam yok, ince yol bu.
+3. Pencereler region/period icin cihaz Back'i (ScreenNavigator.Back) ile kapanir (yakalayici pencerenin altinda); event modal Cancel'a gercek Tap ile kapanir. Secim/filtre degismez, kayit SaveFolderSnapshot ile geri yuklenir.
+4. Riskler: highScoresScreen sahne yuklenince zaten acik ise sahte-kaynak shotlari `_presenter` null assert'inde duser; alan adlari (_leaderboard, _presenter, categoryTabs, cancelButton, eventModal, searchInput) yeniden adlandirilirsa test mesajla kirilir.
+5. Kapsam disi: yukleniyor/hata icin temiz seam (ornegin presenter'a verilebilir ILeaderboard ya da view'a public test kancasi) istenirse urun task'i gerekir.
