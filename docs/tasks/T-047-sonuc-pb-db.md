@@ -1,0 +1,36 @@
+---
+id: T-047
+title: Yaris sonu - oyuncu satirinda PB (yeni kisisel rekor) ve DB (gunun en iyisi) rozetleri
+status: todo
+owner: ui-agent
+depends_on: [T-033, T-037]
+owns_paths:
+  - "Assets/Speed-Staes/Scripts/UI/Race/Results*.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiResultsPrefabs.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/**"
+touches_scene: true
+branch: agent/T-047-pb-db
+commits: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ResultsModelTests.cs"
+analytics:
+  - "yok: projede analytics yok"
+needs: []
+started:
+finished:
+blocked_reason:
+---
+
+## Hedef
+`docs/eksik-ui/README.md` B-8 (`07-sonuc-kazanc-dokumu.png`): sonuç tablosunda oyuncunun satırında, süreden sonra küçük rozetler: **PB** = bu
+koşu yeni kişisel rekor (`IPersonalBests` yeni rekor bilgisi, T-033), **DB** = bu koşu oyuncunun bugünkü (UTC) en iyisi (`IDayBestSource`,
+T-037). İkisi birden olabilir. Rozet sanatı yok: satır prefab'ında iki küçük legacy Text (PB teal #00B6B0, DB kırmızı #FF202D), yalnız
+gerekince görünür; açılışta küçük punch (UiMotionConfig). Kazanç dökümü (Nakit) bu task'ta YOK (PDF'te yarış başı Nakit ödülü tanımlı
+değil). Saf model (`ResultsModel`) rozet kararını verir, EditMode testli.
+
+## Kabul kriterleri
+- [ ] EditMode: ilk koşu = PB + DB; daha yavaş koşu = rozet yok; bugünün en iyisi ama eski rekordan yavaş = yalnız DB
+- [ ] PlayMode yeşil; `Race_results` görüntüsünde düzen bozulmaz
+
+## Calisma notu
+(Agent doldurur)
