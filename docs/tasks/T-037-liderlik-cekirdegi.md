@@ -1,7 +1,7 @@
 ---
 id: T-037
 title: Faz 6 liderlik cekirdegi - yerel kaynak (bot dereceleri), oyuncu gunluk en iyileri, donem/bolge sorgusu, sonuc ekrani durusu
-status: review
+status: merged
 owner: systems-agent
 depends_on: [T-033, T-031]
 owns_paths:
@@ -17,14 +17,14 @@ owns_paths:
   - "docs/decisions/**"
 touches_scene: false
 branch: agent/T-037-liderlik
-commits: []
+commits: [9c518d2, b459bb0]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Leaderboard/LocalLeaderboardTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
+    durum: closed
     not: "ProjectInstaller: (1) [SerializeField] LeaderboardConfig leaderboard (asset Data/Config/LeaderboardConfig.asset, created by ConfigAssetSeeder.SeedAll) + BindConfig(leaderboard); (2) REPLACE the IPersonalBests line with: Container.Bind(typeof(IPersonalBests), typeof(IDayBestSource)).To<SpeedStars.Meta.Records.PersonalBestService>().AsSingle(); (3) Container.Bind(typeof(ILeaderboard), typeof(IDisposable)).To<SpeedStars.Meta.Leaderboard.LocalLeaderboard>().AsSingle(); (RaceEventCatalog, IPlayerSettings, IClock already bound; PersonalBestService now needs LeaderboardConfig + IClock)"
 started: 2026-10-30
 finished: 2026-10-30

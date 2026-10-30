@@ -1,7 +1,7 @@
 ---
 id: T-038
 title: Faz 6 liderlik ekrani (Leaderboard_UI_v1) - filtreler (bolge+arama, donem, etkinlik), tablo + YOU + FIND ME, durumlar; Home ve Sonuc'tan acilir
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-037]
 owns_paths:
@@ -19,14 +19,14 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-038-liderlik-ekrani
-commits: []
+commits: [bd5bad6, a3b1538, 26101f8, 8dfd876]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Leaderboard/LeaderboardPresenterTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Prefab builder overwrite=true (UiPrefabBuilder.BuildAll): the old placeholder HighScoresScreen.prefab is kept otherwise; new Rows/LeaderboardRow, LeaderboardCountryRow, LeaderboardDistanceOption prefabs; then rebuild Home (HomeScreenView.highScoresScreen wired as before) and Race (SceneWiring.WireRace now places the HighScoresScreen instance and wires ResultsScreenView.highScoresScreen)"
 started: 2026-10-30
 finished: 2026-10-30
