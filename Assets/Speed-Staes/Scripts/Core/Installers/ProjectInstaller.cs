@@ -107,6 +107,8 @@ namespace SpeedStars.Installers
             Container.Bind<IThemeService>().FromMethod(CreateThemes).AsSingle();
             // T-031: music / sfx / language / flag / player name, saved with the progress.
             Container.Bind<IPlayerSettings>().FromMethod(c => new PlayerSettingsService(c.Container.Resolve<SettingsConfig>(), c.Container.Resolve<ProgressRepository>())).AsSingle();
+            // T-046: reset personal bests / reset all progress (settings kept).
+            Container.Bind<IProgressReset>().To<SpeedStars.Meta.Settings.ProgressResetService>().AsSingle();
 
             Container.Bind<IRaceEntryGate>().To<RaceEntryGate>().AsSingle();
             // Project-wide because the Entry Gate modal sits in both scenes (Play on Home, Race again on Race).
