@@ -29,8 +29,13 @@ namespace SpeedStars.Tools.Builders
         private const int LastPremiumSet = 9;
 
         // Catalog-level seed values (they live in the asset afterwards; edit them there). Preset count is not in the PDF.
-        private const int SeedPresetCount = 3;
+        private const int SeedPresetCount = 9;
         private const string SeedPresetNameFormat = "Custom {0}";
+        // Skin: ColorSkin_Toon's _Color in the runner prefab (0.2736, 0.1695, 0.1510) is 462B27; the tones run light to dark.
+        private const string SeedDefaultSkinColor = "462B27";
+        private const string SeedSkinRendererName = "LowPoly Male";
+        private const string SeedSkinMaterialName = "ColorSkin_Toon";
+        private static readonly string[] SeedSkinTones = { "FFDFC4", "F1C27D", "E0AC69", "C68642", "A9693D", "8D5524", "6B4226", "462B27" };
         private static readonly string[] SeedLegacyObjects = { "Tshirt", "Short", "Leggings", "Shoes", "Glove", "Helmet" };
         private static readonly string[] SeedPalette = { "E53935", "FB8C00", "FDD835", "43A047", "1E88E5", "8E24AA", "F5F5F5", "212121" };
 
@@ -102,6 +107,10 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "presetNameFormat").stringValue = SeedPresetNameFormat;
             SetStrings(Prop(so, "colorPalette"), SeedPalette);
             SetStrings(Prop(so, "legacyOutfitObjects"), SeedLegacyObjects);
+            Prop(so, "defaultSkinColor").stringValue = SeedDefaultSkinColor;
+            Prop(so, "skinRendererName").stringValue = SeedSkinRendererName;
+            Prop(so, "skinMaterialName").stringValue = SeedSkinMaterialName;
+            SetStrings(Prop(so, "skinTones"), SeedSkinTones);
 
             var ids = new HashSet<string>();
             foreach (UnityEngine.Object item in items)

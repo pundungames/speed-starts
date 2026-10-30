@@ -50,6 +50,7 @@ namespace SpeedStars.Bridge
         {
             Initialize();
             HideLegacy(plan);
+            ApplySkin(plan.Skin);
             _accessories = _root.Find(accessoriesName);
             if (_accessories == null)
             {
@@ -85,6 +86,36 @@ namespace SpeedStars.Bridge
                 {
                     if (materials[i] != null && slot.TryGetColor(materials[i].name, out string hex)
                         && CosmeticColor.TryParse(hex, out Color color))
+                    {
+                        _block.Clear();
+                        _block.SetColor(ColorId, color);
+                        renderer.SetPropertyBlock(_block, i);
+                    }
+                    else
+                    {
+                        renderer.SetPropertyBlock(null, i);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Paints the skin material slot of the body mesh (direct children of the runner root, never the wardrobe) with a
+        /// property block, so the shared skin material stays as it is. Without a colour the slot returns to the material's own.
+        /// </summary>
+        void ApplySkin(SkinPlan skin)
+        {
+            bool hasColor = CosmeticColor.TryParse(skin.ColorHex, out Color color);
+            foreach (Transform child in _root)
+            {
+                if (!skin.MatchesRenderer(child.name)) continue;
+                var renderer = child.GetComponent<Renderer>();
+                if (renderer == null) continue;
+                Material[] materials = renderer.sharedMaterials;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    if (materials[i] == null || !skin.MatchesMaterial(materials[i].name)) continue;
+                    if (hasColor)
                     {
                         _block.Clear();
                         _block.SetColor(ColorId, color);

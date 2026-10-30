@@ -1,7 +1,7 @@
 ---
 id: T-065
 title: Kostum cekirdegi - ten rengi (kiyafetle birlikte kaydedilir, kosucuya uygulanir) ve 9 hazir kostum (Custom 1..9)
-status: todo
+status: review
 owner: systems-agent
 depends_on: [T-035]
 owns_paths:
@@ -18,12 +18,17 @@ owns_paths:
 touches_scene: false
 branch: agent/T-065-ten-rengi
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Cosmetics/CosmeticSkinTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "CosmeticCatalog asset: presetCount 3 -> 9 (elle); yeni alanlar eski asset'te kod varsayilaniyla gelir ama asset kaydedilince sabitlenir: defaultSkinColor 462B27, skinRendererName LowPoly Male, skinMaterialName ColorSkin_Toon, skinTones FFDFC4 F1C27D E0AC69 C68642 A9693D 8D5524 6B4226 462B27"
+
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -59,3 +64,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+- Ten yuvasi: prefab kokunun dogrudan cocugu "LowPoly Male" (SkinnedMeshRenderer, tek materyal, yuva 0) = ColorSkin_Toon; _Color (0.2736, 0.1695, 0.1510) = varsayilan ten 462B27.
+- CosmeticOutfit.SkinColorHex/WithSkinColor, katalog DefaultSkinColor/SkinTones/SkinRendererName/SkinMaterialName; OutfitPlan.Skin (SkinPlan); CosmeticApplier.ApplySkin MaterialPropertyBlock ile yazar.
+- Kayit: CosmeticPreset.SkinColorHex (surum artmadi, ADR yazildi). Preset 3->9 icin yeni kod gerekmedi, servis zaten tembel dolduruyor; yalniz asset presetCount=9 ve tohum 9.
+- Zorlandigim: yok. Unity/test kosulmadi. Yeni test dosyasinin .meta'si Unity import'unda uretilir.
+- Bitmedi/riskli: skinTones degerleri benim makul secimim (supervizor karari); asset elle guncellenmeli.

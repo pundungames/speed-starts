@@ -18,6 +18,36 @@ namespace SpeedStars.Meta.Cosmetics
         public string ColorHex { get; }
     }
 
+    /// <summary>
+    /// The skin to paint: the renderer that carries the body mesh, the skin material on it and the colour. An empty
+    /// <c>ColorHex</c> leaves the material's own colour (no default known).
+    /// </summary>
+    public readonly struct SkinPlan
+    {
+        public SkinPlan(string rendererName, string materialName, string colorHex)
+        {
+            RendererName = rendererName ?? string.Empty;
+            MaterialName = materialName ?? string.Empty;
+            ColorHex = colorHex ?? string.Empty;
+        }
+
+        public string RendererName { get; }
+        public string MaterialName { get; }
+
+        /// <summary>"RRGGBB"; outfit skin, else the catalog default, else empty.</summary>
+        public string ColorHex { get; }
+
+        public bool HasColor => ColorHex.Length > 0;
+
+        /// <summary>True when a renderer object of this name has the skin (the material is matched by <see cref="MatchesMaterial"/>).</summary>
+        public bool MatchesRenderer(string objectName) =>
+            RendererName.Length > 0 && string.Equals(objectName, RendererName, StringComparison.Ordinal);
+
+        /// <summary>Instances are named "ColorSkin_Toon (Instance)", so the name only has to start with the skin material's name.</summary>
+        public bool MatchesMaterial(string materialName) =>
+            MaterialName.Length > 0 && !string.IsNullOrEmpty(materialName) && materialName.StartsWith(MaterialName, StringComparison.Ordinal);
+    }
+
     /// <summary>What one category slot of the runner must look like.</summary>
     public readonly struct SlotPlan
     {
@@ -74,11 +104,15 @@ namespace SpeedStars.Meta.Cosmetics
     {
         private readonly SlotPlan[] _slots;
 
-        private OutfitPlan(SlotPlan[] slots, IReadOnlyList<string> legacyObjects)
+        private OutfitPlan(SlotPlan[] slots, IReadOnlyList<string> legacyObjects, SkinPlan skin)
         {
             _slots = slots;
             LegacyObjects = legacyObjects;
+            Skin = skin;
         }
+
+        /// <summary>Skin colour for the runner's body mesh.</summary>
+        public SkinPlan Skin { get; }
 
         /// <summary>One plan per category, in enum order.</summary>
         public IReadOnlyList<SlotPlan> Slots => _slots;
@@ -123,7 +157,11 @@ namespace SpeedStars.Meta.Cosmetics
                     slots.Add(new SlotPlan(category, Array.Empty<string>(), Array.Empty<ChannelColorPlan>()));
                 }
             }
-            return new OutfitPlan(slots.ToArray(), catalog.LegacyOutfitObjects);
+            // The outfit's own skin wins; an empty or invalid one falls back to the catalog's default skin.
+            string skin = CosmeticColor.Normalize(outfit.SkinColorHex);
+            if (skin.Length == 0) skin = CosmeticColor.Normalize(catalog.DefaultSkinColor);
+            return new OutfitPlan(slots.ToArray(), catalog.LegacyOutfitObjects,
+                new SkinPlan(catalog.SkinRendererName, catalog.SkinMaterialName, skin));
         }
     }
 }

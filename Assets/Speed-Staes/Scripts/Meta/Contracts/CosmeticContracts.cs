@@ -81,11 +81,24 @@ namespace SpeedStars.Meta.Contracts
         private static readonly int SlotCount = MaxCategory() + 1;
 
         /// <summary>Nothing worn.</summary>
-        public static readonly CosmeticOutfit Empty = new CosmeticOutfit(new CosmeticSlot[SlotCount]);
+        public static readonly CosmeticOutfit Empty = new CosmeticOutfit(new CosmeticSlot[SlotCount], string.Empty);
 
         private readonly CosmeticSlot[] _slots;
 
-        private CosmeticOutfit(CosmeticSlot[] slots) => _slots = slots;
+        private CosmeticOutfit(CosmeticSlot[] slots, string skinColorHex)
+        {
+            _slots = slots;
+            SkinColorHex = skinColorHex ?? string.Empty;
+        }
+
+        /// <summary>
+        /// "RRGGBB" of the runner's skin. Empty = the catalog's default skin. Part of the outfit so a preset keeps the
+        /// skin it was saved with and the preview shows both together.
+        /// </summary>
+        public string SkinColorHex { get; }
+
+        /// <summary>A copy with this skin colour (empty = default skin); worn items are kept.</summary>
+        public CosmeticOutfit WithSkinColor(string hex) => new CosmeticOutfit(_slots, hex);
 
         public CosmeticSlot Get(CosmeticCategory category)
         {
@@ -102,7 +115,7 @@ namespace SpeedStars.Meta.Contracts
         {
             var copy = (CosmeticSlot[])_slots.Clone();
             copy[(int)category] = slot;
-            return new CosmeticOutfit(copy);
+            return new CosmeticOutfit(copy, SkinColorHex);
         }
 
         /// <summary>A copy with the category bare.</summary>
@@ -118,6 +131,7 @@ namespace SpeedStars.Meta.Contracts
         public bool Equals(CosmeticOutfit other)
         {
             if (other == null) return false;
+            if (!string.Equals(SkinColorHex, other.SkinColorHex, StringComparison.OrdinalIgnoreCase)) return false;
             for (int i = 0; i < _slots.Length; i++)
                 if (!_slots[i].Equals(other._slots[i])) return false;
             return true;

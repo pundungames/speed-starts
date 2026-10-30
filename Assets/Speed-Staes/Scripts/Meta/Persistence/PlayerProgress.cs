@@ -177,12 +177,17 @@ namespace SpeedStars.Meta.Persistence
     public sealed class CosmeticPreset
     {
         [SerializeField] private List<SelectedCosmetic> slots = new List<SelectedCosmetic>();
+        [SerializeField] private string skinColorHex = string.Empty;
 
         public List<SelectedCosmetic> Slots => slots;
+
+        /// <summary>"RRGGBB" skin of this preset. Empty = the catalog's default skin. Added with the skin feature, no schema bump: older saves open empty.</summary>
+        public string SkinColorHex { get => skinColorHex; set => skinColorHex = value ?? string.Empty; }
 
         internal void EnsureValid()
         {
             if (slots == null) slots = new List<SelectedCosmetic>();
+            if (skinColorHex == null) skinColorHex = string.Empty;
             for (int i = slots.Count - 1; i >= 0; i--)
                 if (slots[i] == null) slots.RemoveAt(i);
             foreach (SelectedCosmetic slot in slots) slot.EnsureValid();

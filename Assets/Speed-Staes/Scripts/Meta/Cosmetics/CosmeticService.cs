@@ -75,8 +75,9 @@ namespace SpeedStars.Meta.Cosmetics
             if (presetIndex < 0 || presetIndex >= PresetCount) return CosmeticOutfit.Empty;
             EnsurePresets();
 
-            CosmeticOutfit outfit = CosmeticOutfit.Empty;
-            foreach (SelectedCosmetic saved in Progress.CosmeticPresets[presetIndex].Slots)
+            CosmeticPreset preset = Progress.CosmeticPresets[presetIndex];
+            CosmeticOutfit outfit = CosmeticOutfit.Empty.WithSkinColor(CosmeticColor.Normalize(preset.SkinColorHex));
+            foreach (SelectedCosmetic saved in preset.Slots)
             {
                 if (!Enum.TryParse(saved.Category, out CosmeticCategory category)) continue;
                 // Unknown, mis-slotted or locked items (removed from the catalog, tampered file) are simply not worn.
@@ -103,7 +104,9 @@ namespace SpeedStars.Meta.Cosmetics
             }
 
             EnsurePresets();
-            List<SelectedCosmetic> slots = Progress.CosmeticPresets[presetIndex].Slots;
+            CosmeticPreset target = Progress.CosmeticPresets[presetIndex];
+            target.SkinColorHex = CosmeticColor.Normalize(outfit.SkinColorHex);
+            List<SelectedCosmetic> slots = target.Slots;
             slots.Clear();
             foreach (CosmeticCategory category in CosmeticOutfit.Categories)
             {

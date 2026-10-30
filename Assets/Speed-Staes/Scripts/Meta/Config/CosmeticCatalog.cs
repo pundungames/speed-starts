@@ -16,7 +16,7 @@ namespace SpeedStars.Meta.Config
         [SerializeField] private CosmeticDefinition[] cosmetics = new CosmeticDefinition[0];
 
         [Tooltip("How many racer presets (Custom 1..N) the player has. Not in the PDF; raising it adds default-outfit presets to existing saves.")]
-        [SerializeField, Min(1)] private int presetCount = 3;
+        [SerializeField, Min(1)] private int presetCount = 9;
 
         [Tooltip("Preset name; {0} is the preset number starting at 1.")]
         [SerializeField] private string presetNameFormat = "Custom {0}";
@@ -30,9 +30,29 @@ namespace SpeedStars.Meta.Config
         [Tooltip("Names of the old base-outfit objects at the runner root (not under Accessories) that are hidden at runtime, since the wardrobe replaces them.")]
         [SerializeField] private string[] legacyOutfitObjects = { "Tshirt", "Short", "Leggings", "Shoes", "Glove", "Helmet" };
 
+        [Tooltip("Skin colour (RRGGBB) of the runner as it is now: the colour of the skin material in the runner prefab. Used when an outfit has no skin colour.")]
+        [SerializeField] private string defaultSkinColor = "462B27";
+
+        [Tooltip("Ready-made skin tones (RRGGBB) the costume screen offers, light to dark.")]
+        [SerializeField] private string[] skinTones = { "FFDFC4", "F1C27D", "E0AC69", "C68642", "A9693D", "8D5524", "6B4226", "462B27" };
+
+        [Tooltip("Name of the object under the runner root that carries the skin mesh (not under Accessories).")]
+        [SerializeField] private string skinRendererName = "LowPoly Male";
+
+        [Tooltip("Name of the skin material on that renderer (the slot is found by name; instances add ' (Instance)').")]
+        [SerializeField] private string skinMaterialName = "ColorSkin_Toon";
+
         public int PresetCount => Mathf.Max(1, presetCount);
         public string PresetNameFormat => string.IsNullOrEmpty(presetNameFormat) ? "Custom {0}" : presetNameFormat;
         public IReadOnlyList<CosmeticOutfitEntry> DefaultOutfit => defaultOutfit ?? Array.Empty<CosmeticOutfitEntry>();
+        /// <summary>"RRGGBB" of the skin an outfit without a skin colour gets.</summary>
+        public string DefaultSkinColor => defaultSkinColor ?? string.Empty;
+
+        /// <summary>Ready-made skin tones as written in the asset (hex text, not normalized).</summary>
+        public IReadOnlyList<string> SkinTones => skinTones ?? Array.Empty<string>();
+
+        public string SkinRendererName => skinRendererName ?? string.Empty;
+        public string SkinMaterialName => skinMaterialName ?? string.Empty;
         public IReadOnlyList<string> ColorPalette => colorPalette ?? Array.Empty<string>();
         public IReadOnlyList<string> LegacyOutfitObjects => legacyOutfitObjects ?? Array.Empty<string>();
 

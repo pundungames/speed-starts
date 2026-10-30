@@ -17,6 +17,13 @@ namespace SpeedStars.Tests.Meta.Cosmetics
         public const int Presets = 3;
         public const int PremiumPrice = 12;
 
+        // Skin inputs of the test catalog (arbitrary test values).
+        public const string DefaultSkin = "AB5C3D";
+        public const string SkinToneA = "FFDFC4";
+        public const string SkinToneB = "6B4226";
+        public const string SkinRenderer = "Body";
+        public const string SkinMaterial = "SkinMat";
+
         public const string HatA = "hat-a";
         public const string HatB = "hat-b";
         public const string HatPremium = "hat-premium";
@@ -98,6 +105,10 @@ namespace SpeedStars.Tests.Meta.Cosmetics
                 WithChannels(Item(SocksThree, CosmeticCategory.Socks, false, 0, CosmeticCurrency.Cash, 1, CosmeticColorChannel.Color2),
                     SocksThreeDefaults, CosmeticColorChannel.Color2, CosmeticColorChannel.Color3, CosmeticColorChannel.Color1));
             ConfigFixture.SetInt(catalog, "presetCount", Presets);
+            ConfigFixture.SetString(catalog, "defaultSkinColor", DefaultSkin);
+            ConfigFixture.SetString(catalog, "skinRendererName", SkinRenderer);
+            ConfigFixture.SetString(catalog, "skinMaterialName", SkinMaterial);
+            ConfigFixture.SetStrings(catalog, "skinTones", SkinToneA, SkinToneB);
             ConfigFixture.SetStrings(catalog, "colorPalette", "FF0000", "00ff00", "not-a-colour");
             ConfigFixture.SetStrings(catalog, "legacyOutfitObjects", "OldShirt", "OldShoes");
             ConfigFixture.Edit(catalog, so =>
