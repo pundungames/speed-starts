@@ -5,10 +5,10 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-10-30 (akşam) · main 41dfbfa (push kullanıcıda) · dal `main`
+Son güncelleme: 2026-10-30 (akşam) · main d2d89003 (push kullanıcıda) · dal `main`
 
 ## Sürüyor
-- T-056 Android build duman testi (geliştirme APK'sı kopyada; Android'e özgü kod + manifest izni).
+- T-058 mağaza build metodu (yalnız o build için IL2CPP+ARM64+paket adı, AAB; proje ayarı kalıcı değişmez).
 
 ## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
 - Tema fiyatı yok → 0; geliştirmede bütün temalar serbest. Normal kozmetik bedava, premium 50 Mor Mücevher (PDF).
@@ -17,18 +17,21 @@ Son güncelleme: 2026-10-30 (akşam) · main 41dfbfa (push kullanıcıda) · dal
 - Bot süreleri, emote fiyatları yer tutucu (config).
 
 ## Kullanıcıdan bekleyen
+- Uygulama adı + paket adı (Play/Çin mağazası; orijinal oyunun adı marka riski) ve imza anahtarı (keystore).
 - Gizlilik / Şartlar / Destek URL'leri (ayarlarda satırlar hazır, URL gelene kadar gri).
 - Malik'ten (Faz 7): yarış saati GO'da başlasın, UI üstündeki dokunma ayak sayılmasın, rakipler/sıra (`docs/TEMEL-SOZLESME.md` §11).
 - Serhat'a: `PastelBuildingRow` sahne açılınca binaları yeniden üretiyor (bizim Home kopyasında kaldırıldı).
 
-## Gözle bakılacaklar (main 41dfbfa; kopyada yeşil: EditMode 792, PlayMode 25, Zenject)
+## Gözle bakılacaklar (main d2d89003; kopyada yeşil: EditMode 796, PlayMode 25, Zenject)
+- APK: geliştirme (Mono/ARMv7) 64 MB; IL2CPP+ARM64 71 MB kopyada derlendi, cihazda denenmedi (telefon bağlı değildi).
+  UI dokuları Android'de ASTC 4x4 (T-057). Günlük build Mono kalır (IL2CPP 9.5 dk).
 - 30.10 akşam: giriş kapısı yeni görünüm + Watch Ad (editörde sahte reklam, 1 bilet), güvenli alan (çentik), UI sesleri + titreşim
   (yer tutucu sesler `scripts/sfx-uret.py`), kapat-aç/saat regresyon testleri. Malik yarış içi emote ekledi (J, eeb4b57).
 - 30.10: ayarlarda gizlilik/şartlar/destek + iki sıfırlama (onay penceresi), yarış sonunda PB/DB rozetleri, READY/SET/GO ölçeği,
   emote kartı yerleşimi, analizde DNF çizgisi, günlük hediye + 7 gün, ses kapalı ikonu + premium kart.
 
 ## Sıradaki iş
-1. T-056 APK duman testi; sonucuna göre mağaza ayarları (IL2CPP/ARM64, hedef API) kararı.
+1. T-058 birleştir; telefon bağlanınca APK'yı cihazda dene (Zenject + IL2CPP).
 2. eksik-ui: Race of the Day kartı (içerik Malik), kazanç dökümü (Nakit kuralı yok), para mağazası/Upgrade (PDF'te yok).
 3. Faz 8: kill/restart, saat kayması, çevrimdışı regresyonu; APK öncesi tam tur.
 
