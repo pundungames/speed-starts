@@ -1,7 +1,7 @@
 ---
 id: T-058
 title: Magaza build metodu - yalniz o build icin IL2CPP + ARMv7/ARM64 + paket adi + surum, AAB; imza anahtari ortam degiskeninden
-status: review
+status: merged
 owner: systems-agent
 depends_on: [T-056]
 owns_paths:
@@ -17,8 +17,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
-    not: "Assets/Speed-Staes/Data/Build/ReleaseBuildConfig.asset (Create > Speed Stars > Release Build Config; script ReleaseBuildConfig.cs). Alanlar: packageId='' , versionName='1.0', versionCode=1, architectures=3 (ARMv7|ARM64), il2cpp=1, buildAppBundle=1, targetSdk=0, keystorePath='', keyAlias=''. Dosya yoksa ReleaseBuild bellek ici ayni varsayilanlarla calisir (uyari basar). Yeni .cs dosyalarinin .meta'si kopyada uretilip alinmali (BuildSupport, ReleaseBuild, ReleaseBuildConfig)."
+    durum: closed
+    not: "Assets/Speed-Staes/Data/Release/ReleaseBuildConfig.asset (Create > Speed Stars > Release Build Config; script ReleaseBuildConfig.cs). Alanlar: packageId='' , versionName='1.0', versionCode=1, architectures=3 (ARMv7|ARM64), il2cpp=1, buildAppBundle=1, targetSdk=0, keystorePath='', keyAlias=''. Dosya yoksa ReleaseBuild bellek ici ayni varsayilanlarla calisir (uyari basar). Yeni .cs dosyalarinin .meta'si kopyada uretilip alinmali (BuildSupport, ReleaseBuild, ReleaseBuildConfig)."
 started: 2026-10-30
 finished: 2026-10-30
 blocked_reason:
@@ -61,3 +61,4 @@ KAMERA  : yok
 3. Parola yalniz `SPEEDSTARS_KEYSTORE_PASS` / `SPEEDSTARS_KEY_PASS`; loglanmaz (script yalniz var/YOK basar). Eksikse debug imza + `ANDROID_RELEASE_UNSIGNED`.
 4. Cikti: `ANDROID_RELEASE_SETTINGS`, `ANDROID_RELEASE_OK size= time=` / `ANDROID_RELEASE_FAIL`, `ANDROID_MANIFEST`. Varsayilan cikti `pipeline-logs/android/SpeedStars-release.aab`.
 5. Calistirma (kopyada, Unity kapali): `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\android-release.ps1 -ProjectPath D:\Pundun\speed-starts-verify-1` (isteğe bagli `-OutFile`, `-ConfigAsset`). Zorlanma: .meta/asset yazilamadi (needs ASSET).
+- Supervizor (30.10): kopyada smoke APK yesil (paylasilan yardimci sonrasi), magaza AAB 57 MB (IL2CPP ARMv7+ARM64, debug imza), ayarlar build sonrasi Mono/ARMv7'ye dondu. Config asset Data/Release/ altinda (Data/Build gitignore'a takiliyordu).

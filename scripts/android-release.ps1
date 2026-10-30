@@ -16,7 +16,7 @@
 .PARAMETER OutFile
     Cikti yolu. Bos = <depo>\pipeline-logs\android\SpeedStars-release.aab (config apk derse .apk icin yol ver).
 .PARAMETER ConfigAsset
-    ReleaseBuildConfig asset yolu (proje icinde). Bos = Assets/Speed-Staes/Data/Build/ReleaseBuildConfig.asset.
+    ReleaseBuildConfig asset yolu (proje icinde). Bos = Assets/Speed-Staes/Data/Release/ReleaseBuildConfig.asset.
 .PARAMETER TimeoutMinutes
     Unity bu surede bitmezse sonlandirilir (varsayilan 60; IL2CPP ~10 dk).
 .EXAMPLE

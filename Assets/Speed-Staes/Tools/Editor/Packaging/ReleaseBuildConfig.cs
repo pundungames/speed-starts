@@ -11,7 +11,7 @@ namespace SpeedStars.Tools.Build
     [CreateAssetMenu(fileName = "ReleaseBuildConfig", menuName = "Speed Stars/Release Build Config")]
     public sealed class ReleaseBuildConfig : ScriptableObject
     {
-        public const string AssetPath = "Assets/Speed-Staes/Data/Build/ReleaseBuildConfig.asset";
+        public const string AssetPath = "Assets/Speed-Staes/Data/Release/ReleaseBuildConfig.asset";
 
         [Tooltip("Android application id for the store build. Empty = keep the project's current id (final id still to be decided).")]
         [SerializeField] private string packageId = "";
