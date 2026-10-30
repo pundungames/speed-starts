@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using DG.Tweening;
+using SpeedStars.Core.Race;
+using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
+using SpeedStars.UI.Leaderboard;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -37,10 +40,10 @@ namespace SpeedStars.UI.Race
         [Tooltip("Title colour while the card says NEW RECORD.")]
         [SerializeField] private Color newRecordColor = new Color(0.92f, 0.12f, 0.14f, 1f);
 
-        [Tooltip("WorldPosition/Value: no leaderboard yet, shows a dash.")]
+        [Tooltip("WorldPosition/Value: '#rank' on the leaderboard, a dash without a record.")]
         [SerializeField] private Text worldPositionText;
 
-        [Tooltip("Percentile/Value: no leaderboard yet, shows a dash.")]
+        [Tooltip("Percentile/Value: 'TOP n%' on the leaderboard, a dash without a record.")]
         [SerializeField] private Text percentileText;
 
         [Header("Results table")]
@@ -54,7 +57,7 @@ namespace SpeedStars.UI.Race
         [SerializeField] private ResultsTableRowView rowPrefab;
 
         [Header("Best of the day")]
-        [Tooltip("DailyBest/Row/Label: empty-state text until a daily source exists.")]
+        [Tooltip("DailyBest/Row/Label: today's best (name and time) from the leaderboard, an empty-state text without data.")]
         [SerializeField] private Text dailyBestText;
 
         [Header("Gem reward")]
@@ -74,8 +77,11 @@ namespace SpeedStars.UI.Race
         [Tooltip("Nav/WatchReplay: disabled, there is no replay system yet.")]
         [SerializeField] private Button watchReplayButton;
 
-        [Tooltip("Nav/HighScores: disabled until the leaderboard phase.")]
+        [Tooltip("Nav/HighScores: opens the leaderboard screen (disabled while that screen is not assigned).")]
         [SerializeField] private Button highScoresButton;
+
+        [Tooltip("The leaderboard screen of this scene (HighScoresScreen prefab instance, starts inactive).")]
+        [SerializeField] private UiScreen highScoresScreen;
 
         [Tooltip("Nav/Stats: opens the Analysis screen; disabled while no Analysis screen is assigned.")]
         [SerializeField] private Button statsButton;
@@ -93,6 +99,8 @@ namespace SpeedStars.UI.Race
 
         private UiMotionConfig _resultsMotion;
         private ScreenNavigator _resultsNavigator;
+        private ILeaderboard _resultsLeaderboard;
+        private IRaceSelection _resultsSelection;
         private readonly List<ResultsTableRowView> _rows = new List<ResultsTableRowView>();
         private Vector3[] _baseScales;
         private Color _normalTitleColor;
@@ -111,10 +119,13 @@ namespace SpeedStars.UI.Race
             _resultsMotion = motion;
         }
 
+        /// <summary>Optional so a scene without the leaderboard keeps the cards as dashes and the High Scores button off.</summary>
         [Inject]
-        public void InjectResultsNavigator([InjectOptional] ScreenNavigator navigator)
+        public void InjectResultsNavigator([InjectOptional] ScreenNavigator navigator, [InjectOptional] ILeaderboard leaderboard, [InjectOptional] IRaceSelection selection)
         {
             _resultsNavigator = navigator;
+            _resultsLeaderboard = leaderboard;
+            _resultsSelection = selection;
         }
 
         public float SplitStepMeters => analysisScreen != null ? analysisScreen.SplitStepMeters : 0f;
@@ -133,7 +144,11 @@ namespace SpeedStars.UI.Race
             CaptureScales();
 
             if (watchReplayButton != null) watchReplayButton.interactable = false;
-            if (highScoresButton != null) highScoresButton.interactable = false;
+            if (highScoresButton != null)
+            {
+                highScoresButton.interactable = highScoresScreen != null;
+                highScoresButton.onClick.AddListener(OnHighScoresClicked);
+            }
             if (statsButton != null)
             {
                 statsButton.interactable = analysisScreen != null;
@@ -163,6 +178,7 @@ namespace SpeedStars.UI.Race
             base.OnDestroy();
             KillDenied();
             KillReveal();
+            if (highScoresButton != null) highScoresButton.onClick.RemoveListener(OnHighScoresClicked);
             if (raceAgainButton != null) raceAgainButton.onClick.RemoveListener(OnRaceAgainClicked);
             if (mainMenuButton != null) mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
             if (statsButton != null) statsButton.onClick.RemoveListener(OnStatsClicked);
@@ -187,6 +203,22 @@ namespace SpeedStars.UI.Race
             _punchRecord = data.IsNewRecord; // the screen is not on yet: the punch plays when it opens
 
             FillRows(data.Rows);
+            ShowLeaderboardCards();
+        }
+
+        /// <summary>WORLD POSITION / PERCENTILE / BEST OF THE DAY from the leaderboard; without data the model's dashes stay.</summary>
+        private void ShowLeaderboardCards()
+        {
+            if (_resultsLeaderboard == null || _resultsSelection == null) return;
+            ResultsCardTexts cards = ResultsLeaderboardCards.Build(_resultsLeaderboard, _resultsSelection.Selected);
+            if (worldPositionText != null) worldPositionText.text = cards.WorldPosition;
+            if (percentileText != null) percentileText.text = cards.Percentile;
+            if (dailyBestText != null) dailyBestText.text = cards.BestOfTheDay;
+        }
+
+        private void OnHighScoresClicked()
+        {
+            if (_resultsNavigator != null && highScoresScreen != null) _resultsNavigator.Push(highScoresScreen);
         }
 
         public void ShowGemReward(int gems)

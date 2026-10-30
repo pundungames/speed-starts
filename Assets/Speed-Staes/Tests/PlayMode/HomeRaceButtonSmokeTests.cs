@@ -114,6 +114,29 @@ namespace SpeedStars.PlayTests
             yield return ScreenRoundTrip("highScoresButton", "highScoresScreen");
         }
 
+        /// <summary>The leaderboard's filter windows are navigator popups: Back closes the open window first, the screen second.</summary>
+        [UnityTest]
+        public IEnumerator HighScores_Back_ClosesAnOpenFilterWindowBeforeLeavingTheScreen()
+        {
+            HomeScreenView home = Require<HomeScreenView>();
+            UiScreen screen = RequireField<UiScreen>(home, "highScoresScreen");
+            yield return Tap(RequireField<Button>(home, "highScoresButton"), "highScoresButton");
+            yield return WaitOpen(screen, "highScoresScreen");
+            yield return WaitClosed(home, "HomeScreen to step aside");
+
+            UiPopup window = RequireField<UiPopup>(screen, "periodPopup");
+            yield return Tap(RequireField<Button>(screen, "periodButton"), "period field");
+            yield return WaitOpen(window, "period window");
+
+            yield return Tap(CloseButtonOf(screen), "Back (window open)");
+            yield return WaitClosed(window, "period window");
+            Assert.IsTrue(screen.gameObject.activeInHierarchy, "the first Back only closes the window");
+
+            yield return Tap(CloseButtonOf(screen), "Back");
+            yield return WaitClosed(screen, "highScoresScreen");
+            yield return WaitOpen(home, "HomeScreen to come back");
+        }
+
         [UnityTest]
         public IEnumerator EditRacer_Button_OpensCosmeticsScreen_AndBackReturnsHome()
         {

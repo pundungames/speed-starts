@@ -90,7 +90,7 @@ namespace SpeedStars.UI.Home
         [Tooltip("Cosmetics (Edit racer) screen: any UiScreen; its view arrives in a later phase.")]
         [SerializeField] private UiScreen cosmeticsScreen;
 
-        [Tooltip("High scores screen: any UiScreen; its view arrives in a later phase.")]
+        [Tooltip("High scores screen: the leaderboard screen (HighScoresScreen prefab instance, a UiScreen).")]
         [SerializeField] private UiScreen highScoresScreen;
 
         [Tooltip("Theme select screen: any UiScreen; its view arrives with the theme select UI (T-027).")]

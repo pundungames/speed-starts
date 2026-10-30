@@ -1,7 +1,7 @@
 ---
 id: T-038
 title: Faz 6 liderlik ekrani (Leaderboard_UI_v1) - filtreler (bolge+arama, donem, etkinlik), tablo + YOU + FIND ME, durumlar; Home ve Sonuc'tan acilir
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-037]
 owns_paths:
@@ -24,9 +24,12 @@ tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Leaderboard/LeaderboardPresenterTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Prefab builder overwrite=true (UiPrefabBuilder.BuildAll): the old placeholder HighScoresScreen.prefab is kept otherwise; new Rows/LeaderboardRow, LeaderboardCountryRow, LeaderboardDistanceOption prefabs; then rebuild Home (HomeScreenView.highScoresScreen wired as before) and Race (SceneWiring.WireRace now places the HighScoresScreen instance and wires ResultsScreenView.highScoresScreen)"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -71,4 +74,8 @@ KAMERA  : yok
 - Liderlik verisi (T-037), sunucu, profil menüsü
 
 ## Calisma notu
-(Agent doldurur)
+- Saf cekirdek: LeaderboardPresenter (requestId, sayfa birlestirme, YOU/FIND ME), LeaderboardEventGroups/Picker, LeaderboardCountryList, LeaderboardFormat, ResultsLeaderboardCards; 30+ EditMode testi.
+- Gorunum: LeaderboardScreenView (+Row/Choice/PopupPanel); region/period/event pencereleri navigator popup'i, Back once pencereyi kapatir (UiPanel closeButton).
+- Builder: UiLeaderboardPrefabs (3 satir prefab'i + ekran), UiPrefabBuilder'da tek cagri; ekran HighScoresScreen yolunda. Sonuc ekrani: 3 kart ILeaderboard'dan, High Scores butonu ekrani Push eder; Race sahnesine SceneWiring yerlestirir.
+- Zorlandigim: layout.json'da ekran konumu yok; konumlar 01-03 onizlemelerinden olculdu (builder'da sabitler), gorsel kontrol gerekir.
+- Birakilan: Unity'de derleme/prefab uretimi yok (kurala gore); Home_leaderboard ekran goruntusu ve yeni PlayMode testi kosulmadi.

@@ -79,6 +79,12 @@ namespace SpeedStars.Tools.Builders
             Apply(devSo);
 #endif
 
+            // T-038: the leaderboard screen sits next to the Results screen (same popup canvas, drawn after it); the Results
+            // High Scores button pushes it and its Back pops to the results again.
+            var resultsSo = new SerializedObject(results);
+            Prop(resultsSo, "highScoresScreen").objectReferenceValue = EnsureLeaderboardScreen(scene, results);
+            Apply(resultsSo);
+
             var installerSo = new SerializedObject(installer);
             Prop(installerSo, "raceSession").objectReferenceValue = adapter;
             Prop(installerSo, "results").objectReferenceValue = results;
@@ -124,6 +130,26 @@ namespace SpeedStars.Tools.Builders
             Prop(resultsSo, "analysisScreen").objectReferenceValue = analysis;
             Apply(resultsSo);
             Log(nameof(SceneWiring), "Race: Analysis screen placed beside Results and wired to its Stats button.");
+        }
+
+        /// <summary>The HighScoresScreen instance of the Race scene: an existing one, else a new inactive one under the Results screen's canvas.</summary>
+        private static UiScreen EnsureLeaderboardScreen(Scene scene, ResultsScreenView results)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(UiPrefabPaths.HighScoresScreen);
+            if (prefab == null) throw new InvalidOperationException($"Prefab '{UiPrefabPaths.HighScoresScreen}' not found.");
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                {
+                    if (!PrefabUtility.IsAnyPrefabInstanceRoot(t.gameObject)) continue;
+                    if (PrefabUtility.GetCorrespondingObjectFromSource(t.gameObject) != prefab) continue;
+                    return t.GetComponent<UiScreen>();
+                }
+            }
+            GameObject instance = SceneUiLayout.Place(prefab, results.transform.parent, active: false);
+            var screen = instance.GetComponent<UiScreen>();
+            if (screen == null) throw new InvalidOperationException("The HighScoresScreen prefab has no UiScreen on its root.");
+            return screen;
         }
 
         private static T RequireOne<T>(Scene scene, string what) where T : Component
