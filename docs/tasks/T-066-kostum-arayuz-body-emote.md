@@ -7,7 +7,7 @@ depends_on: [T-065]
 owns_paths:
   - "Assets/Speed-Staes/Scripts/UI/Costume/**"
   - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiCostumePrefabs.cs"
-  - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/CostumeEditorConfigSeed.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/CostumeConfigSeed.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/**"
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
