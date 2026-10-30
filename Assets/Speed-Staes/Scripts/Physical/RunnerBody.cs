@@ -35,6 +35,10 @@ namespace SpeedStars.Physical
             _forward = transform.forward;
             Sim = new RunnerSim(tuning);
             _origin = Time.timeAsDouble;
+            if (!GetComponent<PerfectStepFeedback>()) gameObject.AddComponent<PerfectStepFeedback>();
+            if (!GetComponent<EarlyStepFeedback>()) gameObject.AddComponent<EarlyStepFeedback>();
+            if (!GetComponent<LateStepFeedback>()) gameObject.AddComponent<LateStepFeedback>();
+            if (!GetComponent<MomentumWindFeedback>()) gameObject.AddComponent<MomentumWindFeedback>();
         }
 
         void Update()
