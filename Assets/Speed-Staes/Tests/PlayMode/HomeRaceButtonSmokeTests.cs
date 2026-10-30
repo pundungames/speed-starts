@@ -185,8 +185,8 @@ namespace SpeedStars.PlayTests
                     { position = RectTransformUtility.WorldToScreenPoint(null, sv.transform.position), button = UnityEngine.EventSystems.PointerEventData.InputButton.Left } });
                 Color picked = RequireField<Image>(shown[0], "colorImage").color;
                 yield return Tap(RequireField<Button>(shown[1], "button"), "colour box 2");
-                Assert.AreEqual(picked, RequireField<Image>(shown[0], "colorImage").color, "box 1 keeps the picked colour");
-                Assert.AreEqual(before2, RequireField<Image>(shown[1], "colorImage").color, "box 2 shows its own colour");
+                AssertColorClose(picked, RequireField<Image>(shown[0], "colorImage").color, "box 1 keeps the picked colour");
+                AssertColorClose(before2, RequireField<Image>(shown[1], "colorImage").color, "box 2 shows its own colour");
             }
 
             yield return Tap(CloseButtonOf(screen), "cosmeticsScreen Back");
@@ -397,6 +397,14 @@ namespace SpeedStars.PlayTests
             yield return WaitOpen(gate, "entry gate");
             yield return Tap(RequireField<Button>(gate, "useTicketButton"), "Use Entry Ticket");
             yield return WaitForScene(RaceScene);
+        }
+
+        /// <summary>Colours round-trip through hex in the save (8 bits per channel): compare within one step.</summary>
+        private static void AssertColorClose(Color expected, Color actual, string what)
+        {
+            const float step = 1f / 255f + 0.0001f;
+            Assert.IsTrue(Mathf.Abs(expected.r - actual.r) <= step && Mathf.Abs(expected.g - actual.g) <= step
+                && Mathf.Abs(expected.b - actual.b) <= step && Mathf.Abs(expected.a - actual.a) <= step, $"{what}: expected {expected}, was {actual}");
         }
 
         private static IRaceSession FindRaceSession()
