@@ -173,6 +173,22 @@ namespace SpeedStars.PlayTests
                         Assert.IsFalse(RequireField<GameObject>(other, "selectedHighlight").activeSelf, $"box {other.Index + 1} must lose the highlight");
             }
 
+            // Pick a colour on box 1, switch to box 2: box 1 keeps the picked colour, box 2 shows its own.
+            if (shown.Count > 1)
+            {
+                var sv = RequireField<ColorDragArea>(picker, "svArea");
+                yield return Tap(RequireField<Button>(shown[0], "button"), "colour box 1");
+                Color before2 = RequireField<Image>(shown[1], "colorImage").color;
+                var pick = typeof(ColorDragArea).GetMethod("Report", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                Assert.IsNotNull(pick, "ColorDragArea.Report");
+                pick.Invoke(sv, new object[] { new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current)
+                    { position = RectTransformUtility.WorldToScreenPoint(null, sv.transform.position), button = UnityEngine.EventSystems.PointerEventData.InputButton.Left } });
+                Color picked = RequireField<Image>(shown[0], "colorImage").color;
+                yield return Tap(RequireField<Button>(shown[1], "button"), "colour box 2");
+                Assert.AreEqual(picked, RequireField<Image>(shown[0], "colorImage").color, "box 1 keeps the picked colour");
+                Assert.AreEqual(before2, RequireField<Image>(shown[1], "colorImage").color, "box 2 shows its own colour");
+            }
+
             yield return Tap(CloseButtonOf(screen), "cosmeticsScreen Back");
             yield return WaitClosed(screen, "cosmeticsScreen");
             yield return WaitOpen(home, "HomeScreen to come back");

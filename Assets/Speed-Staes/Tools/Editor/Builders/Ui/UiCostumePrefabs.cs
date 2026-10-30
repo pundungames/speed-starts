@@ -314,7 +314,7 @@ namespace SpeedStars.Tools.Builders
 
         /// <summary>
         /// One colour box: a button over the swatch frame's rect (shifted right by <paramref name="shift"/>), a ring behind it
-        /// that shows while selected, the flat colour inside, and the frame art on top (its border covers the colour's corners).
+        /// that shows while selected, the frame plate, and the flat colour on top of it.
         /// </summary>
         private static CostumeChannelBoxView ChannelBox(RectTransform parent, int index, Vector4 frame, Vector4 inner, float shift)
         {
@@ -331,10 +331,11 @@ namespace SpeedStars.Tools.Builders
             Kit.Fill(ring.gameObject, HighlightColor, raycast: false);
             ring.gameObject.SetActive(false);
 
+            // The frame art is a solid navy plate (not a ring): it goes UNDER the colour, which is smaller, or it hides it.
+            CanvasLayer(node, "Frame", Art("color_swatch_frame"), frame);
             RectTransform colorNode = Kit.Span(Kit.Node(node, "Color"), new Vector2((inner.x - frame.x) / w, (inner.y - frame.y) / h),
                 new Vector2((inner.z - frame.x) / w, (inner.w - frame.y) / h));
             Image color = Kit.Fill(colorNode.gameObject, Color.white, raycast: false);
-            CanvasLayer(node, "Frame", Art("color_swatch_frame"), frame);
 
             var so = new SerializedObject(view);
             Ref(so, "button", button);

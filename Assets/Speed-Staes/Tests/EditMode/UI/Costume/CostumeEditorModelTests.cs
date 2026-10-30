@@ -183,6 +183,22 @@ namespace SpeedStars.Tests.UI.Costume
         }
 
         [Test]
+        public void EveryBoxShowsItsChannelsColourWhicheverBoxIsSelected()
+        {
+            _model.TapItem(HatA);
+            _model.SetColor(Red);
+            _model.SelectChannel(1);
+
+            Assert.AreEqual(Red, _model.ChannelHex(0), "the edited colour stays on its box after switching");
+            Assert.AreEqual(FakeCosmeticService.HatADefaults[1], _model.ChannelHex(1), "an untouched channel shows its default");
+
+            _service.RandomOutfit = CosmeticOutfit.Empty.With(CosmeticCategory.Headwear, HatA, Blue);
+            _model.Randomize(new Random(1));
+            Assert.AreEqual(Blue, _model.ChannelHex(0));
+            Assert.AreEqual(FakeCosmeticService.HatADefaults[1], _model.ChannelHex(1));
+        }
+
+        [Test]
         public void AChannelTheItemDoesNotHaveCannotBeSelected()
         {
             _model.TapItem(HatB);
