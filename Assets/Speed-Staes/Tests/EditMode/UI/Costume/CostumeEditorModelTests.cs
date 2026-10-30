@@ -138,13 +138,15 @@ namespace SpeedStars.Tests.UI.Costume
         public void AFreshItemShowsTheMaterialDefaultsNotAPlaceholder()
         {
             _model.TapItem(HatA);
+            CosmeticOutfit worn = _model.Outfit; // wearing the item is the edit; reading its colours must add none
 
             for (int i = 0; i < _model.ChannelCount; i++)
             {
                 Assert.AreEqual(FakeCosmeticService.HatADefaults[i], _model.ChannelHex(i));
                 Assert.IsNotEmpty(_model.ChannelHex(i));
             }
-            Assert.IsFalse(_model.IsDirty, "showing defaults is not an edit");
+            Assert.AreEqual(worn, _model.Outfit, "showing defaults is not an edit");
+            Assert.AreEqual(string.Empty, _model.SelectedSlot.ColorAt(0), "no colour was written");
         }
 
         [Test]
