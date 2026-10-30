@@ -1,7 +1,7 @@
 ---
 id: T-057
 title: UI doku butcesi - Android'de UI sanati sikistirilmiyor (APK 450 MB, doku 238 MB); ASTC, tek dim, olcum
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-056]
 owns_paths:
@@ -12,17 +12,17 @@ owns_paths:
   - "docs/TUZAKLAR.md"
 touches_scene: true
 branch: agent/T-057-ui-doku-butcesi
-commits: []
+commits: [e5a86b61, 64c7ec2b]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/UiTextureBudgetTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "Kopyada (aktif hedef Android) UiArt.ImportAll (Faz1Builder.RebuildAll icinde) calissin: UI/Art/**/*.png .meta'lari Android+iPhone ASTC 4x4 (max 2048; Race/counter_panel ve telemetry_panel 4096) ayariyla yeniden yazilir; .meta'lari kopyadan al. Yeni test dosyasi UiTextureBudgetTests.cs icin .meta uretilip alinsin (TUZAKLAR .meta'siz .cs)."
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Faz1Builder.RebuildAll ile 7 builder (Analysis, EntryGate, EventSelect, Leaderboard, Results, Reward, Settings) prefab'lari yeniden uretilir: dim artik sprite'siz Image (rengi PNG'den okunur). Sonra yeni Android APK olculur (hedef: doku 238 MB'tan belirgin dusuk; once/sonra Build Report). Ek karar: Builders/Scene/SceneHomeDim.cs (benim yolum degil) Costume/dimscreen.png sprite'ini kullanmaya devam ediyor; o da Image rengine cevrilebilir (ASTC ile ~1.5 MB'a iner, tek dosya)."
 started: 2026-10-30
 finished: 2026-10-30
@@ -67,3 +67,4 @@ KAMERA  : yok
 3. Dim: 7 PNG 1678x937 duz renk. Olculen RGBA: Analysis (6,26,65,100); Costume (3,15,33,130); EventSelect (3,15,33,130); Results (3,15,33,140); Settings (3,15,33,150); Leaderboard/modal (6,26,65,150); Rewards/modal (6,26,65,135). UiArt.PaintDim rengi PNG'den okur (duz degilse hata), sprite'siz Image; 9 cagri (6 builder + Leaderboard PopupRoot) buna baglandi. Costume dim'i SceneHomeDim (baska yol) kullaniyor, needs'te.
 4. `home` Uncompressed sebebi: kodda/yorumda/git gecmisinde (50e95cde) gecerli sebep yok, ilk UI v2 surumunde konmus; mobilde artik ASTC 4x4 (8 bit/piksel, en yuksek ASTC kalitesi); editor/varsayilan platform Uncompressed kalir, gorsel risk ince cizgide, supervizor ekran goruntusuyle bakar.
 5. Olcum: UiArt.ExpectedTextureBytes (Rgba32 = 4 B/px, Astc4x4 = 16 B/4x4 blok) + EditMode testi (reflection ile; Assembly-CSharp-Editor test asmdef'ine acik degil). Calistirilmadi/derlenmedi (merkezi dogrulama). 1678x937 dim: RGBA32 6.29 MB -> ASTC ~1.57 MB, 7 dim prefab'tan kalkinca ~44 MB.
+- Supervizor (30.10): kopyada (Android hedefi) yeni APK: Textures 238.1 -> 85.8 MB, build 449.9 -> 297.5 MB (sikistirmasiz), APK dosyasi 64 MB. EditMode 796, PlayMode 25 yesil; goruntulerde ASTC bozulmasi yok.

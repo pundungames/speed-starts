@@ -7,6 +7,8 @@
 `- [ ] <konu> — <neden onemli> (fark edildigi task: T-XXX, <tarih>)`
 
 ## Teknik borc
+- [ ] [doku] Race/Leaderboard ikonlari tam tuval boyutlu (ASTC ile bile tanesi 1.5 MB): alfa sinirina kirpma ya da Sprite Atlas; SceneHomeDim hala Costume/dimscreen.png sprite kullaniyor -> duz renk (T-057, 30.10)
+- [ ] [doku] Serhat temalari 51 MB mesh (APK toplam kullanici asset 140 MB): tema basina yukleme ya da Addressables - Serhat ile (T-057, 30.10)
 
 ## Icerik (GDD'den gelen, henuz siraya girmemis)
 
