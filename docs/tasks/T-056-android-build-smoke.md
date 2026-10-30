@@ -55,7 +55,7 @@ KAMERA  : yok
 
 ## Calisma notu
 - Yapildi: Tools/Editor/Packaging/AndroidBuildSmoke.cs (Run: sahneler, Development APK, ANDROID_BUILD_OK/FAIL, ANDROID_MANIFEST, ANDROID_SETTINGS; yalniz okuma) ve scripts/android-build.ps1 (unity-verify.ps1 yardimcilarini dot-source eder).
-- Calistirma (kopyada): powershell -NoProfile -ExecutionPolicy Bypass -File scriptsndroid-build.ps1 -ProjectPath D:\Pundun\speed-starts-verify-1
+- Calistirma (kopyada): powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android-build.ps1 -ProjectPath D:\Pundun\speed-starts-verify-1
 - Mevcut ayarlar (okundu): scriptingBackend bos (Mono), targetArchitectures=1 (yalniz ARMv7), minSdk 22, targetSdk 0 (auto) - magaza icin IL2CPP+ARM64 gerekecek.
 - Zorluk: Unity calistirilmadi; API imzalari 2022.3 bilgisinden. .meta dosyalarini Unity uretecek (hook yazdirmaz).
 - Birakilan: build sonucu dogrulamasi supervizorde.

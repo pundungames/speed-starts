@@ -23,8 +23,7 @@ blocked_reason:
 ---
 
 ## Hedef
-T-056'nin gelistirme APK'si 449.9 MB. Build Report (`D:\Pundun\speed-starts\pipeline-logs\android-build-2026-10-30_130929.log` degil, o
-log `D:\Pundun\speed-starts-t056` kopyasindaydi; ozet asagida): Textures 238.1 MB (%81), Meshes 51 MB (Serhat'in temalari, bizim degil).
+T-056'nin gelistirme APK'si 449.9 MB. Build Report ozeti (log worktree ile silindi): Textures 238.1 MB (%81), Meshes 51 MB (Serhat'in temalari, bizim degil).
 En buyukler bizim UI sanatimiz: tam tuval boyutlu PNG'ler **tanesi 6.0 MB** (= genislik x yukseklik x 4: sikistirilmamis RGBA32), ornek
 `UI/Art/Race/energy_icon.png` 1315x1197, `UI/Art/*/dimscreen.png` / `modal_dimscreen.png` 1678x937 (yedi klasorde ayni dim), Analysis/
 Leaderboard/Results panelleri 1-2 MB. `UiArt.ImportAll` (UiArt.cs ~65-87) varsayilan platformda `Compressed` diyor ama Android'de NPOT ve
