@@ -106,7 +106,7 @@ Biçim `docs/tasks/_TEMPLATE.md`; `scripts/tur-sonu.ps1` makineyle okur. Başlar
   `UiMotionConfig` ile. Panel animasyonunu kendin uydurma.
 - **UI: uGUI + legacy `UnityEngine.UI.Text`** — TextMeshPro KULLANILMAZ (kullanıcı kararı 28.10: oyun Çin pazarına; legacy Text'in
   dinamik fontu cihazda CJK karakterleri işletim sistemi fontundan alır). Font: `LegacyRuntime.ttf` (yerleşik) ya da dinamik bir TTF.
-  Oyuncuya görünen metin **İngilizce**. Input: Input System. UI referans çözünürlüğü 2400×1080 yatay, CanvasScaler yükseklik eşleşmesi.
+  Oyuncuya görünen metin **İngilizce**. Input: Input System. UI referans çözünürlüğü 2400×1080 yatay, CanvasScaler `ScreenMatchMode.Expand` (kullanıcı kararı 30.10: ≥20:9'da yükseklik eşleşmesiyle aynı, daha dar ekranda sığacak kadar küçülür; T-034).
 - Public alan yerine `[SerializeField] private`. Magic number yok — config asset'ine.
 - String yerine enum; olay: C# `event`/Zenject Signal (UnityEvent yalnız Inspector'dan bağlanan UI'da).
 - `using System;` + `using UnityEngine;` olan dosyada `Object`, `Random`, `Debug` niteliksiz kullanılmaz.
