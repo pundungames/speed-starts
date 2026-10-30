@@ -1,7 +1,7 @@
 ---
 id: T-035
 title: Kostum editoru - ogenin 2. (ve varsa 3.) rengi; renk ornek kutulari kanal secer ve canli rengi gosterir
-status: review
+status: merged
 owner: systems-agent
 depends_on: [T-025, T-026, T-032]
 owns_paths:
@@ -20,7 +20,7 @@ owns_paths:
   - "docs/decisions/**"
 touches_scene: true
 branch: agent/T-035-ikinci-renk
-commits: []
+commits: [700061f, b257f6b, 8fd2740]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Cosmetics/CosmeticServiceTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/CostumeEditorModelTests.cs"
@@ -28,10 +28,10 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "Assets/Speed-Staes/Data/Config/Cosmetics/*.asset (CosmeticDefinition) (alanlar: channels, channelDefaultColors; primaryChannel ile tutarli): CosmeticCatalogSeed.Seed overwrite=false yolu BackfillChannels ile kanal listesi bos olan her ogeyi prefab materyallerinden (Color1/2/3_Toon _Color) doldurur; ConfigAssetSeeder calistirilmali. Doldurulana kadar her ogenin tek kutusu ve beyaz varsayilan rengi olur."
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "CosmeticsScreen.prefab yeniden uretilmeli (UiCostumePrefabs.BuildAll, overwrite): ColorPanel'de SwatchColor yerine 3 kanal kutusu (Channels/Channel1..3, CostumeChannelBoxView); yeni CostumeChannelBoxView.cs icin .meta kopyada uretilip GeriAl ile alinmali."
 started: 2026-10-30
 finished: 2026-10-30
