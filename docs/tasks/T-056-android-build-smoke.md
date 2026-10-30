@@ -1,7 +1,7 @@
 ---
 id: T-056
 title: Android build duman testi - batchmode'da gelistirme APK'si, Android'e ozgu kodun derlenmesi, manifest izin kontrolu
-status: todo
+status: review
 owner: systems-agent
 depends_on: [T-052]
 owns_paths:
@@ -15,8 +15,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -43,7 +43,7 @@ build destegi + NDK kurulu (`C:\Program Files\Unity\Hub\Editor\2022.3.62f2-x86_6
 Unity calistirma, build alma YOK (supervizor kopyada calistirir).
 
 ## Kabul kriterleri
-- [ ] Betik + metot yazildi; ProjectSettings'e yazmadigi kodda acik (yalniz okuma)
+- [x] Betik + metot yazildi; ProjectSettings'e yazmadigi kodda acik (yalniz okuma)
 - [ ] Supervizor kopyada calistirinca ANDROID_BUILD_OK/FAIL, ANDROID_MANIFEST ve ANDROID_SETTINGS satirlari cikar
 
 ## Geri bildirim
@@ -54,3 +54,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+- Yapildi: Tools/Editor/Build/AndroidBuildSmoke.cs (Run: sahneler, Development APK, ANDROID_BUILD_OK/FAIL, ANDROID_MANIFEST, ANDROID_SETTINGS; yalniz okuma) ve scripts/android-build.ps1 (unity-verify.ps1 yardimcilarini dot-source eder).
+- Calistirma (kopyada): powershell -NoProfile -ExecutionPolicy Bypass -File scriptsndroid-build.ps1 -ProjectPath D:\Pundun\speed-starts-verify-1
+- Mevcut ayarlar (okundu): scriptingBackend bos (Mono), targetArchitectures=1 (yalniz ARMv7), minSdk 22, targetSdk 0 (auto) - magaza icin IL2CPP+ARM64 gerekecek.
+- Zorluk: Unity calistirilmadi; API imzalari 2022.3 bilgisinden. .meta dosyalarini Unity uretecek (hook yazdirmaz).
+- Birakilan: build sonucu dogrulamasi supervizorde.
