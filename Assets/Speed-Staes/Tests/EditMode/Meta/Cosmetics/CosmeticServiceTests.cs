@@ -65,6 +65,24 @@ namespace SpeedStars.Tests.Meta.Cosmetics
         }
 
         [Test]
+        public void GrantOwned_OwnsTheItemFree_Once_AndRaisesChanged()
+        {
+            var k = Kit(0);
+            int raised = 0;
+            k.Service.Changed += () => raised++;
+
+            var first = k.Service.GrantOwned(CosmeticTestKit.HatPremium, "grant:test");
+            var second = k.Service.GrantOwned(CosmeticTestKit.HatPremium, "grant:test");
+
+            Assert.AreEqual(CosmeticGrantResult.Granted, first);
+            Assert.AreEqual(CosmeticGrantResult.AlreadyOwned, second);
+            Assert.IsTrue(k.Service.IsOwned(CosmeticTestKit.HatPremium));
+            Assert.AreEqual(0, k.Wallet.PurpleGems);
+            Assert.AreEqual(1, raised);
+            Assert.AreEqual(CosmeticGrantResult.UnknownItem, k.Service.GrantOwned("nothing", "grant:x"));
+        }
+
+        [Test]
         public void TryPurchase_NotEnoughGems_ChangesNothing()
         {
             var k = Kit(CosmeticTestKit.PremiumPrice - 1);

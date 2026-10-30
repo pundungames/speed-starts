@@ -169,6 +169,20 @@ namespace SpeedStars.Meta.Cosmetics
             return CosmeticPurchaseResult.Purchased;
         }
 
+        public CosmeticGrantResult GrantOwned(string cosmeticId, string transactionId)
+        {
+            if (!_catalog.TryGet(cosmeticId, out CosmeticDefinition item)) return CosmeticGrantResult.UnknownItem;
+            if (IsOwned(item)) return CosmeticGrantResult.AlreadyOwned;
+            if (!string.IsNullOrEmpty(transactionId) && Progress.ProcessedTransactionIds.Contains(transactionId))
+                return CosmeticGrantResult.AlreadyOwned;
+
+            Progress.OwnedCosmeticIds.Add(item.Id);
+            if (!string.IsNullOrEmpty(transactionId)) Progress.ProcessedTransactionIds.Add(transactionId);
+            _repository.Save();
+            Changed?.Invoke();
+            return CosmeticGrantResult.Granted;
+        }
+
         public IReadOnlyList<string> ColorPalette
         {
             get

@@ -119,11 +119,10 @@ namespace SpeedStars.Meta.Rewards
         private bool GiveCosmetic(CosmeticDefinition item, string transactionId)
         {
             string id = item.Id;
-            if (!_cosmetics.IsOwned(id))
+            switch (_cosmetics.GrantOwned(id, transactionId))
             {
-                List<string> owned = Progress.OwnedCosmeticIds;
-                if (!owned.Contains(id)) owned.Add(id);
-                return true;
+                case CosmeticGrantResult.Granted: return true;
+                case CosmeticGrantResult.UnknownItem: return false;
             }
 
             // Already owned: its price comes back in the item's currency; a free item gives nothing.

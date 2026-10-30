@@ -13,6 +13,9 @@ owns_paths:
   - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/ConfigAssetSeeder.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Rewards/**"
   - "docs/decisions/**"
+  - "Assets/Speed-Staes/Scripts/Meta/Cosmetics/CosmeticService.cs"
+  - "Assets/Speed-Staes/Scripts/Meta/Contracts/CosmeticContracts.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Cosmetics/**"
 touches_scene: false
 branch: agent/T-042-gunluk-oduller
 commits: []
@@ -86,3 +89,5 @@ public interface ISevenDayRewards {
 - Kayit degisikligi yok (DailyGiftDayKey + SevenDayCheckInState yeterli) -> ADR yok. Gun = UTC "yyyy-MM-dd"; EconomyConfig.dayBoundary kullanilmiyor (karar UTC).
 - ICosmeticService'te sahiplik ekleme yolu yok ve CosmeticService benim alanim degil: G7 sahiplik Progress.OwnedCosmeticIds'e dogrudan yazilir; ICosmeticService.Changed tetiklenmez (UI IsOwned'i yeniden okumali).
 - EntryTicket turu 7 gun kartinda desteklenmez (Failed); None/bos gun takvimi ilerletir. Tam suite gerekir (ekonomi/kayit). WIRING sûpervizorde.
+
+- Ek (2026-10-30, koordinator): ICosmeticService.GrantOwned eklendi (varsayilan govde UnknownItem; UI testindeki FakeCosmeticService alanim disinda oldugu icin derleniyor). SevenDay artik onu kullanir; yukaridaki 'dogrudan yazar' notu gecersiz.

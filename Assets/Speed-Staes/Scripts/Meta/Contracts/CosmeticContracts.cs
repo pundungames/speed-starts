@@ -205,6 +205,16 @@ namespace SpeedStars.Meta.Contracts
         UnknownItem
     }
 
+    public enum CosmeticGrantResult
+    {
+        /// <summary>Now owned (saved).</summary>
+        Granted,
+        /// <summary>Owned already (or the transaction id was applied before); nothing changed.</summary>
+        AlreadyOwned,
+        /// <summary>No item with that id in the catalog.</summary>
+        UnknownItem
+    }
+
     public enum CosmeticSaveResult
     {
         /// <summary>The outfit is stored in the preset (and written to disk).</summary>
@@ -264,6 +274,12 @@ namespace SpeedStars.Meta.Contracts
 
         /// <summary>Pays with the item's currency from the wallet; never charges twice for the same item.</summary>
         CosmeticPurchaseResult TryPurchase(string cosmeticId);
+
+        /// <summary>
+        /// Gives the item for free (rewards). Idempotent: an owned item or a repeated transaction id changes nothing.
+        /// Saves and raises <c>Changed</c> when granted. The default body keeps older test doubles compiling.
+        /// </summary>
+        CosmeticGrantResult GrantOwned(string cosmeticId, string transactionId) => CosmeticGrantResult.UnknownItem;
 
         /// <summary>Colours (RRGGBB) the colour picker and Random use.</summary>
         IReadOnlyList<string> ColorPalette { get; }
