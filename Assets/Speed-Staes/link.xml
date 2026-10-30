@@ -1,0 +1,10 @@
+<linker>
+  <!-- IL2CPP managed stripping: Zenject builds every service and view through reflection (constructors, [Inject] fields and
+       methods), which the linker cannot see. Keep Zenject and our own assemblies whole. -->
+  <assembly fullname="Zenject" preserve="all"/>
+  <assembly fullname="SpeedStars.Core" preserve="all"/>
+  <assembly fullname="SpeedStars.Meta" preserve="all"/>
+  <assembly fullname="SpeedStars.Audio" preserve="all"/>
+  <assembly fullname="SpeedStars.UI" preserve="all"/>
+  <assembly fullname="Assembly-CSharp" preserve="all"/>
+</linker>
