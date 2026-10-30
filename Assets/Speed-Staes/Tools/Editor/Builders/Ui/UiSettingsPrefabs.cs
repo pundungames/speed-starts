@@ -254,7 +254,7 @@ namespace SpeedStars.Tools.Builders
             var view = root.gameObject.AddComponent<SettingsPopupView>();
 
             RectTransform dim = Kit.Stretch(Kit.Node(root, "Dimscreen"));
-            UiArt.Paint(dim.gameObject, Art("dimscreen"), raycast: true); // full screen, swallows taps meant for the menu
+            UiArt.PaintDim(dim.gameObject, ArtFolder + "/dimscreen.png"); // full screen, swallows taps meant for the menu
 
             float panelHeight = HeaderHeight + BodyHeight + FooterHeight;
             RectTransform panel = Kit.Node(root, "Panel");
@@ -437,7 +437,7 @@ namespace SpeedStars.Tools.Builders
             var view = root.gameObject.AddComponent<ConfirmDialogView>();
 
             RectTransform dim = Kit.Stretch(Kit.Node(root, "Dimscreen"));
-            UiArt.Paint(dim.gameObject, Art("dimscreen"), raycast: true);
+            UiArt.PaintDim(dim.gameObject, ArtFolder + "/dimscreen.png");
 
             RectTransform panel = Kit.Node(root, "Panel");
             Kit.Anchor(panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, V(640f, 400f));

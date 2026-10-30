@@ -530,12 +530,12 @@ namespace SpeedStars.Tools.Builders
         }
 
         /// <summary>Popup root: stretched over the screen, a catcher button behind the window (the base close button), starts inactive.</summary>
-        private static LeaderboardPopupPanel PopupRoot(RectTransform screen, string name, Sprite catcherSprite, out RectTransform catcher)
+        private static LeaderboardPopupPanel PopupRoot(RectTransform screen, string name, string dimArtPath, out RectTransform catcher)
         {
             RectTransform root = Kit.Stretch(Kit.Node(screen, name));
             var panel = root.gameObject.AddComponent<LeaderboardPopupPanel>();
             catcher = Kit.Stretch(Kit.Node(root, "Catcher"));
-            Image image = catcherSprite != null ? UiArt.Paint(catcher.gameObject, catcherSprite, raycast: true) : Kit.Fill(catcher.gameObject, Clear, raycast: true);
+            Image image = dimArtPath != null ? UiArt.PaintDim(catcher.gameObject, dimArtPath) : Kit.Fill(catcher.gameObject, Clear, raycast: true);
             Button button = catcher.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             button.transition = Selectable.Transition.None;
@@ -606,7 +606,7 @@ namespace SpeedStars.Tools.Builders
 
         private static void EventWindow(RectTransform screen, WindowRefs w)
         {
-            w.Event = PopupRoot(screen, "EventModal", Art("modal_dimscreen"), out _);
+            w.Event = PopupRoot(screen, "EventModal", ArtFolder + "/modal_dimscreen.png", out _);
             RectTransform window = AtScreen(w.Event.transform, "Window", RefWidth * 0.5f - 380f, (RefHeight - 440f) * 0.5f, 760f, 440f);
             UiArt.Paint(window.gameObject, Art("modal_event_background"), raycast: true); // the window itself swallows taps (the dim behind closes)
             w.EventHeader = Kit.Label(window, "Title", LeaderboardTexts.EventHeader, WindowTitleSize, UiArt.Navy, TextAnchor.MiddleLeft);

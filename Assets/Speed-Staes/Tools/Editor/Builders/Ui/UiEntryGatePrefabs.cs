@@ -50,7 +50,7 @@ namespace SpeedStars.Tools.Builders
 
             // The dimscreen covers the whole screen and catches every tap (the modal blocks what is under it).
             RectTransform dim = Kit.Stretch(Kit.Node(root, "Dim"));
-            UiArt.Paint(dim.gameObject, Art("modal_dimscreen"), raycast: true);
+            UiArt.PaintDim(dim.gameObject, ArtFolder + "/modal_dimscreen.png");
 
             RectTransform window = Kit.Node(root, "Window");
             Kit.Anchor(window, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, WindowCanvas * Scale);

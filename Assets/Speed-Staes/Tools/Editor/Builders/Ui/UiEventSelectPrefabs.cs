@@ -48,7 +48,7 @@ namespace SpeedStars.Tools.Builders
 
             // Dimscreen: catches taps so nothing reaches the 3D scene behind the screen.
             RectTransform dim = Kit.Stretch(Kit.Node(root, "Dim"));
-            UiArt.Paint(dim.gameObject, Art("dimscreen"), raycast: true);
+            UiArt.PaintDim(dim.gameObject, ArtFolder + "/dimscreen.png");
 
             RectTransform back = Kit.Node(root, "Back");
             layout.PlaceOnScreen(back, layout.Get("back"));

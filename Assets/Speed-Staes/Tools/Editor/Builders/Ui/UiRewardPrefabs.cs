@@ -169,7 +169,7 @@ namespace SpeedStars.Tools.Builders
 
             // The dimscreen of the package covers the whole screen and catches every tap (the popup is modal).
             RectTransform dim = Kit.Stretch(Kit.Node(root, "Dim"));
-            UiArt.Paint(dim.gameObject, Art("modal_dimscreen"), raycast: true);
+            UiArt.PaintDim(dim.gameObject, ArtFolder + "/modal_dimscreen.png");
 
             Vector2 canvas = layout.GroupSize("daily_gift");
             RectTransform window = Kit.Node(root, "Window");
@@ -217,7 +217,7 @@ namespace SpeedStars.Tools.Builders
             var view = root.gameObject.AddComponent<SevenDayPanelView>();
 
             RectTransform dim = Kit.Stretch(Kit.Node(root, "Dim"));
-            UiArt.Paint(dim.gameObject, Art("modal_dimscreen"), raycast: true);
+            UiArt.PaintDim(dim.gameObject, ArtFolder + "/modal_dimscreen.png");
 
             RectTransform window = Kit.Node(root, "Window");
             PlaceWindow(window, layout, layout.SevenDayPanelRect);

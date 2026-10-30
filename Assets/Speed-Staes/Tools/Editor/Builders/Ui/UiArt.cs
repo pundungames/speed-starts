@@ -29,6 +29,11 @@ namespace SpeedStars.Tools.Builders
             "character_previous_background", "character_next_background", "edit_racer_background", "emote_background"
         };
 
+        /// <summary>Largest art side (px) that fits the Android/iOS texture cap; bigger art keeps 4096 so it is never downscaled.</summary>
+        private const int MobileMaxSize = 2048;
+        private const int MobileMaxSizeLarge = 4096;
+        private static readonly string[] MobilePlatforms = { "Android", "iPhone" };
+
         public static readonly Color Navy = new Color(0.04f, 0.12f, 0.36f, 1f);
 
         // ---------------------------------------------------------------- import
@@ -62,6 +67,7 @@ namespace SpeedStars.Tools.Builders
             bool home = assetPath.StartsWith(HomeArt, StringComparison.Ordinal);
             string spriteName = Path.GetFileNameWithoutExtension(assetPath);
             bool readable = Array.IndexOf(AlphaHitSprites, spriteName) >= 0;
+            int mobileMax = MobileMaxFor(assetPath);
             TextureImporterCompression compression = home ? TextureImporterCompression.Uncompressed : TextureImporterCompression.Compressed;
 
             var settings = new TextureImporterSettings();
@@ -74,7 +80,8 @@ namespace SpeedStars.Tools.Builders
                 && importer.alphaIsTransparency
                 && importer.isReadable == readable
                 && importer.textureCompression == compression
-                && settings.spriteMeshType == SpriteMeshType.FullRect;
+                && settings.spriteMeshType == SpriteMeshType.FullRect
+                && MobileMatches(importer, mobileMax);
             if (same) return;
 
             importer.textureType = TextureImporterType.Sprite;
@@ -84,13 +91,129 @@ namespace SpeedStars.Tools.Builders
             importer.alphaIsTransparency = true;
             importer.isReadable = readable;
             importer.textureCompression = compression;
-            importer.maxTextureSize = 4096; // race art is up to 2172 px wide: never silently downscaled to 2048
+            importer.maxTextureSize = 4096; // default platform: race art is up to 2172 px wide, never silently downscaled
 
             importer.ReadTextureSettings(settings);
             settings.spriteMeshType = SpriteMeshType.FullRect;
             settings.spriteAlignment = (int)SpriteAlignment.Center;
             importer.SetTextureSettings(settings);
+            ApplyMobile(importer, mobileMax);
             importer.SaveAndReimport();
+        }
+
+        /// <summary>
+        /// Android/iOS get explicit ASTC 4x4: the default "Compressed" falls back to uncompressed RGBA32 on mobile for
+        /// non-multiple-of-4 sizes (UI art is mostly such canvases), which cost 238 MB of an APK. ASTC has no size rule and
+        /// keeps alpha edges sharp (4x4 is its highest quality). The default (editor) platform stays as it was.
+        /// </summary>
+        private static void ApplyMobile(TextureImporter importer, int maxSize)
+        {
+            foreach (string platform in MobilePlatforms)
+            {
+                var p = new TextureImporterPlatformSettings
+                {
+                    name = platform,
+                    overridden = true,
+                    maxTextureSize = maxSize,
+                    format = TextureImporterFormat.ASTC_4x4,
+                    textureCompression = TextureImporterCompression.Compressed,
+                    compressionQuality = 50
+                };
+                importer.SetPlatformTextureSettings(p);
+            }
+        }
+
+        private static bool MobileMatches(TextureImporter importer, int maxSize)
+        {
+            foreach (string platform in MobilePlatforms)
+            {
+                TextureImporterPlatformSettings p = importer.GetPlatformTextureSettings(platform);
+                if (!p.overridden || p.format != TextureImporterFormat.ASTC_4x4 || p.maxTextureSize != maxSize) return false;
+            }
+            return true;
+        }
+
+        private static int MobileMaxFor(string assetPath)
+        {
+            ReadPngSize(assetPath, out int width, out int height);
+            return Mathf.Max(width, height) > MobileMaxSize ? MobileMaxSizeLarge : MobileMaxSize;
+        }
+
+        /// <summary>Width and height from the PNG header (IHDR, big-endian at byte 16): no decode, no importer needed.</summary>
+        internal static void ReadPngSize(string assetPath, out int width, out int height)
+        {
+            byte[] header = new byte[24];
+            using (FileStream stream = File.OpenRead(Kit.FullPath(assetPath)))
+            {
+                if (stream.Read(header, 0, 24) < 24) throw new InvalidOperationException($"UiArt: '{assetPath}' is not a PNG.");
+            }
+            width = (header[16] << 24) | (header[17] << 16) | (header[18] << 8) | header[19];
+            height = (header[20] << 24) | (header[21] << 16) | (header[22] << 8) | header[23];
+        }
+
+        // ---------------------------------------------------------------- texture budget
+
+        /// <summary>Pixel formats the Android size estimate knows.</summary>
+        internal enum UiTextureFormat
+        {
+            Rgba32,
+            Astc4x4
+        }
+
+        /// <summary>
+        /// Expected GPU/APK size of one texture without mipmaps: RGBA32 = 4 bytes per pixel, ASTC 4x4 = one 16-byte block
+        /// per 4x4 pixels (edges round up to whole blocks). Lets us compare art before building an APK.
+        /// </summary>
+        internal static long ExpectedTextureBytes(int width, int height, UiTextureFormat format)
+        {
+            if (width <= 0 || height <= 0) throw new ArgumentOutOfRangeException(nameof(width), "UiArt: texture size must be positive.");
+            switch (format)
+            {
+                case UiTextureFormat.Rgba32:
+                    return (long)width * height * 4L;
+                case UiTextureFormat.Astc4x4:
+                    return ((width + 3) / 4) * (long)((height + 3) / 4) * 16L;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(format));
+            }
+        }
+
+        // ---------------------------------------------------------------- dim
+
+        /// <summary>
+        /// A full-screen dim as a plain tinted Image (no sprite, no texture): the dim PNGs are one flat RGBA each, so the
+        /// colour is read from the art file (single source) and the 6 MB texture is not referenced at all.
+        /// </summary>
+        public static Image PaintDim(GameObject go, string artPath)
+        {
+            return Kit.Fill(go, ReadFlatColor(artPath), raycast: true);
+        }
+
+        /// <summary>The one colour of a flat PNG (corners and center sampled); throws if the art is not flat.</summary>
+        internal static Color32 ReadFlatColor(string assetPath)
+        {
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            try
+            {
+                if (!ImageConversion.LoadImage(texture, File.ReadAllBytes(Kit.FullPath(assetPath))))
+                    throw new InvalidOperationException($"UiArt: '{assetPath}' could not be read.");
+
+                int w = texture.width, h = texture.height;
+                Color32[] px = texture.GetPixels32();
+                Color32 first = px[0];
+                Vector2Int[] samples = { new Vector2Int(w - 1, 0), new Vector2Int(0, h - 1), new Vector2Int(w - 1, h - 1), new Vector2Int(w / 2, h / 2) };
+                foreach (Vector2Int at in samples)
+                {
+                    Color32 c = px[at.y * w + at.x];
+                    if (c.r != first.r || c.g != first.g || c.b != first.b || c.a != first.a)
+                        throw new InvalidOperationException($"UiArt: dim art '{assetPath}' is not a flat colour; PaintDim cannot replace it.");
+                }
+                return first;
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
         }
 
         /// <summary>Writes the green → yellow → red cadence track gradient once (builder-owned PNG, importer settings follow in ImportAll).</summary>

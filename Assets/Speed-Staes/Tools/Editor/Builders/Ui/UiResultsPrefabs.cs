@@ -116,7 +116,7 @@ namespace SpeedStars.Tools.Builders
 
             // Dimscreen: over the scene, under the UI; catches taps so the HUD below stays untouched.
             RectTransform dim = Kit.Stretch(Kit.Node(root, "Dimscreen"));
-            UiArt.Paint(dim.gameObject, Art("dimscreen"), raycast: true);
+            UiArt.PaintDim(dim.gameObject, ArtFolder + "/dimscreen.png");
 
             // ---- left column: Cash box, then the six buttons
             RectTransform diamond = Place(root, "Diamond", layout, layout.Get("diamond"));
