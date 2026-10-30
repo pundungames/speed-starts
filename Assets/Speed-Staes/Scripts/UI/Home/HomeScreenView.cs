@@ -50,6 +50,9 @@ namespace SpeedStars.UI.Home
         [Range(0f, 1f)]
         [SerializeField] private float soundOffAlpha = 0.4f;
 
+        [Tooltip("CharacterCard/Emote: opens the emote screen.")]
+        [SerializeField] private Button emoteButton;
+
         [Header("Buttons without a system yet (shown, not interactable)")]
 
         [Tooltip("Upgrade: no upgrade system yet.")]
@@ -57,9 +60,6 @@ namespace SpeedStars.UI.Home
 
         [Tooltip("Players: no multiplayer system yet.")]
         [SerializeField] private Button playersButton;
-
-        [Tooltip("CharacterCard/Emote: no emote system yet.")]
-        [SerializeField] private Button emoteButton;
 
         [Tooltip("CharacterCard/Previous: selects the previous racer preset (wraps around).")]
         [SerializeField] private Button previousRacerButton;
@@ -95,6 +95,9 @@ namespace SpeedStars.UI.Home
 
         [Tooltip("Theme select screen: any UiScreen; its view arrives with the theme select UI (T-027).")]
         [SerializeField] private UiScreen themeSelectScreen;
+
+        [Tooltip("Emote screen: any UiScreen (EmoteScreenView).")]
+        [SerializeField] private UiScreen emoteScreen;
 
         [Tooltip("7-day reward popup: any UiPopup; its view arrives in a later phase.")]
         [SerializeField] private UiPopup sevenDayPopup;
@@ -146,7 +149,8 @@ namespace SpeedStars.UI.Home
             }
             if (previousRacerButton != null) previousRacerButton.onClick.AddListener(OnPreviousRacer);
             if (nextRacerButton != null) nextRacerButton.onClick.AddListener(OnNextRacer);
-            DisableUnbuilt(upgradeButton, playersButton, emoteButton);
+            if (emoteButton != null) emoteButton.onClick.AddListener(OnEmote);
+            DisableUnbuilt(upgradeButton, playersButton);
         }
 
         /// <summary>Everything under the Sound button except its background: these fade while sound effects are off.</summary>
@@ -207,6 +211,7 @@ namespace SpeedStars.UI.Home
             if (soundButton != null) soundButton.onClick.RemoveListener(OnSound);
             if (previousRacerButton != null) previousRacerButton.onClick.RemoveListener(OnPreviousRacer);
             if (nextRacerButton != null) nextRacerButton.onClick.RemoveListener(OnNextRacer);
+            if (emoteButton != null) emoteButton.onClick.RemoveListener(OnEmote);
             base.OnDestroy();
         }
 
@@ -301,6 +306,8 @@ namespace SpeedStars.UI.Home
         private void OnEventSelect() => _navigator.Push(eventSelectScreen);
 
         private void OnEditRacer() => PushScreen(cosmeticsScreen, nameof(cosmeticsScreen));
+
+        private void OnEmote() => PushScreen(emoteScreen, nameof(emoteScreen));
 
         private void OnHighScores() => PushScreen(highScoresScreen, nameof(highScoresScreen));
 

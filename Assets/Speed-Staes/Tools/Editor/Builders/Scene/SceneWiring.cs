@@ -33,6 +33,7 @@ namespace SpeedStars.Tools.Builders
             var sevenDay = RequireInstance<UiPopup>(scene, UiPrefabPaths.SevenDayCheckInPanel);
             var themeSelect = RequireInstance<UiScreen>(scene, UiPrefabPaths.ThemeSelectScreen);
             var settings = RequireInstance<UiPopup>(scene, UiPrefabPaths.SettingsPopup);
+            WireEmoteScreen(scene, homeView); // T-040
 
             var so = new SerializedObject(homeView);
             Prop(so, "eventSelectScreen").objectReferenceValue = eventSelect;
@@ -52,6 +53,18 @@ namespace SpeedStars.Tools.Builders
             Prop(costumeSo, "dimBackdrop").objectReferenceValue = SceneHomeDim.Find(scene);
             Apply(costumeSo);
             Log(nameof(SceneWiring), "Home: HomeScreenView screen/popup references wired.");
+        }
+
+        /// <summary>T-040: Home's emote button target and the emote screen's dim backdrop (both scene objects).</summary>
+        private static void WireEmoteScreen(Scene scene, HomeScreenView homeView)
+        {
+            var emote = RequireOne<SpeedStars.UI.Emotes.EmoteScreenView>(scene, "Emote screen (EmoteScreen prefab instance)");
+            var homeSo = new SerializedObject(homeView);
+            Prop(homeSo, "emoteScreen").objectReferenceValue = emote;
+            Apply(homeSo);
+            var emoteSo = new SerializedObject(emote);
+            Prop(emoteSo, "dimBackdrop").objectReferenceValue = SceneHomeDim.Find(scene);
+            Apply(emoteSo);
         }
 
         /// <summary>Race: RaceSession object (adapter + dev finish) and the RaceSceneInstaller fields.</summary>

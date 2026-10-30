@@ -41,6 +41,8 @@ namespace SpeedStars.Meta.Persistence
 
         /// <summary>Best finished race per (event, UTC day), capped by the leaderboard config. Added with the leaderboard (T-037), no schema bump: older saves open with an empty list.</summary>
         public List<DayBestEntry> DayBests => dayBests;
+        [SerializeField] private List<string> ownedEmoteIds = new List<string>();
+        [SerializeField] private string equippedEmoteId = string.Empty;
 
         /// <summary>Music switch the player set; Default = never touched (the settings config decides). Added with the settings window, no schema bump: older saves open as Default.</summary>
         public SettingChoice MusicChoice { get => musicChoice; set => musicChoice = value; }
@@ -53,6 +55,12 @@ namespace SpeedStars.Meta.Persistence
 
         /// <summary>Flag code the player chose. Empty = never chosen (config default).</summary>
         public string FlagCode { get => flagCode; set => flagCode = value ?? string.Empty; }
+
+        /// <summary>Ids of bought emotes (free emotes are owned without being listed). Added with the emote feature; older saves open with an empty list.</summary>
+        public List<string> OwnedEmoteIds => ownedEmoteIds;
+
+        /// <summary>Id of the equipped emote. Empty = never chosen (the catalog's default applies).</summary>
+        public string EquippedEmoteId { get => equippedEmoteId; set => equippedEmoteId = value ?? string.Empty; }
 
         /// <summary>Saved player name. Empty = never set (config default).</summary>
         public string PlayerName { get => playerName; set => playerName = value ?? string.Empty; }
@@ -148,6 +156,8 @@ namespace SpeedStars.Meta.Persistence
             if (dayBests == null) dayBests = new List<DayBestEntry>();
             for (int i = dayBests.Count - 1; i >= 0; i--)
                 if (dayBests[i] == null) dayBests.RemoveAt(i);
+            if (ownedEmoteIds == null) ownedEmoteIds = new List<string>();
+            if (equippedEmoteId == null) equippedEmoteId = string.Empty;
         }
     }
 

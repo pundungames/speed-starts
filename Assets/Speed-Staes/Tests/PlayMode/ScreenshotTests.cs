@@ -67,6 +67,7 @@ namespace SpeedStars.PlayTests
                 yield return ShootScreen(dir, home, "environmentButton", "themeSelectScreen", "Home_themeselect");
                 yield return ShootScreen(dir, home, "editRacerButton", "cosmeticsScreen", "Home_costume");
                 yield return ShootScreen(dir, home, "highScoresButton", "highScoresScreen", "Home_leaderboard");
+                yield return ShootScreen(dir, home, "emoteButton", "emoteScreen", "Home_emote");
 
                 // Settings is a popup over Home (Home stays open behind its dimscreen).
                 UiPopup settings = RequireField<UiPopup>(home, "settingsPopup");

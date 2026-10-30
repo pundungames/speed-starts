@@ -13,6 +13,7 @@ namespace SpeedStars.Tools.Builders
         public const string ThemeSelectScreen = Root + "/Screens/ThemeSelectScreen.prefab";
         public const string CosmeticsScreen = Root + "/Screens/CosmeticsScreen.prefab";
         public const string HighScoresScreen = Root + "/Screens/HighScoresScreen.prefab";
+        public const string EmoteScreen = Root + "/Screens/EmoteScreen.prefab";
         public const string RaceHud = Root + "/Screens/RaceHud.prefab";
         public const string ResultsScreen = Root + "/Screens/ResultsScreen.prefab";
         public const string AnalysisScreen = Root + "/Screens/AnalysisScreen.prefab";
@@ -36,7 +37,7 @@ namespace SpeedStars.Tools.Builders
         public const string FlagCell = Root + "/Rows/FlagCell.prefab";
 
         /// <summary>Home scene screens, in the order they sit under "Canvas Screens" (first one is the root screen).</summary>
-        public static readonly string[] HomeScreens = { HomeScreen, EventSelectScreen, ThemeSelectScreen, CosmeticsScreen, HighScoresScreen };
+        public static readonly string[] HomeScreens = { HomeScreen, EventSelectScreen, ThemeSelectScreen, CosmeticsScreen, HighScoresScreen, EmoteScreen };
 
         /// <summary>Home scene popups under "Canvas Popups".</summary>
         public static readonly string[] HomePopups = { EntryGateModal, DailyGiftPopup, SevenDayCheckInPanel, SettingsPopup };

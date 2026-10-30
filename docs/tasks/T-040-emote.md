@@ -1,7 +1,7 @@
 ---
 id: T-040
 title: Emote ekrani + prosedurel emote'lar (menu karakteri) - var olan sanatla
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-026]
 owns_paths:
@@ -27,14 +27,19 @@ branch: agent/T-040-emote
 commits: []
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmoteServiceTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmotePlaybackTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/EmoteScreenSmokeTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
     durum: open
-    not: "ProjectInstaller: EmoteCatalog + IEmoteService AsSingle"
-started:
-finished:
+    not: "ProjectInstaller (using SpeedStars.Meta.Emotes): field [SerializeField] private EmoteCatalog emotes; BindConfig(emotes); Container.Bind<IEmoteService>().To<EmoteService>().AsSingle(); Container.Bind<IEmotePreview>().To<EmotePreview>().AsSingle();  (EmoteService ctor = EmoteCatalog, ProgressRepository, IEconomyLedger, all bound already)"
+  - tip: SCENE
+    durum: open
+    not: "ProjectContext prefab: ProjectInstaller.emotes -> Data/Config/EmoteCatalog.asset (seeded by ConfigAssetSeeder.SeedAll / EmoteCatalogSeed.Seed). Then re-run the UI prefab builder (EmoteCard + EmoteScreen prefabs, HomeScreen Emote button interactable) and the Home scene builder (EmoteScreen instance in HomeScreens, MenuEmotePlayer on the runner, HomeScreenView.emoteScreen + EmoteScreenView.dimBackdrop wired in SceneWiring)."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -74,4 +79,8 @@ KAMERA  : yok
 - Yarış içi emote, gerçek animasyon klipleri, Malik'in prefab/kodu
 
 ## Calisma notu
-(Agent doldurur)
+- Yapildi: Meta/Emotes (EmoteCatalog SO + EmoteSampler/EmotePlayback saf mantik + EmoteService + EmotePreview), PlayerProgress'e ownedEmoteIds/equippedEmoteId (eklemeli), Bridge/MenuEmotePlayer (idle'dan sonra tek karisim noktasi), UI/Emotes (ekran, kart, model, config), builder (UiEmotePrefabs, EmoteCatalogSeed, bir satirlik paylasimli eklemeler), Home Emote butonu acik.
+- Emote = kemik anahtar kareleri (runner uzayi euler, katalogda); 6 tohum: Wave/Hands Up bedava, Flex/Number One/Shrug/Salute yer tutucu Nakit. Pozlar gozle yazildi, Unity calistirilmadi: Inspector'da ayarlanmali.
+- Kart tiki = takili emote, kirmizi cerceve = secili/onizlenen; kilitli kart da oynar; alt eylem: Equip (kaydet sanati) ya da fiyat butonu (purchase sanati). Ses/dokunsal yok.
+- Zorluk: MenuIdlePose yalniz kol+gogus yaziyor; bas/el/omurga kemikleri icin MenuEmotePlayer kendi tabanini tutar (kimse sifirlamazsa onceki yazimi geri alir).
+- Birakilan: WIRING + SCENE (needs), PlayMode/EditMode koşulmadı; Home_emote ekran goruntusu ScreenshotTests'e eklendi.

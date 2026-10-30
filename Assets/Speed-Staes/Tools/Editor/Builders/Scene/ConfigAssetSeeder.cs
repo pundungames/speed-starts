@@ -69,6 +69,7 @@ namespace SpeedStars.Tools.Builders
             AnalysisConfigSeed.Seed(AnalysisPath, overwrite);
             LeaderboardConfigSeed.Seed(LeaderboardPath, overwrite);
             RaceStartConfigSeed.Seed(overwrite); // T-039: READY / SET timing + start motion
+            EmoteCatalogSeed.Seed(overwrite); // T-040
             AssetDatabase.SaveAssets();
         }
 

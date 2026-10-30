@@ -82,7 +82,7 @@ namespace SpeedStars.Tools.Builders
             UiArt.Slot(height, "Label", "Height: 5'9", 44f, HeightMin, HeightMax);
 
             CardButton(cardRoot, "EditRacer", "edit_racer_background", "edit_racer_icon", true);
-            CardButton(cardRoot, "Emote", "emote_background", "emote_icon", false);
+            CardButton(cardRoot, "Emote", "emote_background", "emote_icon", true);
         }
 
         private static void StatBar(Transform card, string name, string empty, string fill, float amount)

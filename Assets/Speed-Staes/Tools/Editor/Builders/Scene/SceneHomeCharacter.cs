@@ -24,6 +24,7 @@ namespace SpeedStars.Tools.Builders
         public const string RunnerPrefabPath = "Assets/Speed-Staes/Prefabs/Character/HumanCharacterDummy_F.prefab";
         private const string MenuCharacterType = "SpeedStars.Bridge.MenuCharacter";
         private const string MenuIdlePoseType = "SpeedStars.Bridge.MenuIdlePose";
+        private const string MenuEmotePlayerType = "SpeedStars.Bridge.MenuEmotePlayer"; // T-040
 
         // Names in Serhat's template scene (Anamenu Themalari). The builder stops with a message when one is gone.
         public const string PlatformName = "Foreground Character Platform";
@@ -75,6 +76,10 @@ namespace SpeedStars.Tools.Builders
             // The idle pose is added here, not at runtime, so its angles are editable in the Inspector before Play.
             Type idlePose = FindType(MenuIdlePoseType);
             if (idlePose != null && runner.GetComponent(idlePose) == null) runner.AddComponent(idlePose);
+
+            // T-040: procedural emotes blend on top of the idle pose (runs right after it in LateUpdate).
+            Type emotePlayer = FindType(MenuEmotePlayerType);
+            if (emotePlayer != null && runner.GetComponent(emotePlayer) == null) runner.AddComponent(emotePlayer);
 
             Log(Source, $"Home: '{runner.name}' prefab instance under '{PlatformName}' (local {localPosition}, replaces '{TemplateCharacterName}'), {menuCharacter.Name}.{target.name} -> runner root.");
             return runner;

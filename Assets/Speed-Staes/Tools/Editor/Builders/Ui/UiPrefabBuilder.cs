@@ -40,6 +40,7 @@ namespace SpeedStars.Tools.Builders
                 run.Build(UiPrefabPaths.ThemeSelectScreen, UiThemeSelectPrefabs.ThemeSelect);
                 UiCostumePrefabs.BuildAll(run.Build); // T-026: item card + preset row + the costume editor screen (CosmeticsScreen path)
                 UiLeaderboardPrefabs.BuildAll(run.Build, scene, eventSelectContent); // T-038: leaderboard screen (HighScoresScreen path) + its row prefabs
+                UiEmotePrefabs.BuildAll(run.Build); // T-040: emote card + the emote screen (costume editor art)
                 run.Build(UiPrefabPaths.RaceHud, UiScreenPrefabs.RaceHud);
                 UiResultsPrefabs.BuildAll(run.Build); // T-033: table row prefab + the results screen with the Oyun_Bitis_UI_v1 art
                 UiAnalysisPrefabs.BuildAll(run.Build); // T-036: ranking row prefab + the Analysis screen (Analiz_UI_v1 art)
