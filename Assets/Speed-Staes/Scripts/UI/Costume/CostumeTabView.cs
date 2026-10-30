@@ -5,8 +5,8 @@ using UnityEngine.UI;
 namespace SpeedStars.UI.Costume
 {
     /// <summary>
-    /// One tab of the wardrobe panel: a button with a normal and a selected (red) background, its icon, and for Body a
-    /// second icon that is white while selected. Binds existing objects only; which category the tab lists comes from the
+    /// One tab of the wardrobe panel: a button with a normal and a selected (red) background, its icon, and for Top a
+    /// second icon that is white while selected (Top). Binds existing objects only; which category the tab lists comes from the
     /// config asset (by <see cref="Tab"/>).
     /// </summary>
     public sealed class CostumeTabView : MonoBehaviour
@@ -23,7 +23,7 @@ namespace SpeedStars.UI.Costume
         [Tooltip("Icon shown while not selected (and always, when there is no selected icon).")]
         [SerializeField] private GameObject icon;
 
-        [Tooltip("Optional icon shown instead of the normal one while selected (Body: white). Empty = the same icon in both states.")]
+        [Tooltip("Optional icon shown instead of the normal one while selected (Top: white). Empty = the same icon in both states.")]
         [SerializeField] private GameObject selectedIcon;
 
         [Tooltip("Tab name text (Face, Head, ...). Optional.")]

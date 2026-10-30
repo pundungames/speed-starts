@@ -22,18 +22,20 @@ namespace SpeedStars.Tools.Builders
 
         public const string Path = ConfigAssetSeeder.Folder + "/CostumeEditorConfig.asset";
 
-        /// <summary>Tab -> category and whether it has content. Emote has none yet (its category slot is unused).</summary>
+        /// <summary>Tab -> category and whether it has content. Body (skin) and Emote list no category (that slot is unused); the
+        /// screen gives them their behaviour in code (<see cref="CostumeTabRules"/>), so an older asset without these entries works too.</summary>
         private static readonly (CostumeTab tab, CosmeticCategory category, bool hasContent)[] SeedTabs =
         {
             (CostumeTab.Face, CosmeticCategory.Glasses, true),
             (CostumeTab.Head, CosmeticCategory.Headwear, true),
-            (CostumeTab.Body, CosmeticCategory.Tops, true),
+            (CostumeTab.Top, CosmeticCategory.Tops, true),
             (CostumeTab.Shorts, CosmeticCategory.Shorts, true),
             (CostumeTab.Leggings, CosmeticCategory.Leggings, true),
             (CostumeTab.Hands, CosmeticCategory.Gloves, true),
             (CostumeTab.Shoes, CosmeticCategory.Shoes, true),
             (CostumeTab.Socks, CosmeticCategory.Socks, true),
-            (CostumeTab.Emote, CosmeticCategory.Headwear, false),
+            (CostumeTab.Emote, CosmeticCategory.Headwear, true),
+            (CostumeTab.Body, CosmeticCategory.Tops, true),
         };
 
         /// <returns>The asset (new, reset or the existing one with its picture list completed).</returns>

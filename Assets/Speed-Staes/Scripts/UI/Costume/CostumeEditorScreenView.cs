@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using DG.Tweening;
+using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Cosmetics;
 using SpeedStars.UI.Framework;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,13 +12,15 @@ namespace SpeedStars.UI.Costume
 {
     /// <summary>
     /// Costume editor ("Edit racer") screen: resource boxes, colour panel, stats, Random / Save, the purchase button under
-    /// the pedestal and the wardrobe panel (preset drop-down, nine tabs, two-column item grid). All objects are prefab
-    /// objects bound in the Inspector; item cards and preset rows come from prefabs under their content parents. What is
+    /// the pedestal and the wardrobe panel (preset drop-down, ten tabs, two-column item grid). All objects are prefab
+    /// objects bound in the Inspector; item cards, skin swatches and preset rows come from prefabs under their content parents. What is
     /// worn, whether it is saved, what Save / Purchase may do lives in <see cref="CostumeEditorModel"/> (pure C#); the menu
     /// character follows <see cref="ICosmeticPreview"/>, which this screen only feeds (<c>Show</c> on every change,
     /// <c>Reset</c> on Back). Back is UiPanel's close button: unsaved changes are dropped, the character returns to the saved
     /// outfit. A locked item can be tried on; Save is off while one is worn. Tab and item texts and numbers come from the
-    /// config asset.
+    /// config asset. The Body tab lists skin tones in the same grid and points the colour panel at the skin; the Emote tab
+    /// opens the emote screen on top of this one and the unsaved outfit waits there (Back from the emote screen brings it
+    /// back as it was).
     /// </summary>
     public sealed class CostumeEditorScreenView : UiScreen
     {
@@ -34,7 +38,7 @@ namespace SpeedStars.UI.Costume
         [Tooltip("Wardrobe/Presets: the 'Custom N' drop-down.")]
         [SerializeField] private CostumePresetDropdownView presetDropdown;
 
-        [Tooltip("Wardrobe/Tabs: the nine tabs, in the order of the CostumeTab enum.")]
+        [Tooltip("Wardrobe/Tabs: the ten tabs, in column order (each view carries its own CostumeTab value).")]
         [SerializeField] private CostumeTabView[] tabs = new CostumeTabView[0];
 
         [Tooltip("Wardrobe/Items: the item grid's scroll list.")]
@@ -46,8 +50,15 @@ namespace SpeedStars.UI.Costume
         [Tooltip("CostumeItemCard prefab with a CostumeItemCardView on its root.")]
         [SerializeField] private CostumeItemCardView cardPrefab;
 
+        [Tooltip("CostumeSkinSwatch prefab with a CostumeSkinSwatchView on its root: one ready-made skin tone of the Body tab, created under the same content parent.")]
+        [SerializeField] private CostumeSkinSwatchView swatchPrefab;
+
         [Tooltip("Wardrobe/ScrollTrack: the handle that follows the item grid.")]
         [SerializeField] private ScrollIndicatorView scrollIndicator;
+
+        [Header("Emote")]
+        [Tooltip("The emote screen (scene object, the same one Home opens). The Emote tab pushes it; empty = the Emote tab stays greyed out.")]
+        [SerializeField] private UiScreen emoteScreen;
 
         [Header("Left side")]
         [Tooltip("ColorPanel: colour channels of the worn item of the selected tab (boxes + square + strip).")]
@@ -89,6 +100,8 @@ namespace SpeedStars.UI.Costume
         [SerializeField] private Vector2 statBarSpan = new Vector2(0f, 1f);
 
         private ICosmeticService _service;
+        private CosmeticCatalog _catalog;
+        private ScreenNavigator _navigator;
         private ICosmeticPreview _preview;
         private IInstantiator _instantiator;
         private UiMotionConfig _cardMotion;
@@ -96,18 +109,23 @@ namespace SpeedStars.UI.Costume
         private CostumeTab _tab;
         private DeniedFeedback _saveDenied;
         private DeniedFeedback _purchaseDenied;
+        private bool _keepSession;
         private readonly List<CostumeItemCardView> _cards = new List<CostumeItemCardView>();
+        private readonly List<CostumeSkinSwatchView> _swatches = new List<CostumeSkinSwatchView>();
         private readonly List<string> _presetNames = new List<string>();
         private readonly List<string> _channelHexes = new List<string>();
 
         [Inject]
-        public void ConstructCostumeEditor(ICosmeticService service, ICosmeticPreview preview, IInstantiator instantiator, UiMotionConfig motion)
+        public void ConstructCostumeEditor(ICosmeticService service, ICosmeticPreview preview, IInstantiator instantiator, UiMotionConfig motion,
+            ScreenNavigator navigator, CosmeticCatalog catalog)
         {
             _service = service;
+            _navigator = navigator;
+            _catalog = catalog;
             _preview = preview;
             _instantiator = instantiator;
             _cardMotion = motion;
-            _model = new CostumeEditorModel(service);
+            _model = new CostumeEditorModel(service, catalog.DefaultSkinColor);
         }
 
         protected override void Awake()
@@ -120,7 +138,7 @@ namespace SpeedStars.UI.Costume
             randomButton.onClick.AddListener(OnRandom);
             saveButton.onClick.AddListener(OnSave);
             purchaseButton.onClick.AddListener(OnPurchase);
-            backButton.onClick.AddListener(DropPreview);
+            backButton.onClick.AddListener(OnBack);
             _saveDenied = new DeniedFeedback((RectTransform)saveButton.transform, saveBackground);
             _purchaseDenied = new DeniedFeedback((RectTransform)purchaseButton.transform, purchaseBackground);
         }
@@ -133,10 +151,15 @@ namespace SpeedStars.UI.Costume
             _service.Changed += RefreshAll;
             if (dimBackdrop != null) dimBackdrop.SetActive(true);
 
-            _model.Begin();
+            // Back from the emote screen: the unsaved outfit is still in the model, so it is shown again, not reverted.
+            bool resume = _keepSession;
+            _keepSession = false;
+            if (!resume) _model.Begin();
             DrawStats();
             ShowPresets();
-            SelectFirstAvailableTab();
+            if (resume && IsAvailable(_tab) && CostumeTabRules.KindOf(_tab) != CostumeTabKind.Emote) SelectTab(_tab);
+            else SelectFirstAvailableTab();
+            if (resume) _preview.Show(_model.Outfit);
             RefreshAll();
         }
 
@@ -167,9 +190,11 @@ namespace SpeedStars.UI.Costume
             if (randomButton != null) randomButton.onClick.RemoveListener(OnRandom);
             if (saveButton != null) saveButton.onClick.RemoveListener(OnSave);
             if (purchaseButton != null) purchaseButton.onClick.RemoveListener(OnPurchase);
-            if (backButton != null) backButton.onClick.RemoveListener(DropPreview);
+            if (backButton != null) backButton.onClick.RemoveListener(OnBack);
             foreach (CostumeItemCardView card in _cards)
                 if (card != null) card.Tapped -= OnItemTapped;
+            foreach (CostumeSkinSwatchView swatch in _swatches)
+                if (swatch != null) swatch.Tapped -= OnSwatchTapped;
             base.OnDestroy();
         }
 
@@ -191,15 +216,28 @@ namespace SpeedStars.UI.Costume
 
         private void SelectFirstAvailableTab()
         {
+            // The opening tab is the first list of items (the skin tab sits at the top of the column but is not the default).
             foreach (CostumeTabView tabView in tabs)
             {
-                if (!IsAvailable(tabView.Tab)) continue;
+                if (CostumeTabRules.KindOf(tabView.Tab) != CostumeTabKind.Items || !IsAvailable(tabView.Tab)) continue;
                 SelectTab(tabView.Tab);
                 return;
             }
         }
 
-        private bool IsAvailable(CostumeTab tab) => config.TryGetTab(tab, out CostumeTabEntry entry) && entry.HasContent;
+        /// <summary>
+        /// Item tabs follow the config asset. The Body (skin) tab is always there. The Emote tab is there while the emote screen
+        /// is bound; both are behaviour of the screen, so an asset saved before they existed still works.
+        /// </summary>
+        private bool IsAvailable(CostumeTab tab)
+        {
+            switch (CostumeTabRules.KindOf(tab))
+            {
+                case CostumeTabKind.Skin: return true;
+                case CostumeTabKind.Emote: return emoteScreen != null && _navigator != null;
+                default: return config.TryGetTab(tab, out CostumeTabEntry entry) && entry.HasContent;
+            }
+        }
 
         /// <summary>Everything that follows the outfit, the ownership or the saved state (cheap: a handful of objects).</summary>
         private void RefreshAll()
@@ -217,6 +255,7 @@ namespace SpeedStars.UI.Costume
                 bool known = _service.TryGetItem(card.CosmeticId, out CosmeticItemInfo item);
                 card.SetState(!slot.IsEmpty && slot.CosmeticId == card.CosmeticId, known && item.IsLocked);
             }
+            RefreshSwatches();
 
             colorPicker.SetInteractable(_model.CanColor);
             DrawColorBoxes();
@@ -244,9 +283,49 @@ namespace SpeedStars.UI.Costume
             colorPicker.SetColor(string.IsNullOrEmpty(current) ? config.EmptyColorHex : current);
         }
 
+        /// <summary>The swatch of the worn skin shows its frame and tick; a colour picked in the panel can match one too.</summary>
+        private void RefreshSwatches()
+        {
+            foreach (CostumeSkinSwatchView swatch in _swatches)
+                if (swatch.gameObject.activeSelf) swatch.SetSelected(_model.IsSkinColor(swatch.ColorHex));
+        }
+
+        /// <summary>The Body tab's grid: one swatch per ready-made tone of the catalog (swatches are reused, extra ones are switched off).</summary>
+        private void RebuildSkinTones()
+        {
+            foreach (CostumeItemCardView card in _cards) card.gameObject.SetActive(false);
+            if (swatchPrefab == null)
+            {
+                Debug.LogWarning($"{name}: {nameof(swatchPrefab)} is not assigned; the Body tab shows no skin tones (the colour panel still works).", this);
+                FinishGrid();
+                return;
+            }
+
+            int used = 0;
+            foreach (string tone in _catalog.SkinTones)
+            {
+                string hex = CosmeticColor.Normalize(tone);
+                if (hex.Length == 0 || !CosmeticColor.TryParse(hex, out Color color)) continue;
+                if (used == _swatches.Count)
+                {
+                    CostumeSkinSwatchView created = _instantiator.InstantiatePrefabForComponent<CostumeSkinSwatchView>(swatchPrefab.gameObject, itemsContent);
+                    created.Tapped += OnSwatchTapped;
+                    _swatches.Add(created);
+                }
+                _swatches[used].gameObject.SetActive(true);
+                _swatches[used].Bind(hex, color);
+                used++;
+            }
+            for (int i = used; i < _swatches.Count; i++) _swatches[i].gameObject.SetActive(false);
+
+            FinishGrid();
+        }
+
         /// <summary>The grid of the selected tab: cards are reused, extra ones are switched off.</summary>
         private void RebuildItems()
         {
+            foreach (CostumeSkinSwatchView swatch in _swatches) swatch.gameObject.SetActive(false);
+
             IReadOnlyList<CosmeticItemInfo> items = _service.GetItems(_model.Category);
             for (int i = 0; i < items.Count; i++)
             {
@@ -261,6 +340,11 @@ namespace SpeedStars.UI.Costume
             }
             for (int i = items.Count; i < _cards.Count; i++) _cards[i].gameObject.SetActive(false);
 
+            FinishGrid();
+        }
+
+        private void FinishGrid()
+        {
             LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)itemsContent);
             itemsScroll.verticalNormalizedPosition = 1f;
             scrollIndicator.Redraw();
@@ -268,10 +352,22 @@ namespace SpeedStars.UI.Costume
 
         private void SelectTab(CostumeTab tab)
         {
-            if (!config.TryGetTab(tab, out CostumeTabEntry entry) || !entry.HasContent) return;
-            _tab = tab;
-            _model.SelectCategory(entry.Category);
-            RebuildItems();
+            switch (CostumeTabRules.KindOf(tab))
+            {
+                case CostumeTabKind.Emote:
+                    return; // never "selected": it leaves the screen
+                case CostumeTabKind.Skin:
+                    _tab = tab;
+                    _model.SelectSkin();
+                    RebuildSkinTones();
+                    return;
+                default:
+                    if (!config.TryGetTab(tab, out CostumeTabEntry entry) || !entry.HasContent) return;
+                    _tab = tab;
+                    _model.SelectCategory(entry.Category);
+                    RebuildItems();
+                    return;
+            }
         }
 
         // ---------------------------------------------------------------- taps
@@ -279,7 +375,30 @@ namespace SpeedStars.UI.Costume
         private void OnTab(CostumeTab tab)
         {
             presetDropdown.Close();
+            if (CostumeTabRules.KindOf(tab) == CostumeTabKind.Emote)
+            {
+                OpenEmote();
+                return;
+            }
             SelectTab(tab);
+            RefreshAll();
+        }
+
+        /// <summary>Pushes the emote screen over this one; this screen hides, keeping its session for the way back.</summary>
+        private void OpenEmote()
+        {
+            if (emoteScreen == null || _navigator == null) return;
+            _keepSession = true;
+            _navigator.Push(emoteScreen);
+        }
+
+        private void OnSwatchTapped(string hex)
+        {
+            presetDropdown.Close();
+            if (!_model.SetSkinColor(hex)) return;
+            _preview.Show(_model.Outfit);
+            foreach (CostumeSkinSwatchView swatch in _swatches)
+                if (swatch.gameObject.activeSelf && swatch.ColorHex == hex) swatch.Punch(_cardMotion);
             RefreshAll();
         }
 
@@ -304,6 +423,7 @@ namespace SpeedStars.UI.Costume
             if (!_model.SetColor(hex)) return;
             _preview.Show(_model.Outfit);
             RefreshSaveButton();
+            RefreshSwatches();
         }
 
         private void OnChannelTapped(int index)
@@ -369,6 +489,13 @@ namespace SpeedStars.UI.Costume
                     return;
                 }
             }
+        }
+
+        /// <summary>Back leaves for good: nothing is kept for a later open.</summary>
+        private void OnBack()
+        {
+            _keepSession = false;
+            DropPreview();
         }
 
         private void DropPreview()

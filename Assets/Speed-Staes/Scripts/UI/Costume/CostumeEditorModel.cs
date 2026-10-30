@@ -1,6 +1,7 @@
 using System;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Cosmetics;
 
 namespace SpeedStars.UI.Costume
 {
@@ -23,16 +24,21 @@ namespace SpeedStars.UI.Costume
     /// Rules: a locked (unowned) item may be worn to look at it, but then Save is off; Random keeps the unsaved outfit
     /// apart from the saved one; tapping the worn item takes it off; a new item keeps the colours of the category. The
     /// colour picker edits one colour channel of the worn item at a time (<see cref="ChannelIndex"/>); items have 1 to 3.
+    /// In skin mode (<see cref="SelectSkin"/>, the Body tab) the picker edits the runner's skin colour instead: one channel,
+    /// always available, kept in the outfit (<see cref="CosmeticOutfit.SkinColorHex"/>) so Save and the preview carry it.
     /// </summary>
     public sealed class CostumeEditorModel
     {
         private readonly ICosmeticService _service;
         private CosmeticOutfit _saved = CosmeticOutfit.Empty;
+        private readonly string _defaultSkinHex;
         private int _channel;
 
-        public CostumeEditorModel(ICosmeticService service)
+        /// <param name="defaultSkinColor">"RRGGBB" of the skin an outfit without a skin colour has (the catalog's); empty = unknown.</param>
+        public CostumeEditorModel(ICosmeticService service, string defaultSkinColor = "")
         {
             _service = service ?? throw new ArgumentNullException(nameof(service));
+            _defaultSkinHex = CosmeticColor.Normalize(defaultSkinColor);
             Outfit = CosmeticOutfit.Empty;
             Category = CosmeticOutfit.Categories.Length > 0 ? CosmeticOutfit.Categories[0] : default;
         }
@@ -45,6 +51,19 @@ namespace SpeedStars.UI.Costume
 
         /// <summary>The category whose items the grid lists and whose colour the picker changes.</summary>
         public CosmeticCategory Category { get; private set; }
+
+        /// <summary>True while the colour picker edits the skin (Body tab) and not an item.</summary>
+        public bool SkinMode { get; private set; }
+
+        /// <summary>The skin colour shown now: the outfit's own, else the catalog default (empty only when neither is known).</summary>
+        public string SkinHex
+        {
+            get
+            {
+                string own = CosmeticColor.Normalize(Outfit.SkinColorHex);
+                return own.Length > 0 ? own : _defaultSkinHex;
+            }
+        }
 
         public bool IsDirty => !Outfit.Equals(_saved);
 
@@ -69,13 +88,14 @@ namespace SpeedStars.UI.Costume
         public CosmeticSlot SelectedSlot => Outfit.Get(Category);
 
         /// <summary>The colour picker needs an item to recolour.</summary>
-        public bool CanColor => !SelectedSlot.IsEmpty;
+        public bool CanColor => SkinMode || !SelectedSlot.IsEmpty;
 
         /// <summary>How many colour channels the worn item of the category has (the colour boxes shown); 0 while the slot is bare.</summary>
         public int ChannelCount
         {
             get
             {
+                if (SkinMode) return 1;
                 CosmeticSlot slot = SelectedSlot;
                 if (slot.IsEmpty) return 0;
                 return _service.TryGetItem(slot.CosmeticId, out CosmeticItemInfo item) ? item.ChannelCount : 1;
@@ -99,6 +119,7 @@ namespace SpeedStars.UI.Costume
         /// </summary>
         public string ChannelHex(int index)
         {
+            if (SkinMode) return index == 0 ? SkinHex : string.Empty;
             CosmeticSlot slot = SelectedSlot;
             if (slot.IsEmpty) return string.Empty;
             string set = slot.ColorAt(index);
@@ -133,7 +154,31 @@ namespace SpeedStars.UI.Costume
         public void SelectCategory(CosmeticCategory category)
         {
             Category = category;
+            SkinMode = false;
             _channel = 0;
+        }
+
+        /// <summary>The picker now edits the skin colour (the Body tab); items are not listed.</summary>
+        public void SelectSkin()
+        {
+            SkinMode = true;
+            _channel = 0;
+        }
+
+        /// <summary>Wears this skin colour ("RRGGBB", with or without '#'). False for text that is not a colour.</summary>
+        public bool SetSkinColor(string colorHex)
+        {
+            string hex = CosmeticColor.Normalize(colorHex);
+            if (hex.Length == 0) return false;
+            Outfit = Outfit.WithSkinColor(hex);
+            return true;
+        }
+
+        /// <summary>Whether this colour is the skin worn now (a ready-made tone shows itself selected by this).</summary>
+        public bool IsSkinColor(string colorHex)
+        {
+            string hex = CosmeticColor.Normalize(colorHex);
+            return hex.Length > 0 && string.Equals(hex, SkinHex, StringComparison.Ordinal);
         }
 
         public ItemTapOutcome TapItem(string cosmeticId)
@@ -157,14 +202,16 @@ namespace SpeedStars.UI.Costume
         public bool SetColor(string colorHex)
         {
             if (!CanColor) return false;
+            if (SkinMode) return SetSkinColor(colorHex);
             Outfit = Outfit.WithColor(Category, ChannelIndex, colorHex);
             return true;
         }
 
-        /// <summary>Owned items and palette colours in every category; not saved.</summary>
+        /// <summary>Owned items and palette colours in every category; not saved. The skin stays as it is: Random is clothes only.</summary>
         public void Randomize(System.Random random)
         {
-            Outfit = _service.CreateRandomOutfit(random) ?? CosmeticOutfit.Empty;
+            string skin = Outfit.SkinColorHex;
+            Outfit = (_service.CreateRandomOutfit(random) ?? CosmeticOutfit.Empty).WithSkinColor(skin);
             _channel = 0;
         }
 
@@ -175,6 +222,7 @@ namespace SpeedStars.UI.Costume
         public bool TryGetBuyableItem(out CosmeticItemInfo item)
         {
             item = default;
+            if (SkinMode) return false;
             CosmeticSlot slot = SelectedSlot;
             if (slot.IsEmpty || !_service.TryGetItem(slot.CosmeticId, out item)) return false;
             return item.IsPremium && item.IsLocked && item.IsForSale;

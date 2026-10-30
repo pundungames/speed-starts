@@ -4,18 +4,23 @@ using UnityEngine;
 
 namespace SpeedStars.UI.Costume
 {
-    /// <summary>The nine tabs of the wardrobe panel, in the order they sit in the art (top to bottom).</summary>
+    /// <summary>
+    /// The tabs of the wardrobe panel. The numbers are stored in the config asset and the prefab, so they never change:
+    /// 2 was "Body" (the Tops list) and is now <see cref="Top"/>; the new skin tab "Body" takes the next free number (9).
+    /// Their order on screen is the order of the tab views in the prefab, not this order.
+    /// </summary>
     public enum CostumeTab
     {
         Face = 0,
         Head = 1,
-        Body = 2,
+        Top = 2,
         Shorts = 3,
         Leggings = 4,
         Hands = 5,
         Shoes = 6,
         Socks = 7,
-        Emote = 8
+        Emote = 8,
+        Body = 9
     }
 
     /// <summary>What one tab shows: the cosmetic category behind it, or nothing (the tab is switched off).</summary>
@@ -25,10 +30,10 @@ namespace SpeedStars.UI.Costume
         [Tooltip("Which tab this is.")]
         [SerializeField] private CostumeTab tab;
 
-        [Tooltip("Cosmetic category the tab lists (Face = Glasses, Head = Headwear, Body = Tops, Hands = Gloves). Ignored when the tab has no content.")]
+        [Tooltip("Cosmetic category the tab lists (Face = Glasses, Head = Headwear, Top = Tops, Hands = Gloves). Ignored by the Body (skin) and Emote tabs, which list no category.")]
         [SerializeField] private CosmeticCategory category;
 
-        [Tooltip("Off = the tab has nothing to show yet (Emote) and cannot be tapped.")]
+        [Tooltip("Off = the tab has nothing to show and cannot be tapped.")]
         [SerializeField] private bool hasContent = true;
 
         public CostumeTab Tab => tab;

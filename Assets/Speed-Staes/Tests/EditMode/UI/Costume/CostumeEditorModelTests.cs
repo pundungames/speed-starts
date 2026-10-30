@@ -451,6 +451,151 @@ namespace SpeedStars.Tests.UI.Costume
             Assert.AreEqual(small * 2f, big, 0.0001f);
         }
 
+        // ---- skin (Body tab) ----
+
+        private const string DefaultSkin = "462B27";
+        private const string LightSkin = "FFDFC4";
+
+        private CostumeEditorModel NewSkinModel()
+        {
+            var model = new CostumeEditorModel(_service, DefaultSkin);
+            model.Begin();
+            model.SelectSkin();
+            return model;
+        }
+
+        [Test]
+        public void TabRulesGiveEachTabItsBehaviour()
+        {
+            Assert.AreEqual(CostumeTabKind.Items, CostumeTabRules.KindOf(CostumeTab.Top), "Top is the old Body tab: the Tops list");
+            Assert.AreEqual(CostumeTabKind.Skin, CostumeTabRules.KindOf(CostumeTab.Body));
+            Assert.AreEqual(CostumeTabKind.Emote, CostumeTabRules.KindOf(CostumeTab.Emote));
+            foreach (CostumeTab tab in Enum.GetValues(typeof(CostumeTab)))
+            {
+                if (tab == CostumeTab.Body || tab == CostumeTab.Emote) continue;
+                Assert.AreEqual(CostumeTabKind.Items, CostumeTabRules.KindOf(tab), tab.ToString());
+            }
+        }
+
+        [Test]
+        public void TabNumbersStayCompatibleWithSavedAssets()
+        {
+            // Config assets and prefabs store the numbers: the old Body tab (2) is Top now, the new one takes a free number.
+            Assert.AreEqual(2, (int)CostumeTab.Top);
+            Assert.AreEqual(8, (int)CostumeTab.Emote);
+            Assert.AreEqual(9, (int)CostumeTab.Body);
+        }
+
+        [Test]
+        public void SkinModeColoursTheSkinEvenWithNothingWorn()
+        {
+            CostumeEditorModel model = NewSkinModel();
+
+            Assert.IsTrue(model.SkinMode);
+            Assert.IsTrue(model.CanColor);
+            Assert.AreEqual(1, model.ChannelCount);
+            Assert.AreEqual(DefaultSkin, model.ChannelHex(0), "no skin saved: the box shows the catalog default");
+        }
+
+        [Test]
+        public void ASkinColourGoesToTheOutfitAndMakesItDirty()
+        {
+            CostumeEditorModel model = NewSkinModel();
+
+            Assert.IsTrue(model.SetSkinColor(LightSkin.ToLowerInvariant()));
+
+            Assert.AreEqual(LightSkin, model.Outfit.SkinColorHex);
+            Assert.AreEqual(LightSkin, model.SkinHex);
+            Assert.IsTrue(model.IsSkinColor("#" + LightSkin));
+            Assert.IsFalse(model.IsSkinColor(DefaultSkin));
+            Assert.IsTrue(model.IsDirty);
+        }
+
+        [Test]
+        public void TheColourPanelInSkinModeChangesTheSkinNotTheItem()
+        {
+            _model.TapItem(HatA);
+            _model.SelectSkin();
+
+            Assert.IsTrue(_model.SetColor(Blue));
+
+            Assert.AreEqual(Blue, _model.Outfit.SkinColorHex);
+            Assert.AreNotEqual(Blue, _model.Outfit.Get(CosmeticCategory.Headwear).ColorHex);
+        }
+
+        [Test]
+        public void NotAColourIsRefused()
+        {
+            CostumeEditorModel model = NewSkinModel();
+
+            Assert.IsFalse(model.SetSkinColor("zzz"));
+            Assert.IsFalse(model.SetSkinColor(string.Empty));
+
+            Assert.IsFalse(model.IsDirty);
+        }
+
+        [Test]
+        public void SavingKeepsTheSkinWithTheOutfit()
+        {
+            CostumeEditorModel model = NewSkinModel();
+            model.SetSkinColor(LightSkin);
+
+            Assert.AreEqual(CosmeticSaveResult.Saved, model.Save());
+
+            Assert.AreEqual(LightSkin, _service.Saved[0].SkinColorHex);
+            Assert.IsFalse(model.IsDirty);
+        }
+
+        [Test]
+        public void RevertDropsAnUnsavedSkin()
+        {
+            CostumeEditorModel model = NewSkinModel();
+            model.SetSkinColor(LightSkin);
+
+            model.Revert();
+
+            Assert.AreEqual(DefaultSkin, model.SkinHex);
+            Assert.IsFalse(model.IsDirty);
+        }
+
+        [Test]
+        public void ClothesAndRandomKeepTheSkin()
+        {
+            CostumeEditorModel model = NewSkinModel();
+            model.SetSkinColor(LightSkin);
+            model.SelectCategory(CosmeticCategory.Headwear);
+
+            model.TapItem(HatA);
+            Assert.AreEqual(LightSkin, model.Outfit.SkinColorHex, "wearing an item keeps the skin");
+
+            _service.RandomOutfit = CosmeticOutfit.Empty.With(CosmeticCategory.Headwear, HatB);
+            model.Randomize(new Random(1));
+            Assert.AreEqual(HatB, model.Outfit.Get(CosmeticCategory.Headwear).CosmeticId);
+            Assert.AreEqual(LightSkin, model.Outfit.SkinColorHex, "Random is clothes only");
+        }
+
+        [Test]
+        public void PickingACategoryLeavesSkinMode()
+        {
+            CostumeEditorModel model = NewSkinModel();
+
+            model.SelectCategory(CosmeticCategory.Headwear);
+
+            Assert.IsFalse(model.SkinMode);
+            Assert.IsFalse(model.CanColor, "bare slot again");
+        }
+
+        [Test]
+        public void SkinModeOffersNoPurchase()
+        {
+            _model.TapItem(HatPremium);
+            Assert.IsTrue(_model.TryGetBuyableItem(out _), "the premium hat is buyable while its tab is open");
+
+            _model.SelectSkin();
+
+            Assert.IsFalse(_model.TryGetBuyableItem(out _));
+        }
+
         // ---- fake ----
 
         /// <summary>The cosmetic contract over a handful of test-chosen items; prices are arbitrary test inputs.</summary>

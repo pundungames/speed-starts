@@ -13,7 +13,7 @@ namespace SpeedStars.Tools.Builders
     /// <summary>
     /// The costume editor ("Edit racer") prefabs dressed with the designer's art (UI/Art/Costume): the screen
     /// (CosmeticsScreen.prefab: resource boxes, colour panel, stats, Random / Save, purchase button, wardrobe panel with
-    /// the preset drop-down, nine tabs, item grid and scroll track), the item card and the preset row. Component rects
+    /// the preset drop-down, ten tabs, item grid and scroll track), the item card, the skin swatch and the preset row. Component rects
     /// come from Costume/layout.json (reference 1678x937 -> canvas); layers of one component share its art canvas at 100%
     /// scale (transparent edges are not cropped). Parts that move at runtime (colour cursor, hue handle, chevron, scroll
     /// handle) are nodes sized to the alpha bounds of their art, with the art layer stretched back out to the whole art
@@ -26,6 +26,7 @@ namespace SpeedStars.Tools.Builders
         public const string ItemsFolder = ArtFolder + "/Items";
         public const string ItemCardPath = UiPrefabPaths.Root + "/Rows/CostumeItemCard.prefab";
         public const string PresetRowPath = UiPrefabPaths.Root + "/Rows/CostumePresetRow.prefab";
+        public const string SkinSwatchPath = UiPrefabPaths.Root + "/Rows/CostumeSkinSwatch.prefab";
 
         private const string LayoutPath = ArtFolder + "/layout.json";
         private const string SampleItemArt = "Items/Tops/T01"; // shown on the card prefab so the picture slot is visible; the view replaces it
@@ -65,11 +66,15 @@ namespace SpeedStars.Tools.Builders
         private const float HighlightMargin = 0.14f;     // ring thickness, fraction of the box
         private static readonly Color HighlightColor = new Color32(255, 32, 45, 255);
 
+        // Column order, top to bottom. The skin tab "Body" has no art of its own: it takes the Face tab's backgrounds and a
+        // figure icon from the stats panel (BodyTabIcon), sized and placed like the Emote tab's icon. The old "Body" tab (the
+        // red T-shirt, Tops) is now "Top" and keeps its art.
         private static readonly (CostumeTab tab, string stem)[] TabArt =
         {
+            (CostumeTab.Body, "category_face"),
             (CostumeTab.Face, "category_face"),
             (CostumeTab.Head, "category_head"),
-            (CostumeTab.Body, "category_body"),
+            (CostumeTab.Top, "category_body"),
             (CostumeTab.Shorts, "category_shorts"),
             (CostumeTab.Leggings, "category_leggings"),
             (CostumeTab.Hands, "category_hands"),
@@ -77,6 +82,13 @@ namespace SpeedStars.Tools.Builders
             (CostumeTab.Socks, "category_socks"),
             (CostumeTab.Emote, "category_emote"),
         };
+
+        private const string BodyTabIcon = "stats_height_icon";
+        private const string BodyTabIconBounds = "category_emote_icon"; // where the figure and the label sit inside the tab
+        private const int DropdownVisibleRows = 5;                      // rows of the open preset list before it scrolls
+
+        // Swatch colour inside its card frame (fractions of the card), so the frame stays visible around it.
+        private static readonly Vector2 SwatchInsetMin = new Vector2(0.12f, 0.12f), SwatchInsetMax = new Vector2(0.88f, 0.88f);
 
         /// <summary>
         /// Builds the item card, the preset row and the screen through the builder's own save routine (kept as it is when
@@ -89,9 +101,11 @@ namespace SpeedStars.Tools.Builders
 
             GameObject card = build(ItemCardPath, root => ItemCard(root, layout));
             GameObject presetRow = build(PresetRowPath, root => PresetRow(root, layout));
+            GameObject swatch = build(SkinSwatchPath, root => SkinSwatch(root, layout));
             var cardView = UiViewBinder.RowComponent<CostumeItemCardView>(card, ItemCardPath);
             var rowView = UiViewBinder.RowComponent<CostumePresetRowView>(presetRow, PresetRowPath);
-            build(UiPrefabPaths.CosmeticsScreen, root => BuildScreen(root, layout, config, cardView, rowView));
+            var swatchView = UiViewBinder.RowComponent<CostumeSkinSwatchView>(swatch, SkinSwatchPath);
+            build(UiPrefabPaths.CosmeticsScreen, root => BuildScreen(root, layout, config, cardView, rowView, swatchView));
         }
 
         // ---------------------------------------------------------------- item card and preset row
@@ -154,6 +168,37 @@ namespace SpeedStars.Tools.Builders
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        /// <summary>
+        /// One ready-made skin tone of the Body tab: the item card's own frames with a flat colour inside and the tick. The
+        /// colour is set by the view; the prefab shows white.
+        /// </summary>
+        private static void SkinSwatch(RectTransform root, UiArt.Layout layout)
+        {
+            LayoutSize(root, layout.Get("item_ivory"), layout.Scale);
+            var view = root.gameObject.AddComponent<CostumeSkinSwatchView>();
+
+            Image hit = HitArea(root.gameObject);
+            Button button = UiArt.MakeButton(root.gameObject, hit, true, alphaHit: false);
+
+            Image normal = UiArt.Layer(root, "Normal", Art("item_card_normal_background"));
+            Image selected = UiArt.Layer(root, "Selected", Art("item_card_selected_background"));
+            selected.gameObject.SetActive(false);
+
+            RectTransform colorNode = Kit.Span(Kit.Node(root, "Color"), SwatchInsetMin, SwatchInsetMax);
+            Image color = Kit.Fill(colorNode.gameObject, Color.white, raycast: false);
+
+            GameObject check = UiArt.Layer(root, "Check", Art("item_selected_check")).gameObject;
+            check.SetActive(false);
+
+            var so = new SerializedObject(view);
+            Ref(so, "button", button);
+            Ref(so, "normalBackground", normal.gameObject);
+            Ref(so, "selectedBackground", selected.gameObject);
+            Ref(so, "colorImage", color);
+            Ref(so, "check", check);
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static GameObject PremiumLayer(RectTransform parent, string name, string file)
         {
             GameObject layer = UiArt.Layer(parent, name, Art("Premium/" + file)).gameObject;
@@ -201,7 +246,7 @@ namespace SpeedStars.Tools.Builders
         // ---------------------------------------------------------------- screen
 
         private static void BuildScreen(RectTransform root, UiArt.Layout layout, CostumeEditorConfig config,
-            CostumeItemCardView cardPrefab, CostumePresetRowView rowPrefab)
+            CostumeItemCardView cardPrefab, CostumePresetRowView rowPrefab, CostumeSkinSwatchView swatchPrefab)
         {
             if (config == null) throw new InvalidOperationException("UiCostumePrefabs: CostumeEditorConfig asset is missing (CostumeConfigSeed).");
             var view = root.gameObject.AddComponent<CostumeEditorScreenView>();
@@ -240,6 +285,8 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "itemsScroll", itemsScroll);
             Ref(so, "itemsContent", content);
             Ref(so, "cardPrefab", cardPrefab);
+            Ref(so, "swatchPrefab", swatchPrefab);
+            // emoteScreen (the scene's emote screen) is scene-bound: the scene builder / Inspector sets it, a prefab cannot.
             Ref(so, "scrollIndicator", indicator);
             Ref(so, "colorPicker", picker);
             Ref(so, "resources", resources);
@@ -476,20 +523,45 @@ namespace SpeedStars.Tools.Builders
         {
             RectTransform group = Kit.Stretch(Kit.Node(wardrobe, "Tabs"));
             var tabs = new CostumeTabView[TabArt.Length];
-            for (int i = 0; i < TabArt.Length; i++) tabs[i] = Tab(group, layout, TabArt[i].tab, TabArt[i].stem);
+
+            // The art column holds nine tabs from the Face rect down to the end of the Emote rect. Ten tabs share the same
+            // column: every tab is scaled by the same factor (art proportions kept) and the column keeps its right edge.
+            UiArt.LayoutComponent first = layout.Get("category_face");
+            UiArt.LayoutComponent second = layout.Get("category_head");
+            UiArt.LayoutComponent last = layout.Get("category_emote");
+            float top = first.rect[1];
+            float bottom = last.rect[1] + last.rect[3];
+            float right = first.rect[0] + first.rect[2];
+            float pitchToHeight = (second.rect[1] - first.rect[1]) / (float)first.rect[3];
+            float height = (bottom - top) / ((TabArt.Length - 1) * pitchToHeight + 1f);
+            float width = first.rect[2] * height / first.rect[3];
+
+            for (int i = 0; i < TabArt.Length; i++)
+            {
+                var rect = new UiArt.LayoutComponent
+                {
+                    rect = new[]
+                    {
+                        Mathf.RoundToInt(right - width), Mathf.RoundToInt(top + i * height * pitchToHeight),
+                        Mathf.RoundToInt(width), Mathf.RoundToInt(height)
+                    }
+                };
+                tabs[i] = Tab(group, layout, rect, TabArt[i].tab, TabArt[i].stem);
+            }
             return tabs;
         }
 
-        private static CostumeTabView Tab(RectTransform parent, UiArt.Layout layout, CostumeTab tab, string stem)
+        private static CostumeTabView Tab(RectTransform parent, UiArt.Layout layout, UiArt.LayoutComponent rect, CostumeTab tab, string stem)
         {
             RectTransform node = Kit.Node(parent, tab.ToString());
-            layout.PlaceOnScreen(node, layout.Get(stem));
+            layout.PlaceOnScreen(node, rect);
             Image background = UiArt.Paint(node.gameObject, Art(stem + "_normal_background"), raycast: true);
             Button button = UiArt.MakeButton(node.gameObject, background, true, alphaHit: false);
             var view = node.gameObject.AddComponent<CostumeTabView>();
 
-            // Body has two icons (navy normal, white selected); every other tab one icon that works on both backgrounds.
-            bool twoIcons = tab == CostumeTab.Body;
+            // Top (the T-shirt) has two icons (navy normal, white selected); every other tab one icon that works on both backgrounds.
+            bool twoIcons = tab == CostumeTab.Top;
+            bool figure = tab == CostumeTab.Body;
             GameObject icon = null;
             if (twoIcons) icon = UiArt.Layer(node, "Icon", Art(stem + "_normal_icon")).gameObject;
 
@@ -502,13 +574,22 @@ namespace SpeedStars.Tools.Builders
                 selectedIcon = UiArt.Layer(node, "IconSelected", Art(stem + "_icon")).gameObject;
                 selectedIcon.SetActive(false);
             }
+            else if (figure)
+            {
+                // The figure sits where the Emote tab's icon sits; kept in its own aspect.
+                Vector4 spot = AlphaBounds(BodyTabIconBounds);
+                RectTransform figureNode = Kit.Span(Kit.Node(node, "Icon"), new Vector2(spot.x, spot.y), new Vector2(spot.z, spot.w));
+                Image figureImage = UiArt.Paint(figureNode.gameObject, Art(BodyTabIcon), raycast: false);
+                figureImage.preserveAspect = true;
+                icon = figureNode.gameObject;
+            }
             else
             {
                 icon = UiArt.Layer(node, "Icon", Art(stem + "_icon")).gameObject;
             }
 
             // Name right of the icon, drawn last so it is above every layer.
-            Vector4 tabIcon = AlphaBounds(stem + (twoIcons ? "_normal_icon" : "_icon"));
+            Vector4 tabIcon = AlphaBounds(figure ? BodyTabIconBounds : stem + (twoIcons ? "_normal_icon" : "_icon"));
             Text tabLabel = UiArt.Slot(node, "Label", CostumeTexts.TabName(tab), TabLabelSize,
                 new Vector2(tabIcon.z + LabelGap, 0.1f), new Vector2(TabLabelRight, 0.9f), TextAnchor.MiddleLeft);
             // Same size for every category ("Leggings" is the longest); no best fit, no wrap, margin kept on the right.
@@ -631,16 +712,35 @@ namespace SpeedStars.Tools.Builders
             {
                 rect = new[] { barRect.rect[0], barRect.rect[1] + barRect.rect[3], Mathf.RoundToInt(listSize.x), Mathf.RoundToInt(listSize.y) }
             };
+            // The art list holds as many rows as fit its height (3). With more presets the list is a window of
+            // DropdownVisibleRows rows on a scrolling column: it grows by whole rows, keeping the art's own padding, and is a
+            // sliced sprite so the outline does not stretch (the sprite's border is set in its import settings).
+            float endPadRef = Mathf.Max(0f, (listSize.y - Mathf.Floor(listSize.y / rowSize.y) * rowSize.y) * 0.5f);
+            int presets = PresetCount();
+            int visibleRows = Mathf.Min(presets, DropdownVisibleRows);
+            listRect.rect[3] = Mathf.RoundToInt(visibleRows * rowSize.y + 2f * endPadRef);
             RectTransform list = Kit.Node(group, "List");
             layout.PlaceOnScreen(list, listRect);
-            UiArt.Paint(list.gameObject, listArt, raycast: true);
+            Image listImage = UiArt.Paint(list.gameObject, listArt, raycast: true);
+            listImage.type = Image.Type.Sliced;
+            var listScroll = list.gameObject.AddComponent<ScrollRect>();
 
-            int presets = PresetCount();
-            RectTransform rows = Kit.Stretch(Kit.Node(list, "Rows"));
-            var rowLayout = rows.gameObject.AddComponent<VerticalLayoutGroup>();
             int sidePad = Mathf.RoundToInt(Mathf.Max(0f, (listSize.x - rowSize.x) * 0.5f) * layout.Scale);
-            int endPad = Mathf.RoundToInt(Mathf.Max(0f, (listSize.y - presets * rowSize.y) * 0.5f) * layout.Scale);
-            rowLayout.padding = new RectOffset(sidePad, sidePad, endPad, endPad);
+            int endPad = Mathf.RoundToInt(endPadRef * layout.Scale);
+            RectTransform viewport = Kit.Stretch(Kit.Node(list, "Viewport"), sidePad, sidePad, endPad, endPad);
+            viewport.gameObject.AddComponent<RectMask2D>();
+            RectTransform rows = Kit.Place(Kit.Node(viewport, "Rows"), new Vector2(0f, 1f), Vector2.one, new Vector2(0.5f, 1f), Vector2.zero, Vector2.zero);
+            var rowFitter = rows.gameObject.AddComponent<ContentSizeFitter>();
+            rowFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            rowFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            listScroll.viewport = viewport;
+            listScroll.content = rows;
+            listScroll.horizontal = false;
+            listScroll.vertical = true;
+            listScroll.movementType = ScrollRect.MovementType.Clamped;
+            listScroll.scrollSensitivity = 40f;
+
+            var rowLayout = rows.gameObject.AddComponent<VerticalLayoutGroup>();
             rowLayout.spacing = 0f;
             rowLayout.childAlignment = TextAnchor.UpperCenter;
             rowLayout.childControlWidth = true;
@@ -655,6 +755,7 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "chevron", chevron);
             Ref(so, "list", list.gameObject);
             Ref(so, "rowsParent", rows);
+            Ref(so, "listScroll", listScroll);
             Ref(so, "rowPrefab", rowPrefab);
             so.ApplyModifiedPropertiesWithoutUndo();
             return view;

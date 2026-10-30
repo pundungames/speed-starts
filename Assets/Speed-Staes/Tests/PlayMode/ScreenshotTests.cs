@@ -338,6 +338,62 @@ namespace SpeedStars.PlayTests
         }
 
         /// <summary>
+        /// T-066 evidence: Home_costume_body (the Body tab open, a skin tone picked, runner recoloured) and Home_costume_presets
+        /// (the preset drop-down open at its last rows). Home_costume (Shots_HomeAndRace) shows the Top label.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Shots_CostumeBodyAndPresets()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            try
+            {
+                yield return LoadScene(HomeScene);
+                HomeScreenView home = Require<HomeScreenView>();
+                yield return WaitUntil(() => home.IsVisible, "HomeScreen to be visible");
+                UiScreen screen = RequireField<UiScreen>(home, "cosmeticsScreen");
+                yield return Tap(RequireField<Button>(home, "editRacerButton"), "editRacerButton");
+                yield return WaitOpen(screen, "cosmeticsScreen");
+                yield return WaitClosed(home, "HomeScreen to step aside");
+
+                CostumeTabView bodyTab = null;
+                foreach (CostumeTabView view in RequireField<CostumeTabView[]>(screen, "tabs"))
+                    if (view != null && view.Tab == CostumeTab.Body) bodyTab = view;
+                Assert.IsNotNull(bodyTab, "Body tab view is not bound");
+                yield return Tap(RequireField<Button>(bodyTab, "button"), "Body tab");
+
+                Transform content = RequireField<Transform>(screen, "itemsContent");
+                var swatches = new List<CostumeSkinSwatchView>();
+                yield return WaitUntil(() =>
+                {
+                    swatches.Clear();
+                    foreach (CostumeSkinSwatchView swatch in content.GetComponentsInChildren<CostumeSkinSwatchView>(false)) swatches.Add(swatch);
+                    return swatches.Count > 1;
+                }, "skin swatches to appear");
+                yield return Tap(RequireField<Button>(swatches[1], "button"), "skin swatch");
+                yield return Settle();
+                yield return Capture(dir, "Home_costume_body");
+
+                CostumePresetDropdownView dropdown = RequireField<CostumePresetDropdownView>(screen, "presetDropdown");
+                yield return Tap(RequireField<Button>(dropdown, "bar"), "preset bar");
+                RequireField<ScrollRect>(dropdown, "listScroll").verticalNormalizedPosition = 0f;
+                yield return Settle();
+                yield return Capture(dir, "Home_costume_presets");
+
+                yield return Tap(RequireField<Button>(dropdown, "bar"), "preset bar (close)");
+                yield return Tap(CloseButtonOf(screen), "cosmeticsScreen Back");
+                yield return WaitClosed(screen, "cosmeticsScreen");
+            }
+            finally
+            {
+                saveFiles.Restore();
+            }
+        }
+
+        /// <summary>
         /// T-054 evidence: the entry gate in every state it can show, opened straight from the view (Play skips the gate while
         /// Timed access runs): Home_entrygate_ready (tickets, USE TICKET works), _full (TICKETS FULL, offers closed), _timed
         /// (a Timed Ticket in stock: USE TIMED TICKET shows) and _timedactive (the window runs: ticket button hidden).
