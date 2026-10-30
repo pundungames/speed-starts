@@ -5,6 +5,7 @@ using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Cosmetics;
 using SpeedStars.Meta.Economy;
+using SpeedStars.Meta.Leaderboard;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.Meta.Race;
 using SpeedStars.Meta.Settings;
@@ -37,6 +38,8 @@ namespace SpeedStars.Installers
         [SerializeField] private ThemeCatalog themes;
         [Tooltip("Settings window (T-031): languages, flags, player name rules, defaults.")]
         [SerializeField] private SettingsConfig settings;
+        [Tooltip("Local leaderboard (T-037): bot fields per event (placeholder times), day-best cap, page size.")]
+        [SerializeField] private LeaderboardConfig leaderboard;
 
         [Header("Scenes")]
         [SerializeField] private SceneFlowScenes scenes = new SceneFlowScenes();
@@ -62,6 +65,7 @@ namespace SpeedStars.Installers
             BindConfig(uiMotion);
             BindConfig(themes);
             BindConfig(settings);
+            BindConfig(leaderboard);
 
             Container.Bind<ISaveStore>().FromMethod(_ => FileSaveStore.CreateDefault()).AsSingle();
             Container.Bind<ProgressRepository>().FromMethod(CreateProgress).AsSingle();
@@ -80,7 +84,9 @@ namespace SpeedStars.Installers
             Container.Bind<IRaceRewardResolver>().To<RaceRewardResolver>().AsSingle();
             Container.Bind<IEntryTicketShop>().To<EntryTicketShop>().AsSingle();
             // T-033: best time per event, written once per race.
-            Container.Bind<IPersonalBests>().To<SpeedStars.Meta.Records.PersonalBestService>().AsSingle();
+            Container.Bind(typeof(IPersonalBests), typeof(IDayBestSource)).To<SpeedStars.Meta.Records.PersonalBestService>().AsSingle();
+            // T-037: local leaderboard (bots + the player's day bests); a server source can replace it behind the same interface.
+            Container.Bind(typeof(ILeaderboard), typeof(System.IDisposable)).To<LocalLeaderboard>().AsSingle();
             Container.Bind<IRaceSelection>().To<RaceSelection>().AsSingle();
 
             // T-025: presets, ownership, premium purchase; the preview is what the menu character wears right now.

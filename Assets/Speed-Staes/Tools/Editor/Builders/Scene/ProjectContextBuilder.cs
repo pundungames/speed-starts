@@ -1,6 +1,7 @@
 using System;
 using SpeedStars.Installers;
 using SpeedStars.Meta.Config;
+using SpeedStars.Meta.Leaderboard;
 using SpeedStars.Meta.Settings;
 using SpeedStars.Meta.Themes;
 using SpeedStars.UI.Framework;
@@ -37,6 +38,7 @@ namespace SpeedStars.Tools.Builders
             var uiMotion = LoadRequired<UiMotionConfig>(ConfigAssetSeeder.UiMotionPath, seeder);
             var themes = LoadRequired<ThemeCatalog>(ConfigAssetSeeder.ThemeCatalogPath, seeder);
             var settings = LoadRequired<SettingsConfig>(ConfigAssetSeeder.SettingsPath, seeder);
+            var leaderboard = LoadRequired<LeaderboardConfig>(ConfigAssetSeeder.LeaderboardPath, seeder);
 
             EnsureParentFolder(PrefabPath);
             var preview = EditorSceneManager.NewPreviewScene();
@@ -55,6 +57,7 @@ namespace SpeedStars.Tools.Builders
                 Prop(installerSo, "uiMotion").objectReferenceValue = uiMotion;
                 Prop(installerSo, "themes").objectReferenceValue = themes;
                 Prop(installerSo, "settings").objectReferenceValue = settings;
+                Prop(installerSo, "leaderboard").objectReferenceValue = leaderboard;
                 // Scene names must match Build Settings (SceneFlow loads by name); taken from the scene builder's paths.
                 Prop(installerSo, "scenes.homeScene").stringValue = SceneBuilder.HomeSceneName;
                 Prop(installerSo, "scenes.raceScene").stringValue = SceneBuilder.RaceSceneName;
@@ -71,7 +74,7 @@ namespace SpeedStars.Tools.Builders
             {
                 EditorSceneManager.ClosePreviewScene(preview);
             }
-            Log(Source, $"Wrote {PrefabPath} (ProjectContext + ProjectInstaller, 8 config references).");
+            Log(Source, $"Wrote {PrefabPath} (ProjectContext + ProjectInstaller, 9 config references).");
         }
     }
 }
