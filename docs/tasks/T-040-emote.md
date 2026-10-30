@@ -1,7 +1,7 @@
 ---
 id: T-040
 title: Emote ekrani + prosedurel emote'lar (menu karakteri) - var olan sanatla
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-026]
 owns_paths:
@@ -24,7 +24,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-040-emote
-commits: []
+commits: [d3d8613, abfed29, a08694b]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmoteServiceTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmotePlaybackTests.cs"
@@ -33,10 +33,10 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
+    durum: closed
     not: "ProjectInstaller (using SpeedStars.Meta.Emotes): field [SerializeField] private EmoteCatalog emotes; BindConfig(emotes); Container.Bind<IEmoteService>().To<EmoteService>().AsSingle(); Container.Bind<IEmotePreview>().To<EmotePreview>().AsSingle();  (EmoteService ctor = EmoteCatalog, ProgressRepository, IEconomyLedger, all bound already)"
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "ProjectContext prefab: ProjectInstaller.emotes -> Data/Config/EmoteCatalog.asset (seeded by ConfigAssetSeeder.SeedAll / EmoteCatalogSeed.Seed). Then re-run the UI prefab builder (EmoteCard + EmoteScreen prefabs, HomeScreen Emote button interactable) and the Home scene builder (EmoteScreen instance in HomeScreens, MenuEmotePlayer on the runner, HomeScreenView.emoteScreen + EmoteScreenView.dimBackdrop wired in SceneWiring)."
 started: 2026-10-30
 finished: 2026-10-30

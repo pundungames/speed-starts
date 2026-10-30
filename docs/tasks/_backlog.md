@@ -19,3 +19,4 @@
 - [kostüm] Renk örnek kutusu öğenin rengi yoksa lacivert; 'Watch Replay' etiketi iki satıra kırılıyor (28.10)
 - [analiz] DNF (0 s / dev force-finish) serisi yine 0 s'de düz çizgi + '100 m / 0.00 s' balonu çiziyor; DNF seride çizgi ve balon olmamalı (IMPLEMENTATION.md: eksik örnek 0 sayılmaz) (30.10)
 - [yaris basi] READY/SET/GO yazisi tasarimdakinden kucuk, SET gerilim cizgileri goruntude secilmiyor; olcek/alfa ince ayari (RaceStartConfig) (30.10)
+- [emote] kilit simgesi bazi adlarin ustune biniyor (Number One, Salute), panelin ustu bos, 'Equipped' butonu tasiyor; emote fiyatlari yer tutucu (Nakit) (30.10)
