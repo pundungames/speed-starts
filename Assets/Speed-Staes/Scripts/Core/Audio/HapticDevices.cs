@@ -31,6 +31,10 @@ namespace SpeedStars.Core.Audio
     {
         private const int OneShotMinApi = 26;
 
+        // Never called. Unity writes android.permission.VIBRATE into the manifest only when the scripts use Handheld.Vibrate;
+        // without the permission the JNI vibrate call fails and the buzz is silently off.
+        private static void KeepVibratePermission() => UnityEngine.Handheld.Vibrate();
+
         private UnityEngine.AndroidJavaObject _vibrator;
         private int _apiLevel;
 

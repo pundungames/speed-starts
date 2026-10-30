@@ -1,4 +1,5 @@
 using DG.Tweening;
+using SpeedStars.Core.Audio;
 using SpeedStars.Core.Services;
 using SpeedStars.Meta.Clock;
 using SpeedStars.Meta.Config;
@@ -44,6 +45,8 @@ namespace SpeedStars.Installers
         [SerializeField] private LeaderboardConfig leaderboard;
         [Tooltip("Menu emotes (T-040): procedural pose tracks, prices (placeholder Cash), free set.")]
         [SerializeField] private EmoteCatalog emotes;
+        [Tooltip("UI sounds and haptics (T-052): clip per SfxId, volumes, repeat gap, buzz length.")]
+        [SerializeField] private AudioConfig audio;
 
         [Header("Scenes")]
         [SerializeField] private SceneFlowScenes scenes = new SceneFlowScenes();
@@ -71,6 +74,7 @@ namespace SpeedStars.Installers
             BindConfig(settings);
             BindConfig(leaderboard);
             BindConfig(emotes);
+            BindConfig(audio);
 
             Container.Bind<ISaveStore>().FromMethod(_ => FileSaveStore.CreateDefault()).AsSingle();
             Container.Bind<ProgressRepository>().FromMethod(CreateProgress).AsSingle();
@@ -109,6 +113,12 @@ namespace SpeedStars.Installers
             Container.Bind<IPlayerSettings>().FromMethod(c => new PlayerSettingsService(c.Container.Resolve<SettingsConfig>(), c.Container.Resolve<ProgressRepository>())).AsSingle();
             // T-046: reset personal bests / reset all progress (settings kept).
             Container.Bind<IProgressReset>().To<SpeedStars.Meta.Settings.ProgressResetService>().AsSingle();
+            // T-052: UI sounds follow the settings switches; the buzz follows the sound switch (no separate haptics switch).
+            Container.Bind(typeof(IAudioOutput), typeof(System.IDisposable)).To<AudioSourceOutput>().AsSingle();
+            Container.Bind(typeof(ISfx), typeof(IMusic), typeof(System.IDisposable)).To<AudioService>().AsSingle().NonLazy();
+            Container.Bind<IHapticsDevice>().FromMethod(_ => HapticDevices.CreateDefault()).AsSingle();
+            Container.Bind<IHaptics>().To<HapticsService>().AsSingle();
+            Container.Bind<IButtonFeedbackHook>().To<ButtonSfxHook>().AsSingle();
 
             Container.Bind<IRaceEntryGate>().To<RaceEntryGate>().AsSingle();
             // Project-wide because the Entry Gate modal sits in both scenes (Play on Home, Race again on Race).
