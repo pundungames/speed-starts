@@ -1,7 +1,7 @@
 ---
 id: T-054
 title: Giris kapisi cilasi - tasan buton yazisi, gereksiz satir, bosluk, ikincil buton etiketleri; butun durumlarin ekran goruntusu
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-050]
 owns_paths:
@@ -13,7 +13,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-054-giris-kapisi-cila
-commits: []
+commits: [515218a, b85c824]
 tests:
   - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_EntryGateStates: Home_entrygate_ready/_full/_timed/_timedactive; -shotDir ile)"
   - "mevcut EntryGateModel EditMode + EntryGateAdSmokeTests degismedi"
@@ -21,7 +21,7 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "EntryGateModal prefab'i yeniden uret (UiEntryGatePrefabs.EntryGate, overwrite) ve Home'u yeniden uret. Yeni yol: Window/Actions/{UseEntryTicket,UseTimedTicket} (VerticalLayoutGroup); Window/Remaining baslangicta pasif; TicketIcon RectMask2D ile alttan kirpildi. Sonra Shots_EntryGateStates + Shots_HomeAndRace ile 5 goruntuyu al; Home_entrygate_ready'de biletin altindaki cikinti gittiyse TicketTabCrop (0.10) dogru, kesiliyorsa dusur"
 started: 2026-10-30
 finished: 2026-10-30

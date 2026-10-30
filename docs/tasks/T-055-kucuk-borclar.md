@@ -1,7 +1,7 @@
 ---
 id: T-055
 title: Kucuk borclar - okuyucusuz dayBoundary ayari, sonuc ekraninda iki satira kirilan Watch Replay, kostumde kenara dayanan Leggings
-status: review
+status: merged
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -14,14 +14,14 @@ owns_paths:
   - "docs/tasks/_backlog.md"
 touches_scene: true
 branch: agent/T-055-kucuk-borclar
-commits: []
+commits: [2b65519, b85c824]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Config/EconomyConfigTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Builder'lari yeniden kos (UiResultsPrefabs + UiCostumePrefabs) ve ResultsPanel / CostumeScreen prefab'larini + sahneleri yeniden uret: nav etiketleri 38pt sabit tek satir, kostum kategori etiketleri 30pt sabit, sag pay 0.08. EconomyConfig.asset'te eski 'dayBoundary: 0' satiri kalabilir (Unity yok sayar)."
 started: 2026-10-30
 finished: 2026-10-30
