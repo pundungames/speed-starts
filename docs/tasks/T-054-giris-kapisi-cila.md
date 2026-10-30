@@ -1,0 +1,56 @@
+---
+id: T-054
+title: Giris kapisi cilasi - tasan buton yazisi, gereksiz satir, bosluk, ikincil buton etiketleri; butun durumlarin ekran goruntusu
+status: todo
+owner: ui-agent
+depends_on: [T-050]
+owns_paths:
+  - "Assets/Speed-Staes/Scripts/UI/Home/EntryGate*.cs"
+  - "Assets/Speed-Staes/Scripts/UI/Home/HomeTexts.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiEntryGatePrefabs.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiViewBinder.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Home/**"
+  - "Assets/Speed-Staes/Tests/PlayMode/**"
+touches_scene: true
+branch: agent/T-054-giris-kapisi-cila
+commits: []
+tests: []
+analytics:
+  - "yok: projede analytics yok"
+needs: []
+started:
+finished:
+blocked_reason:
+---
+
+## Hedef
+T-050'nin giris kapisi calisiyor ama ekran goruntusunde (`pipeline-logs/shots-int7b-2026-10-30_125137/Home_entrygate.png`, 0/3 bilet
+durumu) cila eksik:
+1) Pasif **USE TICKET** yazisi butondan tasiyor (beyaz, buyuk). Etiket her durumda (aktif/pasif/basili) butona sigsin ve okunsun.
+2) "**Left: 0**" satiri "Tickets 0/3" ile ayni bilgiyi tekrarliyor -> pencereden kalksin (model alani testlerde kullaniliyorsa kalabilir,
+   yalniz gosterilmez).
+3) USE TICKET ile GET TICKETS arasinda **buyuk bos alan** var (gizli USE TIMED TICKET butonunun yeri olabilir). Gizli satir delik
+   birakmasin: ya yerlesim grubu ya da gorunurluge gore yeniden yerlestirme; pencere icerigi dengeli dagilsin.
+4) **BUY WITH CASH** etiketi dikeyde ortali degil ve WATCH AD'den kucuk; iki ikincil buton ayni etiket stilinde, ortali.
+5) `daily_ticket_icon`'un altindaki cikinti (sanat) goze batiyor: `ticket_flight_icon` daha temizse onu kullan, degilse kirp (sprite rect).
+6) RACE ENTRY basligi seridin iki ucuna dayaniyor; biraz kucuk ve ortali.
+Butun durumlarin ekran goruntusu: `Home_entrygate` (0 bilet) + yeni `Home_entrygate_ready` (1+ bilet, USE TICKET aktif),
+`Home_entrygate_full` (3/3, TICKETS FULL), `Home_entrygate_timed` (Sureli Bilet stokta / etkin). Kurulum var olan PlayMode yardimcilariyla
+(kayit/servis uzerinden), yalniz `-shotDir` ile calisir (ScreenshotTests deseni).
+
+Mantik degismez (EntryGateModel/EntryGateAdFlow davranisi ayni); yalniz gorunum, builder ve metin. Kod kalici UI kurmaz; DOTween yalniz
+cekirdek; dokunma alanlari gorunur bolge (TUZAKLAR). Prefab/sahne uretimi supervizorde (`needs:` SCENE).
+
+## Kabul kriterleri
+- [ ] Dort durumun goruntusunde tasan/kesilen yazi yok, bos delik yok, ikincil butonlar ayni stilde
+- [ ] Var olan EditMode/PlayMode testleri yesil (gerekiyorsa guncellenir; davranis testi silinmez)
+- [ ] needs: SCENE (EntryGateModal prefab + Home yeniden uretimi) yazili
+
+## Geri bildirim
+GORSEL  : var olan (punch/sallanma/donus) korunur
+SES     : T-052 buton sesi
+DOKUNSAL: T-052
+ZAMAN   : yok
+KAMERA  : yok
+
+## Calisma notu
