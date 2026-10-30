@@ -95,6 +95,12 @@ namespace SpeedStars.UI.Themes
         [Tooltip("ThemeAction/Premium/DisabledOverlay: dims the button when it cannot be pressed (not the in-use one).")]
         [SerializeField] private GameObject actionDisabledOverlay;
 
+        [Tooltip("Premium name text box (anchors, fractions of ThemeName): keeps the name inside the frame's inner line.")]
+        [SerializeField] private Vector2 premiumNameMin = new Vector2(0.16f, 0.16f);
+
+        [Tooltip("Premium name text box, upper right anchor (fractions of ThemeName).")]
+        [SerializeField] private Vector2 premiumNameMax = new Vector2(0.84f, 0.84f);
+
         [Tooltip("ThemeAction/GemIcon: price icon when the theme costs Purple Gems (the cash icon is CurrencyIcon).")]
         [SerializeField] private GameObject gemIcon;
 
@@ -109,6 +115,8 @@ namespace SpeedStars.UI.Themes
         private bool _plainColorsKnown;
         private Color _plainNameColor;
         private Color _plainActionColor;
+        private Vector2 _plainNameMin;
+        private Vector2 _plainNameMax;
         private bool _subscribed;
 
         [Inject]
@@ -209,7 +217,7 @@ namespace SpeedStars.UI.Themes
                 disabledSprite = background
             };
 
-            Color tone = look.Tone == ThemeActionTone.Light ? lightTextColor : darkTextColor;
+            Color tone = snapshot.Premium.ToneFor(look.Tone) == ThemeActionTone.Light ? lightTextColor : darkTextColor;
             bool price = look.Label == ThemeActionLabel.Price;
             bool gemPrice = snapshot.Premium.Currency == ThemePriceCurrency.PurpleGem && gemIcon != null;
             currencyIcon.SetActive(look.ShowsCurrencyIcon && !gemPrice);
@@ -235,8 +243,15 @@ namespace SpeedStars.UI.Themes
             {
                 _plainNameColor = nameBackground != null ? nameBackground.color : Color.white;
                 _plainActionColor = actionBackground.color;
+                _plainNameMin = nameText.rectTransform.anchorMin;
+                _plainNameMax = nameText.rectTransform.anchorMax;
                 _plainColorsKnown = true;
             }
+
+            // Premium name sits inside the frame's inner line; best fit shrinks long names to the smaller box.
+            bool inset = premium.IsPremium && namePremiumGroup != null;
+            nameText.rectTransform.anchorMin = inset ? premiumNameMin : _plainNameMin;
+            nameText.rectTransform.anchorMax = inset ? premiumNameMax : _plainNameMax;
 
             if (nameBackground != null) nameBackground.color = premium.IsPremium && namePremiumGroup != null ? Color.clear : _plainNameColor;
             actionBackground.color = premium.IsPremium && actionPremiumGroup != null ? Color.clear : _plainActionColor;

@@ -290,6 +290,20 @@ namespace SpeedStars.Tests.UI.Themes
         }
 
         [Test]
+        public void Premium_ActionTextIsAlwaysDark_PlainKeepsItsStateTone()
+        {
+            foreach (ThemeActionState state in Enum.GetValues(typeof(ThemeActionState)))
+            {
+                ThemeActionLook plain = ThemeSelectPresenter.LookFor(state);
+                PremiumLook premium = PremiumLook.For(true, ThemePriceCurrency.PurpleGem, state, plain.Interactable);
+                PremiumLook normal = PremiumLook.For(false, ThemePriceCurrency.Cash, state, plain.Interactable);
+
+                Assert.AreEqual(ThemeActionTone.Dark, premium.ToneFor(plain.Tone), state.ToString());
+                Assert.AreEqual(plain.Tone, normal.ToneFor(plain.Tone), state.ToString());
+            }
+        }
+
+        [Test]
         public void NonPremium_HasNoPremiumLayers()
         {
             foreach (ThemeActionState state in Enum.GetValues(typeof(ThemeActionState)))

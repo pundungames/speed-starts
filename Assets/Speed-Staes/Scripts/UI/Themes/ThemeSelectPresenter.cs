@@ -61,6 +61,12 @@ namespace SpeedStars.UI.Themes
         public bool ShowsRed => Frame == PremiumFrame.Red;
 
         /// <summary>
+        /// Text tone on the action button. The premium fill is light lavender in every state (also in use), so light text
+        /// would vanish: premium is always dark navy; a plain button keeps the tone of its own state.
+        /// </summary>
+        public ThemeActionTone ToneFor(ThemeActionTone plainTone) => IsPremium ? ThemeActionTone.Dark : plainTone;
+
+        /// <summary>
         /// Layers for one theme. The red frame belongs to the theme in use; the overlay dims an action button that cannot be
         /// pressed for another reason (too poor, not for sale), not the in-use one, which stays red and bright.
         /// </summary>
