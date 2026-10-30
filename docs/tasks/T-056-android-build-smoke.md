@@ -1,7 +1,7 @@
 ---
 id: T-056
 title: Android build duman testi - batchmode'da gelistirme APK'si, Android'e ozgu kodun derlenmesi, manifest izin kontrolu
-status: review
+status: merged
 owner: systems-agent
 depends_on: [T-052]
 owns_paths:
@@ -9,7 +9,7 @@ owns_paths:
   - "scripts/android-build.ps1"
 touches_scene: false
 branch: agent/T-056-android-build
-commits: []
+commits: [1650bf05, 8e966dcc, e3310f39]
 tests:
   - "gerekmiyor: build araci; dogrulamasi supervizorun kopyada kosacagi build'in kendisi"
 analytics:
@@ -59,3 +59,4 @@ KAMERA  : yok
 - Mevcut ayarlar (okundu): scriptingBackend bos (Mono), targetArchitectures=1 (yalniz ARMv7), minSdk 22, targetSdk 0 (auto) - magaza icin IL2CPP+ARM64 gerekecek.
 - Zorluk: Unity calistirilmadi; API imzalari 2022.3 bilgisinden. .meta dosyalarini Unity uretecek (hook yazdirmaz).
 - Birakilan: build sonucu dogrulamasi supervizorde.
+- Supervizor (30.10): kopyada ANDROID_BUILD_OK 449.9 MB (152 sn), vibrate=true; ayarlar Mono2x/ARMv7/minSdk 22. Doku 238 MB (UI sanati sikistirilmamis) -> T-057.
