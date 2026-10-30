@@ -171,5 +171,27 @@ namespace SpeedStars.Tests.UI.Race
             Assert.AreEqual(0f, go.ReleaseAlpha);
             Assert.IsTrue(_motion.IsFinished(RaceStartPhase.Go, _config.GoSeconds), "same length as before");
         }
+
+        [Test]
+        public void Backdrop_ShowsOnlyWhileTheCountdownShows()
+        {
+            Assert.IsFalse(_motion.BackdropVisible(RaceStartPhase.Idle, 0f), "no countdown, no dim or banner");
+            Assert.IsTrue(_motion.BackdropVisible(RaceStartPhase.Ready, 0f));
+            Assert.IsTrue(_motion.BackdropVisible(RaceStartPhase.Ready, 5f), "READY stays until SET");
+            Assert.IsTrue(_motion.BackdropVisible(RaceStartPhase.Set, 3f), "SET waits a random time");
+            Assert.IsTrue(_motion.BackdropVisible(RaceStartPhase.Go, 0f));
+            Assert.IsTrue(_motion.BackdropVisible(RaceStartPhase.Go, _config.GoSeconds * 0.5f));
+            Assert.IsFalse(_motion.BackdropVisible(RaceStartPhase.Go, _config.GoSeconds), "closes with the GO! burst");
+        }
+
+        [Test]
+        public void Config_BannerNumbers_AreUsable()
+        {
+            Assert.Greater(_config.BannerScale, 0f);
+            Assert.Greater(_config.BannerWordFontSize, 0f);
+            Assert.Greater(_config.DimColor.a, 0f, "the dim dims");
+            Assert.Less(_config.DimColor.a, 1f, "the dim is see-through");
+            Assert.IsFalse(_config.ReadySetOutline, "navy words on cream carry no outline by default");
+        }
     }
 }

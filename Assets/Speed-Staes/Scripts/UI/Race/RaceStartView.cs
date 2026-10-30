@@ -26,7 +26,10 @@ namespace SpeedStars.UI.Race
         [Tooltip("RaceStartConfig asset: motion numbers, colours, group scale.")]
         [SerializeField] private RaceStartConfig config;
 
-        [Tooltip("Group: everything that shows and hides (the art's 1024x576 canvas x the config's group scale, built into its size).")]
+        [Tooltip("BackdropRoot: the full-screen dim and the banner (background + flag) behind the words (T-064). A sibling under the Group, never a parent of the word, so the word's squash and growth never touch it. It shows and hides with the Group.")]
+        [SerializeField] private GameObject backdropRoot;
+
+        [Tooltip("Group: the speed lines and the word (the art's 1024x576 canvas x the config's group scale, built into its size); shows and hides with the countdown.")]
         [SerializeField] private RectTransform group;
 
         [Tooltip("Group/EffectsRoot: the speed lines' shared parent; it scales during the GO! burst.")]
@@ -181,6 +184,7 @@ namespace SpeedStars.UI.Race
         {
             _shown = false;
             if (group != null) group.gameObject.SetActive(false);
+            if (backdropRoot != null) backdropRoot.SetActive(false);
             if (_phase == RaceStartPhase.Go) _phase = RaceStartPhase.Idle; // the burst is over; nothing more to animate
         }
 
@@ -195,6 +199,7 @@ namespace SpeedStars.UI.Race
             {
                 _shown = true;
                 if (group != null) group.gameObject.SetActive(true);
+                if (backdropRoot != null) backdropRoot.SetActive(true);
             }
 
             // The pose offsets are in the art's units; the words are built group-scale times bigger, so the moves are too.
@@ -202,12 +207,15 @@ namespace SpeedStars.UI.Race
             textRoot.localScale = new Vector3(pose.TextScale.x, pose.TextScale.y, 1f);
             effectsRoot.localScale = new Vector3(pose.EffectsScale, pose.EffectsScale, 1f);
 
-            Color fill = _phase == RaceStartPhase.Go ? config.GoColor : config.WordColor;
+            // READY / SET: navy on the cream banner; GO!: red with the navy outline.
+            Color fill = _phase == RaceStartPhase.Go ? config.GoColor : config.ReadySetColor;
             fill.a *= pose.TextAlpha;
             wordText.color = fill;
             // The outline fades faster than the word: stacked copies would otherwise outlast the fill as a dark blot.
             Color outline = config.OutlineColor;
             outline.a *= ThickOutline.FadedCopyAlpha(pose.TextAlpha, config.OutlineFadePower, config.OutlineDirections);
+            // Navy words on cream need no outline (the approved art has none); stacked navy copies would only fatten the letters.
+            if (_phase != RaceStartPhase.Go && !config.ReadySetOutline) outline.a = 0f;
             wordOutline.SetColor(outline);
 
             SetAlpha(impactImages, pose.ImpactAlpha);

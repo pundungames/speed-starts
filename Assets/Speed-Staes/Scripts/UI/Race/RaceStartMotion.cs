@@ -53,6 +53,15 @@ namespace SpeedStars.UI.Race
             return phase == RaceStartPhase.Idle || (phase == RaceStartPhase.Go && seconds >= _config.GoSeconds);
         }
 
+        /// <summary>
+        /// Whether the dim and the banner behind the words show: exactly while the countdown shows (a pose that is visible and not
+        /// finished), so cancel, Idle and the end of GO! close them with no timer of their own.
+        /// </summary>
+        public bool BackdropVisible(RaceStartPhase phase, float seconds)
+        {
+            return !IsFinished(phase, seconds) && Sample(phase, seconds).Visible;
+        }
+
         private RaceStartPose Ready(float t)
         {
             RaceStartPose pose = Rest();

@@ -91,7 +91,7 @@ namespace SpeedStars.Core.Race
         [SerializeField] private float releaseScaleTo = 1.35f;
 
         [Header("Look")]
-        [Tooltip("Size of the words and lines against the art's own 1024x576 canvas (1 = the art as drawn; READY is then ~570 units wide). 1.7 puts READY at ~40% of a 2400-wide screen. The words get a real font size of Word Font Size x this, so they stay sharp. Read when the prefab is built (rebuild the RaceStart prefab after a change).")]
+        [Tooltip("Size of the speed lines (and the pose offsets) against the art's own 1024x576 canvas (1 = the art as drawn). The words themselves follow Banner Scale. Read when the prefab is built (rebuild the RaceStart prefab after a change).")]
         [Min(0.05f)]
         [SerializeField] private float groupScale = 1.7f;
 
@@ -99,18 +99,18 @@ namespace SpeedStars.Core.Race
         [Range(0.05f, 0.95f)]
         [SerializeField] private float groupCenterFromTopShare = 0.38f;
 
-        [Tooltip("READY and SET fill colour (#FFFCEF).")]
-        [SerializeField] private Color wordColor = new Color(1f, 0.988f, 0.937f, 1f);
+        [Tooltip("READY and SET fill colour: navy (#061A41) on the cream banner (T-064). Replaces the old cream Word Color, which an existing asset still holds but nothing reads.")]
+        [SerializeField] private Color readySetColor = new Color(0.024f, 0.102f, 0.255f, 1f);
 
         [Tooltip("GO! fill colour (#FF202D).")]
         [SerializeField] private Color goColor = new Color(1f, 0.125f, 0.176f, 1f);
 
-        [Tooltip("Outline colour of all three words (#061A41).")]
+        [Tooltip("Outline colour of the words that have one (#061A41).")]
         [SerializeField] private Color outlineColor = new Color(0.024f, 0.102f, 0.255f, 1f);
 
-        [Tooltip("Font size of the words (Kanit Black Italic) in the art's 1024x576 units; the prefab's real size is this x Group Scale. Read when the prefab is built, so a change needs a rebuild of the RaceStart prefab.")]
+        [Tooltip("Font size of the words (Kanit Black Italic) in the banner's own 864x184 units; the real size is this x Banner Scale, so READY (~3.6 em wide) fills ~90% of the banner's 540-unit text area. Read when the prefab is built (rebuild the RaceStart prefab after a change).")]
         [Min(20f)]
-        [SerializeField] private float wordFontSize = 160f;
+        [SerializeField] private float bannerWordFontSize = 132f;
 
         [Tooltip("Outline thickness as a share of the font size (the art's preview: 7 px on a 110 px word = 0.065).")]
         [Range(0f, 0.2f)]
@@ -123,6 +123,17 @@ namespace SpeedStars.Core.Race
         [Tooltip("While a word fades out its outline fades faster: the outline's share of the visible outline = word alpha ^ this. Without it the 16 stacked outline copies stay almost opaque and turn a fading GO! into a dark blue blot. 1 = same as the word; higher = the outline goes first.")]
         [Min(1f)]
         [SerializeField] private float outlineFadePower = 3f;
+
+        [Header("Banner (T-064)")]
+        [Tooltip("Size of the cream banner (864x184 art) as a multiplier: 1.39 makes it ~50% of a 2400-wide screen. The flag and the word's text area scale with it. Read when the prefab is built.")]
+        [Min(0.1f)]
+        [SerializeField] private float bannerScale = 1.39f;
+
+        [Tooltip("Colour of the full-screen dim behind the banner (the art's 6,26,65,135). A flat colour on an Image, no texture. Read when the prefab is built.")]
+        [SerializeField] private Color dimColor = new Color(6f / 255f, 26f / 255f, 65f / 255f, 135f / 255f);
+
+        [Tooltip("Off: READY and SET are plain navy on the cream banner (as approved); only GO! (red) keeps the navy outline.")]
+        [SerializeField] private bool readySetOutline;
 
         [Header("Reduced motion")]
         [Tooltip("On: no slide, squash, shake or lines; words only fade in. The words and the start moment stay as they are.")]
@@ -155,10 +166,13 @@ namespace SpeedStars.Core.Race
         public float GroupScale => groupScale;
         public float GroupCenterFromTopShare => groupCenterFromTopShare;
         public float OutlineFadePower => outlineFadePower;
-        public Color WordColor => wordColor;
+        public Color ReadySetColor => readySetColor;
         public Color GoColor => goColor;
         public Color OutlineColor => outlineColor;
-        public float WordFontSize => wordFontSize;
+        public float BannerWordFontSize => bannerWordFontSize;
+        public float BannerScale => bannerScale;
+        public Color DimColor => dimColor;
+        public bool ReadySetOutline => readySetOutline;
         public float OutlineThicknessRatio => outlineThicknessRatio;
         public int OutlineDirections => outlineDirections;
         public bool ReduceMotion => reduceMotion;

@@ -1,7 +1,7 @@
 ---
 id: T-064
 title: Yaris basi banner (Yaris_Baslangic_Banner_UI_v1) - READY/SET/GO dama bayrakli krem banner icinde, arkada lacivert dim
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-063]
 owns_paths:
@@ -14,12 +14,19 @@ owns_paths:
 touches_scene: true
 branch: agent/T-064-baslangic-banner
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceStartMotionTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "RaceStart prefab yeniden uretilsin (UiRaceStartPrefabs; Banner PNG'leri once Sprite olarak import edilir: Tools > UI art import): yeni BackdropRoot (StartDimScreen duz renk Image + StartVisualRoot[start_banner_background, start_banner_flag]) Group'un onunde; RaceStartView.backdropRoot = BackdropRoot, wordText yazi alani 540x137 x bannerScale. Race sahnesindeki RaceStart ornegi guncellensin; sonra Shots_RaceStartPhases 6 kare"
+  - tip: ASSET
+    durum: open
+    not: "Data/Config/RaceStartConfig.asset: yeni alanlar kod varsayilaniyla gelir (bannerScale 1.39, bannerWordFontSize 132, readySetColor #061A41, dimColor 6/26/65/135, readySetOutline false) - elle bir sey gerekmez. Eski wordColor/wordFontSize artik okunmaz. groupScale 1.7 yalniz hiz cizgileri ve poz ofsetleri icin kalir"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -54,3 +61,8 @@ ZAMAN   : degismez
 KAMERA  : yok
 
 ## Calisma notu
+Banner: BackdropRoot (dim + banner/bayrak) Group'un kardesi, altinda; RaceStartView Apply/Hide ile Group'la birlikte acip kapatir (yeni zamanlayici yok).
+Kelime kutusu = yazi alani 540x137 x bannerScale (1.39 -> banner ekran genisliginin ~%50'si); banner, yazi alani Group merkezine gelecek sekilde kaydirildi.
+READY/SET lacivert, kontur kapali (readySetOutline); GO! kirmizi + lacivert kontur. Sure/easing/faz/ses/girdi dokunulmadi; grup maskesi yok.
+Kural RaceStartMotion.BackdropVisible (saf) ile EditMode testli; prefab/sahne uretimi supervizorde (needs).
+Derlenmedi/test kosulmadi (kural). Dim PNG kopyalanmadi, config dimColor duz Image.
