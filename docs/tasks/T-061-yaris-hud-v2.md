@@ -1,7 +1,7 @@
 ---
 id: T-061
 title: Yaris HUD v2 - kullanicinin png.rar parcalari (kirpilmis, dogal boyut) + referans ekrana birebir yerlesim
-status: todo
+status: review
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -14,12 +14,16 @@ owns_paths:
 touches_scene: true
 branch: agent/T-061-yaris-hud-v2
 commits: []
-tests: []
+tests:
+  - "gerekmiyor: gorsel yerlesim; kadans hesabi saf RaceDisplayFormat.CadenceFraction (zaten testli), mevcut EditMode/PlayMode testleri degismedi"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "UI v2 prefab uretimini yeniden calistir (UiArt.ImportAll UI/Art/RaceHud PNG'lerini sprite alir, sonra RaceHud prefab'i UiV2Prefabs.RaceHud ile yeniden olusur). RaceHudView.cadenceTrack artik Cadence/Scale (eskiden Cadence/Track); Cash/Plus Image = plus_icon. Sonra Race_play/Race_countdown goruntusunu referansla karsilastir."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -65,3 +69,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+1. UiV2Prefabs.RaceHud yeniden yazildi: tum parcalar UI/Art/RaceHud, sprite dogal boyutunda (Native helper), konumlar gorevdeki referans olculerle; renkle cizilen enerji/kadans izi kalkti (track + fill/scale + pointer sanati).
+2. UiArt: RaceHudArt yolu + RaceHud(name); ImportAll zaten UI/Art altini AllDirectories aliyor, yeni klasor ayni kurallar + T-057 ASTC ile gelir; uretilen cadence_gradient kodu silindi.
+3. UiViewBinder: cadenceTrack artik Cadence/Scale (ibre cizilen 376 px aralikta kayar); RaceHudView.cs degismedi, alan sozlesmesi ayni.
+4. Referanssiz eski UI/Art/Race/*: kodda hicbiri referansli degil (UiArt.Race() yardimcisi duruyor); mevcut RaceHud prefab'i yeniden uretilince hepsi referanssiz: cadence_gradient, cadence_marker, cash_diamond_framed, cash_diamond_icon, cash_diamond_icon_alt, counter_panel, energy_icon, exit_icon, restart_icon, speedometer_icon, square_button_background, stopwatch_icon, telemetry_panel (framed/alt zaten referanssiz).
+5. Derlenmedi, Unity calistirilmadi. Referans ekran diskte yok: Time/Speed/Value metin kutulari (genislik, font 40/32/38/24) tahmini, gorselden ince ayar gerekebilir.
