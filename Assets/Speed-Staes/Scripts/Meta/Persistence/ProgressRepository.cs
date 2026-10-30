@@ -108,6 +108,48 @@ namespace SpeedStars.Meta.Persistence
             return true;
         }
 
+        /// <summary>
+        /// Deletes every race record: the per-event best times and the per-day bests (the leaderboard's source). Nothing
+        /// else changes. Saves at once; like <c>ResetAll</c> it replaces a save that was being protected.
+        /// </summary>
+        public void ResetPersonalBests()
+        {
+            PlayerProgress progress = RequireCurrent();
+            progress.BestTimes.Clear();
+            progress.DayBests.Clear();
+            Reclaim();
+            Save();
+        }
+
+        /// <summary>
+        /// Back to a brand-new player: starting balances, nothing owned, no records. The player's own settings (music, sound
+        /// effects, language, flag, name) and the clock guard (last seen UTC) are kept. Saves at once. A save that was being
+        /// protected (newer schema, unreadable) is replaced: the player asked for it.
+        /// </summary>
+        public void ResetAll()
+        {
+            PlayerProgress old = RequireCurrent();
+            PlayerProgress fresh = CreateNew();
+            fresh.MusicChoice = old.MusicChoice;
+            fresh.SfxChoice = old.SfxChoice;
+            fresh.LanguageCode = old.LanguageCode;
+            fresh.FlagCode = old.FlagCode;
+            fresh.PlayerName = old.PlayerName;
+            fresh.LastSeenUtcTicks = old.LastSeenUtcTicks;
+            Current = fresh;
+            Reclaim();
+            Save();
+        }
+
+        private PlayerProgress RequireCurrent() =>
+            Current ?? throw new InvalidOperationException("Call Load() before resetting.");
+
+        /// <summary>After an explicit reset the file is ours to write whatever it held before.</summary>
+        private void Reclaim()
+        {
+            if (!CanSave) Status = ProgressLoadStatus.Loaded;
+        }
+
         private PlayerProgress CreateNew()
         {
             StartingBalances start = _startingBalances();

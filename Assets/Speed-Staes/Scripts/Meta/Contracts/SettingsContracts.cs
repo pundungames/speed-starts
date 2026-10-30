@@ -17,6 +17,28 @@ namespace SpeedStars.Meta.Contracts
         InvalidCharacters
     }
 
+    /// <summary>The outside pages the settings window links to (their addresses live in the settings config).</summary>
+    public enum SettingsLink
+    {
+        PrivacyPolicy,
+        TermsOfUse,
+        Support
+    }
+
+    /// <summary>
+    /// The two resets of the settings window. Personal bests: every event record and day best is deleted. All progress: the
+    /// save becomes a new player's (starting balances from the economy config) but the player's settings stay.
+    /// <see cref="Changed"/> is raised after either, so screens that cache progress can refresh.
+    /// </summary>
+    public interface IProgressReset
+    {
+        event Action Changed;
+
+        void ResetPersonalBests();
+
+        void ResetAll();
+    }
+
     /// <summary>One language the player can pick (code + its name in its own language).</summary>
     public readonly struct LanguageInfo
     {

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Settings;
+using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using UnityEngine;
 using UnityEngine.UI;
@@ -120,6 +122,25 @@ namespace SpeedStars.UI.Settings
         [Tooltip("Done: validates and saves the name, then closes.")]
         [SerializeField] private Button doneButton;
 
+        [Header("Links and resets")]
+        [Tooltip("Privacy Policy row tap area.")]
+        [SerializeField] private SettingsActionRowView privacyRow;
+
+        [Tooltip("Terms of Use row tap area.")]
+        [SerializeField] private SettingsActionRowView termsRow;
+
+        [Tooltip("Support row tap area.")]
+        [SerializeField] private SettingsActionRowView supportRow;
+
+        [Tooltip("Reset Personal Bests row tap area.")]
+        [SerializeField] private SettingsActionRowView resetBestsRow;
+
+        [Tooltip("Reset All Progress row tap area.")]
+        [SerializeField] private SettingsActionRowView resetAllRow;
+
+        [Tooltip("PopupLayer/ConfirmDialog: the yes/no window of the resets. Starts inactive.")]
+        [SerializeField] private ConfirmDialogView confirmDialog;
+
         [Header("Refusal shake")]
         [Tooltip("Seconds the name field shakes after a refused name.")]
         [Min(0f)]
@@ -145,11 +166,19 @@ namespace SpeedStars.UI.Settings
         private Tween _shake;
         private Vector2 _shakeBase;
         private Tween _closeDelay;
+        private SettingsConfig _config;
+        private IProgressReset _reset;
+        private SceneFlow _sceneFlow;
+        private readonly ResetConfirmFlow _confirm = new ResetConfirmFlow();
 
         [Inject]
         public void ConstructSettings(IPlayerSettings settings, UiMotionConfig motion, IInstantiator instantiator,
-            [InjectOptional] ScreenNavigator navigator)
+            [InjectOptional] ScreenNavigator navigator, [InjectOptional] SettingsConfig config,
+            [InjectOptional] IProgressReset reset, [InjectOptional] SceneFlow sceneFlow)
         {
+            _config = config;
+            _reset = reset;
+            _sceneFlow = sceneFlow;
             _settings = settings;
             _settingsMotion = motion;
             _instantiator = instantiator;
@@ -181,6 +210,8 @@ namespace SpeedStars.UI.Settings
             CloseLanguageWindow();
             CloseFlagWindow();
             RefreshValues();
+            BindActionRows();
+            EndConfirm();
         }
 
         protected override void OnDisable()
@@ -188,6 +219,8 @@ namespace SpeedStars.UI.Settings
             if (_settings != null) _settings.Changed -= RefreshValues;
             KillShake();
             KillCloseDelay();
+            _confirm.Cancel();
+            if (confirmDialog != null) confirmDialog.Hide();
             if (languageWindow != null) languageWindow.SetActive(false); // null while the scene is being destroyed
             if (flagWindow != null) flagWindow.SetActive(false);
             base.OnDisable();
@@ -267,6 +300,81 @@ namespace SpeedStars.UI.Settings
             flagValueImage.sprite = flagSprite;
             flagValueImage.enabled = flagSprite != null;
             foreach (FlagCellView cell in _flagCells) cell.SetSelected(cell.Code == flag);
+        }
+
+        // ---------------------------------------------------------------- links and resets
+
+        private void BindActionRows()
+        {
+            BindLink(privacyRow, SettingsTexts.PrivacyPolicy, SettingsLink.PrivacyPolicy);
+            BindLink(termsRow, SettingsTexts.TermsOfUse, SettingsLink.TermsOfUse);
+            BindLink(supportRow, SettingsTexts.Support, SettingsLink.Support);
+
+            bool canReset = _reset != null;
+            resetBestsRow.Bind(SettingsTexts.ResetPersonalBests, () => BeginReset(ResetKind.PersonalBests), canReset);
+            resetAllRow.Bind(SettingsTexts.ResetAllProgress, () => BeginReset(ResetKind.AllProgress), canReset);
+        }
+
+        private void BindLink(SettingsActionRowView row, string caption, SettingsLink link)
+        {
+            bool usable = _config != null && !string.IsNullOrEmpty(_config.GetLinkUrl(link));
+            row.Bind(caption, () => OpenLink(link), usable);
+        }
+
+        private void OpenLink(SettingsLink link)
+        {
+            string url = _config != null ? _config.GetLinkUrl(link) : string.Empty;
+            if (!string.IsNullOrEmpty(url)) Application.OpenURL(url);
+        }
+
+        private void BeginReset(ResetKind kind)
+        {
+            _confirm.Begin(kind);
+            ShowConfirm();
+        }
+
+        private void ShowConfirm()
+        {
+            if (!_confirm.IsOpen)
+            {
+                confirmDialog.Hide();
+                return;
+            }
+
+            bool final = _confirm.IsFinalStep;
+            confirmDialog.Show(SettingsTexts.ConfirmTitle(_confirm.Kind, _confirm.Step),
+                SettingsTexts.ConfirmBody(_confirm.Kind, _confirm.Step),
+                SettingsTexts.ConfirmButton(final), final, OnConfirmYes, EndConfirm);
+        }
+
+        private void OnConfirmYes()
+        {
+            ResetKind run = _confirm.Confirm();
+            if (run == ResetKind.None)
+            {
+                ShowConfirm(); // first question answered: ask the next one
+                return;
+            }
+
+            confirmDialog.Hide();
+            if (_reset == null) return;
+
+            if (run == ResetKind.PersonalBests)
+            {
+                _reset.ResetPersonalBests();
+                return;
+            }
+
+            _reset.ResetAll();
+            // Every screen shows the old progress: load Home again. Without the flow the window just closes.
+            if (_sceneFlow != null) _sceneFlow.GoTo(GameScene.Home);
+            else if (_navigator != null) PanelCloseRule.Close(_navigator, this, true);
+        }
+
+        private void EndConfirm()
+        {
+            _confirm.Cancel();
+            confirmDialog.Hide();
         }
 
         // ---------------------------------------------------------------- music, language, flag

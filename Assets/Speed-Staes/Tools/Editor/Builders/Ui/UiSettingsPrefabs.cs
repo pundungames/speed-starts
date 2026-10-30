@@ -49,6 +49,7 @@ namespace SpeedStars.Tools.Builders
             ("field_focused", 20, 20, 20, 20),
             ("field_disabled", 20, 20, 20, 20),
             ("field_error", 20, 20, 20, 20),
+            ("panel_single_9slice", 28, 28, 28, 28),
         };
 
         private const string TrackTight = "scrollbar_track_tight";
@@ -295,6 +296,12 @@ namespace SpeedStars.Tools.Builders
             RectTransform flagRow = Row(rowPrefab, content, "FlagRow", "row_flag_icon", "Flag", scene);
             RectTransform nameRow = Row(rowPrefab, content, "NameRow", "row_player_icon", "Player Name", scene);
 
+            SettingsActionRowView privacyRow = ActionRow(rowPrefab, content, "PrivacyRow", "row_language_icon", SettingsTexts.PrivacyPolicy, scene);
+            SettingsActionRowView termsRow = ActionRow(rowPrefab, content, "TermsRow", "row_language_icon", SettingsTexts.TermsOfUse, scene);
+            SettingsActionRowView supportRow = ActionRow(rowPrefab, content, "SupportRow", "row_language_icon", SettingsTexts.Support, scene);
+            SettingsActionRowView resetBestsRow = ActionRow(rowPrefab, content, "ResetBestsRow", "row_player_icon", SettingsTexts.ResetPersonalBests, scene);
+            SettingsActionRowView resetAllRow = ActionRow(rowPrefab, content, "ResetAllRow", "row_player_icon", SettingsTexts.ResetAllProgress, scene);
+
             SettingsToggleView toggle = BuildToggle(Slot(musicRow));
             BuildDropdownField(Slot(languageRow), "LanguageField", withFlag: false, out Button languageButton, out Text languageValue,
                 out Image languageArrow, out _);
@@ -329,6 +336,7 @@ namespace SpeedStars.Tools.Builders
             BuildLanguageWindow(layer, panelHeight, out GameObject languageWindow, out Button languageCatcher,
                 out RectTransform languageContent);
             BuildFlagWindow(layer, out GameObject flagWindow, out Button flagCatcher, out RectTransform flagContent);
+            ConfirmDialogView confirmDialog = BuildConfirmDialog(layer); // last child: above both list windows
 
             var so = new SerializedObject(view);
             Ref(so, "titleText", title);
@@ -363,6 +371,12 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "nameFocusedSprite", Art("field_focused"));
             Ref(so, "nameErrorSprite", Art("field_error"));
             Ref(so, "doneButton", doneButton);
+            Ref(so, "privacyRow", privacyRow);
+            Ref(so, "termsRow", termsRow);
+            Ref(so, "supportRow", supportRow);
+            Ref(so, "resetBestsRow", resetBestsRow);
+            Ref(so, "resetAllRow", resetAllRow);
+            Ref(so, "confirmDialog", confirmDialog);
             so.ApplyModifiedPropertiesWithoutUndo();
 
             UiViewBinder.BindClose(root, "Panel/Header/Close"); // base UiPanel.closeButton: closes this popup through the navigator
@@ -382,6 +396,88 @@ namespace SpeedStars.Tools.Builders
             label.text = caption;
             Kit.Record(label);
             return row;
+        }
+
+        /// <summary>
+        /// A SettingsRow with a transparent full-row button (<see cref="SettingsActionRowView"/>) and, for the link rows,
+        /// the dropdown arrow turned to point right in its slot. Caption text is filled again by the view at run time.
+        /// </summary>
+        private static SettingsActionRowView ActionRow(GameObject prefab, Transform parent, string name, string iconFile, string caption,
+            UnityEngine.SceneManagement.Scene scene)
+        {
+            RectTransform row = Row(prefab, parent, name, iconFile, caption, scene);
+
+            RectTransform arrowNode = Kit.Node(Slot(row), "Arrow");
+            Kit.Anchor(arrowNode, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-P(8f), 0f), V(56f, 56f));
+            arrowNode.localEulerAngles = new Vector3(0f, 0f, 90f); // the art's down arrow turned to point right
+            Image arrow = arrowNode.gameObject.AddComponent<Image>();
+            arrow.sprite = Art("dropdown_arrow_down");
+            arrow.preserveAspect = true;
+            arrow.raycastTarget = false;
+
+            RectTransform hit = Kit.Stretch(Kit.Node(row, "Hit"));
+            Image hitImage = Kit.Fill(hit.gameObject, new Color(0f, 0f, 0f, 0f), raycast: true);
+            Button button = Clickable(hit.gameObject, hitImage);
+            var view = hit.gameObject.AddComponent<SettingsActionRowView>();
+
+            var so = new SerializedObject(view);
+            Ref(so, "button", button);
+            Ref(so, "background", row.GetComponent<Image>());
+            Ref(so, "label", row.Find("Label").GetComponent<Text>());
+            Ref(so, "enabledSprite", Art("row_normal"));
+            Ref(so, "disabledSprite", Art("row_disabled"));
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return view;
+        }
+
+        /// <summary>The reset confirmation window: its own dim, a plain panel, Cancel and a confirm button (red for the last question).</summary>
+        private static ConfirmDialogView BuildConfirmDialog(RectTransform layer)
+        {
+            RectTransform root = Kit.Stretch(Kit.Node(layer, "ConfirmDialog"));
+            var view = root.gameObject.AddComponent<ConfirmDialogView>();
+
+            RectTransform dim = Kit.Stretch(Kit.Node(root, "Dimscreen"));
+            UiArt.Paint(dim.gameObject, Art("dimscreen"), raycast: true);
+
+            RectTransform panel = Kit.Node(root, "Panel");
+            Kit.Anchor(panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, V(640f, 400f));
+            Sliced(panel.gameObject, Art("panel_single_9slice"), raycast: true);
+
+            Text title = Label(panel, "Title", "Are you sure?", 46f, TextAnchor.MiddleCenter);
+            Kit.Span(title.rectTransform, new Vector2(0.06f, 0.68f), new Vector2(0.94f, 0.92f));
+            Text body = Label(panel, "Body", "Body", 32f, TextAnchor.MiddleCenter);
+            Kit.Span(body.rectTransform, new Vector2(0.08f, 0.32f), new Vector2(0.92f, 0.66f));
+
+            RectTransform cancel = Kit.Node(panel, "Cancel");
+            Kit.Anchor(cancel, new Vector2(0.27f, 0.17f), new Vector2(0.5f, 0.5f), Vector2.zero, V(240f, 88f));
+            Image cancelImage = Sliced(cancel.gameObject, Art("field_normal"), raycast: true);
+            Button cancelButton = Clickable(cancel.gameObject, cancelImage);
+            Text cancelLabel = Label(cancel, "Label", "Cancel", 38f, TextAnchor.MiddleCenter);
+            Kit.Margin(cancelLabel, 12f, 6f, 12f, 10f);
+
+            RectTransform confirm = Kit.Node(panel, "Confirm");
+            Kit.Anchor(confirm, new Vector2(0.73f, 0.17f), new Vector2(0.5f, 0.5f), Vector2.zero, V(240f, 88f));
+            Image confirmImage = UiArt.Paint(confirm.gameObject, Art("done_normal_background"), raycast: true);
+            Button confirmButton = Clickable(confirm.gameObject, confirmImage);
+            Text confirmLabel = Label(confirm, "Label", "RESET", 38f, TextAnchor.MiddleCenter);
+            confirmLabel.color = Color.white;
+            Kit.Margin(confirmLabel, 12f, 6f, 12f, 10f);
+
+            var so = new SerializedObject(view);
+            Ref(so, "panel", panel);
+            Ref(so, "titleText", title);
+            Ref(so, "bodyText", body);
+            Ref(so, "cancelButton", cancelButton);
+            Ref(so, "cancelLabel", cancelLabel);
+            Ref(so, "confirmButton", confirmButton);
+            Ref(so, "confirmImage", confirmImage);
+            Ref(so, "confirmLabel", confirmLabel);
+            Ref(so, "normalConfirmSprite", Art("done_normal_background"));
+            Ref(so, "dangerConfirmSprite", Art("field_normal"));
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            root.gameObject.SetActive(false);
+            return view;
         }
 
         private static RectTransform Slot(RectTransform row) => (RectTransform)row.Find("ControlSlot");

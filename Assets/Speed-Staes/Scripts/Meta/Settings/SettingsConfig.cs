@@ -68,6 +68,16 @@ namespace SpeedStars.Meta.Settings
         [Tooltip("Most characters a name may have.")]
         [SerializeField, Min(1)] private int nameMaxLength = 16;
 
+        [Header("Links (empty = the row is greyed out)")]
+        [Tooltip("Privacy Policy page (http or https).")]
+        [SerializeField] private string privacyPolicyUrl;
+
+        [Tooltip("Terms of Use page (http or https).")]
+        [SerializeField] private string termsOfUseUrl;
+
+        [Tooltip("Support page or contact form (http or https).")]
+        [SerializeField] private string supportUrl;
+
         [Header("Lists")]
         [Tooltip("Languages in list order.")]
         [SerializeField] private LanguageOption[] languages = new LanguageOption[0];
@@ -80,6 +90,20 @@ namespace SpeedStars.Meta.Settings
         public string DefaultPlayerName => defaultPlayerName ?? string.Empty;
         public int NameMinLength => Mathf.Max(1, nameMinLength);
         public int NameMaxLength => Mathf.Max(NameMinLength, nameMaxLength);
+
+        /// <summary>The configured address of a link; empty when not set or not an openable http(s) address.</summary>
+        public string GetLinkUrl(SettingsLink link)
+        {
+            string url;
+            switch (link)
+            {
+                case SettingsLink.PrivacyPolicy: url = privacyPolicyUrl; break;
+                case SettingsLink.TermsOfUse: url = termsOfUseUrl; break;
+                case SettingsLink.Support: url = supportUrl; break;
+                default: url = null; break;
+            }
+            return LinkRules.IsOpenable(url) ? url.Trim() : string.Empty;
+        }
 
         public IReadOnlyList<LanguageInfo> GetLanguages()
         {
