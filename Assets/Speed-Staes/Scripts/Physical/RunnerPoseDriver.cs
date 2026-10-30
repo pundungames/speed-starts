@@ -131,6 +131,9 @@ namespace SpeedStars.Physical
             [HideInInspector] public float swingToe;    // toe bend in the air (deg, + = toes up)
             [HideInInspector] public bool reachNext;    // the other key went down while this leg was going back: reach once back
             [HideInInspector] public bool easeOut;      // this phase starts at the leg's own speed and slows into its target
+            [HideInInspector] public bool swing;        // recover, mid and home as one curve (no stop between them)
+            [HideInInspector] public double swingStart; // sim time the swing began (end of the push)
+            [HideInInspector] public float swingTime;   // recover + mid + home of this swing (s)
             [HideInInspector] public float thighRate;   // the thigh's angular speed last frame (deg/s, + = forward)
             public Vector3 RestBall => restAnkle + ballOffset;
             public double EndTime => phaseTime + duration;
@@ -252,18 +255,33 @@ namespace SpeedStars.Physical
         public float heldLegArch = -10f;
 
         [Header("Leg timing (s)")]
-        [Tooltip("Push — and the other leg's reach, at the same time — standing (x) and at max speed (y).")]
-        public Vector2 pushTime = new Vector2(0.12f, 0.08f);
-        [Tooltip("Shin folding up after the push.")]
+        [Tooltip("Push: the pressed leg going back, and the other leg's reach forward with it (s). A fixed time of its " +
+                 "own, not the sim's stanceTime: too short and the legs jump instead of flowing.")]
+        public float pushTime = 0.2f;
+        [Tooltip("At max speed the push and the swing take this share of their time (1 = as slow as standing): the " +
+                 "faster the run, the quicker the legs and arms, so they keep up with presses on time.")]
+        [Range(0.2f, 1f)] public float animSpeedUp = 0.5f;
+        [Tooltip("Shin folding up after the push. recover + mid + home are shares of the step: scaled together so " +
+                 "push + recover + mid + home fill the time between presses (stepTimeMin to stepTimeMax), one curve " +
+                 "with no stop between them.")]
         public float recoverTime = 0.15f;
-        [Tooltip("From recovered to the mid angle.")]
+        [Tooltip("From recovered to the mid angle (a share of the step, see recoverTime).")]
         public float midTime = 0.15f;
-        [Tooltip("From the mid angle to home.")]
+        [Tooltip("From the mid angle to home (a share of the step, see recoverTime).")]
         public float homeTime = 0.15f;
-        [Tooltip("The leg in front goes home this slowly once the other is no longer pushing or held (the body passes over it).")]
+        [Tooltip("The leg in front goes home this slowly once the other is no longer pushing or held (the body passes " +
+                 "over it); scaled with the step like recoverTime.")]
         public float frontHomeTime = 0.3f;
-        [Tooltip("The air phases (recover, mid) take this share of their time at max speed.")]
-        [Range(0.3f, 1f)] public float airTimeAtSpeed = 0.6f;
+        [Tooltip("The step never goes quicker than this (s), however fast the presses come.")]
+        public float stepTimeMin = 0.2f;
+        [Tooltip("The step never goes slower than this (s): sparser presses finish it in this time and the pose waits.")]
+        public float stepTimeMax = 0.6f;
+        [Tooltip("The swing takes this many times the press-to-press time (after stepTimeMin/Max): above 1 the legs " +
+                 "and arms move slower than the presses come, and the next press takes the leg on from where it is.")]
+        public float stepSlow = 2f;
+        [Tooltip("How much of each new press-to-press time the step takes on (1 = just the last one): one odd press " +
+                 "does not jerk the legs.")]
+        [Range(0.1f, 1f)] public float stepFollow = 0.5f;
         [Tooltip("While a key is down, home is the crouch below x m/s and the running home above y. With no key down " +
                  "home is the crouch: the runner heads straight for it, no upright stance on the way.")]
         public Vector2 restToBaseSpeed = new Vector2(0.5f, 3f);
@@ -273,6 +291,10 @@ namespace SpeedStars.Physical
         [Header("Body height (from the leg angles: the lowest carrying foot stands on the ground)")]
         [Tooltip("The pelvis follows the height the legs give through this spring (a foot it lags under is kept on the ground).")]
         public SpringSettings heightSpring = new SpringSettings(8f, 0.8f);
+        [Tooltip("Coming down between steps (the legs ask for a lower body than it has): the pelvis sinks through this " +
+                 "softer spring instead, so the front foot reaches the ground a moment before the body settles onto it. " +
+                 "Going up stays on heightSpring (a foot never goes into the ground).")]
+        public SpringSettings dropSpring = new SpringSettings(3f, 0.6f);
         [Tooltip("Getting up from low down (the body more than liftBelow under its standing height, fully so liftRange " +
                  "further down): the height goes through this softer spring instead (~0.5 s up off the ground). Running and " +
                  "the crouch stay above liftBelow and keep heightSpring.")]
@@ -422,6 +444,8 @@ namespace SpeedStars.Physical
         float _ground, _sole, _profileW, _runHome;
         float _restWaist;                          // B-spine's bend on the hips at rest (deg)
         float _stepping;                           // 1 = a key is down (run stance), 0 = none: Ready crouch
+        float _pressGap = float.MaxValue;          // press to press (s), smoothed by stepFollow
+        double _lastPress = -1.0;                  // sim time of the last press
         Spring _bodyY, _lean;                      // the waist top's lean after the head (deg)
         Spring _waistBase, _hipsLean;              // B-spine's and the hips' lean down the chain (deg)
         float _headAngle;                          // this frame's head angle (deg, + = forward)
@@ -579,11 +603,18 @@ namespace SpeedStars.Physical
             if (!pressed)
             {
                 l.held = false;
-                if (l.phase == LegPhase.Hold) Enter(l, LegPhase.Mid, time, AirTime(midTime));
+                if (l.phase == LegPhase.Hold) Enter(l, LegPhase.Mid, time, StepPart(midTime));
                 return;
             }
             l.held = true;
             l.reachNext = false;
+            if (_lastPress >= 0.0)
+            {
+                // A pause counts as stepTimeMax: it does not leave the next steps sluggish.
+                float gap = Mathf.Min((float)(time - _lastPress), stepTimeMax);
+                _pressGap = _pressGap == float.MaxValue ? gap : Mathf.Lerp(_pressGap, gap, stepFollow);
+            }
+            _lastPress = time;
             Enter(l, LegPhase.Push, time, PushTime());
             var other = Legs(1 - leg);
             if (other.HeldBack) return;
@@ -593,7 +624,11 @@ namespace SpeedStars.Physical
             else Enter(other, LegPhase.Reach, time, PushTime());
         }
 
-        float PushTime() => Mathf.Lerp(pushTime.x, pushTime.y, Speed01());
+        /// <summary>The push, and the other leg's reach with it: pushTime, quicker with speed (animSpeedUp).</summary>
+        float PushTime() => pushTime * SpeedUp();
+
+        /// <summary>Share of their time the legs take at this speed: 1 standing, animSpeedUp at max speed.</summary>
+        float SpeedUp() => Mathf.Lerp(1f, animSpeedUp, Speed01());
 
         /// <summary>
         /// A leg in the air heads for the front instead of mid, without a snap: coming forward it goes on at the
@@ -608,12 +643,12 @@ namespace SpeedStars.Physical
             float push = PushTime();
             if (leg.thighRate > MinFlowRate)
             {
-                Enter(leg, LegPhase.Reach, time, Mathf.Clamp(2f * dist / leg.thighRate, push, 2f * AirTime(midTime)));
+                Enter(leg, LegPhase.Reach, time, Mathf.Clamp(2f * dist / leg.thighRate, push, 2f * StepPart(midTime)));
                 leg.easeOut = true;
             }
             else
                 Enter(leg, LegPhase.Reach, time,
-                    Mathf.Max(push, AirTime(midTime) * dist / Mathf.Max(1f, Mathf.Abs(mid.thigh - recover.thigh))));
+                    Mathf.Max(push, StepPart(midTime) * dist / Mathf.Max(1f, Mathf.Abs(mid.thigh - recover.thigh))));
         }
 
         void OnRunReset()
@@ -627,14 +662,35 @@ namespace SpeedStars.Physical
             ResetLeg(leftLeg);
             ResetLeg(rightLeg);
             _heightSet = false;
+            _pressGap = float.MaxValue;
+            _lastPress = -1.0;
         }
 
         Leg Legs(int i) => i == 0 ? leftLeg : rightLeg;
 
         float Speed01() => body && body.Sim != null ? Mathf.Clamp01(body.Sim.Speed / body.Sim.T.maxSpeed) : 0f;
 
-        /// <summary>An air phase's time: shorter the faster the run.</summary>
-        float AirTime(float time) => time * Mathf.Lerp(1f, airTimeAtSpeed, Speed01());
+        /// <summary>
+        /// A phase's share of the step: push + recover + mid + home fill the time between presses, so the legs (and
+        /// the arms after them) flow from press to press, faster as the presses come faster. Between stepTimeMin and
+        /// stepTimeMax; before the presses have a rhythm, the sim's StepTime.
+        /// </summary>
+        float StepPart(float time)
+        {
+            float gap = _pressGap == float.MaxValue ? (body && body.Sim != null ? body.Sim.StepTime : 0.4f) : _pressGap;
+            float step = Mathf.Clamp(gap, stepTimeMin, Mathf.Max(stepTimeMin, stepTimeMax)) * stepSlow * SpeedUp();
+            return time * Mathf.Max(0.01f, step - PushTime()) / SwingParts;
+        }
+
+        float SwingParts => Mathf.Max(0.01f, recoverTime + midTime + homeTime);
+
+        /// <summary>The swing's share done when this phase starts and ends (recover, mid, home in turn).</summary>
+        void SwingShares(LegPhase phase, out float a, out float b)
+        {
+            float r = recoverTime / SwingParts, m = midTime / SwingParts;
+            a = phase == LegPhase.Recover ? 0f : phase == LegPhase.Mid ? r : r + m;
+            b = phase == LegPhase.Recover ? r : phase == LegPhase.Mid ? r + m : 1f;
+        }
 
         /// <summary>Start a phase from the leg's current angles.</summary>
         static void Enter(Leg leg, LegPhase phase, double time, float duration)
@@ -645,6 +701,15 @@ namespace SpeedStars.Physical
             leg.from = leg.angles;
             leg.fromPitch = leg.pitch;
             leg.easeOut = false;
+            leg.swing = false;
+        }
+
+        /// <summary>Hand a swing on to its next phase (its share of the swing's time), still on the one curve.</summary>
+        void EnterSwing(Leg leg, LegPhase phase, double time)
+        {
+            SwingShares(phase, out float a, out float b);
+            Enter(leg, phase, time, leg.swingTime * (b - a));
+            leg.swing = true;
         }
 
         /// <summary>
@@ -662,14 +727,14 @@ namespace SpeedStars.Physical
                     var partner = leg == leftLeg ? rightLeg : leftLeg;
                     if (leg.phase == LegPhase.Hold && !leg.held)
                     {
-                        Enter(leg, LegPhase.Mid, time, AirTime(midTime));
+                        Enter(leg, LegPhase.Mid, time, StepPart(midTime));
                         continue;
                     }
                     // The front foot stays planted ahead until the other leg has pushed and recovered.
                     if (leg.phase == LegPhase.Front && partner.phase != LegPhase.Push && partner.phase != LegPhase.Hold &&
                         partner.phase != LegPhase.Recover)
                     {
-                        Enter(leg, LegPhase.Rest, time, frontHomeTime);
+                        Enter(leg, LegPhase.Rest, time, StepPart(frontHomeTime));
                         continue;
                     }
                     if (!leg.Timed || time < leg.EndTime) continue;
@@ -678,14 +743,21 @@ namespace SpeedStars.Physical
                     {
                         case LegPhase.Push:
                             if (leg.held) Enter(leg, LegPhase.Hold, end, 0f);
-                            else Enter(leg, LegPhase.Recover, end, AirTime(recoverTime));
+                            else
+                            {
+                                leg.swingStart = end;
+                                leg.swingTime = StepPart(recoverTime + midTime + homeTime);
+                                EnterSwing(leg, LegPhase.Recover, end);
+                            }
                             break;
                         case LegPhase.Recover:
                             if (leg.reachNext) ReachOn(leg, end);
-                            else Enter(leg, LegPhase.Mid, end, AirTime(midTime));
+                            else if (leg.swing) EnterSwing(leg, LegPhase.Mid, end);
+                            else Enter(leg, LegPhase.Mid, end, StepPart(midTime));
                             break;
                         case LegPhase.Mid:
-                            Enter(leg, LegPhase.Rest, end, homeTime);
+                            if (leg.swing) EnterSwing(leg, LegPhase.Rest, end);
+                            else Enter(leg, LegPhase.Rest, end, StepPart(homeTime));
                             break;
                         case LegPhase.Reach:
                             Enter(leg, LegPhase.Front, end, 0f);
@@ -724,7 +796,15 @@ namespace SpeedStars.Physical
             float s = leg.duration > 0f ? Mathf.Clamp01((float)(now - leg.phaseTime) / leg.duration) : 1f;
             float lastThigh = leg.angles.thigh;
             // Phases start and end at rest (smooth step); one that takes over a moving leg starts at its speed.
+            // A swing is one smooth step over recover + mid + home: it slows only as it comes home.
             float ease = leg.easeOut ? 1f - (1f - s) * (1f - s) : Mathf.SmoothStep(0f, 1f, s);
+            if (leg.swing && leg.swingTime > 0f)
+            {
+                SwingShares(leg.phase, out float a, out float b);
+                float g = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((float)(now - leg.swingStart) / leg.swingTime));
+                float ga = Mathf.SmoothStep(0f, 1f, a), gb = Mathf.SmoothStep(0f, 1f, b);
+                ease = Mathf.Clamp01((g - ga) / Mathf.Max(0.0001f, gb - ga));
+            }
             leg.angles = LegAngles.Lerp(leg.from, Target(leg, ownHold, otherHold), ease);
             leg.thighRate = dt > 0f ? (leg.angles.thigh - lastThigh) / dt : 0f;
             leg.angles.knee = Mathf.Min(leg.angles.knee, maxKnee);
@@ -997,8 +1077,10 @@ namespace SpeedStars.Physical
                 if (!_heightSet) _bodyY.Reset(need);
                 _heightSet = true;
                 float low = Mathf.SmoothStep(0f, 1f, (-_bodyY.Value - liftBelow) / Mathf.Max(0.01f, liftRange));
-                _bodyY.Step(need, Mathf.Lerp(heightSpring.frequency, liftSpring.frequency, low),
-                    Mathf.Lerp(heightSpring.damping, liftSpring.damping, low), dt);
+                // Coming down the body sinks softly onto the front foot; going up it keeps to the legs.
+                SpringSettings spring = need < _bodyY.Value ? dropSpring : heightSpring;
+                _bodyY.Step(need, Mathf.Lerp(spring.frequency, liftSpring.frequency, low),
+                    Mathf.Lerp(spring.damping, liftSpring.damping, low), dt);
                 _carried = true;
                 return _bodyY.Value;
             }
