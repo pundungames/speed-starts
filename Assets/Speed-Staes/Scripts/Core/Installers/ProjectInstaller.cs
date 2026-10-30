@@ -9,6 +9,7 @@ using SpeedStars.Meta.Emotes;
 using SpeedStars.Meta.Leaderboard;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.Meta.Race;
+using SpeedStars.Meta.Rewards;
 using SpeedStars.Meta.Settings;
 using SpeedStars.Meta.Themes;
 using SpeedStars.Meta.Tickets;
@@ -94,6 +95,9 @@ namespace SpeedStars.Installers
             // T-040: emote ownership/equip (Cash via the ledger) and the preview the menu character plays.
             Container.Bind<IEmoteService>().To<EmoteService>().AsSingle();
             Container.Bind<IEmotePreview>().To<EmotePreview>().AsSingle();
+            // T-042: daily Entry Ticket gift + 7-day rewards (UTC day; one card per day; ledger/cosmetic grants).
+            Container.BindInterfacesAndSelfTo<DailyGiftService>().AsSingle();
+            Container.BindInterfacesAndSelfTo<SevenDayRewardService>().AsSingle();
             Container.Bind<IRaceSelection>().To<RaceSelection>().AsSingle();
 
             // T-025: presets, ownership, premium purchase; the preview is what the menu character wears right now.
