@@ -44,8 +44,9 @@ namespace SpeedStars.Tools.Builders
         private static readonly Vector2 PresetLabelMin = new Vector2(0.04f, 0.10f), PresetLabelMax = new Vector2(0.85f, 0.90f);
         private static readonly Vector2 RowLabelMin = new Vector2(0.05f, 0.10f), RowLabelMax = new Vector2(0.95f, 0.90f);
         private static readonly Vector2 ItemIconMin = new Vector2(0.06f, 0.06f), ItemIconMax = new Vector2(0.94f, 0.94f);
-        // Inside the premium art's inner navy line, as fractions of the 736x807 group (the picture must not touch the frame).
-        private static readonly Vector2 PremiumIconMin = new Vector2(0.14f, 0.12f), PremiumIconMax = new Vector2(0.86f, 0.88f);
+        // Inside the premium art's inner navy line: inset on every side as a fraction of the cell height (the picture must not
+        // touch the frame; same look as the earlier 0.12 of the 807 px canvas height).
+        private const float PremiumIconInset = 0.12f;
         private const float PriceGap = 0.03f; // between the gem and the price text
         private const float PriceEdge = 0.94f;
         private const float HeightInset = 0.03f;
@@ -122,25 +123,28 @@ namespace SpeedStars.Tools.Builders
             Image selected = UiArt.Layer(root, "Selected", Art("item_card_selected_background"));
             selected.gameObject.SetActive(false);
 
-            // Premium family: ONE group fitted into the cell by aspect (the 736x807 art is portrait, the cell is wider: never
-            // stretched). Background, picture and both frames share the group's rect so they stay aligned; the corner icons
-            // anchor to the group's corners; hidden until a premium item binds.
+            // Premium family: ONE group that covers the whole cell (same outer size as a normal card). The 736x807 art is
+            // 9-sliced, so the rect may be any shape while the frame band and bevelled corners keep their look. Background,
+            // picture and both frames share the group's rect so they stay aligned; the corner icons anchor to its corners;
+            // hidden until a premium item binds.
             Sprite premiumArt = Art("Premium/premium_background");
+            UiArt.LayoutComponent cell = layout.Get("item_ivory");
+            Vector2 cellSize = new Vector2(cell.rect[2], cell.rect[3]) * layout.Scale;
+            float borderMultiplier = UiArt.SlicedBorderMultiplier(premiumArt.rect.height, cellSize.y);
             RectTransform group = Kit.Stretch(Kit.Node(root, "PremiumCard"));
-            var fitter = group.gameObject.AddComponent<AspectRatioFitter>();
-            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fitter.aspectRatio = premiumArt.rect.width / premiumArt.rect.height;
 
-            GameObject premiumBackground = PremiumLayer(group, "PremiumBackground", "premium_background");
-            RectTransform premiumIconNode = Kit.Span(Kit.Node(group, "PremiumIcon"), PremiumIconMin, PremiumIconMax);
+            GameObject premiumBackground = PremiumLayer(group, "PremiumBackground", "premium_background", borderMultiplier, fillCenter: true);
+            // The picture stays inside the inner line: the same inset (a fraction of the cell height) on every side.
+            Vector2 iconMin = new Vector2(PremiumIconInset * cellSize.y / cellSize.x, PremiumIconInset);
+            RectTransform premiumIconNode = Kit.Span(Kit.Node(group, "PremiumIcon"), iconMin, Vector2.one - iconMin);
             Image premiumIcon = UiArt.Paint(premiumIconNode.gameObject, Art(SampleItemArt), raycast: false);
             premiumIcon.preserveAspect = true;
             premiumIcon.enabled = false;
-            GameObject premiumFrame = PremiumLayer(group, "PremiumFrame", "premium_frame");
-            GameObject premiumSelectedFrame = PremiumLayer(group, "PremiumSelectedFrame", "premium_selected_frame");
+            GameObject premiumFrame = PremiumLayer(group, "PremiumFrame", "premium_frame", borderMultiplier, fillCenter: false);
+            GameObject premiumSelectedFrame = PremiumLayer(group, "PremiumSelectedFrame", "premium_selected_frame", borderMultiplier, fillCenter: false);
             GameObject premiumLock = PremiumCorner(group, "PremiumLock", "premium_lock", top: false, scale: layout.Scale);
             GameObject premiumCheck = PremiumCorner(group, "PremiumCheck", "premium_check", top: true, scale: layout.Scale);
-            GameObject premiumDisabled = PremiumLayer(group, "PremiumDisabledOverlay", "premium_disabled_overlay");
+            GameObject premiumDisabled = PremiumOverlay(group, "PremiumDisabledOverlay", "premium_disabled_overlay");
 
             RectTransform iconNode = Kit.Span(Kit.Node(root, "Icon"), ItemIconMin, ItemIconMax);
             Image icon = UiArt.Paint(iconNode.gameObject, Art(SampleItemArt), raycast: false);
@@ -199,9 +203,17 @@ namespace SpeedStars.Tools.Builders
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static GameObject PremiumLayer(RectTransform parent, string name, string file)
+        /// <summary>The 176x164 disabled overlay is a flat tint: plain stretched Image, not sliced.</summary>
+        private static GameObject PremiumOverlay(RectTransform parent, string name, string file)
         {
             GameObject layer = UiArt.Layer(parent, name, Art("Premium/" + file)).gameObject;
+            layer.SetActive(false);
+            return layer;
+        }
+
+        private static GameObject PremiumLayer(RectTransform parent, string name, string file, float borderMultiplier, bool fillCenter)
+        {
+            GameObject layer = UiArt.SlicedLayer(parent, name, Art("Premium/" + file), borderMultiplier, fillCenter).gameObject;
             layer.SetActive(false);
             return layer;
         }

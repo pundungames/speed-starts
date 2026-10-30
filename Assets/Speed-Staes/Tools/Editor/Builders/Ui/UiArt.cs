@@ -34,6 +34,21 @@ namespace SpeedStars.Tools.Builders
         private const int MobileMaxSizeLarge = 4096;
         private static readonly string[] MobilePlatforms = { "Android", "iPhone" };
 
+        /// <summary>
+        /// 9-slice border (px) of the three premium card layers on their shared 736x807 canvas: covers the frame band (~8..77 px)
+        /// and the bevelled corners (~100 px), up to the background's inner bevel (~140 px). All three layers must use the same
+        /// value so they stay aligned when the card is stretched to the cell.
+        /// </summary>
+        public const float PremiumBorderPx = 150f;
+
+        // Files that get a 9-slice border on import (file name without extension -> left, bottom, right, top in px).
+        private static readonly (string stem, Vector4 border)[] SlicedBorders =
+        {
+            ("premium_background", new Vector4(PremiumBorderPx, PremiumBorderPx, PremiumBorderPx, PremiumBorderPx)),
+            ("premium_frame", new Vector4(PremiumBorderPx, PremiumBorderPx, PremiumBorderPx, PremiumBorderPx)),
+            ("premium_selected_frame", new Vector4(PremiumBorderPx, PremiumBorderPx, PremiumBorderPx, PremiumBorderPx)),
+        };
+
         public static readonly Color Navy = new Color(0.04f, 0.12f, 0.36f, 1f);
 
         // ---------------------------------------------------------------- import
@@ -69,6 +84,8 @@ namespace SpeedStars.Tools.Builders
             int mobileMax = MobileMaxFor(assetPath);
             TextureImporterCompression compression = home ? TextureImporterCompression.Uncompressed : TextureImporterCompression.Compressed;
 
+            bool sliced = TryGetBorder(spriteName, out Vector4 border);
+
             var settings = new TextureImporterSettings();
             importer.ReadTextureSettings(settings);
 
@@ -80,7 +97,8 @@ namespace SpeedStars.Tools.Builders
                 && importer.isReadable == readable
                 && importer.textureCompression == compression
                 && settings.spriteMeshType == SpriteMeshType.FullRect
-                && MobileMatches(importer, mobileMax);
+                && MobileMatches(importer, mobileMax)
+                && (!sliced || importer.spriteBorder == border); // art without a table entry keeps whatever border it has
             if (same) return;
 
             importer.textureType = TextureImporterType.Sprite;
@@ -96,8 +114,31 @@ namespace SpeedStars.Tools.Builders
             settings.spriteMeshType = SpriteMeshType.FullRect;
             settings.spriteAlignment = (int)SpriteAlignment.Center;
             importer.SetTextureSettings(settings);
+            if (sliced) importer.spriteBorder = border;
             ApplyMobile(importer, mobileMax);
             importer.SaveAndReimport();
+        }
+
+        private static bool TryGetBorder(string stem, out Vector4 border)
+        {
+            foreach ((string name, Vector4 value) in SlicedBorders)
+            {
+                if (name != stem) continue;
+                border = value;
+                return true;
+            }
+            border = Vector4.zero;
+            return false;
+        }
+
+        /// <summary>
+        /// Image.pixelsPerUnitMultiplier that keeps a sliced border at the thickness the whole sprite would have when its
+        /// height is fitted to <paramref name="cellHeight"/> (border units shrink by this factor): spriteHeight / cellHeight.
+        /// </summary>
+        internal static float SlicedBorderMultiplier(float spriteHeight, float cellHeight)
+        {
+            if (spriteHeight <= 0f || cellHeight <= 0f) throw new ArgumentOutOfRangeException(nameof(cellHeight), "UiArt: sizes must be positive.");
+            return spriteHeight / cellHeight;
         }
 
         /// <summary>
@@ -288,6 +329,19 @@ namespace SpeedStars.Tools.Builders
             RectTransform rt = Kit.Node(parent, name);
             Kit.Span(rt, new Vector2(-bounds.x / w, -bounds.y / h), new Vector2((1f - bounds.x) / w, (1f - bounds.y) / h));
             return Paint(rt.gameObject, sprite, raycast: false);
+        }
+
+        /// <summary>
+        /// A stretched layer drawn 9-sliced (border set on the sprite's import): the rect can be any shape, the frame band and
+        /// corners keep their look. <paramref name="borderMultiplier"/> scales the border thickness (see SlicedBorderMultiplier).
+        /// </summary>
+        public static Image SlicedLayer(Transform parent, string name, Sprite sprite, float borderMultiplier, bool fillCenter)
+        {
+            Image image = Layer(parent, name, sprite);
+            image.type = Image.Type.Sliced;
+            image.fillCenter = fillCenter;
+            image.pixelsPerUnitMultiplier = borderMultiplier;
+            return image;
         }
 
         /// <summary>A child stretched over its parent that shows one art layer. Never catches taps.</summary>
