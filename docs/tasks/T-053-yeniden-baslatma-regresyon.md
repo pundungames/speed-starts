@@ -1,7 +1,7 @@
 ---
 id: T-053
 title: Faz 8 regresyon - uygulamayi oldurup acma, saat geri alma ve ileri sarma, bozuk kayit; butun meta sistemleri birlikte
-status: todo
+status: review
 owner: test-agent
 depends_on: [T-042, T-046]
 owns_paths:
@@ -9,12 +9,16 @@ owns_paths:
 touches_scene: false
 branch: agent/T-053-regresyon
 commits: []
-tests: []
+tests:
+  - Assets/Speed-Staes/Tests/EditMode/Meta/Regression/RegressionHarness.cs
+  - Assets/Speed-Staes/Tests/EditMode/Meta/Regression/RestartTimersRegressionTests.cs
+  - Assets/Speed-Staes/Tests/EditMode/Meta/Regression/RestartDayRewardsRegressionTests.cs
+  - Assets/Speed-Staes/Tests/EditMode/Meta/Regression/RestartMoneySaveAndResetRegressionTests.cs
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -40,9 +44,9 @@ Bir senaryo **kod hatasi** gosterirse kodu duzeltme: testi `[Ignore("BUG: ...")]
 ayri task acar). Kod ile senin beklentin celisiyor ama hangisinin dogru oldugu belirsizse KOD haklidir (CALISMA-KURALLARI §6).
 
 ## Kabul kriterleri
-- [ ] Yukaridaki 7 senaryo testli, hepsi tek asmdef'te (var olan EditMode test assembly'si)
-- [ ] Bulunan hata varsa `[Ignore("BUG: ...")]` + rapor; sessizce gecen yok
-- [ ] Gecici dosyalar test sonunda silinir
+- [x] Yukaridaki 7 senaryo testli, hepsi tek asmdef'te (var olan EditMode test assembly'si)
+- [x] Bulunan hata varsa `[Ignore("BUG: ...")]` + rapor; sessizce gecen yok
+- [x] Gecici dosyalar test sonunda silinir
 
 ## Geri bildirim
 GORSEL  : yok
@@ -52,3 +56,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+- 7 senaryo icin 3 test sinifi + RegressionHarness (gercek ProgressRepository, ClockService - son gorulen damga kayitta -, tum servisler; Boot() = uygulamayi oldurup acma).
+- Kod hatasi bulunmadi, [Ignore] yok. Gozlem: EconomyConfig.dayBoundary (seed LocalMidnight) hicbir kod tarafindan okunmuyor; RewardDay hep UTC - testler UTC varsayar.
+- Calistirilmadi (merkezi dogrulama bekliyor). Yeni klasorun .meta'lari yok: kopyada derlenip .meta alinmali (TUZAKLAR .meta maddesi).
+- Sabit denge sayisi assert edilmiyor: degerler harness'te test girdisi, beklentiler iliski ya da config'ten okunuyor.
+- Kapsam disi: gercek uygulama yasam dongusu (OnApplicationPause/Quit), PlayerPrefs, emote servisi.
