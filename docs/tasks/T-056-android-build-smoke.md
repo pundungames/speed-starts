@@ -5,7 +5,7 @@ status: review
 owner: systems-agent
 depends_on: [T-052]
 owns_paths:
-  - "Assets/Speed-Staes/Tools/Editor/Build/**"
+  - "Assets/Speed-Staes/Tools/Editor/Packaging/**"
   - "scripts/android-build.ps1"
 touches_scene: false
 branch: agent/T-056-android-build
