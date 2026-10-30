@@ -34,6 +34,7 @@ namespace SpeedStars.Tools.Builders
         public const string AnalysisPath = Folder + "/AnalysisConfig.asset";
         public const string LeaderboardPath = Folder + "/LeaderboardConfig.asset";
         public const string AudioPath = Folder + "/AudioConfig.asset";
+        public const string AdsDevPath = Folder + "/AdsDevConfig.asset";
 
         /// <summary>
         /// Events in display order (PDF §1.3, MD §12). Distance only where the name states it; Training, Race of the
@@ -72,6 +73,7 @@ namespace SpeedStars.Tools.Builders
             RaceStartConfigSeed.Seed(overwrite); // T-039: READY / SET timing + start motion
             EmoteCatalogSeed.Seed(overwrite); // T-040
             AudioConfigSeed.Seed(AudioPath, overwrite); // T-052: sound cues (placeholder WAVs), music slot, haptic numbers
+            SeedAdsDev(overwrite); // T-050: fake rewarded ad (dev only)
             AssetDatabase.SaveAssets();
         }
 
@@ -87,7 +89,7 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "timedAccessMinutes").floatValue = 60f;        // PDF §1, §1.1: "Sure Aktif ... 1 saat surer"
 
             // Not in the PDF -> not invented (contract §6): new saves start empty, ticket prices closed (OPEN #4),
-            // no rewarded ad (OPEN #11: no ad SDK in the project).
+            // rewarded ad: 1 ad = 1 Entry Ticket (PDF 1.2; supervisor decision 30.10, the SDK is still OPEN #11).
             Prop(so, "startingCash").intValue = 0;
             Prop(so, "startingPurpleGems").intValue = 0;
             // Not in the PDF either; decided 28.10: a new player starts with a full inventory (= entryTicketCap), otherwise
@@ -96,11 +98,19 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "startingTimedTickets").intValue = 0;
             Prop(so, "entryTicketCashPrice").intValue = 0;
             Prop(so, "timedTicketCashPrice").intValue = 0;
-            Prop(so, "rewardedAdEnabled").boolValue = false;
-            Prop(so, "rewardedAdEntryTickets").intValue = 0;
+            Prop(so, "rewardedAdEnabled").boolValue = true;
+            Prop(so, "rewardedAdEntryTickets").intValue = 1;
             Prop(so, "dayBoundary").intValue = (int)DayBoundaryPolicy.LocalMidnight; // OPEN #2 working assumption
             Apply(so);
             Log(Source, $"Seeded {EconomyPath}.");
+        }
+
+        private static void SeedAdsDev(bool overwrite)
+        {
+            // The field defaults (about a second, Completed) are the seed; nothing is written over them.
+            var asset = CreateOrReset<SpeedStars.Meta.Ads.AdsDevConfig>(AdsDevPath, overwrite);
+            if (asset == null) { Skipped(Source, AdsDevPath); return; }
+            Log(Source, $"Seeded {AdsDevPath}.");
         }
 
         private static void SeedGemRewards(bool overwrite)

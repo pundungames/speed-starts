@@ -43,6 +43,7 @@ namespace SpeedStars.Tools.Builders
             var leaderboard = LoadRequired<LeaderboardConfig>(ConfigAssetSeeder.LeaderboardPath, seeder);
             var emotes = LoadRequired<EmoteCatalog>(EmoteCatalogSeed.CatalogPath, seeder);
             var audio = LoadRequired<AudioConfig>(ConfigAssetSeeder.AudioPath, seeder);
+            var adsDev = LoadRequired<SpeedStars.Meta.Ads.AdsDevConfig>(ConfigAssetSeeder.AdsDevPath, seeder);
 
             EnsureParentFolder(PrefabPath);
             var preview = EditorSceneManager.NewPreviewScene();
@@ -63,6 +64,7 @@ namespace SpeedStars.Tools.Builders
                 Prop(installerSo, "settings").objectReferenceValue = settings;
                 Prop(installerSo, "leaderboard").objectReferenceValue = leaderboard;
                 Prop(installerSo, "emotes").objectReferenceValue = emotes;
+                Prop(installerSo, "adsDev").objectReferenceValue = adsDev;
                 // T-052: the installer field arrives with the WIRING step; until then the reference is skipped instead of failing the build.
                 SerializedProperty audioSlot = installerSo.FindProperty("audio");
                 if (audioSlot != null) audioSlot.objectReferenceValue = audio;

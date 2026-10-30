@@ -47,6 +47,8 @@ namespace SpeedStars.Installers
         [SerializeField] private EmoteCatalog emotes;
         [Tooltip("UI sounds and haptics (T-052): clip per SfxId, volumes, repeat gap, buzz length.")]
         [SerializeField] private AudioConfig audio;
+        [Tooltip("Fake rewarded ad (T-050, editor / development builds only): wait and result.")]
+        [SerializeField] private SpeedStars.Meta.Ads.AdsDevConfig adsDev;
 
         [Header("Scenes")]
         [SerializeField] private SceneFlowScenes scenes = new SceneFlowScenes();
@@ -119,6 +121,11 @@ namespace SpeedStars.Installers
             Container.Bind<IHapticsDevice>().FromMethod(_ => HapticDevices.CreateDefault()).AsSingle();
             Container.Bind<IHaptics>().To<HapticsService>().AsSingle();
             Container.Bind<IButtonFeedbackHook>().To<ButtonSfxHook>().AsSingle();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // T-050: no ad SDK yet (OPEN #11) -> a fake rewarded ad in the editor and development builds. Release binds
+            // nothing, so WATCH AD stays off there.
+            if (adsDev != null) Container.Bind<IRewardedAds>().FromInstance(new SpeedStars.Meta.Ads.FakeRewardedAds(adsDev)).AsSingle();
+#endif
 
             Container.Bind<IRaceEntryGate>().To<RaceEntryGate>().AsSingle();
             // Project-wide because the Entry Gate modal sits in both scenes (Play on Home, Race again on Race).
