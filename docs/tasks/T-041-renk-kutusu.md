@@ -1,7 +1,7 @@
 ---
 id: T-041
 title: Kostum renk kutulari secilen rengi gostermiyordu (lacivert cerceve plakasi rengin ustundeydi)
-status: review
+status: merged
 owner: systems-agent
 depends_on: [T-035]
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-041-renk-kutusu
-commits: []
+commits: [26740a63, bdbd066f, bd271198]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/CostumeEditorModelTests.cs"
 analytics:
