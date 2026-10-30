@@ -5,10 +5,10 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-10-30 (akşam) · main 86bff46+ (push kullanıcıda) · dal `main`
+Son güncelleme: 2026-10-30 (akşam) · main 41dfbfa (push kullanıcıda) · dal `main`
 
 ## Sürüyor
-- T-054 giriş kapısı cilası · T-055 küçük borçlar (dayBoundary, Watch Replay etiketi, Leggings) — worktree'ler `speed-starts-t054/t055`.
+- T-056 Android build duman testi (geliştirme APK'sı kopyada; Android'e özgü kod + manifest izni).
 
 ## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
 - Tema fiyatı yok → 0; geliştirmede bütün temalar serbest. Normal kozmetik bedava, premium 50 Mor Mücevher (PDF).
@@ -21,14 +21,14 @@ Son güncelleme: 2026-10-30 (akşam) · main 86bff46+ (push kullanıcıda) · da
 - Malik'ten (Faz 7): yarış saati GO'da başlasın, UI üstündeki dokunma ayak sayılmasın, rakipler/sıra (`docs/TEMEL-SOZLESME.md` §11).
 - Serhat'a: `PastelBuildingRow` sahne açılınca binaları yeniden üretiyor (bizim Home kopyasında kaldırıldı).
 
-## Gözle bakılacaklar (main 86bff46; kopyada yeşil: EditMode 792, PlayMode 24, Zenject)
+## Gözle bakılacaklar (main 41dfbfa; kopyada yeşil: EditMode 792, PlayMode 25, Zenject)
 - 30.10 akşam: giriş kapısı yeni görünüm + Watch Ad (editörde sahte reklam, 1 bilet), güvenli alan (çentik), UI sesleri + titreşim
   (yer tutucu sesler `scripts/sfx-uret.py`), kapat-aç/saat regresyon testleri. Malik yarış içi emote ekledi (J, eeb4b57).
 - 30.10: ayarlarda gizlilik/şartlar/destek + iki sıfırlama (onay penceresi), yarış sonunda PB/DB rozetleri, READY/SET/GO ölçeği,
   emote kartı yerleşimi, analizde DNF çizgisi, günlük hediye + 7 gün, ses kapalı ikonu + premium kart.
 
 ## Sıradaki iş
-1. T-054/T-055 birleştir.
+1. T-056 APK duman testi; sonucuna göre mağaza ayarları (IL2CPP/ARM64, hedef API) kararı.
 2. eksik-ui: Race of the Day kartı (içerik Malik), kazanç dökümü (Nakit kuralı yok), para mağazası/Upgrade (PDF'te yok).
 3. Faz 8: kill/restart, saat kayması, çevrimdışı regresyonu; APK öncesi tam tur.
 
