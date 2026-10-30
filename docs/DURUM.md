@@ -8,10 +8,7 @@ MOD: süpervizör
 Son güncelleme: 2026-10-30 (akşam) · main bce0ddb5 (push kullanıcıda) · dal `main`
 
 ## Sürüyor
-- Rakip botlar (kullanıcı onayı 30.10): T-074 saf plan (systems), T-075 yarışta botlar + kalibrasyon (gameplay), T-076 sıra
-  arayüzü (ui); worktree `D:\Pundun\speed-starts-rakip`, dal `agent/T-074-076-rakipler`, ortak sözleşme `IRaceStandings`.
-  Malik'in koduna dokunulmuyor (public API: `RunnerInput.Inject`); bitince Malik'e not md'si yazılacak.
-- Referans oyun rakip analizi bitti: `docs/analiz/2026-10-30-referans-oyun-rakipler.md` (Global players = sabit hayalet,
+- Yok (worktree'ler kapandı). Referans oyun rakip analizi: `docs/analiz/2026-10-30-referans-oyun-rakipler.md` (Global players = sabit hayalet,
   Bots = her yarış değişen AI, Difficulty/Skill range ayarı). Rakip AI tasarım kararı kullanıcıda (pano).
 
 ## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
@@ -30,6 +27,8 @@ Son güncelleme: 2026-10-30 (akşam) · main bce0ddb5 (push kullanıcıda) · da
 ## Gözle bakılacaklar (main bce0ddb5; kopyada yeşil: EditMode 836, PlayMode 34, Zenject)
 - 30.10 (6bcc2159): T-072 yarışta seçili temanın akan dünyası (5 tema, düz pist kapalı); kopyada derleme + 28 test yeşil.
 - 30.10 (d36bcd55): T-073 menüde karakteri UI dışından yatay sürükleyerek döndürme (bırakınca yavaşlar, açıda kalır).
+- 30.10 (6d9ee299): T-074..T-076 yarışta 5 bot (bizim fizikle, kalibre: beceri 0→22.3 sn, 1→16.0 sn), HUD'da yer, sonuç listesi;
+  EditMode 111 + PlayMode 27 + 2 çekim yeşil. Malik'e devir notu `docs/MALIK-DEVIR-rakip-botlar.md`. Telefonda performans ölçülmedi.
 - 30.10 akşam: READY/SET/GO banner'lı (dama bayrak), yarış HUD'u yeni parçalarla, liderlik pencereleri/durumları, premium kart v2
   (altın/kırmızı), kostümde Top + Body (ten) + Emote sekmesi + Custom 1..9, ana menüde Upgrade/Players yok, tema/emote'ta ortak sayaç,
   Sky Islands premium (bedava). APK 64 MB (ASTC), mağaza AAB 57 MB (debug imzalı).
