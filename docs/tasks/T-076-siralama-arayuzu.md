@@ -1,7 +1,7 @@
 ---
 id: T-076
 title: Siralama arayuzu - yarista oyuncunun yeri (1st/2nd...) ve sonuc ekraninda tum kosucular (rakipler bitirdikce dolar)
-status: review
+status: merged
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -15,24 +15,24 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Results/**"
 touches_scene: true
 branch: agent/T-074-076-rakipler
-commits: []
+commits: [b7a800a0, 6c79308f, 9c23afd5, b43fec00, 299ab5d7, acbe1435, 0fd9e23a, 7b123541, d9d4a02b]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceStandingsFormatTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "UiPrefabBuilder.BuildAll(overwrite: true) ile yeniden uretilecek: RaceHud.prefab (yeni Place paneli: Place/Label, RaceHudView.placeRoot+placeText bagli), ResultsTableRow.prefab (yeni Flag + CanvasGroup, ResultsTableRowView.flagImage+revealGroup), ResultsScreen.prefab (Rows artik ResultsPanel/RowsScroll/Viewport/Rows; ResultsScreenView.rowsScroll + flags[] + unknownFlag bagli). Sonra sahnedeki RaceHud ve ResultsScreen ornekleri prefab'tan guncellenir (SceneBuilder/SceneWiring). Yeniden uretimden sonra grep: placeRoot, placeText, flagImage, revealGroup, rowsScroll fileID != 0."
+    durum: closed
+    not: "UiPrefabBuilder.BuildAll(overwrite: true) ile yeniden uretilecek: RaceHud.prefab (yeni Place paneli: Place/Label, RaceHudView.placeRoot+placeText bagli), ResultsTableRow.prefab (yeni Flag + CanvasGroup, ResultsTableRowView.flagImage+revealGroup), ResultsScreen.prefab (Rows artik ResultsPanel/RowsScroll/Viewport/Rows; ResultsScreenView.rowsScroll + flags[] + unknownFlag bagli). Sonra sahnedeki RaceHud ve ResultsScreen ornekleri prefab'tan guncellenir (SceneBuilder/SceneWiring). Yeniden uretimden sonra grep: placeRoot, placeText, flagImage, revealGroup, rowsScroll fileID != 0. -> kopyada builder + kalibrasyon + seed, EditMode 111 + PlayMode 27/0 + 2 cekim testi yesil, raceBots bagli (supervizor 30.10)"
   - tip: SCENE
-    durum: open
-    not: "Shots_HomeAndRace (ShotTool, T-075 alani): yarisa 3. sirada HUD cekimi ('3rd' Place paneli gorunur) ve 7-8 kosuculu sonuc ekrani cekimi eklenmeli; ShotTool bu task'in yazma alani disinda."
+    durum: closed
+    not: "Shots_HomeAndRace (ShotTool, T-075 alani): yarisa 3. sirada HUD cekimi ('3rd' Place paneli gorunur) ve 7-8 kosuculu sonuc ekrani cekimi eklenmeli; ShotTool bu task'in yazma alani disinda. -> kopyada builder + kalibrasyon + seed, EditMode 111 + PlayMode 27/0 + 2 cekim testi yesil, raceBots bagli (supervizor 30.10)"
   - tip: ASSET
-    durum: open
-    not: "Yeni .cs icin .cs.meta (kopyada derlenip GeriAl ile alinacak): Scripts/UI/Race/RaceStandingsFormat.cs, Tests/EditMode/UI/Race/RaceStandingsFormatTests.cs"
+    durum: closed
+    not: "Yeni .cs icin .cs.meta (kopyada derlenip GeriAl ile alinacak): Scripts/UI/Race/RaceStandingsFormat.cs, Tests/EditMode/UI/Race/RaceStandingsFormatTests.cs -> kopyada builder + kalibrasyon + seed, EditMode 111 + PlayMode 27/0 + 2 cekim testi yesil, raceBots bagli (supervizor 30.10)"
   - tip: WIRING
-    durum: open
-    not: "IRaceStandings (T-075 bot oturumu) -> RaceSceneInstaller: Container.Bind<IRaceStandings>() (RaceHudView.InjectStandings ve ResultsScreenView.InjectStandings [InjectOptional]); bagli degilse HUD sirasi gizli, sonuc tablosu eskisi gibi tek satir."
+    durum: closed
+    not: "IRaceStandings (T-075 bot oturumu) -> RaceSceneInstaller: Container.Bind<IRaceStandings>() (RaceHudView.InjectStandings ve ResultsScreenView.InjectStandings [InjectOptional]); bagli degilse HUD sirasi gizli, sonuc tablosu eskisi gibi tek satir. -> kopyada builder + kalibrasyon + seed, EditMode 111 + PlayMode 27/0 + 2 cekim testi yesil, raceBots bagli (supervizor 30.10)"
 started: 2026-10-30
 finished: 2026-10-30
 blocked_reason:

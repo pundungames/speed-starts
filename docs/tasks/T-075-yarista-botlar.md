@@ -1,7 +1,7 @@
 ---
 id: T-075
 title: Yarista botlar kossun - kosucu kopyalari, Inject ile surme, seritler, bitis sureleri, siralama, kalibrasyon araci
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-074]
 owns_paths:
@@ -14,20 +14,20 @@ owns_paths:
   - "Assets/Speed-Staes/Tools/Editor/Builders/ShotTool.cs"
 touches_scene: true
 branch: agent/T-074-076-rakipler
-commits: []
+commits: [b7a800a0, 6c79308f, 9c23afd5, b43fec00, 299ab5d7, acbe1435, 0fd9e23a, 7b123541, d9d4a02b]
 tests: "gerekmiyor: sahne/surme, T-074 testleri + cekim + kalibrasyon"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "Race sahnesini builder ile yeniden kur (SceneBuilder.BuildRace overwrite): 'Race Bots' nesnesi (RaceBots) + adapter.bots + RaceController.body/dunya runner alanlari. Sonra ShotTool.CaptureRaceBots cekimi"
+    durum: closed
+    not: "Race sahnesini builder ile yeniden kur (SceneBuilder.BuildRace overwrite): 'Race Bots' nesnesi (RaceBots) + adapter.bots + RaceController.body/dunya runner alanlari. Sonra ShotTool.CaptureRaceBots cekimi -> kopyada builder + kalibrasyon + seed, EditMode 111 + PlayMode 27/0 + 2 cekim testi yesil, raceBots bagli (supervizor 30.10)"
   - tip: ASSET
-    durum: open
-    not: "Yeni .cs dosyalarinin .meta'lari kopyada derlenip alinacak: Scripts/Bridge/RaceBots.cs, Tools/Editor/Builders/Scene/SceneRaceBots.cs, Tools/Editor/Builders/BotCalibration.cs. BotRaceConfig.asset T-074 seeder'indan (ConfigAssetSeeder). Kalibrasyon kosusundan sonra tablo config'e (-apply)"
+    durum: closed
+    not: "Yeni .cs dosyalarinin .meta'lari kopyada derlenip alinacak: Scripts/Bridge/RaceBots.cs, Tools/Editor/Builders/Scene/SceneRaceBots.cs, Tools/Editor/Builders/BotCalibration.cs. BotRaceConfig.asset T-074 seeder'indan (ConfigAssetSeeder). Kalibrasyon kosusundan sonra tablo config'e (-apply) -> kopyada builder + kalibrasyon + seed, EditMode 111 + PlayMode 27/0 + 2 cekim testi yesil, raceBots bagli (supervizor 30.10)"
   - tip: WIRING
-    durum: open
-    not: "IRaceStandings -> RaceSceneInstaller: [SerializeField] private RaceBots raceBots; Install'da raceBots varsa Container.Bind<IRaceStandings>().FromInstance(raceBots).AsSingle(). Builder SceneRaceBots 'raceBots' alanini sahnede doldurur (alan yoksa uyarir). RaceBots hem IRaceStandings'i uygular hem Changed olayini ileten tek nesnedir"
+    durum: closed
+    not: "IRaceStandings -> RaceSceneInstaller: [SerializeField] private RaceBots raceBots; Install'da raceBots varsa Container.Bind<IRaceStandings>().FromInstance(raceBots).AsSingle(). Builder SceneRaceBots 'raceBots' alanini sahnede doldurur (alan yoksa uyarir). RaceBots hem IRaceStandings'i uygular hem Changed olayini ileten tek nesnedir -> kopyada builder + kalibrasyon + seed, EditMode 111 + PlayMode 27/0 + 2 cekim testi yesil, raceBots bagli (supervizor 30.10)"
 started: 2026-10-30
 finished: 2026-10-30
 blocked_reason:

@@ -1,7 +1,7 @@
 ---
 id: T-074
 title: Rakip botlarin plani (saf C#) - config, saha plani, basis takvimi, canli siralama modeli
-status: review
+status: merged
 owner: systems-agent
 depends_on: []
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/**"
 touches_scene: false
 branch: agent/T-074-076-rakipler
-commits: []
+commits: [b7a800a0, 6c79308f, 9c23afd5, b43fec00, 299ab5d7, acbe1435, 0fd9e23a, 7b123541, d9d4a02b]
 tests:
   - Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/BotPlanningTests.cs
   - Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/RaceStandingsModelTests.cs
@@ -19,8 +19,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
-    not: "Data/Config/BotRaceConfig.asset uretilecek (kopyada ConfigAssetSeeder.SeedAll -> BotRaceConfigSeed); alanlar kod varsayilani; .cs.meta dosyalarini Unity uretir (Scripts/Core/Runtime/Race/Bots, BotRaceConfigSeed.cs, Tests/.../Bots)"
+    durum: closed
+    not: "Data/Config/BotRaceConfig.asset uretilecek (kopyada ConfigAssetSeeder.SeedAll -> BotRaceConfigSeed); alanlar kod varsayilani; .cs.meta dosyalarini Unity uretir (Scripts/Core/Runtime/Race/Bots, BotRaceConfigSeed.cs, Tests/.../Bots) -> kopyada builder + kalibrasyon + seed, EditMode 111 + PlayMode 27/0 + 2 cekim testi yesil, raceBots bagli (supervizor 30.10)"
 started: 2026-10-30
 finished: 2026-10-30
 blocked_reason:
