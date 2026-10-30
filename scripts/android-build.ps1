@@ -3,7 +3,7 @@
     Android duman testi: kopyada gelistirme APK'si alir (batchmode), ANDROID_* ve error CS satirlarini basar.
 
 .DESCRIPTION
-    Metot: SpeedStars.Tools.Build.AndroidBuildSmoke.Run (Assets/Speed-Staes/Tools/Editor/Build). Metot cikisi kendisi
+    Metot: SpeedStars.Tools.Build.AndroidBuildSmoke.Run (Assets/Speed-Staes/Tools/Editor/Packaging). Metot cikisi kendisi
     yapar (-quit yok). Ana klasorde Unity aciksa calismaz: kopyada kos (scripts\kopya.ps1 -Al / -Senkron).
     Cikis kodlari: 0 build tamam; 1 build/derleme basarisiz; 10 Unity kurulumu yok; 11 proje yok; 12 Editor projeyi
     acik tutuyor; 13 zaman asimi / log yok; 19 script ic hatasi.

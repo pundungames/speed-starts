@@ -25,7 +25,7 @@ YOL-HARITASI Faz 8 "APK oncesi tam test turu". Editor dogrulamasi `#if UNITY_AND
 hic derlemiyor; Android player derlemesi, sahne listesi ve manifest izni hic denenmedi. Kullanici projeyi Android'e cevirdi; Android
 build destegi + NDK kurulu (`C:\Program Files\Unity\Hub\Editor\2022.3.62f2-x86_64\Editor\Data\PlaybackEngines\AndroidPlayer`).
 
-1) `Tools/Editor/Build/AndroidBuildSmoke.cs` (`SpeedStars.Tools.Build`, Editor-only): `-executeMethod SpeedStars.Tools.Build.AndroidBuildSmoke.Run`
+1) `Tools/Editor/Packaging/AndroidBuildSmoke.cs` (`SpeedStars.Tools.Build`, Editor-only): `-executeMethod SpeedStars.Tools.Build.AndroidBuildSmoke.Run`
    - Sahneler `EditorBuildSettings.scenes`'ten (etkin olanlar); bos ise hata.
    - `BuildPlayerOptions`: Android, `BuildOptions.Development`, cikti `-buildOut <yol>` argumanindan (yoksa proje kokune gore
      `../pipeline-logs/android/SpeedStars-dev.apk`; Assets disinda). **ProjectSettings/PlayerSettings'e kalici yazma yok** (scripting
@@ -54,7 +54,7 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
-- Yapildi: Tools/Editor/Build/AndroidBuildSmoke.cs (Run: sahneler, Development APK, ANDROID_BUILD_OK/FAIL, ANDROID_MANIFEST, ANDROID_SETTINGS; yalniz okuma) ve scripts/android-build.ps1 (unity-verify.ps1 yardimcilarini dot-source eder).
+- Yapildi: Tools/Editor/Packaging/AndroidBuildSmoke.cs (Run: sahneler, Development APK, ANDROID_BUILD_OK/FAIL, ANDROID_MANIFEST, ANDROID_SETTINGS; yalniz okuma) ve scripts/android-build.ps1 (unity-verify.ps1 yardimcilarini dot-source eder).
 - Calistirma (kopyada): powershell -NoProfile -ExecutionPolicy Bypass -File scriptsndroid-build.ps1 -ProjectPath D:\Pundun\speed-starts-verify-1
 - Mevcut ayarlar (okundu): scriptingBackend bos (Mono), targetArchitectures=1 (yalniz ARMv7), minSdk 22, targetSdk 0 (auto) - magaza icin IL2CPP+ARM64 gerekecek.
 - Zorluk: Unity calistirilmadi; API imzalari 2022.3 bilgisinden. .meta dosyalarini Unity uretecek (hook yazdirmaz).
