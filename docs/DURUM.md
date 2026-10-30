@@ -8,7 +8,10 @@ MOD: süpervizör
 Son güncelleme: 2026-10-30 (akşam) · main bce0ddb5 (push kullanıcıda) · dal `main`
 
 ## Sürüyor
-- Yok (bütün worktree'ler kapandı).
+- T-073 (menüde karakteri sürükleyip döndürme): kod main'de, Home çıktısı dal `agent/T-072-073` 06d75c2c (worktree
+  `D:\Pundun\speed-starts-tema`). Kullanıcının Unity'sinde Home kaydedilmemiş (*) olduğu için main'e alınmadı.
+- Orijinal oyun analizi (telefon, adb + monkey): rakipler sabit kayıtlı koşu, oyuncuya tepki yok; Restart/Race again aynı grup,
+  Play yeni eşleşme; kötü koşulardan sonra grup yavaşladı (12-18 sn -> 23-27 sn). AI tasarım kararı kullanıcıda.
 
 ## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
 - Tema: fiyatı 0 olan tema bedava (her build'de sahipli, T-070); Sky Islands premium (Mor Mücevher para birimi) ama "beleş olsun şimdilik".
@@ -24,6 +27,7 @@ Son güncelleme: 2026-10-30 (akşam) · main bce0ddb5 (push kullanıcıda) · da
 - Serhat'a: `PastelBuildingRow` sahne açılınca binaları yeniden üretiyor (bizim Home kopyasında kaldırıldı).
 
 ## Gözle bakılacaklar (main bce0ddb5; kopyada yeşil: EditMode 836, PlayMode 34, Zenject)
+- 30.10 (6bcc2159): T-072 yarışta seçili temanın akan dünyası (5 tema, düz pist kapalı); kopyada derleme + 28 test yeşil.
 - 30.10 akşam: READY/SET/GO banner'lı (dama bayrak), yarış HUD'u yeni parçalarla, liderlik pencereleri/durumları, premium kart v2
   (altın/kırmızı), kostümde Top + Body (ten) + Emote sekmesi + Custom 1..9, ana menüde Upgrade/Players yok, tema/emote'ta ortak sayaç,
   Sky Islands premium (bedava). APK 64 MB (ASTC), mağaza AAB 57 MB (debug imzalı).
