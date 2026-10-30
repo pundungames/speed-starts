@@ -25,7 +25,7 @@ needs:
     not: "ResultsTableRow prefab'i ve Race_results sahnesini builder ile yeniden uret (PersonalBestBadge/DayBestBadge Text'leri ve personalBestBadge/dayBestBadge alanlari yeni)"
 
 started: 2026-10-30
-finished:
+finished: 2026-10-30
 blocked_reason:
 ---
 

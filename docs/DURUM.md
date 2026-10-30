@@ -5,34 +5,30 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-10-30 (öğleden sonra) · origin/main birleşti (881966a, push kullanıcıda) · dal `main`
+Son güncelleme: 2026-10-30 (akşam) · main 7ffb62a (push kullanıcıda) · dal `main`
 
 ## Sürüyor
-- Yok (bütün worktree'ler kapandı). Sıradaki: Faz 4 / Faz 6 (aşağıda).
+- T-050 giriş kapısı v2 + sahte ödüllü reklam · T-051 güvenli alan · T-052 ses ve titreşim (worktree'ler `speed-starts-t050..t052`).
 
 ## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
-- Tema fiyatı (Nakit) yok → asset'te 0; geliştirmede bütün temalar serbest. Ön ayar Custom 1..3. Face = Glasses, Emote pasif,
-  Power/Stamina/Height yalnız gösterim. Normal kozmetik bedava, premium 50 Mor Mücevher (PDF).
-- Başlangıç Adet Bileti = tavan (3): PDF'te değer yok, 0 ile yeni oyuncu ilk yarış için 30 dk bekliyordu (entegrasyonda uygulanır).
-- Serhat'ın `Docs/` md'leri index'te `docs/`'a taşındı (2188d99). `Backups/` (370 MB) Serhat'ın: silinmedi (pull eden makinede
-  dosyaları silerdi); Serhat'a "yedekleri depo dışında tut" denecek.
+- Tema fiyatı yok → 0; geliştirmede bütün temalar serbest. Normal kozmetik bedava, premium 50 Mor Mücevher (PDF).
+- Başlangıç Adet Bileti = tavan (3). Günlük gün sınırı UTC; 7 gün kaçırılan gün sıfırlamaz; G6 300 Nakit, G7 PH02 şapka.
+- Ödüllü reklam: 1 reklam = 1 Adet Bileti (PDF §1.2), SDK yok → editör/dev'de sahte reklam (T-050). Titreşim efekt anahtarını izler (T-052).
+- Bot süreleri, emote fiyatları yer tutucu (config).
 
 ## Kullanıcıdan bekleyen
-- Malik'ten (Faz 7, sona bırakıldı): yarış başladı/bitti olayı, UI üstündeki dokunma ayak sayılmasın, geri sayım sinyali (`docs/TEMEL-SOZLESME.md` §11).
+- Gizlilik / Şartlar / Destek URL'leri (ayarlarda satırlar hazır, URL gelene kadar gri).
+- Malik'ten (Faz 7): yarış saati GO'da başlasın, UI üstündeki dokunma ayak sayılmasın, rakipler/sıra (`docs/TEMEL-SOZLESME.md` §11).
+- Serhat'a: `PastelBuildingRow` sahne açılınca binaları yeniden üretiyor (bizim Home kopyasında kaldırıldı).
 
-## Gözle bakılacaklar (main 649e7d3; kopyada yeşil: EditMode 629, PlayMode 16, Zenject; çekimler pipeline-logs/shots-t040b-*, shots-t039-*, shots-t038-*)
-- 30.10 eklenenler: kostüm 2./3. renk (T-035), Analiz ekranı (T-036), Liderlik tablosu Faz 6 (T-037/T-038, yerel, bot dereceleri yer tutucu),
-  yarış başı READY/SET/GO (T-039; girdi GO'da açılır), Emote ekranı (T-040; prosedürel 6 emote, fiyatlar yer tutucu Nakit).
-- Eksik UI listesi: `docs/eksik-ui/` (orijinal oyun telefonda gezildi; yalnız bizde olmayanlar).
-
-## Senden beklenen
-- Push. Unity'de dene: tişört/oklar (T-034), emote, liderlik, yarış başı geri sayımı.
-- Malik'e: yarış saati ilk basışta başlıyor, GO'da başlamalı (T-039 DECISION). Serhat'a: şehir temasındaki binalar sahne açılınca yeniden üretiliyor.
+## Gözle bakılacaklar (main 7ffb62a; kopyada yeşil: EditMode 708, PlayMode 19, Zenject)
+- 30.10: ayarlarda gizlilik/şartlar/destek + iki sıfırlama (onay penceresi), yarış sonunda PB/DB rozetleri, READY/SET/GO ölçeği,
+  emote kartı yerleşimi, analizde DNF çizgisi, günlük hediye + 7 gün, ses kapalı ikonu + premium kart.
 
 ## Sıradaki iş
-1. Faz 4 günlük hediye + 7 gün (sanat yok → var olan sanatla taslak), giriş kapısı sanatı gelince.
-2. eksik-ui listesinden: Ayarlar'a Gizlilik/Şartlar/Sıfırlama satırları (mağaza için şart), kazanç dökümü + DB/PB, Race of the Day kartı.
-3. Backlog: ölü kod, DNF çizgisi, başlangıç yazı ölçeği, emote yerleşimi.
+1. T-050/T-051/T-052 birleştir.
+2. eksik-ui: Race of the Day kartı (içerik Malik), kazanç dökümü (Nakit kuralı yok), para mağazası/Upgrade (PDF'te yok).
+3. Faz 8: kill/restart, saat kayması, çevrimdışı regresyonu; APK öncesi tam tur.
 
 ## Dikkat
 - `CLAUDE.md` Malik'in; bizim kurallar `docs/CALISMA-KURALLARI.md` (`CLAUDE.local.md` ile yüklenir).
