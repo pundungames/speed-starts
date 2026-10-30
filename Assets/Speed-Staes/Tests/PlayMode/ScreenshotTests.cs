@@ -8,6 +8,7 @@ using SpeedStars.Core.Services;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
+using SpeedStars.UI.Costume;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
@@ -269,6 +270,65 @@ namespace SpeedStars.PlayTests
                 yield return WaitUntil(() => home.IsVisible, "HomeScreen to be visible");
                 yield return Settle();
                 yield return Capture(dir, "Home_safearea");
+            }
+            finally
+            {
+                saveFiles.Restore();
+            }
+        }
+
+        /// <summary>
+        /// T-062 evidence: a premium item card of the costume screen, shot twice. Home_costume_premium_locked: the card is
+        /// picked while not owned (gold frame gone, red frame + lock). Home_costume_premium_selected: the same item granted
+        /// through ICosmeticService.GrantOwned (red frame + tick). Home_costume (Shots_HomeAndRace) stays as it is.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Shots_CostumePremium()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            try
+            {
+                yield return LoadScene(HomeScene);
+                DiContainer container = ProjectContext.Instance.Container;
+                ICosmeticService cosmetics = container.Resolve<ICosmeticService>();
+
+                HomeScreenView home = Require<HomeScreenView>();
+                yield return WaitUntil(() => home.IsVisible, "HomeScreen to be visible");
+                UiScreen screen = RequireField<UiScreen>(home, "cosmeticsScreen");
+                yield return Tap(RequireField<Button>(home, "editRacerButton"), "editRacerButton");
+                yield return WaitOpen(screen, "cosmeticsScreen");
+                yield return WaitClosed(home, "HomeScreen to step aside");
+                yield return Settle();
+
+                // Premium items come first in a tab: the first active premium card of the opening tab that is not owned yet.
+                var cards = (List<CostumeItemCardView>)GetPrivate(screen, "_cards");
+                CostumeItemCardView premium = null;
+                foreach (CostumeItemCardView card in cards)
+                {
+                    if (!card.gameObject.activeSelf) continue;
+                    if (cosmetics.TryGetItem(card.CosmeticId, out CosmeticItemInfo item) && item.IsPremium && item.IsLocked)
+                    {
+                        premium = card;
+                        break;
+                    }
+                }
+                if (premium == null) Assert.Ignore("No locked premium card in the opening tab of the costume screen.");
+
+                string id = premium.CosmeticId;
+                yield return Tap(RequireField<Button>(premium, "button"), "premium item card");
+                yield return Settle();
+                yield return Capture(dir, "Home_costume_premium_locked");
+
+                Assert.AreEqual(CosmeticGrantResult.Granted, cosmetics.GrantOwned(id, "shot:T-062"));
+                yield return Settle();
+                yield return Capture(dir, "Home_costume_premium_selected");
+
+                yield return Tap(CloseButtonOf(screen), "cosmeticsScreen Back");
+                yield return WaitClosed(screen, "cosmeticsScreen");
             }
             finally
             {

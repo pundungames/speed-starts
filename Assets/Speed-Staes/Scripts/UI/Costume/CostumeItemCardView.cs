@@ -27,6 +27,9 @@ namespace SpeedStars.UI.Costume
         [Tooltip("Item picture; kept in its aspect inside the card.")]
         [SerializeField] private Image icon;
 
+        [Tooltip("Picture of a premium card: sits inside the premium group, between its fill and its frame. Optional.")]
+        [SerializeField] private Image premiumIcon;
+
         [Tooltip("Tick: shown while the item is worn.")]
         [SerializeField] private GameObject check;
 
@@ -37,10 +40,10 @@ namespace SpeedStars.UI.Costume
         [Tooltip("Premium plain fill under the item picture.")]
         [SerializeField] private GameObject premiumBackground;
 
-        [Tooltip("Premium navy frame with the gold inner line, above the picture.")]
+        [Tooltip("Premium gold frame (thick gold band): shown while the card is NOT selected.")]
         [SerializeField] private GameObject premiumFrame;
 
-        [Tooltip("Premium red outer frame: the item is the one shown on the character.")]
+        [Tooltip("Premium red frame: replaces the gold one while the item is the one shown on the character (never both).")]
         [SerializeField] private GameObject premiumSelectedFrame;
 
         [Tooltip("Premium lock: the item is not owned.")]
@@ -86,8 +89,15 @@ namespace SpeedStars.UI.Costume
         {
             CosmeticId = item.Id;
             icon.sprite = picture;
-            icon.enabled = picture != null;
             _premium = item.IsPremium;
+            // A premium card draws its picture inside the premium group (under the frame), so the plain picture stays off.
+            bool hasPicture = picture != null;
+            icon.enabled = hasPicture && (!_premium || premiumIcon == null);
+            if (premiumIcon != null)
+            {
+                premiumIcon.sprite = picture;
+                premiumIcon.enabled = hasPicture && _premium;
+            }
         }
 
         public void SetState(bool selected, bool locked, bool disabled = false)
@@ -145,9 +155,9 @@ namespace SpeedStars.UI.Costume
 
     /// <summary>
     /// Which layers of an item card are visible (pure, tested). Normal cards keep the old look. A premium card shows
-    /// background, picture, frame; locked adds the lock (the card still selects and previews); the selected one adds the
-    /// red frame, and the tick only when the item is really owned (a previewed locked item is not "worn"); the veil is
-    /// only for a really disabled card.
+    /// background, picture and ONE frame: gold while not selected, red while selected (never both: the red one replaces the
+    /// gold). Locked adds the lock (the card still selects and previews); the selected one adds the tick only when the item
+    /// is really owned (a previewed locked item is not "worn"); the veil is only for a really disabled card.
     /// </summary>
     public readonly struct PremiumCardLayers
     {
@@ -169,7 +179,7 @@ namespace SpeedStars.UI.Costume
             NormalCheck = !premium && selected;
             NormalLock = !premium && locked;
             PremiumBackground = premium;
-            PremiumFrame = premium;
+            PremiumFrame = premium && !selected;
             PremiumSelectedFrame = premium && selected;
             PremiumLock = premium && locked;
             PremiumCheck = premium && selected && !locked;

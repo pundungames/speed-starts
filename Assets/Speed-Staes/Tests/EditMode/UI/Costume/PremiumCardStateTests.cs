@@ -28,7 +28,32 @@ namespace SpeedStars.Tests.UI.Costume
             {
                 PremiumCardLayers layers = PremiumCardLayers.Resolve(true, selected, locked, false);
                 Assert.IsFalse(layers.NormalBackground || layers.NormalSelectedBackground || layers.NormalCheck || layers.NormalLock);
-                Assert.IsTrue(layers.PremiumBackground && layers.PremiumFrame);
+                Assert.IsTrue(layers.PremiumBackground);
+                Assert.IsTrue(layers.PremiumFrame || layers.PremiumSelectedFrame);
+            }
+        }
+
+        [Test]
+        public void PremiumShowsExactlyOneFrame_RedWhenSelected_GoldOtherwise()
+        {
+            foreach (bool selected in new[] { false, true })
+            foreach (bool locked in new[] { false, true })
+            foreach (bool disabled in new[] { false, true })
+            {
+                PremiumCardLayers layers = PremiumCardLayers.Resolve(true, selected, locked, disabled);
+                Assert.IsFalse(layers.PremiumFrame && layers.PremiumSelectedFrame, "gold and red must never show together");
+                Assert.AreEqual(selected, layers.PremiumSelectedFrame);
+                Assert.AreEqual(!selected, layers.PremiumFrame);
+            }
+        }
+
+        [Test]
+        public void NormalCardNeverShowsAPremiumFrame()
+        {
+            foreach (bool selected in new[] { false, true })
+            {
+                PremiumCardLayers layers = PremiumCardLayers.Resolve(false, selected, false, false);
+                Assert.IsFalse(layers.PremiumFrame || layers.PremiumSelectedFrame);
             }
         }
 

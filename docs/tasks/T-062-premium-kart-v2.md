@@ -1,7 +1,7 @@
 ---
 id: T-062
 title: Kostum premium karti v2 (Premium_Kart_Duzeltme_v2) - kalin altin cerceve, seciliyken altin yerine kirmizi; dikey sanat hucreye oranla sigar
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-044]
 owns_paths:
@@ -12,12 +12,17 @@ owns_paths:
 touches_scene: true
 branch: agent/T-062-premium-kart-v2
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/PremiumCardStateTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_CostumePremium, yalniz -shotDir)"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Builder CostumeItemCard'i yeniden uretmeli (UiCostumePrefabs.ItemCard; mevcut prefab overwrite ile): Rows/CostumeItemCard.prefab'ta yeni PremiumCard dugumu (AspectRatioFitter FitInParent 736/807) altinda PremiumBackground, PremiumIcon, PremiumFrame, PremiumSelectedFrame, PremiumLock (sag-alt), PremiumCheck (sag-ust), PremiumDisabledOverlay olusur; CostumeItemCardView.premiumIcon alani yeni (fileID: 0 degil mi kontrol et). Sonra CostumeEditorScreen prefab'i kart prefab'ina bagli kalir. Sonra Shots_CostumePremium ile Home_costume_premium_locked/selected goruntulerine bak."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -58,3 +63,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+1. Katman kurali: PremiumFrame = premium && !selected, PremiumSelectedFrame = premium && selected (altin ve kirmizi asla birlikte); testler buna gore, "tek cerceve" ve "normal kartta premium cerceve yok" testleri eklendi.
+2. Hucreyi DEGISTIRMEDIM, karti hucreye sigdirdim: izgara hucresi (176x164 olcekli) aynidir; PremiumCard dugumu AspectRatioFitter FitInParent (736:807) ile hucre icinde ortalanir, yan bosluk seffaf (izgara duzeni bozulmaz).
+3. Premium ikon ayri Image (`premiumIcon`) grubun icinde, Background ile Frame arasinda, ic lacivert cizgi icine (0.14-0.88) yayilir; normal ikon premium kartta kapali.
+4. Lock/check eski 176x164 tuvalleri kendi boyunda grubun sag-alt/sag-ust kosesine cipali; disabled overlay grubu kaplar. Prefab uretilmedi (needs SCENE).
+5. ScreenshotTests.Shots_CostumePremium eklendi (locked -> GrantOwned -> selected); Unity/test kosulmadi.
