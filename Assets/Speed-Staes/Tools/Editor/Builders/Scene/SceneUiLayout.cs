@@ -106,6 +106,7 @@ namespace SpeedStars.Tools.Builders
                 throw new InvalidOperationException($"Could not instantiate '{AssetDatabase.GetAssetPath(prefab)}'.");
             instance.transform.SetParent(parent, false);
             if (instance.activeSelf != active) instance.SetActive(active);
+            UiSafeAreaWiring.Attach(instance, prefab); // T-051: edge items stay out from under a notch, backgrounds stay full-bleed
             PrefabUtility.RecordPrefabInstancePropertyModifications(instance);
             PrefabUtility.RecordPrefabInstancePropertyModifications(instance.transform);
             return instance;

@@ -1,7 +1,7 @@
 ---
 id: T-051
 title: Guvenli alan (safe area) - centik/kamera deligi olan telefonlarda butonlar ve metinler kesilmesin
-status: todo
+status: review
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -15,12 +15,21 @@ owns_paths:
 touches_scene: true
 branch: agent/T-051-guvenli-alan
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Framework/SafeAreaTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/SafeAreaPlayTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shot_HomeSafeArea, -shotDir ile)"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: ".meta dosyalari uretilmeli (Unity import): Scripts/UI/Framework/SafeAreaMath.cs, SafeAreaSource.cs, SafeAreaFitter.cs, FullBleed.cs; Tools/Editor/Builders/Ui/UiSafeAreaWiring.cs; Tests/EditMode/UI/Framework/ (klasor + SafeAreaTests.cs); Tests/PlayMode/SafeAreaPlayTests.cs"
+  - tip: SCENE
+    durum: open
+    not: "Home.unity ve Race.unity yeniden uretilmeli (SceneBuilder overwrite): SceneUiLayout.Place artik her ekran/popup/widget ornegine SafeAreaFitter ekliyor (tam ekran kok = Children modu, kenar widget'i = Self; RewardFlight/RedDot haric). Sahnelerde elle duzenleme varsa kullaniciya sor; yoksa overwrite. Sonra PlayMode SafeAreaPlayTests + ScreenshotTests.Shot_HomeSafeArea (-shotDir)"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -60,3 +69,8 @@ KAMERA  : yok
 - Dikey yon (oyun yalniz yatay), farkli en-boy icin yeni yerlesim
 
 ## Calisma notu
+1. Tasarim: ekran prefab'larina dokunmadan sahne katmaninda `SafeAreaFitter` (ornekte eklenen bilesen). Kok tam ekransa (Children) dogrudan cocuklarin anchor'lari guvenli dikdortgene lineer eslenir (kose ogesi guvenli koseye, ortadaki ortaya); kenar widget'i (ResourceBar) ise kendini (Self) eslenir.
+2. Tam ekran kalanlar: kendi Graphic'i olan, tam gerilmis, ofsetsiz cocuk (dim/arka plan/tap yakalayici) otomatik atlanir; ayrica elle `FullBleed` isaretcisi var. Ofset/boyut korunur (anchor atamasi bunlari yeniden yazar, geri yaziliyor), animasyon anchoredPosition'a dokundugu icin bozulmaz.
+3. Neden bu: wrapper (SafeArea kapsayicisi) prefab ornegi icinde yeniden ebeveynleme gerektirirdi (yasak) ve her ekran builder'inda FullBleed isaretlemesi; T-050/T-052 ile cakisirdi. Builder degisikligi: `SceneUiLayout.Place` icinde tek satir + yeni `UiSafeAreaWiring.cs`.
+4. Seam: `ISafeAreaSource` (Screen.safeArea varsayilan, testte `FixedSafeAreaSource`); `Refresh()` yalniz deger degisince yazar, Update'te sadece iki onbellekli deger kiyaslanir. Popup pencereleri ortada oldugu icin guvenli merkeze (asimetrik centikte yarim inset) kayar, dim'ler tam ekran.
+5. Belirsiz: sahneler yeniden uretilmeden fitter yok (PlayMode testi bunu acikca soyler); Race'i dogrudan yuklemek RaceFlow'da "free start" uyarisi verir (hata degil).

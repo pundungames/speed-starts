@@ -189,6 +189,30 @@ namespace SpeedStars.PlayTests
             }
         }
 
+        /// <summary>T-051 evidence: Home with a fake camera hole on the left edge (resource bar and corner buttons pulled in, art full-bleed).</summary>
+        [UnityTest]
+        public IEnumerator Shot_HomeSafeArea()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            try
+            {
+                yield return LoadScene(HomeScene);
+                SafeAreaTestSupport.Install(SafeAreaTestSupport.LeftNotch());
+                HomeScreenView home = Require<HomeScreenView>();
+                yield return WaitUntil(() => home.IsVisible, "HomeScreen to be visible");
+                yield return Settle();
+                yield return Capture(dir, "Home_safearea");
+            }
+            finally
+            {
+                saveFiles.Restore();
+            }
+        }
+
         private static IEnumerator ShootScreen(string dir, HomeScreenView home, string buttonField, string screenField, string shotName)
         {
             UiScreen screen = RequireField<UiScreen>(home, screenField);
