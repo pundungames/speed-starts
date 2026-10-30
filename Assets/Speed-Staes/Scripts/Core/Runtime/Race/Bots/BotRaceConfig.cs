@@ -121,12 +121,20 @@ namespace SpeedStars.Core.Race.Bots
         [SerializeField] private float mistakeShiftRatio = 0.5f;
 
         [Header("Calibration (skill -> expected 100 m time)")]
-        [Tooltip("Skill to expected time rows, skill ascending, seconds falling. Placeholder until the calibration tool fills it.")]
+        [Tooltip("Skill to expected time rows, skill ascending, seconds falling. Measured against the runner sim by the calibration tool.")]
         [SerializeField] private List<BotCalibrationPoint> calibration = new List<BotCalibrationPoint>
         {
-            new BotCalibrationPoint(0f, 32f),
-            new BotCalibrationPoint(0.5f, 19f),
-            new BotCalibrationPoint(1f, 13f),
+            new BotCalibrationPoint(0f, 22.343836f),
+            new BotCalibrationPoint(0.1f, 21.805595f),
+            new BotCalibrationPoint(0.2f, 21.106363f),
+            new BotCalibrationPoint(0.3f, 20.491817f),
+            new BotCalibrationPoint(0.4f, 19.861803f),
+            new BotCalibrationPoint(0.5f, 19.182318f),
+            new BotCalibrationPoint(0.6f, 18.5784f),
+            new BotCalibrationPoint(0.7f, 17.932213f),
+            new BotCalibrationPoint(0.8f, 17.238714f),
+            new BotCalibrationPoint(0.9f, 16.595211f),
+            new BotCalibrationPoint(1f, 15.965787f),
         };
 
         [Header("Names")]
