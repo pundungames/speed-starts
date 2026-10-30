@@ -7,6 +7,7 @@
 `- [ ] <konu> — <neden onemli> (fark edildigi task: T-XXX, <tarih>)`
 
 ## Teknik borc
+- [ ] [kostum] Yeni Body (ten) sekmesinin ikonu (stats_height_icon) sekmede neredeyse gorunmuyor; daha belirgin bir ikon ya da olcek (T-066, 30.10)
 - [ ] [build] Magaza build metodu: IL2CPP + ARMv7/ARM64 + paket adi + surum kodu yalniz o build icin (PlayerSettings sonra geri), AAB; gunluk build Mono kalir (IL2CPP 9.5 dk, Mono 1 dk). IL2CPP+link.xml kopyada derlendi (71 MB APK); cihazda calisma denenmedi (30.10)
 - [ ] [doku] Leaderboard ikonlari tam tuval boyutlu: alfa sinirina kirpma ya da Sprite Atlas (Race HUD T-061 ile kirpilmis sanata gecti); SceneHomeDim hala Costume/dimscreen.png sprite kullaniyor -> duz renk (T-057, 30.10)
 - [ ] [doku] Serhat temalari 51 MB mesh (APK toplam kullanici asset 140 MB): tema basina yukleme ya da Addressables - Serhat ile (T-057, 30.10)

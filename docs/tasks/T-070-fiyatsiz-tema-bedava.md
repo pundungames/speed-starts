@@ -1,7 +1,7 @@
 ---
 id: T-070
 title: Fiyati 0 olan tema bedava (herkes kullanir) - Sky Islands premium ama simdilik ucretsiz; fiyat girilince satin alinabilir
-status: review
+status: merged
 owner: systems-agent
 depends_on: [T-068]
 owns_paths:
@@ -12,7 +12,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Regression/**"
 touches_scene: false
 branch: agent/T-070-fiyatsiz-tema
-commits: []
+commits: [58eb6081]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/ThemeServiceTests.cs"
 analytics:

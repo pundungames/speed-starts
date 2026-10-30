@@ -31,8 +31,8 @@ needs:
     durum: closed
     not: "8 PNG Unity'ye alinacak (UiArt.ImportAll: Sprite/Single/FullRect/alpha/mipmap kapali/ASTC). ThemeCatalog.asset: sky_islands girdisinde premium=true, priceCurrency=PurpleGem(1); diger temalar premium=false, priceCurrency=Cash(0). cashPrice alani artik 'fiyat miktari' (serilestirilmis ad ayni). Mevcut asset kullanicinin: ThemeCatalogSeed overwrite etmez, elle ya da overwrite ile."
   - tip: DECISION
-    durum: open
-    not: "Sky Islands fiyati (Mor Mucevher miktari). Verilmedi: 0 = satin alinamaz. Paket: kozmetigin 50'sini kopyalama."
+    durum: closed
+    not: "Sky Islands fiyati (Mor Mucevher miktari). Verilmedi: 0 = satin alinamaz. Paket: kozmetigin 50'sini kopyalama." -> kullanici 30.10: "beles olsun simdilik" (T-070: fiyat 0 = bedava)
 started: 2026-10-30
 finished: 2026-10-30
 blocked_reason:

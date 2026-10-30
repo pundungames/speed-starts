@@ -1,7 +1,7 @@
 ---
 id: T-066
 title: Kostum arayuzu - "Body" sekmesi "Top" olur, yeni "Body" sekmesi ten rengi secer; Emote sekmesi emote ekranini acar; 9 hazir kostum listesi
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-065]
 owns_paths:
@@ -12,7 +12,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-066-kostum-arayuz
-commits: []
+commits: [629aec56, b74b1007, fd590f6d]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/CostumeEditorModelTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/CostumeScreenSmokeTests.cs"
@@ -21,13 +21,13 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "UiBuilder overwrite ile uc prefab uretilir: Rows/CostumeSkinSwatch.prefab (YENI), Rows/CostumePresetRow.prefab degismez ama CosmeticsScreen.prefab YENIDEN uretilir (overwrite): sekme sutunu 10 sekme (Body en ustte, Top=eski Body etiketi, hepsi ~%10 kucuk), preset listesi kaydirmali (5 satir), yeni alanlar swatchPrefab + dropdown.listScroll. Builder cikti: UiCostumePrefabs.BuildAll. Overwrite kullanicinin prefab'taki elle duzenlemelerini ezer: once sor."
   - tip: WIRING
-    durum: open
+    durum: closed
     not: "CostumeEditorScreenView.emoteScreen (CosmeticsScreen sahne ornegi) -> sahnedeki EmoteScreen nesnesi (HomeScreenView.emoteScreen ile ayni nesne). Prefab sahne nesnesine baglanamaz; sahne builder'i ya da Inspector. Bos kalirsa Emote sekmesi gri kalir. Zenject: ConstructCostumeEditor artik ScreenNavigator + CosmeticCatalog da ister (ikisi de bagli)."
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "custom_dropdown_list_background.png.meta: Sprite Border L/B/R/T = 20/20/20/20 (liste Sliced cizilir, 9 satirda kenar cizgisi esnemesin; sinir yoksa Sliced=Simple gibi dolar, calisir ama esner). T-065 ASSET maddeleri (presetCount 9, skinTones...) ayrica gerekli; PlayMode testi presetCount >= 9 ister."
 started: 2026-10-30
 finished: 2026-10-30

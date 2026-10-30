@@ -1,7 +1,7 @@
 ---
 id: T-069
 title: Premium tema yazilari - kullanimdaki premiumda "IN USE" lavanta zeminde beyaz kaliyor; tema adi cerceveye tasiyor
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-068]
 owns_paths:
@@ -10,14 +10,14 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Themes/**"
 touches_scene: true
 branch: agent/T-069-premium-tema-yazi
-commits: []
+commits: [d22ee89d, fd590f6d]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Themes/ThemeSelectPresenterTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "ThemeSelectScreenView.premiumNameMin/Max alanlari kodda varsayilanli (0.16/0.84); mevcut prefab'ta kayitli degil, varsayilan gecer. Gorunum uygunsuzsa Inspector'dan ayarla; prefab yeniden uretilirse degisiklik gerekmez."
 started: 2026-10-30
 finished: 2026-10-30
