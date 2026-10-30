@@ -1,4 +1,5 @@
 using System;
+using SpeedStars.Core.Audio;
 using SpeedStars.Installers;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Emotes;
@@ -41,6 +42,7 @@ namespace SpeedStars.Tools.Builders
             var settings = LoadRequired<SettingsConfig>(ConfigAssetSeeder.SettingsPath, seeder);
             var leaderboard = LoadRequired<LeaderboardConfig>(ConfigAssetSeeder.LeaderboardPath, seeder);
             var emotes = LoadRequired<EmoteCatalog>(EmoteCatalogSeed.CatalogPath, seeder);
+            var audio = LoadRequired<AudioConfig>(ConfigAssetSeeder.AudioPath, seeder);
 
             EnsureParentFolder(PrefabPath);
             var preview = EditorSceneManager.NewPreviewScene();
@@ -61,6 +63,10 @@ namespace SpeedStars.Tools.Builders
                 Prop(installerSo, "settings").objectReferenceValue = settings;
                 Prop(installerSo, "leaderboard").objectReferenceValue = leaderboard;
                 Prop(installerSo, "emotes").objectReferenceValue = emotes;
+                // T-052: the installer field arrives with the WIRING step; until then the reference is skipped instead of failing the build.
+                SerializedProperty audioSlot = installerSo.FindProperty("audio");
+                if (audioSlot != null) audioSlot.objectReferenceValue = audio;
+                else Warn(Source, "ProjectInstaller has no 'audio' field yet (T-052 WIRING); AudioConfig is not referenced.");
                 // Scene names must match Build Settings (SceneFlow loads by name); taken from the scene builder's paths.
                 Prop(installerSo, "scenes.homeScene").stringValue = SceneBuilder.HomeSceneName;
                 Prop(installerSo, "scenes.raceScene").stringValue = SceneBuilder.RaceSceneName;

@@ -1,7 +1,7 @@
 ---
 id: T-052
 title: Ses ve titresim - UI efekt sesleri (yer tutucu, uretilmis), muzik yuvasi, ayarlardaki Music/Sound anahtarlari, hafif titresim
-status: todo
+status: review
 owner: systems-agent
 depends_on: [T-031]
 owns_paths:
@@ -18,12 +18,25 @@ owns_paths:
 touches_scene: false
 branch: agent/T-052-ses-titresim
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Core/Audio/AudioServiceTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "asmdef referanslari (yeni asmdef SpeedStars.Audio = Scripts/Core/Audio, Core+Meta+Zenject'e bagli; UI ve testler ona bagli degil): Assets/Speed-Staes/Scripts/UI/SpeedStars.UI.asmdef, Assets/Speed-Staes/Tests/EditMode/SpeedStars.Tests.asmdef ve Assets/Speed-Staes/Tests/PlayMode/SpeedStars.PlayTests.asmdef 'references' listesine \"SpeedStars.Audio\" ekle. Eklenmeden UI (ButtonSfxHook, RaceStartView, DailyGiftPopupView, SevenDayPanelView) ve testler DERLENMEZ."
+  - tip: ASSET
+    durum: open
+    not: "Data/Config/AudioConfig.asset tohumu: Unity'de ConfigAssetSeeder.SeedAll(false) (AudioConfigSeed, 8 SfxId -> Audio/Sfx/<SfxId>.wav, muzik klibi bos). Once WAV'lar ve .meta'lari (yeni .cs/.asmdef .meta'lari dahil) Unity'de import edilmeli; AudioConfigSeed klip bulamazsa uyarir ve o ses sessiz kalir. Sonra ProjectContextBuilder.Build(overwrite: true) ProjectContext.prefab'ta ProjectInstaller.audio alanini baglar (alan yoksa uyarip atlar)."
+  - tip: ASSET
+    durum: open
+    not: "Android manifest: android.permission.VIBRATE (AndroidJavaObject ile cagrildigi icin Unity otomatik eklemeyebilir; Assets/Plugins/Android/AndroidManifest.xml ya da Player Settings). Izin yoksa titresim sessizce hic calismaz (kod try/catch ile kapanir)."
+  - tip: WIRING
+    durum: open
+    not: "ProjectInstaller: (1) alan `[SerializeField] private AudioConfig audio;` + InstallBindings'te `BindConfig(audio);` + `using SpeedStars.Core.Audio;`. (2) `Container.Bind(typeof(IAudioOutput), typeof(System.IDisposable)).To<AudioSourceOutput>().AsSingle();` (3) `Container.Bind(typeof(ISfx), typeof(IMusic), typeof(System.IDisposable)).To<AudioService>().AsSingle().NonLazy();` (NonLazy: muzik acilista baslasin, ayar anahtarlari dinlensin) (4) `Container.Bind<IHapticsDevice>().FromMethod(_ => HapticDevices.CreateDefault()).AsSingle();` (5) `Container.Bind<IHaptics>().To<HapticsService>().AsSingle();` (6) `Container.Bind<IButtonFeedbackHook>().To<SpeedStars.UI.Framework.ButtonSfxHook>().AsSingle();` IPlayerSettings bagliysa (ayni installer) servisler onu otomatik kullanir; hepsi InjectOptional."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -66,3 +79,8 @@ KAMERA  : yok
 - Kosu sesleri (ayak, nefes, kalabalik) — mekanik tarafi; gercek ses tasarimi; ayarlarda ayri titresim satiri
 
 ## Calisma notu
+1. Yapildi: Scripts/Core/Audio (SfxId, ISfx/IMusic/IHaptics, AudioService + HapticsService saf cekirdek, AudioSourceOutput kalici GameObject, Android AndroidJavaObject titresim #if'li, AudioConfig SO), ButtonSfxHook, RaceStart/Daily/7-gun baglantilari, AudioConfigSeed, scripts/sfx-uret.py + 8 WAV (iki calistirma ayni md5).
+2. Zorluk: Scripts/Core/Audio hicbir asmdef'e dusmuyordu (Core asmdef yalniz Runtime/) ve UI/testler Assembly-CSharp'i goremez -> yeni SpeedStars.Audio asmdef acildi; UI ve test asmdef'lerine referans eklenmesi needs (ASSET), eklenene dek UI ve testler derlenmez.
+3. Karar (supervizor): ayri titresim anahtari yok; titresim efekt (SfxOn) anahtarini izler. Titresim yalniz buton Pressed'ta (Denied'da yok).
+4. Ses: Tap/Denied buton hook'unda; Ready/Set/Go faz degisiminde (gec-baglanma yakalamasinda calmaz); gunluk hediye Claim yalniz bilet verilince, 7 gun Reward. Muzik klibi bos tohumlandi; muzik susturma `mute` ile (durdurulmaz).
+5. Calistirilmadi: Unity/derleme/test yok. Kayit/ekonomi dokunulmadi; tam suite gerekmez (hizli rejim: derleme + Core/Audio testleri). Belirsiz: test asmdef Zenject'i gormuyor; AudioService ctor'unda [Inject] var, kullanimda sorun cikmamali ama derleme dogrulamasi gerek.

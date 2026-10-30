@@ -1,3 +1,4 @@
+using SpeedStars.Core.Audio;
 using SpeedStars.Core.Race;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,8 +12,8 @@ namespace SpeedStars.UI.Race
     /// A phase that arrives early, a restart (Ready again) or a cancel (Idle) just restarts or hides the motion, so there is never a second
     /// GO! or a layer left on screen. The motion itself is RaceStartMotion (pure, tested); this class copies its pose onto the prefab's
     /// objects. Nothing here catches taps: every graphic has raycast off and the CanvasGroup blocks nothing.
-    /// Sound hooks (no audio system yet): READY = short thud at <see cref="ShowPhase"/> Ready; SET = low short tension, optional;
-    /// START = one clear athletics start sound at <see cref="ShowPhase"/> Go, bound to the same event as the input gate.
+    /// Sound (T-052): each phase change the signal raises plays its countdown beep through the optional <see cref="ISfx"/>, on the same
+    /// event as the input gate (GO sounds exactly when the runner may move). A late bind that only catches up does not sound.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class RaceStartView : MonoBehaviour
@@ -54,11 +55,19 @@ namespace SpeedStars.UI.Race
         private float _seconds;
         private bool _subscribed;
         private bool _shown;
+        private ISfx _sfx;
 
         [Inject]
         public void InjectStart(IRaceSession session)
         {
             Initialize(session as IRaceStartSignal);
+        }
+
+        /// <summary>Optional: without a bound sound system the countdown is silent.</summary>
+        [Inject]
+        public void InjectAudio([InjectOptional] ISfx sfx)
+        {
+            _sfx = sfx;
         }
 
         private void Awake() => Initialize();
@@ -98,7 +107,14 @@ namespace SpeedStars.UI.Race
             _subscribed = false;
         }
 
-        private void OnPhaseChanged(RaceStartPhase phase) => ShowPhase(phase);
+        private void OnPhaseChanged(RaceStartPhase phase)
+        {
+            ShowPhase(phase);
+            if (_sfx == null) return;
+            if (phase == RaceStartPhase.Ready) _sfx.Play(SfxId.CountdownReady);
+            else if (phase == RaceStartPhase.Set) _sfx.Play(SfxId.CountdownSet);
+            else if (phase == RaceStartPhase.Go) _sfx.Play(SfxId.CountdownGo);
+        }
 
         /// <summary>Starts the motion of a phase from its first frame, replacing whatever was playing.</summary>
         public void ShowPhase(RaceStartPhase phase)

@@ -1,3 +1,4 @@
+using SpeedStars.Core.Audio;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
 using UnityEngine;
@@ -64,6 +65,7 @@ namespace SpeedStars.UI.Rewards
         private ScreenNavigator _navigator;
         private UiMotionConfig _closeMotion;
         private DailyGiftLayout _layout;
+        private ISfx _sfx;
         private bool _busy;
 
         [Inject]
@@ -73,6 +75,13 @@ namespace SpeedStars.UI.Rewards
             _tickets = tickets;
             _closeMotion = motion;
             _navigator = navigator;
+        }
+
+        /// <summary>Optional: without a bound sound system the claim is silent.</summary>
+        [Inject]
+        public void InjectAudio([InjectOptional] ISfx sfx)
+        {
+            _sfx = sfx;
         }
 
         protected override void Awake()
@@ -135,6 +144,7 @@ namespace SpeedStars.UI.Rewards
             switch (RewardPanelsModel.OutcomeOf(_gift.Claim()))
             {
                 case DailyClaimOutcome.Fly:
+                    _sfx?.Play(SfxId.Claim); // only a granted ticket sounds; the full view is not a reward
                     Close();
                     if (flight != null) flight.Play(_closeMotion != null ? _closeMotion.PopupClose.Duration : 0f);
                     else Debug.LogWarning($"{name}: the flight widget is not bound; the ticket is granted without the flight.", this);

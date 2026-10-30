@@ -33,6 +33,7 @@ namespace SpeedStars.Tools.Builders
         public const string SettingsPath = Folder + "/SettingsConfig.asset";
         public const string AnalysisPath = Folder + "/AnalysisConfig.asset";
         public const string LeaderboardPath = Folder + "/LeaderboardConfig.asset";
+        public const string AudioPath = Folder + "/AudioConfig.asset";
 
         /// <summary>
         /// Events in display order (PDF §1.3, MD §12). Distance only where the name states it; Training, Race of the
@@ -70,6 +71,7 @@ namespace SpeedStars.Tools.Builders
             LeaderboardConfigSeed.Seed(LeaderboardPath, overwrite);
             RaceStartConfigSeed.Seed(overwrite); // T-039: READY / SET timing + start motion
             EmoteCatalogSeed.Seed(overwrite); // T-040
+            AudioConfigSeed.Seed(AudioPath, overwrite); // T-052: sound cues (placeholder WAVs), music slot, haptic numbers
             AssetDatabase.SaveAssets();
         }
 

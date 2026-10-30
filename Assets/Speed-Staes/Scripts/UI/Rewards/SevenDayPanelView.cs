@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SpeedStars.Core.Audio;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Costume;
 using SpeedStars.UI.Framework;
@@ -39,6 +40,7 @@ namespace SpeedStars.UI.Rewards
         private ISevenDayRewards _rewards;
         private ICosmeticService _cosmetics;
         private UiMotionConfig _cardMotion;
+        private ISfx _sfx;
         private bool _claiming;
 
         [Inject]
@@ -47,6 +49,13 @@ namespace SpeedStars.UI.Rewards
             _rewards = rewards;
             _cardMotion = motion;
             _cosmetics = cosmetics;
+        }
+
+        /// <summary>Optional: without a bound sound system the claim is silent.</summary>
+        [Inject]
+        public void InjectAudio([InjectOptional] ISfx sfx)
+        {
+            _sfx = sfx;
         }
 
         protected override void Awake()
@@ -131,6 +140,7 @@ namespace SpeedStars.UI.Rewards
             SevenDayClaimResult result = _rewards.Claim(); // raises Changed: the cards redraw (and Home's red dot follows)
             _claiming = false;
 
+            if (result == SevenDayClaimResult.Claimed) _sfx?.Play(SfxId.Reward);
             if (result == SevenDayClaimResult.Claimed && dayIndex >= 0 && dayIndex < dayCards.Length && dayCards[dayIndex] != null)
                 dayCards[dayIndex].Punch(_cardMotion);
             Redraw();
