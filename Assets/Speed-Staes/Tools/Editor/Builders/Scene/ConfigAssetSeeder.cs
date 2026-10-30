@@ -116,18 +116,18 @@ namespace SpeedStars.Tools.Builders
             Log(Source, $"Seeded {GemRewardPath}.");
         }
 
+        private const string DaySevenCosmeticId = "headwear.ph02"; // Headwear_PH02 in Data/Config/Cosmetics
+
         private static void SeedSevenDay(bool overwrite, CosmeticCatalog cosmetics)
         {
             var asset = CreateOrReset<SevenDayRewardConfig>(SevenDayRewardPath, overwrite);
             if (asset == null) { Skipped(Source, SevenDayRewardPath); return; }
 
-            // Day 7 (PDF §2.4): "a premium cosmetic, for now a head cosmetic". Which one is open (OPEN #6); working
-            // assumption: the first premium Headwear in the catalog's own list order.
-            CosmeticDefinition daySevenItem = cosmetics != null
-                ? cosmetics.GetByCategory(CosmeticCategory.Headwear).FirstOrDefault(c => c.IsPremium)
-                : null;
+            // Day 7 (PDF §2.4 left it open; user decision 2026-10-30): the Premium 02 headwear, looked up by its catalog id.
+            CosmeticDefinition daySevenItem = null;
+            if (cosmetics != null) cosmetics.TryGet(DaySevenCosmeticId, out daySevenItem);
             if (daySevenItem == null)
-                Warn(Source, "No premium Headwear in the cosmetic catalog; day 7 is left without an item (it gives nothing until one is set).");
+                Warn(Source, $"Cosmetic '{DaySevenCosmeticId}' is not in the cosmetic catalog; day 7 is left without an item (it gives nothing until one is set).");
 
             var so = new SerializedObject(asset);
             var days = Prop(so, "days");
@@ -137,8 +137,8 @@ namespace SpeedStars.Tools.Builders
             SetDay(days, 3, SevenDayRewardKind.TimedTicket, 1, null);     // PDF §2.4: 3. Gun 1 Sureli Bilet
             SetDay(days, 4, SevenDayRewardKind.Cash, 200, null);          // PDF §2.4: 4. Gun 200 Nakit
             SetDay(days, 5, SevenDayRewardKind.TimedTicket, 1, null);     // PDF §2.4: 5. Gun 1 Sureli Bilet
-            SetDay(days, 6, SevenDayRewardKind.None, 0, null);            // PDF §2.4 has no day 6: empty day (OPEN #1)
-            SetDay(days, 7, SevenDayRewardKind.Cosmetic, 0, daySevenItem); // PDF §2.4: 7. Gun premium kafa kozmetigi (OPEN #6)
+            SetDay(days, 6, SevenDayRewardKind.Cash, 300, null);          // PDF §2.4 has no day 6; design + user decision 2026-10-30: 300 Cash
+            SetDay(days, 7, SevenDayRewardKind.Cosmetic, 0, daySevenItem); // Premium 02 headwear (user decision 2026-10-30)
             Prop(so, "cyclePolicy").intValue = (int)SevenDayCyclePolicy.RestartFromDayOne; // OPEN #2 working assumption
             Apply(so);
             Log(Source, $"Seeded {SevenDayRewardPath} (day 7: {(daySevenItem != null ? daySevenItem.Id : "no item")}).");

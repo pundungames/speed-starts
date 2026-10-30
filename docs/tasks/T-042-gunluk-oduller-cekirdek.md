@@ -1,7 +1,7 @@
 ---
 id: T-042
 title: Faz 4 cekirdek - gunluk giris hediyesi (1 Adet Bileti) ve 7 gunluk odul servisi
-status: todo
+status: review
 owner: systems-agent
 depends_on: [T-028]
 owns_paths:
@@ -24,9 +24,9 @@ analytics:
 needs:
   - tip: WIRING
     durum: open
-    not: "ProjectInstaller: IDailyGift, ISevenDayRewards AsSingle"
-started:
-finished:
+    not: "ProjectInstaller: Container.BindInterfacesAndSelfTo<DailyGiftService>().AsSingle(); Container.BindInterfacesAndSelfTo<SevenDayRewardService>().AsSingle(); (SevenDayRewardConfig asset must be bound as an instance; IClock, IEconomyLedger, ICosmeticService, IEntryTickets, IEntryTicketSource, EconomyConfig, ProgressRepository already exist)"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -81,4 +81,8 @@ public interface ISevenDayRewards {
 - UI (T-043), reklam, sunucu
 
 ## Calisma notu
-(Agent doldurur)
+- Yapildi: RewardContracts.cs, Rewards/{DailyGiftService,SevenDayRewardService,RewardDay}.cs, tohum G6=300 Cash + G7=headwear.ph02, 2 test dosyasi (kod yazildi, koşulmadi).
+- Sozlesme tam; tek sapma: SevenDayCard.Kind = config enum SevenDayRewardKind (Cash/TimedTicket/Cosmetic; PurpleGems yok, ihtiyac yok). DailyGiftService'e ek: FullNoticeSeenToday (sinif uyesi).
+- Kayit degisikligi yok (DailyGiftDayKey + SevenDayCheckInState yeterli) -> ADR yok. Gun = UTC "yyyy-MM-dd"; EconomyConfig.dayBoundary kullanilmiyor (karar UTC).
+- ICosmeticService'te sahiplik ekleme yolu yok ve CosmeticService benim alanim degil: G7 sahiplik Progress.OwnedCosmeticIds'e dogrudan yazilir; ICosmeticService.Changed tetiklenmez (UI IsOwned'i yeniden okumali).
+- EntryTicket turu 7 gun kartinda desteklenmez (Failed); None/bos gun takvimi ilerletir. Tam suite gerekir (ekonomi/kayit). WIRING sûpervizorde.
