@@ -1,7 +1,7 @@
 ---
 id: T-036
 title: Analiz ekrani (Analiz_UI_v1) - mesafe/sure grafigi gercek yaris verisinden, siralama, imlec balonu; sonuc ekranindaki Stats acar
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-033]
 owns_paths:
@@ -20,7 +20,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-036-analiz
-commits: []
+commits: [67bbe8f]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceSplitRecorderTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/AnalysisChartModelTests.cs"
@@ -28,7 +28,7 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Prefab builder (UiPrefabBuilder.BuildAll, kopyada) AnalysisScreen.prefab + AnalysisRankingRow.prefab + Data/Config/AnalysisConfig.asset uretir (PNG importlari UiArt.ImportAll'da). Sonra Race sahnesi: SceneBuilder.BuildRace(overwrite) ya da SceneWiring.WireRace calisinca Analysis ornegi Results'in yanina (Canvas Popups, Results'in hemen ustu, pasif) yerlesir ve ResultsScreenView.analysisScreen baglanir. Bu yapilmadan Stats pasif kalir (uyari verir, bozmaz). Yeni .cs dosyalarinin .meta'lari kopyada uretilip alinmali (TUZAKLAR .meta'siz commit)."
 
 started: 2026-10-30
