@@ -1,14 +1,14 @@
 ---
 id: T-060
 title: Liderlik - acilir pencerelerin ve durumlarin ekran goruntusu (bolge+arama, donem, etkinlik sekmeleri, bos, yukleniyor, hata, siralamasiz)
-status: review
+status: merged
 owner: test-agent
 depends_on: [T-038]
 owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: false
 branch: agent/T-060-liderlik-goruntuleri
-commits: []
+commits: [08385dc7]
 tests:
   - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_LeaderboardStates, yalniz -shotDir)"
 analytics:

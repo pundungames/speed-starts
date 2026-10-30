@@ -1,7 +1,7 @@
 ---
 id: T-061
 title: Yaris HUD v2 - kullanicinin png.rar parcalari (kirpilmis, dogal boyut) + referans ekrana birebir yerlesim
-status: review
+status: merged
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -13,14 +13,14 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-061-yaris-hud-v2
-commits: []
+commits: [e51d0f05, edd4ee11, 7fbbe206]
 tests:
   - "gerekmiyor: gorsel yerlesim; kadans hesabi saf RaceDisplayFormat.CadenceFraction (zaten testli), mevcut EditMode/PlayMode testleri degismedi"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "UI v2 prefab uretimini yeniden calistir (UiArt.ImportAll UI/Art/RaceHud PNG'lerini sprite alir, sonra RaceHud prefab'i UiV2Prefabs.RaceHud ile yeniden olusur). RaceHudView.cadenceTrack artik Cadence/Scale (eskiden Cadence/Track); Cash/Plus Image = plus_icon. Sonra Race_play/Race_countdown goruntusunu referansla karsilastir."
 started: 2026-10-30
 finished: 2026-10-30

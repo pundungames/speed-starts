@@ -1,7 +1,7 @@
 ---
 id: T-059
 title: READY / SET / GO tasarima uysun - kalin italik font (Kanit Black Italic, OFL), kalin lacivert kontur, efekt cizgileri gorunur; 6 karenin ekran goruntusu
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-039, T-049]
 owns_paths:
@@ -14,7 +14,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-059-baslangic-yazilari
-commits: []
+commits: [98989120, 4d0b1ee3, 7fbbe206]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ThickOutlineTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_RaceStartPhases, yalniz -shotDir)"
@@ -22,13 +22,13 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "Kanit-BlackItalic.ttf icin Unity .meta uretilsin (kopyada Refresh); font dinamik, Character=Dynamic."
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "UiPrefabBuilder RaceStart prefab'i yeniden uretilsin (UI/Prefabs RaceStart): Word = Kanit Black Italic + ThickOutline (eski Outline kalkar, view.wordOutline yeniden baglanir), group merkezi ustten 250. Sonra Race sahnesindeki RaceStart ornegi guncel prefab ile degissin (SceneWiring.WireRace)."
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "Data/Config/RaceStartConfig.asset: holdTensionMinAlpha 0.85 -> 0.6 (tasarim 0.6->1; kod varsayilani 0.6 oldu ama mevcut asset eski degeri tutar). Yeni alanlar (wordFontSize 160, outlineThicknessRatio 0.065, outlineDirections 16) asset'te yoksa kod varsayilaniyla calisir."
 started: 2026-10-30
 finished: 2026-10-30
