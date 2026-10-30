@@ -5,16 +5,17 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-10-30 (akşam) · main 08174171 (push kullanıcıda) · dal `main`
+Son güncelleme: 2026-10-30 (akşam) · main bce0ddb5 (push kullanıcıda) · dal `main`
 
 ## Sürüyor
 - Yok (bütün worktree'ler kapandı).
 
 ## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
-- Tema fiyatı yok → 0; geliştirmede bütün temalar serbest. Normal kozmetik bedava, premium 50 Mor Mücevher (PDF).
-- Başlangıç Adet Bileti = tavan (3). Günlük gün sınırı UTC; 7 gün kaçırılan gün sıfırlamaz; G6 300 Nakit, G7 PH02 şapka.
-- Ödüllü reklam: 1 reklam = 1 Adet Bileti (PDF §1.2), SDK yok → editör/dev'de sahte reklam (T-050). Titreşim efekt anahtarını izler (T-052).
-- Bot süreleri, emote fiyatları yer tutucu (config).
+- Tema: fiyatı 0 olan tema bedava (her build'de sahipli, T-070); Sky Islands premium (Mor Mücevher para birimi) ama "beleş olsun şimdilik".
+- Normal kozmetik bedava, premium 50 Mor Mücevher (PDF). Ten tonları (8, açıktan koyuya; varsayılan bugünkü koyu ten 462B27) supervizör seçimi.
+- Başlangıç Adet Bileti = tavan (3). Gün sınırı UTC; 7 gün kaçırılan gün sıfırlamaz; G6 300 Nakit, G7 PH02 şapka.
+- Ödüllü reklam: 1 reklam = 1 Adet Bileti, editör/dev'de sahte reklam. Titreşim efekt anahtarını izler.
+- Günlük build Mono/ARMv7; mağaza build'i (scripts/android-release.ps1) IL2CPP+ARMv7/ARM64, ayarı kalıcı değiştirmez.
 
 ## Kullanıcıdan bekleyen
 - Uygulama adı + paket adı (Play/Çin mağazası; orijinal oyunun adı marka riski) ve imza anahtarı (keystore).
@@ -22,15 +23,10 @@ Son güncelleme: 2026-10-30 (akşam) · main 08174171 (push kullanıcıda) · da
 - Malik'ten (Faz 7): yarış saati GO'da başlasın, UI üstündeki dokunma ayak sayılmasın, rakipler/sıra (`docs/TEMEL-SOZLESME.md` §11).
 - Serhat'a: `PastelBuildingRow` sahne açılınca binaları yeniden üretiyor (bizim Home kopyasında kaldırıldı).
 
-## Gözle bakılacaklar (main 08174171; kopyada yeşil: EditMode 796, PlayMode 25, Zenject)
-- APK: geliştirme (Mono/ARMv7) 64 MB; IL2CPP+ARM64 71 MB kopyada derlendi, cihazda denenmedi (telefon bağlı değildi).
-  UI dokuları Android'de ASTC 4x4 (T-057). Günlük build Mono kalır (IL2CPP 9.5 dk).
-- Mağaza build'i: `scripts/android-release.ps1 -ProjectPath <kopya>` → AAB 57 MB (IL2CPP ARMv7+ARM64); ayarlar
-  `Data/Release/ReleaseBuildConfig.asset`, parola ortam değişkeni (SPEEDSTARS_KEYSTORE_PASS / SPEEDSTARS_KEY_PASS). Şu an debug imzalı.
-- 30.10 akşam: giriş kapısı yeni görünüm + Watch Ad (editörde sahte reklam, 1 bilet), güvenli alan (çentik), UI sesleri + titreşim
-  (yer tutucu sesler `scripts/sfx-uret.py`), kapat-aç/saat regresyon testleri. Malik yarış içi emote ekledi (J, eeb4b57).
-- 30.10: ayarlarda gizlilik/şartlar/destek + iki sıfırlama (onay penceresi), yarış sonunda PB/DB rozetleri, READY/SET/GO ölçeği,
-  emote kartı yerleşimi, analizde DNF çizgisi, günlük hediye + 7 gün, ses kapalı ikonu + premium kart.
+## Gözle bakılacaklar (main bce0ddb5; kopyada yeşil: EditMode 836, PlayMode 34, Zenject)
+- 30.10 akşam: READY/SET/GO banner'lı (dama bayrak), yarış HUD'u yeni parçalarla, liderlik pencereleri/durumları, premium kart v2
+  (altın/kırmızı), kostümde Top + Body (ten) + Emote sekmesi + Custom 1..9, ana menüde Upgrade/Players yok, tema/emote'ta ortak sayaç,
+  Sky Islands premium (bedava). APK 64 MB (ASTC), mağaza AAB 57 MB (debug imzalı).
 
 ## Sıradaki iş
 1. Telefon bağlanınca APK/AAB'yi cihazda dene (Zenject + IL2CPP, ses, titreşim, güvenli alan).
