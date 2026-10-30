@@ -1,14 +1,14 @@
 ---
 id: T-053
 title: Faz 8 regresyon - uygulamayi oldurup acma, saat geri alma ve ileri sarma, bozuk kayit; butun meta sistemleri birlikte
-status: review
+status: merged
 owner: test-agent
 depends_on: [T-042, T-046]
 owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Regression/**"
 touches_scene: false
 branch: agent/T-053-regresyon
-commits: []
+commits: [737b7b1]
 tests:
   - Assets/Speed-Staes/Tests/EditMode/Meta/Regression/RegressionHarness.cs
   - Assets/Speed-Staes/Tests/EditMode/Meta/Regression/RestartTimersRegressionTests.cs

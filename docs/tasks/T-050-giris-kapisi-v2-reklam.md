@@ -1,7 +1,7 @@
 ---
 id: T-050
 title: Giris kapisi v2 - eldeki odul sanatiyla yeniden gorunum + sahte odullu reklam (Watch Ad -> 1 Adet Bileti)
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-043]
 owns_paths:
@@ -18,7 +18,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-050-giris-kapisi-v2
-commits: []
+commits: [c61d3be, 82a3198, 864ed15]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/EntryGateAdFlowTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/EntryGateAdSmokeTests.cs"
@@ -26,16 +26,16 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
+    durum: closed
     not: "IRewardedAds -> FakeRewardedAds (yalniz #if UNITY_EDITOR || DEVELOPMENT_BUILD; ProjectInstaller: Container.BindInterfacesTo<FakeRewardedAds>().AsSingle() + AdsDevConfig asset FromInstance). Release build: baglama yok, WATCH AD pasif kalir (view [InjectOptional])."
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "AdsDevConfig asset (menu Speed Stars/Meta/Ads Dev Config; fakeAdSeconds ~1, fakeResult Completed) + yeni dosyalarin .meta uretimi (Meta/Ads, Meta/Ads/Dev, EntryGateAdFlow.cs, testler)"
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "EconomyConfig asset: rewardedAdEnabled=1, rewardedAdEntryTickets=1 (supervizor karari, PDF 1.2); ConfigAssetSeeder.cs:97-98 simdi false/0 seed ediyor, o dosya benim yolum degil"
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "EntryGateModal prefab yeniden uretimi (UiPrefabBuilder.BuildAll overwrite=true; hiyerarsi UiEntryGatePrefabs, alan baglari UiViewBinder.BindEntryGate) + Home sahnesindeki EntryGateModal ornegi yenilenmeli. Yerlesim olculeri (pencere 620x700 sanat-px, daily_panel dikey gerilmis) kod okuyarak yazildi, gozle ince ayar gerekebilir; Home_entrygate ekran goruntusunu kontrol et"
 started: 2026-10-30
 finished: 2026-10-30

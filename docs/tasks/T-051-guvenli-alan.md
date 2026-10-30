@@ -1,7 +1,7 @@
 ---
 id: T-051
 title: Guvenli alan (safe area) - centik/kamera deligi olan telefonlarda butonlar ve metinler kesilmesin
-status: review
+status: merged
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -14,7 +14,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-051-guvenli-alan
-commits: []
+commits: [dcf79fd, 75b23c8]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Framework/SafeAreaTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/SafeAreaPlayTests.cs"
@@ -23,10 +23,10 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
+    durum: closed
     not: ".meta dosyalari uretilmeli (Unity import): Scripts/UI/Framework/SafeAreaMath.cs, SafeAreaSource.cs, SafeAreaFitter.cs, FullBleed.cs; Tools/Editor/Builders/Ui/UiSafeAreaWiring.cs; Tests/EditMode/UI/Framework/ (klasor + SafeAreaTests.cs); Tests/PlayMode/SafeAreaPlayTests.cs"
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Home.unity ve Race.unity yeniden uretilmeli (SceneBuilder overwrite): SceneUiLayout.Place artik her ekran/popup/widget ornegine SafeAreaFitter ekliyor (tam ekran kok = Children modu, kenar widget'i = Self; RewardFlight/RedDot haric). Sahnelerde elle duzenleme varsa kullaniciya sor; yoksa overwrite. Sonra PlayMode SafeAreaPlayTests + ScreenshotTests.Shot_HomeSafeArea (-shotDir)"
 started: 2026-10-30
 finished: 2026-10-30
