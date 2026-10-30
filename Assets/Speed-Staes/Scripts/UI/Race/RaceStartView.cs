@@ -1,5 +1,6 @@
 using SpeedStars.Core.Audio;
 using SpeedStars.Core.Race;
+using SpeedStars.UI.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -34,11 +35,11 @@ namespace SpeedStars.UI.Race
         [Tooltip("Group/TextRoot: the word's box (700x200); slide, squash and shake act on it.")]
         [SerializeField] private RectTransform textRoot;
 
-        [Tooltip("Group/TextRoot/Word: the READY / SET / GO! text (legacy Text, bold italic).")]
+        [Tooltip("Group/TextRoot/Word: the READY / SET / GO! text (legacy Text, Kanit Black Italic).")]
         [SerializeField] private Text wordText;
 
-        [Tooltip("The Outline on the Word: its colour follows the word's alpha.")]
-        [SerializeField] private Outline wordOutline;
+        [Tooltip("The ThickOutline on the Word: thickness and directions come from the config, its colour follows the word's alpha.")]
+        [SerializeField] private ThickOutline wordOutline;
 
         [Tooltip("impact_01..03: the lines under READY when it lands.")]
         [SerializeField] private Image[] impactImages;
@@ -55,6 +56,7 @@ namespace SpeedStars.UI.Race
         private float _seconds;
         private bool _subscribed;
         private bool _shown;
+        private bool _preview;
         private ISfx _sfx;
 
         [Inject]
@@ -92,6 +94,7 @@ namespace SpeedStars.UI.Race
             {
                 _motion = new RaceStartMotion(config);
                 if (group != null) group.localScale = Vector3.one * config.GroupScale;
+                PrepareWord();
             }
             if (_signal == null || _subscribed || !isActiveAndEnabled) return;
 
@@ -99,6 +102,19 @@ namespace SpeedStars.UI.Race
             _subscribed = true;
             // Bound late (the countdown already began): show where it is instead of waiting for the next event.
             ShowPhase(_signal.StartPhase);
+        }
+
+        /// <summary>
+        /// Outline size from the config and the three words' glyphs asked from the dynamic font now, so the very first frame of READY
+        /// is drawn with its letters instead of waiting a frame for the font atlas.
+        /// </summary>
+        private void PrepareWord()
+        {
+            if (wordText == null) return;
+            if (wordOutline != null)
+                wordOutline.Configure(config.OutlineThicknessRatio * wordText.fontSize, config.OutlineColor, config.OutlineDirections);
+            if (wordText.font != null)
+                wordText.font.RequestCharactersInTexture(ReadyWord + SetWord + GoWord, wordText.fontSize, wordText.fontStyle);
         }
 
         private void Unsubscribe()
@@ -119,6 +135,7 @@ namespace SpeedStars.UI.Race
         /// <summary>Starts the motion of a phase from its first frame, replacing whatever was playing.</summary>
         public void ShowPhase(RaceStartPhase phase)
         {
+            _preview = false;
             _phase = phase;
             _seconds = 0f;
             if (_motion == null) return;
@@ -132,12 +149,27 @@ namespace SpeedStars.UI.Race
             Apply(_motion.Sample(phase, 0f));
         }
 
+        /// <summary>
+        /// Evidence shots (PlayMode screenshot test): shows the pose of <paramref name="phase"/> at exactly <paramref name="seconds"/> and
+        /// stops following the clock until the next phase event. Never used by the game.
+        /// </summary>
+        public void PreviewAt(RaceStartPhase phase, float seconds)
+        {
+            if (_motion == null || phase == RaceStartPhase.Idle) return;
+            ShowPhase(phase);
+            _preview = true;
+            _seconds = Mathf.Max(0f, seconds);
+            Apply(_motion.Sample(phase, _seconds));
+        }
+
         private void Update()
         {
-            if (_phase == RaceStartPhase.Idle || _motion == null) return;
+            if (_phase == RaceStartPhase.Idle || _motion == null || _preview) return;
 
             // Unscaled: the motion keeps its look at any time scale; the session decides what a pause does to the race.
-            _seconds += Time.unscaledDeltaTime;
+            // One frame never counts more than the session's own frame limit: the load hitch before the first frame must not
+            // swallow READY's slide-in and rebound, which would show it already settled (or not at all).
+            _seconds += Mathf.Min(Time.unscaledDeltaTime, config.MaxFrameSeconds);
             if (_motion.IsFinished(_phase, _seconds))
             {
                 Hide();
@@ -175,7 +207,7 @@ namespace SpeedStars.UI.Race
             wordText.color = fill;
             Color outline = config.OutlineColor;
             outline.a *= pose.TextAlpha;
-            wordOutline.effectColor = outline;
+            wordOutline.SetColor(outline);
 
             SetAlpha(impactImages, pose.ImpactAlpha);
             SetAlpha(tensionImages, pose.TensionAlpha);

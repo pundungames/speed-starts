@@ -191,6 +191,67 @@ namespace SpeedStars.PlayTests
             }
         }
 
+        /// <summary>
+        /// T-059 evidence: the six frames of the design storyboard (IMPLEMENTATION.md) on the real Race scene: Race_start_01_impact,
+        /// _02_rebound, _03_compress, _04_hold, _05_release, _06_clear. The countdown is stopped (time scale 0, so the session's clock
+        /// stands) once READY is up, and the view shows each pose at an offset worked out from the RaceStartConfig (never fixed seconds).
+        /// Also checks that READY is what the first frame of the countdown shows.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Shots_RaceStartPhases()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            float previousScale = Time.timeScale;
+            try
+            {
+                yield return LoadScene(RaceScene);
+
+                IRaceStartSignal startSignal = null;
+                foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>(true))
+                    if (behaviour is IRaceStartSignal found) { startSignal = found; break; }
+                Assert.IsNotNull(startSignal, "No IRaceStartSignal in the Race scene.");
+                Time.timeScale = 0f; // the session ticks on scaled time: the countdown stands still from here
+                Assert.AreNotEqual(RaceStartPhase.Idle, startSignal.StartPhase, "The countdown has not begun after the Race scene loaded.");
+
+                RaceStartView view = Require<RaceStartView>();
+                RaceStartConfig config = RequireField<RaceStartConfig>(view, "config");
+                Text word = RequireField<Text>(view, "wordText");
+                if (startSignal.StartPhase == RaceStartPhase.Ready)
+                {
+                    Assert.IsTrue(word.transform.IsChildOf(view.transform) && word.gameObject.activeInHierarchy, "READY is not on screen in the first frames.");
+                    Assert.AreEqual("READY", word.text);
+                }
+
+                float enter = config.ReadyEnterSeconds;
+                float rebound = config.ReboundSeconds;
+                float compress = config.SetCompressSeconds;
+                float go = config.GoSeconds;
+                yield return ShootStart(dir, view, "Race_start_01_impact", RaceStartPhase.Ready, enter * 0.67f);
+                yield return ShootStart(dir, view, "Race_start_02_rebound", RaceStartPhase.Ready, enter + rebound * 0.5f);
+                yield return ShootStart(dir, view, "Race_start_03_compress", RaceStartPhase.Set, compress);
+                yield return ShootStart(dir, view, "Race_start_04_hold", RaceStartPhase.Set, compress + config.HoldCycleSeconds * 1.25f);
+                yield return ShootStart(dir, view, "Race_start_05_release", RaceStartPhase.Go, go * 0.27f);
+                yield return ShootStart(dir, view, "Race_start_06_clear", RaceStartPhase.Go, go * 0.93f);
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                saveFiles.Restore();
+            }
+        }
+
+        private static IEnumerator ShootStart(string dir, RaceStartView view, string name, RaceStartPhase phase, float seconds)
+        {
+            view.PreviewAt(phase, seconds);
+            yield return null;
+            yield return null;
+            yield return Capture(dir, name);
+        }
+
         /// <summary>T-051 evidence: Home with a fake camera hole on the left edge (resource bar and corner buttons pulled in, art full-bleed).</summary>
         [UnityTest]
         public IEnumerator Shot_HomeSafeArea()

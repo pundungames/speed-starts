@@ -1,7 +1,7 @@
 ---
 id: T-059
 title: READY / SET / GO tasarima uysun - kalin italik font (Kanit Black Italic, OFL), kalin lacivert kontur, efekt cizgileri gorunur; 6 karenin ekran goruntusu
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-039, T-049]
 owns_paths:
@@ -15,12 +15,23 @@ owns_paths:
 touches_scene: true
 branch: agent/T-059-baslangic-yazilari
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ThickOutlineTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_RaceStartPhases, yalniz -shotDir)"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "Kanit-BlackItalic.ttf icin Unity .meta uretilsin (kopyada Refresh); font dinamik, Character=Dynamic."
+  - tip: SCENE
+    durum: open
+    not: "UiPrefabBuilder RaceStart prefab'i yeniden uretilsin (UI/Prefabs RaceStart): Word = Kanit Black Italic + ThickOutline (eski Outline kalkar, view.wordOutline yeniden baglanir), group merkezi ustten 250. Sonra Race sahnesindeki RaceStart ornegi guncel prefab ile degissin (SceneWiring.WireRace)."
+  - tip: ASSET
+    durum: open
+    not: "Data/Config/RaceStartConfig.asset: holdTensionMinAlpha 0.85 -> 0.6 (tasarim 0.6->1; kod varsayilani 0.6 oldu ama mevcut asset eski degeri tutar). Yeni alanlar (wordFontSize 160, outlineThicknessRatio 0.065, outlineDirections 16) asset'te yoksa kod varsayilaniyla calisir."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -61,3 +72,8 @@ ZAMAN   : timing.json
 KAMERA  : yok
 
 ## Calisma notu
+- Yapildi: ThickOutline (16 yonlu kalin kontur, dolgu en ustte, saf `Expand` + EditMode testi), config'e wordFontSize/outlineThicknessRatio/outlineDirections, builder Kanit Black Italic + ThickOutline + group merkezi 250, view ThickOutline'a baglandi.
+- Ilk kare: view Awake/OnEnable/inject'te mevcut faza yetisir (zaten vardi); ek olarak font glifleri onceden istenir, kare suresi config.MaxFrameSeconds ile sinirlanir (yukleme takilmasi READY kaymasini yutmasin), `PreviewAt` ile kanit.
+- Shots_RaceStartPhases: timeScale 0 ile sayimi durdurur, 6 pozu config surelerinden hesaplanan ofsetlerde cizer (storyboard 0.08/0.17/0.93/1.45/1.68/1.88 sn karsiliklari).
+- Eski Race_countdown'da tension cizgileri yoktu: kare SET'ten 2 kare sonra cekiliyordu (alpha ~0); yeni kareler ofsetle cekilir.
+- Birakilan: READY egimi eklenmedi (storyboard'da READY duz, italik font zaten egik); sahne/prefab/asset yeniden uretimi needs'te.

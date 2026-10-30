@@ -55,7 +55,7 @@ namespace SpeedStars.Core.Race
 
         [Tooltip("While SET waits, the tension lines pulse between this alpha and 1.")]
         [Range(0f, 1f)]
-        [SerializeField] private float holdTensionMinAlpha = 0.85f;
+        [SerializeField] private float holdTensionMinAlpha = 0.6f;
 
         [Tooltip("Width of the small horizontal shake while SET waits (UI units; at most 2 per the art's notes).")]
         [Range(0f, 2f)]
@@ -104,6 +104,18 @@ namespace SpeedStars.Core.Race
         [Tooltip("Outline colour of all three words (#061A41).")]
         [SerializeField] private Color outlineColor = new Color(0.024f, 0.102f, 0.255f, 1f);
 
+        [Tooltip("Font size of the words (Kanit Black Italic) in the art's 1024x576 units. Read when the prefab is built, so a change needs a rebuild of the RaceStart prefab.")]
+        [Min(20f)]
+        [SerializeField] private float wordFontSize = 160f;
+
+        [Tooltip("Outline thickness as a share of the font size (the art's preview: 7 px on a 110 px word = 0.065).")]
+        [Range(0f, 0.2f)]
+        [SerializeField] private float outlineThicknessRatio = 0.065f;
+
+        [Tooltip("How many copies go around the word for the outline. 12-16 stays smooth when thick; the view applies it to the prefab's ThickOutline.")]
+        [Range(4, 32)]
+        [SerializeField] private int outlineDirections = 16;
+
         [Header("Reduced motion")]
         [Tooltip("On: no slide, squash, shake or lines; words only fade in. The words and the start moment stay as they are.")]
         [SerializeField] private bool reduceMotion;
@@ -136,6 +148,9 @@ namespace SpeedStars.Core.Race
         public Color WordColor => wordColor;
         public Color GoColor => goColor;
         public Color OutlineColor => outlineColor;
+        public float WordFontSize => wordFontSize;
+        public float OutlineThicknessRatio => outlineThicknessRatio;
+        public int OutlineDirections => outlineDirections;
         public bool ReduceMotion => reduceMotion;
         public float ReducedFadeSeconds => reducedFadeSeconds;
     }
