@@ -8,7 +8,10 @@ MOD: süpervizör
 Son güncelleme: 2026-10-30 (akşam) · main bce0ddb5 (push kullanıcıda) · dal `main`
 
 ## Sürüyor
-- Yok (worktree'ler kapandı). Referans oyun rakip analizi: `docs/analiz/2026-10-30-referans-oyun-rakipler.md` (Global players = sabit hayalet,
+- **Yarım, test edilmedi:** dal `agent/T-077-080-duzeltmeler` (worktree `D:\Pundun\speed-starts-duzeltme`, 77a3c763) — T-077 Stats'ta
+  botlar, T-078 süre GO'dan + iz kaydı + ok tuşları (sürücü araması yok, blocked), T-079 bilet penceresi Race'te + Practice +
+  COMING SOON, T-080 yükleme ölçümü. Bitirme sırası ve olası sorunlar: `docs/DEVIR-2026-10-30-aksam.md`. Installer bağlamaları
+  kullanıcı onayı bekliyor. Referans oyun rakip analizi: `docs/analiz/2026-10-30-referans-oyun-rakipler.md` (Global players = sabit hayalet,
   Bots = her yarış değişen AI, Difficulty/Skill range ayarı). Rakip AI tasarım kararı kullanıcıda (pano).
 
 ## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
