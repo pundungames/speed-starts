@@ -1,7 +1,7 @@
 ---
 id: T-058
 title: Magaza build metodu - yalniz o build icin IL2CPP + ARMv7/ARM64 + paket adi + surum, AAB; imza anahtari ortam degiskeninden
-status: todo
+status: review
 owner: systems-agent
 depends_on: [T-056]
 owns_paths:
@@ -15,9 +15,12 @@ tests:
   - "gerekmiyor: build araci; dogrulamasi supervizorun kopyada kosacagi build"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "Assets/Speed-Staes/Data/Build/ReleaseBuildConfig.asset (Create > Speed Stars > Release Build Config; script ReleaseBuildConfig.cs). Alanlar: packageId='' , versionName='1.0', versionCode=1, architectures=3 (ARMv7|ARM64), il2cpp=1, buildAppBundle=1, targetSdk=0, keystorePath='', keyAlias=''. Dosya yoksa ReleaseBuild bellek ici ayni varsayilanlarla calisir (uyari basar). Yeni .cs dosyalarinin .meta'si kopyada uretilip alinmali (BuildSupport, ReleaseBuild, ReleaseBuildConfig)."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -53,3 +56,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+1. Yeni: `BuildSupport.cs` (ortak: sahne listesi, arg okuma, manifest, hata raporu), `ReleaseBuildConfig.cs`, `ReleaseBuild.cs`, `scripts/android-release.ps1`; `AndroidBuildSmoke` yardimciyi kullanir (cikti satirlari ayni). Derlenmedi/kosulmadi.
+2. Geri yazilan ayarlar (`finally`, hepsi once kaydedilir): scripting backend (Android), targetArchitectures, EditorUserBuildSettings.buildAppBundle, applicationIdentifier (Android), bundleVersion, Android.bundleVersionCode, Android.targetSdkVersion, useCustomKeystore, keystoreName, keystorePass, keyaliasName, keyaliasPass. Build hedefi Android'e gecisi smoke ile ayni (geri alinmaz).
+3. Parola yalniz `SPEEDSTARS_KEYSTORE_PASS` / `SPEEDSTARS_KEY_PASS`; loglanmaz (script yalniz var/YOK basar). Eksikse debug imza + `ANDROID_RELEASE_UNSIGNED`.
+4. Cikti: `ANDROID_RELEASE_SETTINGS`, `ANDROID_RELEASE_OK size= time=` / `ANDROID_RELEASE_FAIL`, `ANDROID_MANIFEST`. Varsayilan cikti `pipeline-logs/android/SpeedStars-release.aab`.
+5. Calistirma (kopyada, Unity kapali): `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\android-release.ps1 -ProjectPath D:\Pundun\speed-starts-verify-1` (isteğe bagli `-OutFile`, `-ConfigAsset`). Zorlanma: .meta/asset yazilamadi (needs ASSET).
