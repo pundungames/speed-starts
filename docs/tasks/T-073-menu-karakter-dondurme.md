@@ -1,7 +1,7 @@
 ---
 id: T-073
 title: Ana menude karakteri parmakla surukleyerek kendi ekseninde dondurme (birakinca yavaslayarak durur, oldugu yerde kalir)
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: []
 owns_paths:
@@ -11,20 +11,20 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Core/Menu/SpinMathTests.cs"
 touches_scene: true
 branch: agent/T-072-073
-commits: []
+commits: [1e4cf912, c4a26db8, d36bcd55]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Core/Menu/SpinMathTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "Home sahnesini builder ile yeniden uret (SceneHomeCharacter artik MenuCharacterSpin ekliyor, target = runner koku). Uretildi: agent/T-072-073 06d75c2c; main'e alinmadi cunku kullanicinin Unity'sinde Home kaydedilmemis (*)"
+    durum: closed
+    not: "Home sahnesini builder ile yeniden uret (SceneHomeCharacter artik MenuCharacterSpin ekliyor, target = runner koku). -> d36bcd55 (kullanici 'ustune yaz' dedi; Unity'nin yazdigi 8 satirlik metin/font override'i atildi)"
   - tip: ASSET
     durum: closed
     not: "Yeni .cs.meta dosyalari Unity'den: Scripts/Bridge/MenuCharacterSpin.cs, Scripts/Core/Runtime/Menu/SpinMath.cs (+ Menu klasoru meta), Tests/EditMode/Core/Menu/SpinMathTests.cs (+ klasor meta) -> c4a26db8"
 started: 2026-10-30
-finished:
+finished: 2026-10-30
 blocked_reason:
 ---
 
