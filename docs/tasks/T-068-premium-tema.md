@@ -1,7 +1,7 @@
 ---
 id: T-068
 title: Premium tema (Premium_Tema_UI_v1) - Sky Islands premium; tema adi ve islem butonu altin (normal) / kirmizi (kullanimda) cerceve, pasif ortu
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-027]
 owns_paths:
@@ -16,7 +16,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-068-premium-tema
-commits: []
+commits: [2ae9bf70, 4e892c90, 4ee00888]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/ThemeServiceTests.cs (Premium_* : para birimi, fiyatsiz, idempotent, yetersiz bakiye)"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Themes/ThemeSelectPresenterTests.cs (Premium_*: altin/kirmizi asla birlikte, ortu)"
@@ -25,10 +25,10 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "ThemeSelectScreen prefab'i UiThemeSelectPrefabs ile yeniden uretilecek: ThemeName ve ThemeAction altinda 'Premium' grubu (Fill, FrameGold, FrameRed, [DisabledOverlay]) + ThemeAction/GemIcon; ThemeSelectScreenView alanlari nameBackground, namePremiumGroup, nameFrameGold, nameFrameRed, actionPremiumGroup, actionFrameGold, actionFrameRed, actionDisabledOverlay, gemIcon baglanir. T-067 ayni builder/prefabi degistiriyor: birlesince tek sefer uretilsin."
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "8 PNG Unity'ye alinacak (UiArt.ImportAll: Sprite/Single/FullRect/alpha/mipmap kapali/ASTC). ThemeCatalog.asset: sky_islands girdisinde premium=true, priceCurrency=PurpleGem(1); diger temalar premium=false, priceCurrency=Cash(0). cashPrice alani artik 'fiyat miktari' (serilestirilmis ad ayni). Mevcut asset kullanicinin: ThemeCatalogSeed overwrite etmez, elle ya da overwrite ile."
   - tip: DECISION
     durum: open

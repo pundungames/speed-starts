@@ -1,7 +1,7 @@
 ---
 id: T-065
 title: Kostum cekirdegi - ten rengi (kiyafetle birlikte kaydedilir, kosucuya uygulanir) ve 9 hazir kostum (Custom 1..9)
-status: review
+status: merged
 owner: systems-agent
 depends_on: [T-035]
 owns_paths:
@@ -17,14 +17,14 @@ owns_paths:
   - "docs/decisions/**"
 touches_scene: false
 branch: agent/T-065-ten-rengi
-commits: []
+commits: [5439cc78, 4e892c90]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Cosmetics/CosmeticSkinTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "CosmeticCatalog asset: presetCount 3 -> 9 (elle); yeni alanlar eski asset'te kod varsayilaniyla gelir ama asset kaydedilince sabitlenir: defaultSkinColor 462B27, skinRendererName LowPoly Male, skinMaterialName ColorSkin_Toon, skinTones FFDFC4 F1C27D E0AC69 C68642 A9693D 8D5524 6B4226 462B27"
 
 started: 2026-10-30

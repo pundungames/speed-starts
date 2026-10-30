@@ -1,7 +1,7 @@
 ---
 id: T-067
 title: Ana menu - sol alttaki Upgrade ve Players butonlari kalkar; tema secimi ve emote ekraninda ana menunun sol sayaclari (kaynak cubugu) aynen kalir
-status: review
+status: merged
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -18,14 +18,14 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-067-ana-menu
-commits: []
+commits: [a05e2170, ac120295, 4ee00888]
 tests:
   - "Assets/Speed-Staes/Tests/PlayMode/HomeSharedResourceBarSmokeTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Builder yeniden calistirilir (HomeScreen, ThemeSelectScreen, EmoteScreen prefab uretimi + SceneWiring). Home: Upgrade/Players kalkti, HighScores sol alt koseye (upgrade slotuna) kaydi. ThemeSelect/Emote prefablarinda kopya kaynak kutulari (PurpleGem/EntryTicket/TimedTicket/Cash) kalmadi. Sahnede ResourceBar.alsoVisibleOn = [ThemeSelectScreen, EmoteScreen] (SceneWiring doldurur). Prefablarda fileID:0 kalan alan olmamali."
 started: 2026-10-30
 finished: 2026-10-30
