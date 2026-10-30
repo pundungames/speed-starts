@@ -8,7 +8,10 @@ MOD: süpervizör
 Son güncelleme: 2026-10-30 (akşam) · main bce0ddb5 (push kullanıcıda) · dal `main`
 
 ## Sürüyor
-- Yok. Referans oyun rakip analizi bitti: `docs/analiz/2026-10-30-referans-oyun-rakipler.md` (Global players = sabit hayalet,
+- Rakip botlar (kullanıcı onayı 30.10): T-074 saf plan (systems), T-075 yarışta botlar + kalibrasyon (gameplay), T-076 sıra
+  arayüzü (ui); worktree `D:\Pundun\speed-starts-rakip`, dal `agent/T-074-076-rakipler`, ortak sözleşme `IRaceStandings`.
+  Malik'in koduna dokunulmuyor (public API: `RunnerInput.Inject`); bitince Malik'e not md'si yazılacak.
+- Referans oyun rakip analizi bitti: `docs/analiz/2026-10-30-referans-oyun-rakipler.md` (Global players = sabit hayalet,
   Bots = her yarış değişen AI, Difficulty/Skill range ayarı). Rakip AI tasarım kararı kullanıcıda (pano).
 
 ## Verilen kararlar (kullanıcı 28.10: "kararları riskleri sen ayarla"; değiştirmek isterse söyler)
