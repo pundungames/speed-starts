@@ -1,7 +1,7 @@
 ---
 id: T-044
 title: Ses kapali ikonu + premium kostum karti durumlari (Ses_Kapali_ve_Premium_UI_v1)
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-031, T-041]
 owns_paths:
@@ -22,8 +22,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -48,4 +48,8 @@ Legacy Text; DOTween çekirdek; kod kalıcı UI kurmaz; dokunma alanları görü
 - Yeni ikon/kıyafet çizimi, fiyat yerleşimi değişikliği, ses sistemi
 
 ## Calisma notu
-(Agent doldurur)
+- Ses: HomeScreenView soundIcon/soundOffSprite alanlari, sprite degisir (alpha yer tutucu kalkti); builder UiV2Prefabs.BindSoundIcons baglar. Acilista RefreshSound zaten SfxOn ile esitler.
+- Premium kart: saf PremiumCardLayers (CostumeItemCardView.cs icinde) + 6 premium katman builder'da (UiCostumePrefabs.ItemCard); premium tint kalkti.
+- Kilitli+onizlenen premium: selected_frame + lock, check YOK (giyili sayilmaz). disabled overlay yalniz SetState(disabled:true).
+- Prefab/sahne yazilmadi: builder (Tools menu) yeniden kosulmali, PNG importlari (.meta) Unity uretir; HomeScreen.prefab'da eski soundOffAlpha degeri artik yetim.
+- Test koşulmadı; PlayMode/ekran goruntusu dogrulama merkezi.

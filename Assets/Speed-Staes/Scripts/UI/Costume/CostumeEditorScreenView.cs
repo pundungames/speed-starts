@@ -257,7 +257,7 @@ namespace SpeedStars.UI.Costume
                     _cards.Add(created);
                 }
                 _cards[i].gameObject.SetActive(true);
-                _cards[i].Bind(items[i], config.IconOf(items[i].Id), config.PremiumCardTint);
+                _cards[i].Bind(items[i], config.IconOf(items[i].Id));
             }
             for (int i = items.Count; i < _cards.Count; i++) _cards[i].gameObject.SetActive(false);
 

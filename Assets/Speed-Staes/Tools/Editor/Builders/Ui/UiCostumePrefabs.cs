@@ -106,6 +106,8 @@ namespace SpeedStars.Tools.Builders
             Image selected = UiArt.Layer(root, "Selected", Art("item_card_selected_background"));
             selected.gameObject.SetActive(false);
 
+            GameObject premiumBackground = UiArt.Layer(root, "PremiumBackground", Art("Premium/premium_background")).gameObject;
+
             RectTransform iconNode = Kit.Span(Kit.Node(root, "Icon"), ItemIconMin, ItemIconMax);
             Image icon = UiArt.Paint(iconNode.gameObject, Art(SampleItemArt), raycast: false);
             icon.preserveAspect = true;
@@ -115,6 +117,14 @@ namespace SpeedStars.Tools.Builders
             lockOverlay.SetActive(false);
             check.SetActive(false);
 
+            // Premium family: same 176x164 canvas, stretched over the card; hidden until a premium item binds.
+            GameObject premiumFrame = PremiumLayer(root, "PremiumFrame", "premium_frame");
+            GameObject premiumSelectedFrame = PremiumLayer(root, "PremiumSelectedFrame", "premium_selected_frame");
+            GameObject premiumLock = PremiumLayer(root, "PremiumLock", "premium_lock");
+            GameObject premiumCheck = PremiumLayer(root, "PremiumCheck", "premium_check");
+            GameObject premiumDisabled = PremiumLayer(root, "PremiumDisabledOverlay", "premium_disabled_overlay");
+            premiumBackground.SetActive(false);
+
             var so = new SerializedObject(view);
             Ref(so, "button", button);
             Ref(so, "normalBackground", normal);
@@ -122,7 +132,20 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "icon", icon);
             Ref(so, "check", check);
             Ref(so, "lockOverlay", lockOverlay);
+            Ref(so, "premiumBackground", premiumBackground);
+            Ref(so, "premiumFrame", premiumFrame);
+            Ref(so, "premiumSelectedFrame", premiumSelectedFrame);
+            Ref(so, "premiumLock", premiumLock);
+            Ref(so, "premiumCheck", premiumCheck);
+            Ref(so, "premiumDisabledOverlay", premiumDisabled);
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static GameObject PremiumLayer(RectTransform root, string name, string file)
+        {
+            GameObject layer = UiArt.Layer(root, name, Art("Premium/" + file)).gameObject;
+            layer.SetActive(false);
+            return layer;
         }
 
         private static void PresetRow(RectTransform root, UiArt.Layout layout)

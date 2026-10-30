@@ -43,12 +43,14 @@ namespace SpeedStars.UI.Home
         [Tooltip("Settings (top right, gear): opens the settings window.")]
         [SerializeField] private Button settingsButton;
 
-        [Tooltip("Sound (top right, speaker): switches sound effects on or off; the icon fades while they are off.")]
+        [Tooltip("Sound (top right, speaker): switches sound effects on or off; the icon shows the muted speaker while they are off.")]
         [SerializeField] private Button soundButton;
 
-        [Tooltip("Icon alpha of the Sound button while sound effects are off (the art has no 'off' icon yet).")]
-        [Range(0f, 1f)]
-        [SerializeField] private float soundOffAlpha = 0.4f;
+        [Tooltip("Sound/Icon image: shows the speaker; its prefab sprite is the 'on' picture.")]
+        [SerializeField] private Image soundIcon;
+
+        [Tooltip("Muted speaker sprite (same canvas as the 'on' icon), shown while sound effects are off.")]
+        [SerializeField] private Sprite soundOffSprite;
 
         [Tooltip("CharacterCard/Emote: opens the emote screen.")]
         [SerializeField] private Button emoteButton;
@@ -112,7 +114,7 @@ namespace SpeedStars.UI.Home
         private HomeEntryFlow _entryFlow;
         private IPlayerSettings _settings;
         private ICosmeticService _cosmetics;
-        private Graphic[] _soundGraphics = new Graphic[0];
+        private Sprite _soundOnSprite;
 
         [Inject]
         public void ConstructHome(ScreenNavigator navigator, IRaceSelection selection, RaceEventCatalog catalog, IWallet wallet, HomeEntryFlow entryFlow)
@@ -145,23 +147,12 @@ namespace SpeedStars.UI.Home
             if (soundButton != null)
             {
                 soundButton.onClick.AddListener(OnSound);
-                _soundGraphics = FindSoundIcons();
+                if (soundIcon != null) _soundOnSprite = soundIcon.sprite;
             }
             if (previousRacerButton != null) previousRacerButton.onClick.AddListener(OnPreviousRacer);
             if (nextRacerButton != null) nextRacerButton.onClick.AddListener(OnNextRacer);
             if (emoteButton != null) emoteButton.onClick.AddListener(OnEmote);
             DisableUnbuilt(upgradeButton, playersButton);
-        }
-
-        /// <summary>Everything under the Sound button except its background: these fade while sound effects are off.</summary>
-        private Graphic[] FindSoundIcons()
-        {
-            var icons = new System.Collections.Generic.List<Graphic>();
-            foreach (Graphic graphic in soundButton.GetComponentsInChildren<Graphic>(true))
-            {
-                if (graphic != soundButton.targetGraphic) icons.Add(graphic);
-            }
-            return icons.ToArray();
         }
 
         /// <summary>Designed buttons whose system does not exist yet stay visible but dead (they may be left empty).</summary>
@@ -259,11 +250,8 @@ namespace SpeedStars.UI.Home
         private void RefreshSound()
         {
             if (_settings == null) return;
-            float alpha = _settings.SfxOn ? 1f : soundOffAlpha;
-            foreach (Graphic graphic in _soundGraphics)
-            {
-                if (graphic != null) graphic.canvasRenderer.SetAlpha(alpha);
-            }
+            if (soundIcon == null || soundOffSprite == null) return;
+            soundIcon.sprite = _settings.SfxOn ? _soundOnSprite : soundOffSprite;
         }
 
         private void OnSound()

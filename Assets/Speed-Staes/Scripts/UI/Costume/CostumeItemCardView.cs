@@ -10,7 +10,7 @@ namespace SpeedStars.UI.Costume
     /// <summary>
     /// One item card of the wardrobe grid (prefab CostumeItemCard, created by the screen under the grid's content). Normal
     /// and selected background layers, the item picture, a tick while worn, a lock while not owned. A premium item
-    /// tints its backgrounds (placeholder look). The card is a Button: the screen hears the tap through <see cref="Tapped"/>.
+    /// swaps to its own layer family (see <see cref="PremiumCardLayers"/>). The card is a Button: the screen hears the tap through <see cref="Tapped"/>.
     /// Binds existing objects only.
     /// </summary>
     public sealed class CostumeItemCardView : MonoBehaviour
@@ -33,7 +33,27 @@ namespace SpeedStars.UI.Costume
         [Tooltip("Lock overlay: shown while the item is not owned.")]
         [SerializeField] private GameObject lockOverlay;
 
+        [Header("Premium layers (hidden on normal cards)")]
+        [Tooltip("Premium plain fill under the item picture.")]
+        [SerializeField] private GameObject premiumBackground;
+
+        [Tooltip("Premium navy frame with the gold inner line, above the picture.")]
+        [SerializeField] private GameObject premiumFrame;
+
+        [Tooltip("Premium red outer frame: the item is the one shown on the character.")]
+        [SerializeField] private GameObject premiumSelectedFrame;
+
+        [Tooltip("Premium lock: the item is not owned.")]
+        [SerializeField] private GameObject premiumLock;
+
+        [Tooltip("Premium tick: the item is owned and worn.")]
+        [SerializeField] private GameObject premiumCheck;
+
+        [Tooltip("Premium veil: only while the card is really disabled (not the same as locked).")]
+        [SerializeField] private GameObject premiumDisabledOverlay;
+
         private Tween _punch;
+        private bool _premium;
         private Vector3 _baseScale = Vector3.one;
         private bool _baseKnown;
 
@@ -62,23 +82,32 @@ namespace SpeedStars.UI.Costume
         }
 
         /// <summary>Fills the card for an item. <paramref name="picture"/> may be null (no picture yet: the picture is hidden).</summary>
-        public void Bind(CosmeticItemInfo item, Sprite picture, Color premiumTint)
+        public void Bind(CosmeticItemInfo item, Sprite picture)
         {
             CosmeticId = item.Id;
             icon.sprite = picture;
             icon.enabled = picture != null;
-
-            Color tint = item.IsPremium ? premiumTint : Color.white;
-            normalBackground.color = tint;
-            selectedBackground.color = tint;
+            _premium = item.IsPremium;
         }
 
-        public void SetState(bool selected, bool locked)
+        public void SetState(bool selected, bool locked, bool disabled = false)
         {
-            normalBackground.gameObject.SetActive(!selected);
-            selectedBackground.gameObject.SetActive(selected);
-            check.SetActive(selected);
-            lockOverlay.SetActive(locked);
+            PremiumCardLayers layers = PremiumCardLayers.Resolve(_premium, selected, locked, disabled);
+            normalBackground.gameObject.SetActive(layers.NormalBackground);
+            selectedBackground.gameObject.SetActive(layers.NormalSelectedBackground);
+            check.SetActive(layers.NormalCheck);
+            lockOverlay.SetActive(layers.NormalLock);
+            Show(premiumBackground, layers.PremiumBackground);
+            Show(premiumFrame, layers.PremiumFrame);
+            Show(premiumSelectedFrame, layers.PremiumSelectedFrame);
+            Show(premiumLock, layers.PremiumLock);
+            Show(premiumCheck, layers.PremiumCheck);
+            Show(premiumDisabledOverlay, layers.PremiumDisabledOverlay);
+        }
+
+        private static void Show(GameObject layer, bool visible)
+        {
+            if (layer != null) layer.SetActive(visible);
         }
 
         /// <summary>A short scale punch (a bought item): numbers from the motion config; no motion config = no punch.</summary>
@@ -112,5 +141,42 @@ namespace SpeedStars.UI.Costume
             _punch = null;
             running.Kill();
         }
+    }
+
+    /// <summary>
+    /// Which layers of an item card are visible (pure, tested). Normal cards keep the old look. A premium card shows
+    /// background, picture, frame; locked adds the lock (the card still selects and previews); the selected one adds the
+    /// red frame, and the tick only when the item is really owned (a previewed locked item is not "worn"); the veil is
+    /// only for a really disabled card.
+    /// </summary>
+    public readonly struct PremiumCardLayers
+    {
+        public bool NormalBackground { get; }
+        public bool NormalSelectedBackground { get; }
+        public bool NormalCheck { get; }
+        public bool NormalLock { get; }
+        public bool PremiumBackground { get; }
+        public bool PremiumFrame { get; }
+        public bool PremiumSelectedFrame { get; }
+        public bool PremiumLock { get; }
+        public bool PremiumCheck { get; }
+        public bool PremiumDisabledOverlay { get; }
+
+        private PremiumCardLayers(bool premium, bool selected, bool locked, bool disabled)
+        {
+            NormalBackground = !premium && !selected;
+            NormalSelectedBackground = !premium && selected;
+            NormalCheck = !premium && selected;
+            NormalLock = !premium && locked;
+            PremiumBackground = premium;
+            PremiumFrame = premium;
+            PremiumSelectedFrame = premium && selected;
+            PremiumLock = premium && locked;
+            PremiumCheck = premium && selected && !locked;
+            PremiumDisabledOverlay = premium && disabled;
+        }
+
+        public static PremiumCardLayers Resolve(bool premium, bool selected, bool locked, bool disabled)
+            => new PremiumCardLayers(premium, selected, locked, disabled);
     }
 }

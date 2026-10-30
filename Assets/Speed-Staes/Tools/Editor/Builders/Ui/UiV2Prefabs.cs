@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using Kit = SpeedStars.Tools.Builders.UiBuildKit;
@@ -54,6 +55,7 @@ namespace SpeedStars.Tools.Builders
 
             BuildCharacterCard(root, layout);
             UiViewBinder.BindHome(root);
+            BindSoundIcons(root);
         }
 
         private static void BuildCharacterCard(RectTransform root, UiArt.Layout layout)
@@ -115,6 +117,15 @@ namespace SpeedStars.Tools.Builders
             Image image = UiArt.CanvasLayer(node, "Background", UiArt.Home(background), bounds);
             UiArt.CanvasLayer(node, "Icon", UiArt.Home(icon), bounds);
             UiArt.MakeButton(node.gameObject, image, interactable, alphaHit: false);
+        }
+
+        /// <summary>Sound button: the icon image and the muted sprite for HomeScreenView (the icon swaps sprite, same rect).</summary>
+        private static void BindSoundIcons(RectTransform root)
+        {
+            var view = new SerializedObject(root.GetComponent<SpeedStars.UI.Home.HomeScreenView>());
+            view.FindProperty("soundIcon").objectReferenceValue = root.Find("Sound/Icon").GetComponent<Image>();
+            view.FindProperty("soundOffSprite").objectReferenceValue = UiArt.Home("sound_off_icon");
+            view.ApplyModifiedPropertiesWithoutUndo();
         }
 
         /// <summary>Screen-level button: background on the node, "Icon" child on the same rect, placed from layout.json.</summary>
