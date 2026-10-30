@@ -82,7 +82,7 @@ namespace SpeedStars.Tools.Builders
             b.Set("cashText", b.Child<Text>("Cash/Value"));
             b.Set("cashPlusButton", b.Child<Button>("Cash/Plus"));
             b.Set("energyFill", b.Child<Image>("Energy/Fill"));
-            b.Set("cadenceTrack", b.Child<RectTransform>("Cadence/Track"));
+            b.Set("cadenceTrack", b.Child<RectTransform>("Cadence/Scale"));
             b.Set("cadenceMarker", b.Child<RectTransform>("Cadence/Marker"));
             b.Set("exitButton", b.Child<Button>("Exit"));
             b.Set("restartButton", b.Child<Button>("Restart"));

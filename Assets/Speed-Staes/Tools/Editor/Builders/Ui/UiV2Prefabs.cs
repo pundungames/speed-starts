@@ -1,4 +1,4 @@
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using Kit = SpeedStars.Tools.Builders.UiBuildKit;
@@ -180,119 +180,110 @@ namespace SpeedStars.Tools.Builders
 
         // ---------------------------------------------------------------- RaceHud
 
-        // Race HUD sizes in canvas units (design preview 1280x715 -> 1080 high: x1.51). Art canvases have transparent margins,
-        // so rects are a little larger than the visible shapes.
-        private static readonly Vector2 TelemetrySize = new Vector2(450f, 150f);
-        private static readonly Vector2 CashSize = new Vector2(230f, 82f);
-        private static readonly Vector2 BarGroupSize = new Vector2(600f, 50f);
-        private const float BarX = 190f; // where the bar tracks start inside Energy/Cadence
-        private const float BarWidth = 400f;
-        private const float BarHeight = 28f;
-        private static readonly Vector2 SquareButtonSize = new Vector2(110f, 108f);
+        // Race HUD (T-061): the designer's cropped parts under UI/Art/RaceHud, drawn at their native size (art px = canvas units,
+        // 1080 high). Offsets come from the reference screen (reference px x 1.5); only the containers' sizes are listed here.
+        private static readonly Vector2 TelemetrySize = new Vector2(398f, 71f);
+        private static readonly Vector2 CashSize = new Vector2(185f, 67f);
+        private static readonly Vector2 EnergyGroupSize = new Vector2(428f, 39f);   // icon (left) + track
+        private static readonly Vector2 CadenceGroupSize = new Vector2(542f, 39f);  // label + track + pointer
+        private const float CadenceLabelWidth = 150f;
+        private const float EnergyTrackX = 40f;   // track offset inside the Energy group (icon is at 0)
+        private const float CadenceTrackX = 160f; // track offset inside the Cadence group (after the label)
+        private const float BarTrackY = -6f;      // cadence track top inside its group (pointer is taller than the track)
+        private const float EnergyTrackY = -5f;   // energy track top inside its group (icon is taller than the track)
 
         public static void RaceHud(RectTransform root)
         {
             root.gameObject.AddComponent<SpeedStars.UI.Race.RaceHudView>();
             var topLeft = new Vector2(0f, 1f);
             var topCenter = new Vector2(0.5f, 1f);
+            var leftMiddle = new Vector2(0f, 0.5f);
+            var rightMiddle = new Vector2(1f, 0.5f);
 
-            // Telemetry (top-left): stopwatch + time | speedometer | speed, split by the panel's two dividers.
+            // Telemetry (top-left): stopwatch + time | divider (in the art) | speedometer + speed.
             RectTransform telemetry = Kit.Node(root, "Telemetry");
-            Kit.Anchor(telemetry, topLeft, topLeft, new Vector2(24f, -6f), TelemetrySize);
-            UiArt.Paint(telemetry.gameObject, UiArt.Race("telemetry_panel"), raycast: false);
-            Icon(telemetry, "Stopwatch", "stopwatch_icon", new Vector2(0.06f, 0.30f), new Vector2(0.15f, 0.70f));
-            UiArt.Slot(telemetry, "Time", "0.00", 44f, new Vector2(0.15f, 0.30f), new Vector2(0.35f, 0.70f));
-            Icon(telemetry, "Speedometer", "speedometer_icon", new Vector2(0.40f, 0.30f), new Vector2(0.60f, 0.70f));
-            UiArt.Slot(telemetry, "Speed", "0.0 m/s", 36f, new Vector2(0.67f, 0.30f), new Vector2(0.95f, 0.70f));
+            Kit.Anchor(telemetry, topLeft, topLeft, new Vector2(52f, -48f), TelemetrySize);
+            UiArt.Paint(telemetry.gameObject, UiArt.RaceHud("telemetry_panel"), raycast: false);
+            Native(telemetry, "Stopwatch", "stopwatch_icon", leftMiddle, leftMiddle, new Vector2(15f, 0f));
+            TextBox(telemetry, "Time", "0.00", 40f, 66f, 126f, TextAnchor.MiddleCenter);
+            Native(telemetry, "Speedometer", "speedometer_icon", leftMiddle, leftMiddle, new Vector2(TelemetrySize.x * 0.54f, 0f));
+            TextBox(telemetry, "Speed", "0.0 m/s", 32f, 280f, 112f, TextAnchor.MiddleLeft);
 
-            // Cash (under telemetry).
+            // Cash (under telemetry): diamond | value | plus.
             RectTransform cash = Kit.Node(root, "Cash");
-            Kit.Anchor(cash, topLeft, topLeft, new Vector2(24f, -150f), CashSize);
-            UiArt.Paint(cash.gameObject, UiArt.Race("counter_panel"), raycast: false);
-            Icon(cash, "Icon", "cash_diamond_icon", new Vector2(0.12f, 0.28f), new Vector2(0.34f, 0.76f));
-            UiArt.Slot(cash, "Value", "0", 44f, new Vector2(0.36f, 0.25f), new Vector2(0.72f, 0.80f), TextAnchor.MiddleLeft);
-            RectTransform plus = Kit.Span(Kit.Node(cash, "Plus"), new Vector2(0.72f, 0.2f), new Vector2(0.92f, 0.82f));
-            Text plusLabel = plus.gameObject.AddComponent<Text>();
-            StyleLabel(plusLabel, "+", 44f);
-            plusLabel.raycastTarget = true;
-            UiArt.MakeButton(plus.gameObject, plusLabel, false, alphaHit: false); // no shop yet
+            Kit.Anchor(cash, topLeft, topLeft, new Vector2(52f, -138f), CashSize);
+            UiArt.Paint(cash.gameObject, UiArt.RaceHud("counter_panel"), raycast: false);
+            Native(cash, "Icon", "cash_diamond_icon", leftMiddle, leftMiddle, new Vector2(15f, 0f));
+            TextBox(cash, "Value", "0", 38f, 66f, 76f, TextAnchor.MiddleLeft);
+            Image plus = Native(cash, "Plus", "plus_icon", rightMiddle, rightMiddle, new Vector2(-12f, 0f));
+            plus.raycastTarget = true; // the visible plus is the hit area
+            UiArt.MakeButton(plus.gameObject, plus, false, alphaHit: false); // no shop yet
 
-            // Energy (top-center): icon | track with fill.
+            // Energy (top-center): icon | track with a Filled-type fill centered inside it.
             RectTransform energy = Kit.Node(root, "Energy");
-            Kit.Anchor(energy, topCenter, topCenter, new Vector2(0f, -18f), BarGroupSize);
-            RectTransform energyIcon = Kit.Anchor(Kit.Node(energy, "Icon"), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(BarX - 70f, 0f), new Vector2(52f, 48f));
-            UiArt.Paint(energyIcon.gameObject, UiArt.Race("energy_icon"), raycast: false);
-            RectTransform energyTrack = BarRect(Kit.Node(energy, "Track"), 0f);
-            Image trackImage = Kit.Panel(energyTrack.gameObject, UiArt.Navy, frame: false, raycast: false);
-            trackImage.color = UiArt.Navy;
-            RectTransform energyFill = BarRect(Kit.Node(energy, "Fill"), 3f);
-            Image fill = Kit.Panel(energyFill.gameObject, new Color(1f, 0.78f, 0.1f, 1f), frame: false, raycast: false);
+            Kit.Anchor(energy, topCenter, topCenter, new Vector2(-21f, -50f), EnergyGroupSize);
+            Native(energy, "Icon", "energy_icon", topLeft, topLeft, Vector2.zero);
+            Image energyTrack = Native(energy, "Track", "energy_track", topLeft, topLeft, new Vector2(EnergyTrackX, EnergyTrackY));
+            Image fill = Native(energy, "Fill", "energy_fill", topLeft, topLeft, CenteredIn(energyTrack, "energy_fill", EnergyTrackX, EnergyTrackY));
             fill.type = Image.Type.Filled;
             fill.fillMethod = Image.FillMethod.Horizontal;
             fill.fillOrigin = (int)Image.OriginHorizontal.Left;
             fill.fillAmount = 1f;
 
-            // Cadence (under energy): label | gradient track | marker above the track. Track and Marker are siblings anchored at
-            // the group's left edge (pivot left / bottom-center), so the view moves the marker along track.anchoredPosition.x + t * width.
+            // Cadence (under energy): label | track with the green-yellow-red scale | pointer. The view slides the pointer along
+            // the Scale rect (the drawn range), so Scale is what RaceHudView.cadenceTrack binds to.
             RectTransform cadence = Kit.Node(root, "Cadence");
-            Kit.Anchor(cadence, topCenter, topCenter, new Vector2(0f, -70f), BarGroupSize);
-            Text cadenceLabel = Kit.Label(cadence, "Label", "Cadence", 30f, UiArt.Navy, TextAnchor.MiddleRight);
-            Kit.Place(cadenceLabel.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(BarX - 10f, 40f));
-            RectTransform cadenceTrack = BarRect(Kit.Node(cadence, "Track"), 0f);
-            Image gradient = UiArt.Paint(cadenceTrack.gameObject, Load(UiArt.CadenceGradientPath), raycast: false);
-            Kit.Frame(cadenceTrack.gameObject, 3f).effectColor = UiArt.Navy;
-            RectTransform marker = Kit.Node(cadence, "Marker");
-            Kit.Anchor(marker, new Vector2(0f, 0.5f), new Vector2(0.5f, 0f), new Vector2(BarX + BarWidth * 0.5f, BarHeight * 0.5f - 2f), new Vector2(34f, 30f));
-            UiArt.Paint(marker.gameObject, UiArt.Race("cadence_marker"), raycast: false);
-            gradient.type = Image.Type.Simple;
+            Kit.Anchor(cadence, topCenter, topCenter, new Vector2(-79f, -115f), CadenceGroupSize);
+            Text cadenceLabel = Kit.Label(cadence, "Label", "Cadence", 24f, UiArt.Navy, TextAnchor.MiddleRight);
+            Kit.Place(cadenceLabel.rectTransform, topLeft, topLeft, topLeft, Vector2.zero, new Vector2(CadenceLabelWidth, CadenceGroupSize.y));
+            Image cadenceTrack = Native(cadence, "Track", "cadence_track", topLeft, topLeft, new Vector2(CadenceTrackX, BarTrackY));
+            Native(cadence, "Scale", "cadence_scale", topLeft, topLeft, CenteredIn(cadenceTrack, "cadence_scale", CadenceTrackX, BarTrackY));
+            Vector2 trackSize = cadenceTrack.rectTransform.sizeDelta;
+            // Starts centered on the track; the view moves it with the value.
+            Native(cadence, "Marker", "cadence_pointer", topLeft, new Vector2(0.5f, 0.5f),
+                new Vector2(CadenceTrackX + trackSize.x * 0.5f, BarTrackY - trackSize.y * 0.5f));
 
-            // Exit and Restart (top-right).
-            SquareButton(root, "Restart", "restart_icon", new Vector2(-24f, -14f), new Vector2(66f, 64f));
-            SquareButton(root, "Exit", "exit_icon", new Vector2(-24f - SquareButtonSize.x - 14f, -14f), new Vector2(70f, 61f));
+            // Exit and Restart (top-right): square background, native icon centered.
+            SquareButton(root, "Restart", "restart_icon", -50f);
+            SquareButton(root, "Exit", "exit_icon", -186f);
 
             UiViewBinder.BindRaceHud(root);
         }
 
-        private static Sprite Load(string path)
+        /// <summary>An Image at its sprite's native size (SetNativeSize equivalent: art px = canvas units).</summary>
+        private static Image Native(Transform parent, string name, string sprite, Vector2 anchor, Vector2 pivot, Vector2 position)
         {
-            var sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
-            if (sprite == null) throw new System.InvalidOperationException($"UiV2Prefabs: sprite '{path}' not found.");
-            return sprite;
+            RectTransform rt = Kit.Node(parent, name);
+            Sprite art = UiArt.RaceHud(sprite);
+            Kit.Anchor(rt, anchor, pivot, position, art.rect.size);
+            return UiArt.Paint(rt.gameObject, art, raycast: false);
         }
 
-        /// <summary>Track rect in a bar group: left-anchored at BarX, fixed width, vertically centered; inset shrinks it all around.</summary>
-        private static RectTransform BarRect(RectTransform rt, float inset)
+        /// <summary>Top-left offset that centers a sprite inside a bar track placed at (trackX, trackY).</summary>
+        private static Vector2 CenteredIn(Image track, string sprite, float trackX, float trackY)
         {
-            return Kit.Anchor(rt, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(BarX + inset, 0f),
-                new Vector2(BarWidth - 2f * inset, BarHeight - 2f * inset));
+            Vector2 inner = UiArt.RaceHud(sprite).rect.size;
+            Vector2 outer = track.rectTransform.sizeDelta;
+            return new Vector2(trackX + (outer.x - inner.x) * 0.5f, trackY - (outer.y - inner.y) * 0.5f);
         }
 
-        private static void Icon(Transform parent, string name, string sprite, Vector2 min, Vector2 max)
+        /// <summary>Navy Text at the left edge of its panel, full panel height: x and width in canvas units.</summary>
+        private static void TextBox(Transform parent, string name, string text, float size, float x, float width, TextAnchor alignment)
         {
-            RectTransform rt = Kit.Span(Kit.Node(parent, name), min, max);
-            Image image = UiArt.Paint(rt.gameObject, UiArt.Race(sprite), raycast: false);
-            image.preserveAspect = true; // race icons are not on a shared canvas: keep their shape inside the slot
+            Text label = Kit.Label(parent, name, text, size, UiArt.Navy, alignment);
+            Kit.Place(label.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(x, 0f), new Vector2(width, 0f));
         }
 
-        private static void SquareButton(Transform parent, string name, string icon, Vector2 position, Vector2 iconSize)
+        private static void SquareButton(Transform parent, string name, string icon, float rightOffset)
         {
+            var topRight = new Vector2(1f, 1f);
             RectTransform node = Kit.Node(parent, name);
-            Kit.Anchor(node, Vector2.one, Vector2.one, position, SquareButtonSize);
-            Image background = UiArt.Paint(node.gameObject, UiArt.Race("square_button_background"), raycast: true);
-            RectTransform iconRect = Kit.Anchor(Kit.Node(node, "Icon"), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, iconSize);
-            UiArt.Paint(iconRect.gameObject, UiArt.Race(icon), raycast: false).preserveAspect = true;
-            UiArt.MakeButton(node.gameObject, background, true, alphaHit: false);
-        }
-
-        private static void StyleLabel(Text label, string text, float size)
-        {
-            // A Text added in place (the "+" is its own button graphic): same look as Kit.Label.
-            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            label.text = text;
-            label.fontStyle = FontStyle.Bold;
-            label.fontSize = Mathf.RoundToInt(size);
-            label.alignment = TextAnchor.MiddleCenter;
-            label.color = UiArt.Navy;
+            Sprite background = UiArt.RaceHud("square_button_background");
+            Kit.Anchor(node, topRight, topRight, new Vector2(rightOffset, -37f), background.rect.size);
+            Image image = UiArt.Paint(node.gameObject, background, raycast: true);
+            var center = new Vector2(0.5f, 0.5f);
+            Native(node, "Icon", icon, center, center, Vector2.zero).preserveAspect = true;
+            UiArt.MakeButton(node.gameObject, image, true, alphaHit: false);
         }
     }
 }

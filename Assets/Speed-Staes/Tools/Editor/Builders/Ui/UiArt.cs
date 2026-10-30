@@ -8,7 +8,7 @@ using Kit = SpeedStars.Tools.Builders.UiBuildKit;
 namespace SpeedStars.Tools.Builders
 {
     /// <summary>
-    /// UI v2 art pipeline (editor time): texture import settings for UI/Art/**, the generated cadence gradient,
+    /// UI v2 art pipeline (editor time): texture import settings for UI/Art/**,
     /// sprite lookup and the reader of Art/Home/layout.json (reference-screen rects, converted to canvas anchors).
     /// Positions are never hard-coded: every component rect comes from layout.json.
     /// </summary>
@@ -18,7 +18,7 @@ namespace SpeedStars.Tools.Builders
         public const string HomeArt = ArtRoot + "/Home";
         public const string RaceArt = ArtRoot + "/Race";
         public const string LayoutPath = HomeArt + "/layout.json";
-        public const string CadenceGradientPath = RaceArt + "/cadence_gradient.png";
+        public const string RaceHudArt = ArtRoot + "/RaceHud";
 
         /// <summary>Canvas reference height of the scene scalers (match = height): reference-screen rects scale by this / reference height.</summary>
         public const float CanvasHeight = 1080f;
@@ -41,7 +41,6 @@ namespace SpeedStars.Tools.Builders
         /// <summary>Applies the UI sprite settings to every PNG under UI/Art (only re-imports when a setting differs).</summary>
         public static void ImportAll()
         {
-            EnsureCadenceGradient();
             string full = Kit.FullPath(ArtRoot);
             if (!Directory.Exists(full)) throw new InvalidOperationException($"UiArt: art folder '{ArtRoot}' not found.");
 
@@ -216,40 +215,14 @@ namespace SpeedStars.Tools.Builders
             }
         }
 
-        /// <summary>Writes the green → yellow → red cadence track gradient once (builder-owned PNG, importer settings follow in ImportAll).</summary>
-        private static void EnsureCadenceGradient()
-        {
-            if (File.Exists(Kit.FullPath(CadenceGradientPath))) return;
-
-            const int width = 256;
-            const int height = 8;
-            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-            var green = new Color(0.1f, 0.85f, 0.2f, 1f);
-            var yellow = new Color(1f, 0.9f, 0.1f, 1f);
-            var orange = new Color(1f, 0.55f, 0.08f, 1f);
-            var red = new Color(0.95f, 0.1f, 0.1f, 1f);
-            var pixels = new Color[width * height];
-            for (int x = 0; x < width; x++)
-            {
-                float t = x / (float)(width - 1);
-                Color c = t < 0.4f ? Color.Lerp(green, yellow, t / 0.4f)
-                    : t < 0.7f ? Color.Lerp(yellow, orange, (t - 0.4f) / 0.3f)
-                    : Color.Lerp(orange, red, (t - 0.7f) / 0.3f);
-                for (int y = 0; y < height; y++) pixels[y * width + x] = c;
-            }
-            texture.SetPixels(pixels);
-            texture.Apply();
-            Kit.EnsureFolder(RaceArt);
-            File.WriteAllBytes(Kit.FullPath(CadenceGradientPath), texture.EncodeToPNG());
-            UnityEngine.Object.DestroyImmediate(texture);
-            AssetDatabase.ImportAsset(CadenceGradientPath, ImportAssetOptions.ForceSynchronousImport);
-        }
-
         // ---------------------------------------------------------------- sprites and images
 
         public static Sprite Home(string file) => Load(HomeArt + "/" + file + ".png");
 
         public static Sprite Race(string file) => Load(RaceArt + "/" + file + ".png");
+
+        /// <summary>Race HUD part (UI/Art/RaceHud: cropped, native size = canvas units).</summary>
+        public static Sprite RaceHud(string file) => Load(RaceHudArt + "/" + file + ".png");
 
         private static Sprite Load(string path)
         {
