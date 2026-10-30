@@ -252,6 +252,33 @@ namespace SpeedStars.PlayTests
             yield return WaitUntil(() => home.IsVisible, "HomeScreen after Main Menu");
         }
 
+        [UnityTest]
+        public IEnumerator Race_Results_StatsOpensAnalysis_BackReturnsToResults()
+        {
+            SetTickets(1);
+            yield return EnterRaceWithTicket();
+
+            yield return WaitUntil(() => FindRaceSession() != null, "race session");
+            IRaceSession session = FindRaceSession();
+            System.Reflection.MethodInfo finish = session.GetType().GetMethod("DevForceFinish");
+            if (finish == null) Assert.Ignore("RaceSessionAdapter.DevForceFinish is not compiled in (non-dev build): no way to finish the race from a test.");
+            finish.Invoke(session, null);
+
+            ResultsScreenView results = Require<ResultsScreenView>();
+            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish");
+
+            AnalysisScreenView analysis = RequireField<AnalysisScreenView>(results, "analysisScreen");
+            Button stats = RequireField<Button>(results, "statsButton");
+            Assert.IsTrue(stats.interactable, "Results Stats must be pressable once the Analysis screen is in the scene.");
+
+            yield return Tap(stats, "Results Stats");
+            yield return WaitOpen(analysis, "Analysis screen");
+
+            yield return Tap(CloseButtonOf(analysis), "Analysis Back");
+            yield return WaitClosed(analysis, "Analysis screen");
+            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen after Analysis Back");
+        }
+
         // ---- helpers ----
 
         private IEnumerator EnterRaceWithTicket()

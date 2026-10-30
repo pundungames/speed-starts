@@ -15,6 +15,7 @@ namespace SpeedStars.Tools.Builders
         public const string HighScoresScreen = Root + "/Screens/HighScoresScreen.prefab";
         public const string RaceHud = Root + "/Screens/RaceHud.prefab";
         public const string ResultsScreen = Root + "/Screens/ResultsScreen.prefab";
+        public const string AnalysisScreen = Root + "/Screens/AnalysisScreen.prefab";
 
         public const string EntryGateModal = Root + "/Popups/EntryGateModal.prefab";
         public const string DailyGiftPopup = Root + "/Popups/DailyGiftPopup.prefab";

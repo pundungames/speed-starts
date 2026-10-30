@@ -85,6 +85,45 @@ namespace SpeedStars.Tools.Builders
             Prop(installerSo, "rootScreen").objectReferenceValue = hudScreen;
             Apply(installerSo);
             Log(nameof(SceneWiring), "Race: RaceSession (adapter + DevRaceFinish) and RaceSceneInstaller fields wired.");
+
+            WireAnalysis(scene, results);
+        }
+
+        /// <summary>
+        /// T-036: the Analysis screen sits next to Results (same popup canvas, just above it, inactive) and Results' Stats button
+        /// opens it. The prefab instance is placed here when the scene has none yet, so an existing Race scene gets it by
+        /// re-running the wiring. Without the prefab (prefab builder not run) the scene stays as it was: Stats stays disabled.
+        /// </summary>
+        private static void WireAnalysis(Scene scene, ResultsScreenView results)
+        {
+            AnalysisScreenView analysis = null;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                analysis = root.GetComponentInChildren<AnalysisScreenView>(true);
+                if (analysis != null) break;
+            }
+
+            if (analysis == null)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(UiPrefabPaths.AnalysisScreen);
+                if (prefab == null)
+                {
+                    Warn(nameof(SceneWiring), $"Race: '{UiPrefabPaths.AnalysisScreen}' not found (run the UI prefab builder); the Analysis screen is not placed and Stats stays disabled.");
+                    return;
+                }
+                Transform canvas = results.transform.parent;
+                if (canvas == null) throw new InvalidOperationException("The Results screen has no parent canvas; the Analysis screen cannot be placed beside it.");
+
+                GameObject instance = SceneUiLayout.Place(prefab, canvas, active: false);
+                instance.transform.SetSiblingIndex(results.transform.GetSiblingIndex() + 1); // drawn above Results
+                analysis = instance.GetComponent<AnalysisScreenView>();
+                if (analysis == null) throw new InvalidOperationException($"'{UiPrefabPaths.AnalysisScreen}' has no AnalysisScreenView on its root.");
+            }
+
+            var resultsSo = new SerializedObject(results);
+            Prop(resultsSo, "analysisScreen").objectReferenceValue = analysis;
+            Apply(resultsSo);
+            Log(nameof(SceneWiring), "Race: Analysis screen placed beside Results and wired to its Stats button.");
         }
 
         private static T RequireOne<T>(Scene scene, string what) where T : Component

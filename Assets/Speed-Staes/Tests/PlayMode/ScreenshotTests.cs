@@ -119,6 +119,13 @@ namespace SpeedStars.PlayTests
                     yield return WaitUntil(() => results != null && results.gameObject.activeInHierarchy, "results screen");
                     yield return Settle();
                     yield return Capture(dir, "Race_results");
+
+                    // Analysis: Stats on the results screen opens it (a force-finish at ~0 m shows the empty state, not a crash).
+                    AnalysisScreenView analysis = RequireField<AnalysisScreenView>(results, "analysisScreen");
+                    yield return Tap(RequireField<Button>(results, "statsButton"), "Results Stats");
+                    yield return WaitOpen(analysis, "analysis screen");
+                    yield return Settle();
+                    yield return Capture(dir, "Race_analysis");
                 }
             }
             finally

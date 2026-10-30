@@ -33,6 +33,7 @@ namespace SpeedStars.UI.Race
         private bool _resultsOpen;
         private bool _warnedFreeStart;
         private string _payoutId = string.Empty;
+        private RaceSplitRecorder _splits; // null until a race started and the results view can take analysis data
 
         public RaceFlowLogic(IRaceSession session, IRaceEntryGate gate, IRaceSelection selection, IRaceEventLookup events,
             ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, IEntryGatePrompt prompt,
@@ -61,6 +62,7 @@ namespace SpeedStars.UI.Race
             if (_started) return;
             _started = true;
 
+            _session.Started += OnStarted;
             _session.Finished += OnFinished;
             _results.RaceAgainRequested += OnRaceAgain;
             _results.MainMenuRequested += OnMainMenu;
@@ -82,6 +84,7 @@ namespace SpeedStars.UI.Race
         {
             if (!_started) return;
             _started = false;
+            _session.Started -= OnStarted;
             _session.Finished -= OnFinished;
             _results.RaceAgainRequested -= OnRaceAgain;
             _results.MainMenuRequested -= OnMainMenu;
@@ -102,6 +105,25 @@ namespace SpeedStars.UI.Race
             return true;
         }
 
+        /// <summary>Per-frame sample of the player's run for the Analysis chart (the Zenject shell ticks this).</summary>
+        public void Tick()
+        {
+            if (_splits == null || !_splits.IsActive || _session.State != RaceSessionState.Running) return;
+            _splits.Sample(_session.Distance, _session.RaceTime);
+        }
+
+        private void OnStarted()
+        {
+            // The recording numbers live in the Analysis config, reached through the Results view (it owns the Analysis screen).
+            if (!(_results is IAnalysisSink sink) || sink.SplitStepMeters <= 0f)
+            {
+                _splits = null; // no Analysis screen to feed: nothing is recorded
+                return;
+            }
+            _splits = new RaceSplitRecorder(sink.SplitStepMeters, sink.FinishToleranceMeters);
+            _splits.Begin(_session.TargetDistance);
+        }
+
         private void OnFinished(RaceOutcome outcome)
         {
             if (_resultsOpen) return; // exactly one Results per race
@@ -114,9 +136,30 @@ namespace SpeedStars.UI.Race
             _resultsOpen = true;
             if (string.IsNullOrEmpty(_payoutId)) _payoutId = Guid.NewGuid().ToString("N");
             int gems = _rewards.Resolve(outcome, _payoutId); // once per race (the guard above); the resolver pays once per id too
-            _results.Present(BuildResults(title, outcome));
+            ResultsData resultsData = BuildResults(title, outcome);
+            _results.Present(resultsData);
+            PresentAnalysis(title, outcome);
             if (_results is IGemRewardView gemView) gemView.ShowGemReward(gems); // 0 clears the line of a previous race
             _navigator.Push(_results);
+        }
+
+        /// <summary>Closes the player's split series on the finish and hands the Analysis data to the Results view.</summary>
+        private void PresentAnalysis(string title, RaceOutcome outcome)
+        {
+            if (!(_results is IAnalysisSink sink) || sink.SplitStepMeters <= 0f) return;
+
+            // A run that never reached the line (or a force-finish at ~0 m) stays a not-finished series: empty state, no invented time.
+            if (_splits == null)
+            {
+                _splits = new RaceSplitRecorder(sink.SplitStepMeters, sink.FinishToleranceMeters);
+                _splits.Begin(_session.TargetDistance);
+            }
+            _splits.Sample(_session.Distance, _session.RaceTime);
+            float distance = outcome.DistanceMeters > 0f ? outcome.DistanceMeters : _session.TargetDistance;
+            SplitSeries series = _splits.Finish(AnalysisModel.PlayerRunnerId, outcome.TimeSeconds);
+
+            sink.PresentAnalysis(AnalysisModel.Build(title, _wallet != null ? _wallet.Cash : 0, distance,
+                _settings != null ? _settings.PlayerName : string.Empty, outcome.Rank, series, null));
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ---
 id: T-036
 title: Analiz ekrani (Analiz_UI_v1) - mesafe/sure grafigi gercek yaris verisinden, siralama, imlec balonu; sonuc ekranindaki Stats acar
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-033]
 owns_paths:
@@ -26,9 +26,13 @@ tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/AnalysisChartModelTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Prefab builder (UiPrefabBuilder.BuildAll, kopyada) AnalysisScreen.prefab + AnalysisRankingRow.prefab + Data/Config/AnalysisConfig.asset uretir (PNG importlari UiArt.ImportAll'da). Sonra Race sahnesi: SceneBuilder.BuildRace(overwrite) ya da SceneWiring.WireRace calisinca Analysis ornegi Results'in yanina (Canvas Popups, Results'in hemen ustu, pasif) yerlesir ve ResultsScreenView.analysisScreen baglanir. Bu yapilmadan Stats pasif kalir (uyari verir, bozmaz). Yeni .cs dosyalarinin .meta'lari kopyada uretilip alinmali (TUZAKLAR .meta'siz commit)."
+
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -71,4 +75,8 @@ KAMERA  : yok
 - Rakip koşucular / ghost (Malik), kişisel rekor serisini kaydetmek, tekrar (replay)
 
 ## Calisma notu
-(Agent doldurur)
+- Yapilan: saf RaceSplitRecorder/AnalysisChartModel/AnalysisModel + AnalysisConfig (sayilar asset'te); AnalysisScreenView (mesh cizgi AnalysisChartGraphic, imlec, siralama, scroll), ResultsScreenView Stats -> navigator.Push; RaceFlow ITickable (BindInterfacesAndSelfTo ile ek installer satiri gerekmez) ornekler.
+- Akis: RaceFlowLogic Started'ta kaydi baslatir, Tick'te ornekler, Finished'ta seriyi kapatir ve IAnalysisSink (Results gorunumu) uzerinden Analiz ekranina verir; Finished'in outcome.DistanceMeters hedef mesafedir, bu yuzden bitis "son gercek ornek hedefe tolerans icinde mi" ile belirlenir (dev force-finish ~0 m = bos durum/DNF).
+- Builder: UiAnalysisPrefabs (+AnalysisConfigSeed, UiPrefabBuilder'a tek cagri, UiPrefabPaths.AnalysisScreen); SceneWiring.WireRace Analysis prefab'ini Results'in yanina koyup baglar (SceneBuilder'a dokunulmadi).
+- Zorluk: Unity/derleme calistirilmadi, hicbir sey derlenmedi; sanat IMPLEMENTATION.md TMP diyor, legacy Text kullanildi. Balon metin alani ve etiket konumlari onayli tasarimdan okunan oranlar: ekran gorusunde ince ayar gerekebilir.
+- Birakilan: rakip serileri (AnalysisModel.Build rivals parametresi hazir, veri kaynagi yok), kayda yazma yok; son yaris verisi yalniz Race sahnesi boyunca tutulur.

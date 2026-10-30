@@ -11,11 +11,11 @@ namespace SpeedStars.UI.Race
     /// <summary>
     /// Post-race results screen (Oyun_Bitis_UI_v1): Cash, the Personal Best / World Position / Percentile cards, the
     /// results table (one row prefab under a content parent), the Best of the day panel and the left button column.
-    /// Race Again and Main Menu work; Watch Replay, High Scores, Stats and Practice have no feature behind them yet and
+    /// Race Again, Main Menu and Stats (opens the Analysis screen) work; Watch Replay, High Scores and Practice have no feature behind them yet and
     /// start disabled. The prefab holds every object; this only binds and fills them. On open the cards and panels
     /// reveal one after another (UiMotionConfig stagger) and a new record punches its card.
     /// </summary>
-    public sealed class ResultsScreenView : UiScreen, IResultsView, IGemRewardView
+    public sealed class ResultsScreenView : UiScreen, IResultsView, IGemRewardView, IAnalysisSink
     {
         [Header("Cash")]
         [Tooltip("Diamond/Value: the player's Cash.")]
@@ -77,17 +77,22 @@ namespace SpeedStars.UI.Race
         [Tooltip("Nav/HighScores: disabled until the leaderboard phase.")]
         [SerializeField] private Button highScoresButton;
 
-        [Tooltip("Nav/Stats: disabled, there is no stats screen yet.")]
+        [Tooltip("Nav/Stats: opens the Analysis screen; disabled while no Analysis screen is assigned.")]
         [SerializeField] private Button statsButton;
 
         [Tooltip("Nav/Practice: disabled, the training event is not playable yet.")]
         [SerializeField] private Button practiceButton;
+
+        [Header("Analysis")]
+        [Tooltip("The Analysis screen of this scene (a sibling prefab instance, wired by SceneWiring). Stats opens it; the flow hands it the race's split data.")]
+        [SerializeField] private AnalysisScreenView analysisScreen;
 
         [Header("Open animation")]
         [Tooltip("Cards, panels and buttons that reveal one after another on open, in this order (each needs a CanvasGroup). Inactive ones are skipped.")]
         [SerializeField] private CanvasGroup[] revealItems;
 
         private UiMotionConfig _resultsMotion;
+        private ScreenNavigator _resultsNavigator;
         private readonly List<ResultsTableRowView> _rows = new List<ResultsTableRowView>();
         private Vector3[] _baseScales;
         private Color _normalTitleColor;
@@ -106,6 +111,21 @@ namespace SpeedStars.UI.Race
             _resultsMotion = motion;
         }
 
+        [Inject]
+        public void InjectResultsNavigator([InjectOptional] ScreenNavigator navigator)
+        {
+            _resultsNavigator = navigator;
+        }
+
+        public float SplitStepMeters => analysisScreen != null ? analysisScreen.SplitStepMeters : 0f;
+
+        public float FinishToleranceMeters => analysisScreen != null ? analysisScreen.FinishToleranceMeters : 0f;
+
+        public void PresentAnalysis(AnalysisData data)
+        {
+            if (analysisScreen != null) analysisScreen.PresentAnalysis(data);
+        }
+
         protected override void Awake()
         {
             base.Awake();
@@ -114,7 +134,11 @@ namespace SpeedStars.UI.Race
 
             if (watchReplayButton != null) watchReplayButton.interactable = false;
             if (highScoresButton != null) highScoresButton.interactable = false;
-            if (statsButton != null) statsButton.interactable = false;
+            if (statsButton != null)
+            {
+                statsButton.interactable = analysisScreen != null;
+                statsButton.onClick.AddListener(OnStatsClicked);
+            }
             if (practiceButton != null) practiceButton.interactable = false;
             if (raceAgainButton != null) raceAgainButton.onClick.AddListener(OnRaceAgainClicked);
             if (mainMenuButton != null) mainMenuButton.onClick.AddListener(OnMainMenuClicked);
@@ -141,6 +165,7 @@ namespace SpeedStars.UI.Race
             KillReveal();
             if (raceAgainButton != null) raceAgainButton.onClick.RemoveListener(OnRaceAgainClicked);
             if (mainMenuButton != null) mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
+            if (statsButton != null) statsButton.onClick.RemoveListener(OnStatsClicked);
         }
 
         public void Present(ResultsData data)
@@ -295,6 +320,11 @@ namespace SpeedStars.UI.Race
         private void OnRaceAgainClicked() => RaceAgainRequested?.Invoke();
 
         private void OnMainMenuClicked() => MainMenuRequested?.Invoke();
+
+        private void OnStatsClicked()
+        {
+            if (analysisScreen != null && _resultsNavigator != null) _resultsNavigator.Push(analysisScreen); // Back on the Analysis screen returns here
+        }
 
         private void KillDenied()
         {
