@@ -12,7 +12,7 @@ namespace SpeedStars.Tools.Builders
 {
     /// <summary>
     /// The READY / SET / GO! overlay (UI/Art/RaceStart, Yaris_Baslangic_UI_v1). One prefab: RaceStartRoot (view + a CanvasGroup that blocks
-    /// nothing) over a Group of the art's own 1024x576 canvas at the top centre; inside it EffectsRoot holds the 13 line layers, all
+    /// nothing) over a Group of the art's own 1024x576 canvas x the config's group scale (as its size) centred at a share of the screen height; inside it EffectsRoot holds the 13 line layers, all
     /// stretched over the same canvas at 100% scale (never cropped or moved: they sit on top of each other as drawn), and TextRoot holds
     /// the 700x200 word box (legacy Text in Kanit Black Italic with a ThickOutline; IMPLEMENTATION.md says TMP, this project has none). No panel
     /// background. Size and outline thickness come from the RaceStartConfig (a change needs a rebuild of this prefab).
@@ -29,7 +29,6 @@ namespace SpeedStars.Tools.Builders
         private static readonly Vector2 ArtCanvas = new Vector2(1024f, 576f);
         private static readonly Vector2 WordBox = new Vector2(700f, 200f);
         public const string FontPath = "Assets/Speed-Staes/UI/Fonts/Kanit/Kanit-BlackItalic.ttf"; // SIL OFL 1.1, OFL.txt beside it
-        private const float GroupCenterFromTop = 250f; // the group's centre: under the HUD's top row, the word clear of the runner's head
 
         public static void BuildAll(Func<string, Action<RectTransform>, GameObject> build)
         {
@@ -45,8 +44,10 @@ namespace SpeedStars.Tools.Builders
             group.blocksRaycasts = false;
 
             RectTransform groupRt = Kit.Node(root, "Group");
-            Kit.Anchor(groupRt, new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f), new Vector2(0f, -GroupCenterFromTop), ArtCanvas);
-            groupRt.localScale = Vector3.one * config.GroupScale;
+            // Centre at a share of the screen height from the top (config), so every aspect ratio puts it at the runner's head height.
+            // The size carries the group scale (scale stays 1) so the word's font can be real-size and sharp.
+            float scale = config.GroupScale;
+            Kit.Anchor(groupRt, new Vector2(0.5f, 1f - config.GroupCenterFromTopShare), new Vector2(0.5f, 0.5f), Vector2.zero, ArtCanvas * scale);
 
             RectTransform effects = Kit.Stretch(Kit.Node(groupRt, "EffectsRoot"));
             Image[] impact = Layers(effects, Impact);
@@ -54,11 +55,11 @@ namespace SpeedStars.Tools.Builders
             Image[] release = Layers(effects, Release);
 
             RectTransform textRoot = Kit.Node(groupRt, "TextRoot");
-            Kit.Anchor(textRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, WordBox);
-            Text word = Kit.Label(textRoot, "Word", "READY", config.WordFontSize, config.WordColor);
+            Kit.Anchor(textRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, WordBox * scale);
+            Text word = Kit.Label(textRoot, "Word", "READY", config.WordFontSize * scale, config.WordColor);
             StyleWord(word, config);
             var outline = AddRequired<ThickOutline>(word.gameObject);
-            outline.Configure(config.OutlineThicknessRatio * config.WordFontSize, config.OutlineColor, config.OutlineDirections);
+            outline.Configure(config.OutlineThicknessRatio * config.WordFontSize * scale, config.OutlineColor, config.OutlineDirections);
 
             groupRt.gameObject.SetActive(false); // the view shows it with the first phase
 
@@ -92,7 +93,7 @@ namespace SpeedStars.Tools.Builders
             {
                 Warn(nameof(UiRaceStartPrefabs), $"Font '{FontPath}' not found: READY / SET / GO! fall back to the built-in font.");
             }
-            word.fontSize = Mathf.RoundToInt(config.WordFontSize);
+            word.fontSize = Mathf.RoundToInt(config.WordFontSize * config.GroupScale);
             word.resizeTextForBestFit = false;
             word.horizontalOverflow = HorizontalWrapMode.Overflow;
             word.verticalOverflow = VerticalWrapMode.Overflow;

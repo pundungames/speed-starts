@@ -91,9 +91,13 @@ namespace SpeedStars.Core.Race
         [SerializeField] private float releaseScaleTo = 1.35f;
 
         [Header("Look")]
-        [Tooltip("Scale of the whole group (words and lines). The art's own canvas is 1024x576; 0.8 reads like the design preview on a 2400x1080 screen (0.55 looked small).")]
+        [Tooltip("Size of the words and lines against the art's own 1024x576 canvas (1 = the art as drawn; READY is then ~570 units wide). 1.7 puts READY at ~40% of a 2400-wide screen. The words get a real font size of Word Font Size x this, so they stay sharp. Read when the prefab is built (rebuild the RaceStart prefab after a change).")]
         [Min(0.05f)]
-        [SerializeField] private float groupScale = 0.8f;
+        [SerializeField] private float groupScale = 1.7f;
+
+        [Tooltip("Where the words' centre sits, as a share of the screen height measured from the top (0.38 = the runner's head height, clear of the HUD's top row). Horizontally always the screen centre. Read when the prefab is built.")]
+        [Range(0.05f, 0.95f)]
+        [SerializeField] private float groupCenterFromTopShare = 0.38f;
 
         [Tooltip("READY and SET fill colour (#FFFCEF).")]
         [SerializeField] private Color wordColor = new Color(1f, 0.988f, 0.937f, 1f);
@@ -104,7 +108,7 @@ namespace SpeedStars.Core.Race
         [Tooltip("Outline colour of all three words (#061A41).")]
         [SerializeField] private Color outlineColor = new Color(0.024f, 0.102f, 0.255f, 1f);
 
-        [Tooltip("Font size of the words (Kanit Black Italic) in the art's 1024x576 units. Read when the prefab is built, so a change needs a rebuild of the RaceStart prefab.")]
+        [Tooltip("Font size of the words (Kanit Black Italic) in the art's 1024x576 units; the prefab's real size is this x Group Scale. Read when the prefab is built, so a change needs a rebuild of the RaceStart prefab.")]
         [Min(20f)]
         [SerializeField] private float wordFontSize = 160f;
 
@@ -115,6 +119,10 @@ namespace SpeedStars.Core.Race
         [Tooltip("How many copies go around the word for the outline. 12-16 stays smooth when thick; the view applies it to the prefab's ThickOutline.")]
         [Range(4, 32)]
         [SerializeField] private int outlineDirections = 16;
+
+        [Tooltip("While a word fades out its outline fades faster: the outline's share of the visible outline = word alpha ^ this. Without it the 16 stacked outline copies stay almost opaque and turn a fading GO! into a dark blue blot. 1 = same as the word; higher = the outline goes first.")]
+        [Min(1f)]
+        [SerializeField] private float outlineFadePower = 3f;
 
         [Header("Reduced motion")]
         [Tooltip("On: no slide, squash, shake or lines; words only fade in. The words and the start moment stay as they are.")]
@@ -145,6 +153,8 @@ namespace SpeedStars.Core.Race
         public float GoScaleTo => goScaleTo;
         public float ReleaseScaleTo => releaseScaleTo;
         public float GroupScale => groupScale;
+        public float GroupCenterFromTopShare => groupCenterFromTopShare;
+        public float OutlineFadePower => outlineFadePower;
         public Color WordColor => wordColor;
         public Color GoColor => goColor;
         public Color OutlineColor => outlineColor;

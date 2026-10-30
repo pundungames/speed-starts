@@ -60,6 +60,20 @@ namespace SpeedStars.UI.Framework
         }
 
         /// <summary>
+        /// Alpha each outline copy needs so that, stacked <paramref name="directions"/> deep, the outline as a whole shows only
+        /// <c>fillAlpha ^ power</c>. Copies painted with the word's own alpha pile up (1-(1-a)^n) and stay nearly opaque while the fill
+        /// is already faint, which turns a fading light word into a dark blot. Power below 1 counts as 1; alpha 1 stays 1, 0 stays 0.
+        /// </summary>
+        public static float FadedCopyAlpha(float fillAlpha, float power, int directions)
+        {
+            float fill = Mathf.Clamp01(fillAlpha);
+            if (fill <= 0f) return 0f;
+            if (fill >= 1f) return 1f;
+            float visible = Mathf.Pow(fill, Mathf.Max(1f, power));
+            return 1f - Mathf.Pow(1f - visible, 1f / Mathf.Max(1, directions));
+        }
+
+        /// <summary>
         /// Rewrites a triangle vertex stream in place: <paramref name="directions"/> copies of it pushed out by
         /// <paramref name="thickness"/> on a circle and painted <paramref name="color"/>, then the untouched original on top.
         /// Returns the number of outline copies added (0 = stream left as it was: no thickness, no directions or an empty stream).

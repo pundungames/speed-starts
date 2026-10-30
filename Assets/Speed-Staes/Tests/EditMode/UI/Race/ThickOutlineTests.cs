@@ -92,5 +92,42 @@ namespace SpeedStars.Tests.UI.Race
             Assert.AreEqual(0, ThickOutline.Expand(stream, 6f, 0, Line, new List<UIVertex>()));
             Assert.AreEqual(6, stream.Count);
         }
+
+        [Test]
+        public void FadedCopyAlpha_KeepsTheEnds()
+        {
+            Assert.AreEqual(1f, ThickOutline.FadedCopyAlpha(1f, 3f, 16), 0.0001f);
+            Assert.AreEqual(0f, ThickOutline.FadedCopyAlpha(0f, 3f, 16), 0.0001f);
+            Assert.AreEqual(0f, ThickOutline.FadedCopyAlpha(-1f, 3f, 16), 0.0001f);
+            Assert.AreEqual(1f, ThickOutline.FadedCopyAlpha(2f, 3f, 16), 0.0001f);
+        }
+
+        [Test]
+        public void FadedCopyAlpha_StackedCopiesShowFillAlphaToThePower_NeverMoreThanTheFill()
+        {
+            const int directions = 16;
+            for (float fill = 0.1f; fill < 1f; fill += 0.1f)
+            {
+                float copy = ThickOutline.FadedCopyAlpha(fill, 3f, directions);
+                float stacked = 1f - Mathf.Pow(1f - copy, directions);
+                Assert.AreEqual(Mathf.Pow(fill, 3f), stacked, 0.001f, "fill " + fill);
+                Assert.Less(stacked, fill, "the outline must not outlast the fill at fill " + fill);
+            }
+        }
+
+        [Test]
+        public void FadedCopyAlpha_RisesWithTheFill_AndBadInputsAreSafe()
+        {
+            float previous = -1f;
+            for (float fill = 0f; fill <= 1f; fill += 0.05f)
+            {
+                float copy = ThickOutline.FadedCopyAlpha(fill, 3f, 16);
+                Assert.GreaterOrEqual(copy, previous);
+                previous = copy;
+            }
+            // power below 1 counts as 1 (outline = fill), zero directions counts as one copy
+            Assert.AreEqual(0.5f, ThickOutline.FadedCopyAlpha(0.5f, 0.2f, 1), 0.0001f);
+            Assert.AreEqual(0.5f, ThickOutline.FadedCopyAlpha(0.5f, 1f, 0), 0.0001f);
+        }
     }
 }

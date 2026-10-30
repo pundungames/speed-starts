@@ -1,7 +1,7 @@
 ---
 id: T-063
 title: READY/SET/GO cilasi - kelimeler buyuk ve ekranin ortasinda, efekt cizgileri kelimeyle olceklenir, GO sonerken lacivert lekeye donmez
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-059]
 owns_paths:
@@ -14,12 +14,19 @@ owns_paths:
 touches_scene: true
 branch: agent/T-063-baslangic-cila
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ThickOutlineTests.cs (FadedCopyAlpha x3)"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "Data/Config/RaceStartConfig.asset: groupScale 0.8 -> 1.7; yeni alanlar groupCenterFromTopShare: 0.38 ve outlineFadePower: 3 (asset'te yok, kod varsayilani gecerli; yine de yaz). Baska deger degismez."
+  - tip: SCENE
+    durum: open
+    not: "RaceStart prefab'ini UiRaceStartPrefabs ile yeniden uret (Group artik olcek 1, boyut 1024x576 x groupScale, merkez ekran yuksekliginin ustten %38'i; Word fontu 160 x 1.7 = 272; WordBox 1190x340) ve Race sahnesindeki ornegi guncelle. Eski prefab yeni view ile cift olceklenir: ASSET ile birlikte yeniden uret. Sonra Shots_RaceStartPhases 6 kare: READY ~%40 genislik, efektler orantili, 06'da GO kirmizi."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -53,3 +60,8 @@ ZAMAN   : timing.json
 KAMERA  : yok
 
 ## Calisma notu
+1) Boyut: sahnedeki READY gercekte ~570 art birimi (kareden olculdu); hedef %40 = ~960 icin groupScale 1.7. Olcek artik Group.localScale degil boyutta + gercek font (272), boylece yazi bulaniklasmaz.
+2) Konum: Group ankoru y = 1 - 0.38 (ekran yuksekligi orani), x orta; config'te groupCenterFromTopShare. Efektler ayni grupta, ayni 1024x576 tuvalde: kelimeyle orantili.
+3) GO lekesi: konturun 16 kopyasi ust uste binip opak kaliyordu. ThickOutline.FadedCopyAlpha: kopya basina alfa, yigilinca gorunen kontur = dolgu^outlineFadePower (3); view bunu kullanir.
+4) View hareket ofsetlerini (slide, hop, titresim) GroupScale ile carpar. timing sayilarina dokunulmadi.
+5) Derleme/test calistirilmadi; ASSET + SCENE needs acik. Uyari: kelime merkezi kosucunun basiyla ayni yatay bolgede (%38 dikey); spec bu.

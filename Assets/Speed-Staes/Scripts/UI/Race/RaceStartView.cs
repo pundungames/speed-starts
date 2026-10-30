@@ -26,7 +26,7 @@ namespace SpeedStars.UI.Race
         [Tooltip("RaceStartConfig asset: motion numbers, colours, group scale.")]
         [SerializeField] private RaceStartConfig config;
 
-        [Tooltip("Group: everything that shows and hides (1024x576, the art's canvas; scaled by the config).")]
+        [Tooltip("Group: everything that shows and hides (the art's 1024x576 canvas x the config's group scale, built into its size).")]
         [SerializeField] private RectTransform group;
 
         [Tooltip("Group/EffectsRoot: the speed lines' shared parent; it scales during the GO! burst.")]
@@ -93,7 +93,6 @@ namespace SpeedStars.UI.Race
             if (_motion == null && config != null)
             {
                 _motion = new RaceStartMotion(config);
-                if (group != null) group.localScale = Vector3.one * config.GroupScale;
                 PrepareWord();
             }
             if (_signal == null || _subscribed || !isActiveAndEnabled) return;
@@ -198,15 +197,17 @@ namespace SpeedStars.UI.Race
                 if (group != null) group.gameObject.SetActive(true);
             }
 
-            textRoot.anchoredPosition = new Vector2(pose.TextX, pose.TextY);
+            // The pose offsets are in the art's units; the words are built group-scale times bigger, so the moves are too.
+            textRoot.anchoredPosition = new Vector2(pose.TextX, pose.TextY) * config.GroupScale;
             textRoot.localScale = new Vector3(pose.TextScale.x, pose.TextScale.y, 1f);
             effectsRoot.localScale = new Vector3(pose.EffectsScale, pose.EffectsScale, 1f);
 
             Color fill = _phase == RaceStartPhase.Go ? config.GoColor : config.WordColor;
             fill.a *= pose.TextAlpha;
             wordText.color = fill;
+            // The outline fades faster than the word: stacked copies would otherwise outlast the fill as a dark blot.
             Color outline = config.OutlineColor;
-            outline.a *= pose.TextAlpha;
+            outline.a *= ThickOutline.FadedCopyAlpha(pose.TextAlpha, config.OutlineFadePower, config.OutlineDirections);
             wordOutline.SetColor(outline);
 
             SetAlpha(impactImages, pose.ImpactAlpha);
