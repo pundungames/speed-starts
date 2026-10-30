@@ -1,7 +1,7 @@
 ---
 id: T-062
 title: Kostum premium karti v2 (Premium_Kart_Duzeltme_v2) - kalin altin cerceve, seciliyken altin yerine kirmizi; dikey sanat hucreye oranla sigar
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-044]
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: true
 branch: agent/T-062-premium-kart-v2
-commits: []
+commits: [b44e6b04, e50b3641, 1317f31f]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/PremiumCardStateTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_CostumePremium, yalniz -shotDir)"
@@ -19,7 +19,7 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Builder CostumeItemCard'i yeniden uretmeli (UiCostumePrefabs.ItemCard; mevcut prefab overwrite ile): Rows/CostumeItemCard.prefab'ta yeni PremiumCard dugumu (AspectRatioFitter FitInParent 736/807) altinda PremiumBackground, PremiumIcon, PremiumFrame, PremiumSelectedFrame, PremiumLock (sag-alt), PremiumCheck (sag-ust), PremiumDisabledOverlay olusur; CostumeItemCardView.premiumIcon alani yeni (fileID: 0 degil mi kontrol et). Sonra CostumeEditorScreen prefab'i kart prefab'ina bagli kalir. Sonra Shots_CostumePremium ile Home_costume_premium_locked/selected goruntulerine bak."
 started: 2026-10-30
 finished: 2026-10-30

@@ -1,7 +1,7 @@
 ---
 id: T-063
 title: READY/SET/GO cilasi - kelimeler buyuk ve ekranin ortasinda, efekt cizgileri kelimeyle olceklenir, GO sonerken lacivert lekeye donmez
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-059]
 owns_paths:
@@ -13,17 +13,17 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/**"
 touches_scene: true
 branch: agent/T-063-baslangic-cila
-commits: []
+commits: [523535f3, b3e20dca, 0aa008b4]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ThickOutlineTests.cs (FadedCopyAlpha x3)"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
+    durum: closed
     not: "Data/Config/RaceStartConfig.asset: groupScale 0.8 -> 1.7; yeni alanlar groupCenterFromTopShare: 0.38 ve outlineFadePower: 3 (asset'te yok, kod varsayilani gecerli; yine de yaz). Baska deger degismez."
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "RaceStart prefab'ini UiRaceStartPrefabs ile yeniden uret (Group artik olcek 1, boyut 1024x576 x groupScale, merkez ekran yuksekliginin ustten %38'i; Word fontu 160 x 1.7 = 272; WordBox 1190x340) ve Race sahnesindeki ornegi guncelle. Eski prefab yeni view ile cift olceklenir: ASSET ile birlikte yeniden uret. Sonra Shots_RaceStartPhases 6 kare: READY ~%40 genislik, efektler orantili, 06'da GO kirmizi."
 started: 2026-10-30
 finished: 2026-10-30
