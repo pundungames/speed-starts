@@ -22,8 +22,17 @@ namespace SpeedStars.UI.Race
         public readonly bool IsPlayer;
         public readonly ResultTrophy Trophy;
 
-        public ResultRowData(int rank, string name, string timeText, bool isPlayer, ResultTrophy trophy)
+        /// <summary>PB: this race is a new personal record (player row only).</summary>
+        public readonly bool ShowPersonalBest;
+
+        /// <summary>DB: this race is the player's best of today, UTC (player row only).</summary>
+        public readonly bool ShowDayBest;
+
+        public ResultRowData(int rank, string name, string timeText, bool isPlayer, ResultTrophy trophy,
+            bool showPersonalBest = false, bool showDayBest = false)
         {
+            ShowPersonalBest = showPersonalBest;
+            ShowDayBest = showDayBest;
             Rank = rank;
             Name = name ?? string.Empty;
             TimeText = timeText ?? string.Empty;
@@ -111,9 +120,14 @@ namespace SpeedStars.UI.Race
         public readonly bool IsNewRecord;
         public readonly IReadOnlyList<ResultEntry> Others;
 
+        /// <summary>This race is the player's best of today (see <see cref="ResultsModel.IsDayBest"/>).</summary>
+        public readonly bool IsDayBest;
+
         public ResultsInput(string eventTitle, int playerRank, double playerSeconds, string playerName, int cash,
-            bool hasPersonalBest, double personalBestSeconds, bool isNewRecord, IReadOnlyList<ResultEntry> others)
+            bool hasPersonalBest, double personalBestSeconds, bool isNewRecord, IReadOnlyList<ResultEntry> others,
+            bool isDayBest = false)
         {
+            IsDayBest = isDayBest;
             EventTitle = eventTitle ?? string.Empty;
             PlayerRank = playerRank;
             PlayerSeconds = playerSeconds;
@@ -153,6 +167,16 @@ namespace SpeedStars.UI.Race
                 Rows(input));
         }
 
+        /// <summary>
+        /// True when the stored best of today equals this race (same rounding the day-best store uses: whole milliseconds).
+        /// A slower run after a faster one today leaves the stored value lower, so it is not a day best.
+        /// </summary>
+        public static bool IsDayBest(bool hasDayBest, long dayBestMilliseconds, double seconds)
+        {
+            if (!hasDayBest || double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds <= 0d) return false;
+            return dayBestMilliseconds == (long)Math.Round(seconds * 1000d);
+        }
+
         /// <summary>Cup of a place: gold, silver, bronze for 1 to 3, none after.</summary>
         public static ResultTrophy TrophyFor(int rank)
         {
@@ -171,7 +195,8 @@ namespace SpeedStars.UI.Race
             string playerName = string.IsNullOrWhiteSpace(input.PlayerName) ? ResultsTexts.DefaultPlayerName : input.PlayerName.Trim();
 
             var ordered = new List<ResultRowData>();
-            Insert(ordered, new ResultRowData(playerRank, playerName, ResultsTexts.Time(input.PlayerSeconds), true, TrophyFor(playerRank)));
+            Insert(ordered, new ResultRowData(playerRank, playerName, ResultsTexts.Time(input.PlayerSeconds), true, TrophyFor(playerRank),
+                input.IsNewRecord && input.HasPersonalBest, input.IsDayBest));
 
             if (input.Others != null)
             {

@@ -267,7 +267,7 @@ namespace SpeedStars.UI.Race
             foreach (ResultRowData row in rows)
             {
                 ResultsTableRowView view = Instantiate(rowPrefab, rowsContent);
-                view.Fill(row);
+                view.Fill(row, _resultsMotion);
                 _rows.Add(view);
             }
         }

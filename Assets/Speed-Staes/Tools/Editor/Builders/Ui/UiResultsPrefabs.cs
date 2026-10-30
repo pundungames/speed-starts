@@ -58,6 +58,10 @@ namespace SpeedStars.Tools.Builders
         private static readonly Vector2 RankMin = new Vector2(0.17f, 0.08f), RankMax = new Vector2(0.26f, 0.92f);
         private static readonly Vector2 NameMin = new Vector2(0.29f, 0.08f), NameMax = new Vector2(0.64f, 0.92f);
         private static readonly Vector2 TimeMin = new Vector2(0.64f, 0.08f), TimeMax = new Vector2(0.94f, 0.92f);
+        private static readonly Vector2 PbBadgeMin = new Vector2(0.56f, 0.2f), PbBadgeMax = new Vector2(0.66f, 0.8f);
+        private static readonly Vector2 DbBadgeMin = new Vector2(0.66f, 0.2f), DbBadgeMax = new Vector2(0.76f, 0.8f);
+        private static readonly Color PbBadgeColor = new Color32(0x00, 0xB6, 0xB0, 0xFF);
+        private static readonly Color DbBadgeColor = new Color32(0xFF, 0x20, 0x2D, 0xFF);
         private static readonly Vector2 DailyHeaderTextMin = new Vector2(0.17f, 0.08f), DailyHeaderTextMax = new Vector2(0.95f, 0.92f);
         private static readonly Vector2 DailyRowMin = new Vector2(0.05f, 0.08f), DailyRowMax = new Vector2(0.95f, 0.92f);
 
@@ -291,7 +295,15 @@ namespace SpeedStars.Tools.Builders
             Text playerName = UiArt.Slot(root, "Name", "YOU", RowSize, NameMin, NameMax, TextAnchor.MiddleLeft);
             Text time = UiArt.Slot(root, "Time", "0.00s", RowSize, TimeMin, TimeMax, TextAnchor.MiddleRight);
 
+            // Badges stay off until the model says so; no art, just small coloured text after the name.
+            Text pb = UiArt.Slot(root, "PersonalBestBadge", "PB", RowSize * 0.6f, PbBadgeMin, PbBadgeMax, TextAnchor.MiddleCenter, PbBadgeColor);
+            Text db = UiArt.Slot(root, "DayBestBadge", "DB", RowSize * 0.6f, DbBadgeMin, DbBadgeMax, TextAnchor.MiddleCenter, DbBadgeColor);
+            pb.gameObject.SetActive(false);
+            db.gameObject.SetActive(false);
+
             var so = new SerializedObject(view);
+            Ref(so, "personalBestBadge", pb);
+            Ref(so, "dayBestBadge", db);
             Ref(so, "rankText", rank);
             Ref(so, "nameText", playerName);
             Ref(so, "timeText", time);

@@ -14,6 +14,52 @@ namespace SpeedStars.Tests.UI.Race
             double best = Time, bool record = false, IReadOnlyList<ResultEntry> others = null) =>
             new ResultsInput(Event, rank, Time, name, cash, hasBest, best, record, others);
 
+        private static ResultRowData PlayerRow(bool record, bool dayBest) =>
+            ResultsModel.Build(new ResultsInput(Event, 1, Time, "Ada", 0, true, Time, record, null, dayBest)).Rows[0];
+
+        [Test]
+        public void Badges_FirstRun_IsPersonalBestAndDayBest()
+        {
+            bool dayBest = ResultsModel.IsDayBest(true, (long)System.Math.Round(Time * 1000d), Time);
+            ResultRowData row = PlayerRow(record: true, dayBest: dayBest);
+            Assert.IsTrue(row.ShowPersonalBest);
+            Assert.IsTrue(row.ShowDayBest);
+        }
+
+        [Test]
+        public void Badges_SlowerRun_ShowsNone()
+        {
+            bool dayBest = ResultsModel.IsDayBest(true, (long)System.Math.Round((Time - 1d) * 1000d), Time);
+            ResultRowData row = PlayerRow(record: false, dayBest: dayBest);
+            Assert.IsFalse(row.ShowPersonalBest);
+            Assert.IsFalse(row.ShowDayBest);
+        }
+
+        [Test]
+        public void Badges_DayBestSlowerThanOldRecord_ShowsOnlyDayBest()
+        {
+            ResultRowData row = PlayerRow(record: false, dayBest: true);
+            Assert.IsFalse(row.ShowPersonalBest);
+            Assert.IsTrue(row.ShowDayBest);
+        }
+
+        [Test]
+        public void IsDayBest_NoStoredValueOrInvalidTime_IsFalse()
+        {
+            Assert.IsFalse(ResultsModel.IsDayBest(false, 0L, Time));
+            Assert.IsFalse(ResultsModel.IsDayBest(true, 0L, 0d));
+            Assert.IsFalse(ResultsModel.IsDayBest(true, 0L, double.NaN));
+        }
+
+        [Test]
+        public void Badges_OtherRunners_NeverShowBadges()
+        {
+            var others = new List<ResultEntry> { new ResultEntry(2, "Bo", Time + 1d) };
+            ResultsData data = ResultsModel.Build(new ResultsInput(Event, 1, Time, "Ada", 0, true, Time, true, others, true));
+            Assert.IsFalse(data.Rows[1].ShowPersonalBest);
+            Assert.IsFalse(data.Rows[1].ShowDayBest);
+        }
+
         [Test]
         public void TrophyFor_FirstThreePlaces_AreDistinct_AndNoneAfter()
         {
