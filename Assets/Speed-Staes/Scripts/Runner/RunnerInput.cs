@@ -41,8 +41,11 @@ namespace SpeedStars.Runner
 
         public void Clear() => _queue.Clear();
 
+        /// <summary>The emote key (J). Not a foot: it never enters the press queue.</summary>
+        public event System.Action EmotePressed;
+
 #if ENABLE_INPUT_SYSTEM
-        InputAction _left, _right;
+        InputAction _left, _right, _emote;
         readonly Dictionary<int, int> _fingerLeg = new Dictionary<int, int>();
 
         void OnEnable()
@@ -59,6 +62,11 @@ namespace SpeedStars.Runner
             _right.canceled += ctx => Enqueue(1, false, ctx.time);
             _right.Enable();
 
+            _emote = new InputAction("Emote", InputActionType.Button);
+            _emote.AddBinding("<Keyboard>/j");
+            _emote.performed += ctx => EmotePressed?.Invoke();
+            _emote.Enable();
+
             EnhancedTouchSupport.Enable();
             ETouch.onFingerDown += OnFingerDown;
             ETouch.onFingerUp += OnFingerUp;
@@ -70,6 +78,7 @@ namespace SpeedStars.Runner
             ETouch.onFingerUp -= OnFingerUp;
             _left?.Dispose();
             _right?.Dispose();
+            _emote?.Dispose();
             _fingerLeg.Clear();
         }
 
@@ -102,6 +111,7 @@ namespace SpeedStars.Runner
             if (Input.GetKeyUp(KeyCode.N)) Enqueue(0, false);
             if (Input.GetKeyDown(KeyCode.M)) Enqueue(1, true);
             if (Input.GetKeyUp(KeyCode.M)) Enqueue(1, false);
+            if (Input.GetKeyDown(KeyCode.J)) EmotePressed?.Invoke();
             for (int i = 0; i < Input.touchCount; i++)
             {
                 var t = Input.GetTouch(i);
