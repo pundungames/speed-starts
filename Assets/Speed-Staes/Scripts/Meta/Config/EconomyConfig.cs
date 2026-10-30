@@ -4,19 +4,6 @@ using UnityEngine;
 namespace SpeedStars.Meta.Config
 {
     /// <summary>
-    /// When a new "day" starts. One boundary for both the daily entry gift and the 7-day check-in, so the two never
-    /// disagree about what "today" is. Serialized as int: append new values, never reorder.
-    /// </summary>
-    public enum DayBoundaryPolicy
-    {
-        /// <summary>Device's local calendar day, at midnight (working assumption, OPEN 2026-10-28 #2).</summary>
-        LocalMidnight = 0,
-
-        /// <summary>UTC calendar day, at UTC midnight.</summary>
-        UtcMidnight = 1
-    }
-
-    /// <summary>
     /// Ticket and wallet numbers (PDF §1.1, §1.2, §2.1). Every value lives in the asset and belongs to the user; code
     /// defaults are 0 on purpose so a value nobody entered reads as "off", never as a made-up number. A ticket option
     /// without a price is closed: the PDF prices nothing (MD §18.4), so the UI shows those options greyed out.
@@ -69,10 +56,6 @@ namespace SpeedStars.Meta.Config
         [Tooltip("How many processed transaction ids the save remembers (duplicate protection). The oldest are dropped first. Technical limit, not balance; keep it well above the number of purchases a player can repeat within one session.")]
         [SerializeField, Min(1)] private int processedTransactionCap = 200;
 
-        [Header("Day boundary")]
-        [Tooltip("When the daily gift and the 7-day check-in roll over to a new day.")]
-        [SerializeField] private DayBoundaryPolicy dayBoundary;
-
         public int EntryTicketCap => entryTicketCap;
         public TimeSpan EntryTicketRegenInterval => TimeSpan.FromMinutes(entryTicketRegenMinutes);
         public int DailyGiftEntryTickets => dailyGiftEntryTickets;
@@ -84,8 +67,6 @@ namespace SpeedStars.Meta.Config
         public int StartingTimedTickets => startingTimedTickets;
 
         public int ProcessedTransactionCap => processedTransactionCap < 1 ? 1 : processedTransactionCap;
-
-        public DayBoundaryPolicy DayBoundary => dayBoundary;
 
         /// <summary>False when the Entry Ticket has no Cash price: buying it with Cash is closed.</summary>
         public bool TryGetEntryTicketCashPrice(out int cashPrice) => TryGetPrice(entryTicketCashPrice, out cashPrice);

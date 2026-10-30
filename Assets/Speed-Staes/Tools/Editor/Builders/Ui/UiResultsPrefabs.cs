@@ -28,7 +28,7 @@ namespace SpeedStars.Tools.Builders
 
         // Text sizes in canvas points (design reference px x ~1.15), best fit shrinks them to the slot.
         private const float CashSize = 54f;
-        private const float NavSize = 46f;
+        private const float NavSize = 38f; // "Watch Replay" is the longest caption and must stay on one line
         private const float CardTitleSize = 30f;
         private const float CardValueSize = 60f;
         private const float CardEventSize = 28f;
@@ -251,7 +251,11 @@ namespace SpeedStars.Tools.Builders
             RectTransform node = Place(parent, nodeName, layout, layout.Get(artName));
             Image background = UiArt.Paint(node.gameObject, Art(artName + "_background"), raycast: true);
             UiArt.Layer(node, "Icon", Art(artName + "_icon"));
-            UiArt.Slot(node, "Label", caption, NavSize, NavMin, NavMax, TextAnchor.MiddleLeft, textColor);
+            // One fixed size for every nav label (best fit would shrink only the long ones, and wrap "Watch Replay" to two lines).
+            Text label = UiArt.Slot(node, "Label", caption, NavSize, NavMin, NavMax, TextAnchor.MiddleLeft, textColor);
+            label.resizeTextForBestFit = false;
+            label.fontSize = Mathf.RoundToInt(NavSize);
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
 
             Button button = UiArt.MakeButton(node.gameObject, background, interactable, alphaHit: false);
             button.transition = Selectable.Transition.SpriteSwap;

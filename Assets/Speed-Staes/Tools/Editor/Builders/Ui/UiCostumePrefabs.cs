@@ -46,12 +46,12 @@ namespace SpeedStars.Tools.Builders
         private const float PriceGap = 0.03f; // between the gem and the price text
         private const float PriceEdge = 0.94f;
         private const float HeightInset = 0.03f;
-        private const float TabLabelSize = 34f;
+        private const float TabLabelSize = 30f;
         private const float TitleSize = 40f;
         private const float StatLabelSize = 28f;
         private const float ActionLabelSize = 44f;
         private const float LabelGap = 0.03f;      // between an icon and its label (fraction of the component)
-        private const float TabLabelRight = 0.96f;
+        private const float TabLabelRight = 0.92f;
         private const float TitleInset = 0.06f;
         private static readonly Color LabelWhite = Color.white;
 
@@ -483,6 +483,10 @@ namespace SpeedStars.Tools.Builders
             Vector4 tabIcon = AlphaBounds(stem + (twoIcons ? "_normal_icon" : "_icon"));
             Text tabLabel = UiArt.Slot(node, "Label", CostumeTexts.TabName(tab), TabLabelSize,
                 new Vector2(tabIcon.z + LabelGap, 0.1f), new Vector2(TabLabelRight, 0.9f), TextAnchor.MiddleLeft);
+            // Same size for every category ("Leggings" is the longest); no best fit, no wrap, margin kept on the right.
+            tabLabel.resizeTextForBestFit = false;
+            tabLabel.fontSize = Mathf.RoundToInt(TabLabelSize);
+            tabLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
 
             var so = new SerializedObject(view);
             Find(so, "tab").intValue = (int)tab;

@@ -1,7 +1,7 @@
 ---
 id: T-055
 title: Kucuk borclar - okuyucusuz dayBoundary ayari, sonuc ekraninda iki satira kirilan Watch Replay, kostumde kenara dayanan Leggings
-status: todo
+status: review
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -15,12 +15,16 @@ owns_paths:
 touches_scene: true
 branch: agent/T-055-kucuk-borclar
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Config/EconomyConfigTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Builder'lari yeniden kos (UiResultsPrefabs + UiCostumePrefabs) ve ResultsPanel / CostumeScreen prefab'larini + sahneleri yeniden uret: nav etiketleri 38pt sabit tek satir, kostum kategori etiketleri 30pt sabit, sag pay 0.08. EconomyConfig.asset'te eski 'dayBoundary: 0' satiri kalabilir (Unity yok sayar)."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -51,3 +55,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+1. dayBoundary: grep (tum Assets, Physical/Runner dahil) `dayBoundary|DayBoundaryPolicy|LocalMidnight` yalniz EconomyConfig.cs, ConfigAssetSeeder, EconomyConfigTests ve EconomyConfig.asset'te cikti; ucu de kaldirildi (asset'e dokunulmadi).
+2. Test `CapGiftAndStartingBalances_ComeFromTheAsset` olarak adlandirildi, dayBoundary assert'i silindi.
+3. Watch Replay: UiBuildKit.Label best fit + Wrap yuzunden kiriliyordu; Kit'e dokunmadan nav etiketi sabit 38pt, best fit kapali, Overflow (tum nav etiketleri ayni punto).
+4. Kostum kategori etiketi: sabit 30pt, best fit kapali, Overflow, sag sinir 0.96 -> 0.92.
+5. Prefab uretimi supervizorde (needs SCENE); gorsel dogrulama yeniden uretimden sonra. Backlog'dan 2 madde silindi.

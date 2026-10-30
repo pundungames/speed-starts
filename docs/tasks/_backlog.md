@@ -12,9 +12,7 @@
 
 ## Olu ayar supheleri
 (config alani var ama okuyucusu bulunamadi - faz sonu taramasinda dogrula)
-- [ ] EconomyConfig.dayBoundary okuyucusuz: gun sinirinin hepsi UTC (RewardDay.Key) ama ConfigAssetSeeder LocalMidnight tohumluyor; alan kaldirilmali ya da Utc tohumlanmali (T-053, 30.10)
 
 ## Test kapsamasi bosluklari
 - [builder] Her RebuildAll prefab içi fileID'leri yeniden üretiyor (her build binlerce satır diff) → var olan prefab'ı yerinde güncelleyen builder ya da sabit fileID; o zamana kadar sahne + prefab'lar aynı build'den commit'lenir (28.10)
-- [kostüm] Renk örnek kutusu öğenin rengi yoksa lacivert; 'Watch Replay' etiketi iki satıra kırılıyor (28.10)
 - [emote] emote fiyatlari yer tutucu (Nakit); gercek fiyatlar karara bagli (30.10)

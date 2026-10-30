@@ -100,7 +100,6 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "timedTicketCashPrice").intValue = 0;
             Prop(so, "rewardedAdEnabled").boolValue = true;
             Prop(so, "rewardedAdEntryTickets").intValue = 1;
-            Prop(so, "dayBoundary").intValue = (int)DayBoundaryPolicy.LocalMidnight; // OPEN #2 working assumption
             Apply(so);
             Log(Source, $"Seeded {EconomyPath}.");
         }

@@ -74,7 +74,7 @@ namespace SpeedStars.Tests.Meta.Config
         }
 
         [Test]
-        public void CapGiftStartingBalancesAndDayBoundary_ComeFromTheAsset()
+        public void CapGiftAndStartingBalances_ComeFromTheAsset()
         {
             var config = fixture.Create<EconomyConfig>();
             ConfigFixture.SetInt(config, "entryTicketCap", 9);
@@ -83,7 +83,6 @@ namespace SpeedStars.Tests.Meta.Config
             ConfigFixture.SetInt(config, "startingPurpleGems", 102);
             ConfigFixture.SetInt(config, "startingEntryTickets", 103);
             ConfigFixture.SetInt(config, "startingTimedTickets", 104);
-            ConfigFixture.SetInt(config, "dayBoundary", (int)DayBoundaryPolicy.UtcMidnight);
 
             Assert.AreEqual(9, config.EntryTicketCap);
             Assert.AreEqual(2, config.DailyGiftEntryTickets);
@@ -91,7 +90,6 @@ namespace SpeedStars.Tests.Meta.Config
             Assert.AreEqual(102, config.StartingPurpleGems);
             Assert.AreEqual(103, config.StartingEntryTickets);
             Assert.AreEqual(104, config.StartingTimedTickets);
-            Assert.AreEqual(DayBoundaryPolicy.UtcMidnight, config.DayBoundary);
         }
     }
 }
