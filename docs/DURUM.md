@@ -5,7 +5,7 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-10-28 · origin/main birleşti (881966a, push kullanıcıda) · dal `main`
+Son güncelleme: 2026-10-30 · origin/main birleşti (881966a, push kullanıcıda) · dal `main`
 
 ## Sürüyor
 - Yok (bütün worktree'ler kapandı). Sıradaki: Faz 4 / Faz 6 (aşağıda).
@@ -20,15 +20,14 @@ Son güncelleme: 2026-10-28 · origin/main birleşti (881966a, push kullanıcıd
 ## Kullanıcıdan bekleyen
 - Malik'ten (Faz 7, sona bırakıldı): yarış başladı/bitti olayı, UI üstündeki dokunma ayak sayılmasın, geri sayım sinyali (`docs/TEMEL-SOZLESME.md` §11).
 
-## Gözle bakılacaklar (main ccdafad, kopyada yeşil: EditMode 441, PlayMode 10, Zenject; çekimler pipeline-logs/shots-t033-2026-10-28_173524)
-- Home (Serhat'ın sahnesinin kopyası) + tema seçimi + yarış seçimi v1 + kostüm editörü + ayarlar + giriş kapısı + yarış sonu ekranı.
-- Yarış sonu: kişisel rekor gerçek (etkinlik başına kayıt); dünya sırası/yüzdelik "--", Best of the Day "No races today" (veri Faz 6);
-  tabloda yalnız oyuncu (rakipler Malik'in NPC'leri gelince). Watch Replay / Stats / Practice / High Scores pasif.
-- Faz 3 ekonomi kapandı. Giriş kapısının sanatı yok (yer tutucu görünüm).
+## Gözle bakılacaklar (main 2ff96c2 + kullanıcının 2 sahne commit'i 1a20dce, push edildi)
+- Bütün ana ekran ekranları + yarış sonu; testler artık gerçek ışınla dokunuyor (Tap), PlayMode 10/10; CanvasScaler Expand.
+- Kullanıcı 28.10: "karakter edit yapamıyorum" → T-034 düzeltti (kart butonları tüm kartı kaplıyordu); kullanıcı Unity'de denemedi henüz.
 
 ## Senden beklenen
-- Push. Unity'de Player Settings → dikey kutular işaretsiz mi bak (434879b dosyadan yazıldı).
-- Serhat'ın `Anamenu Themaları.unity` sahnesi sende commit'siz değişik (16:59): bilerek mi? Evet ise Home'a geçirilir.
+- Tişört / ok butonlarını Unity'de dene. Kurallar dosyasında "CanvasScaler yükseklik eşleşmesi" → "Expand" güncellensin mi.
+- Serhat'a: şehir temasının "Generated Buildings"ı sahne her açılınca yeni ID'lerle yeniden üretiliyor (1a20dce/8820906'da 142 nesne,
+  içerik aynı) → her açılış gereksiz sahne diff'i; generator sahne açılışında yeniden üretmesin.
 
 ## Sıradaki iş
 1. Faz 4 günlük hediye + 7 gün; Faz 6 High Scores (ad + bayrak T-031'de, sonuç ekranı kartları bekliyor).
