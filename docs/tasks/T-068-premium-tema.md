@@ -18,9 +18,9 @@ touches_scene: true
 branch: agent/T-068-premium-tema
 commits: [2ae9bf70, 4e892c90, 4ee00888]
 tests:
-  - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/ThemeServiceTests.cs (Premium_* : para birimi, fiyatsiz, idempotent, yetersiz bakiye)"
-  - "Assets/Speed-Staes/Tests/EditMode/UI/Themes/ThemeSelectPresenterTests.cs (Premium_*: altin/kirmizi asla birlikte, ortu)"
-  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Home_themeselect_premium, Home_themeselect_premium_inuse)"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/ThemeServiceTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Themes/ThemeSelectPresenterTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:

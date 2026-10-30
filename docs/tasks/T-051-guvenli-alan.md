@@ -18,7 +18,7 @@ commits: [dcf79fd, 75b23c8]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Framework/SafeAreaTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/SafeAreaPlayTests.cs"
-  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shot_HomeSafeArea, -shotDir ile)"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:

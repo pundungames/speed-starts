@@ -10,7 +10,7 @@ touches_scene: false
 branch: agent/T-060-liderlik-goruntuleri
 commits: [08385dc7]
 tests:
-  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_LeaderboardStates, yalniz -shotDir)"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs: []

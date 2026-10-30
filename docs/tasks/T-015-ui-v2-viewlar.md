@@ -12,8 +12,8 @@ branch: agent/ui-v2
 commits: []
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/PanelCloseRuleTests.cs"
-  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceFlowLogicTests.cs (Restart/Exit)"
-  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceDisplayFormatTests.cs (Speed, CadenceFraction)"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceFlowLogicTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceDisplayFormatTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:

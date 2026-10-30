@@ -17,7 +17,7 @@ branch: agent/T-059-baslangic-yazilari
 commits: [98989120, 4d0b1ee3, 7fbbe206]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ThickOutlineTests.cs"
-  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_RaceStartPhases, yalniz -shotDir)"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:

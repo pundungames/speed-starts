@@ -15,7 +15,7 @@ touches_scene: true
 branch: agent/T-063-baslangic-cila
 commits: [523535f3, b3e20dca, 0aa008b4]
 tests:
-  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ThickOutlineTests.cs (FadedCopyAlpha x3)"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ThickOutlineTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:

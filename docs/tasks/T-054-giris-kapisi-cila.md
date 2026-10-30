@@ -15,7 +15,7 @@ touches_scene: true
 branch: agent/T-054-giris-kapisi-cila
 commits: [515218a, b85c824]
 tests:
-  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_EntryGateStates: Home_entrygate_ready/_full/_timed/_timedactive; -shotDir ile)"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs"
   - "mevcut EntryGateModel EditMode + EntryGateAdSmokeTests degismedi"
 analytics:
   - "yok: projede analytics yok"

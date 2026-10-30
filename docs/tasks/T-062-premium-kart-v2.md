@@ -14,7 +14,7 @@ branch: agent/T-062-premium-kart-v2
 commits: [b44e6b04, e50b3641, 1317f31f]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/PremiumCardStateTests.cs"
-  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_CostumePremium, yalniz -shotDir)"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:

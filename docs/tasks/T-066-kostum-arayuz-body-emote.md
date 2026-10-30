@@ -16,7 +16,7 @@ commits: [629aec56, b74b1007, fd590f6d]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/CostumeEditorModelTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/CostumeScreenSmokeTests.cs"
-  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs (Shots_CostumeBodyAndPresets: Home_costume_body, Home_costume_presets)"
+  - "Assets/Speed-Staes/Tests/PlayMode/ScreenshotTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:

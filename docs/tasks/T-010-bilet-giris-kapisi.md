@@ -16,7 +16,7 @@ branch: agent/faz2-dilim
 commits: [bb43cdb, dc7db07]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Tickets/EntryTicketServiceTests.cs"
-  - "Assets/Speed-Staes/Tests/EditMode/Meta/Race/RaceEntryGateTests.cs (gate, RaceSelection, WalletService)"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Race/RaceEntryGateTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
