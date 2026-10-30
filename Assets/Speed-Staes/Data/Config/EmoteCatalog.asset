@@ -1,0 +1,622 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a01f7f4126915f498771c2bc300e48b, type: 3}
+  m_Name: EmoteCatalog
+  m_EditorClassIdentifier: 
+  emotes:
+  - emoteId: wave
+    displayName: Wave
+    cashPrice: 0
+    duration: 2.4
+    blendIn: 0.25
+    blendOut: 0.4
+    keys:
+    - time: 0
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 9
+      euler: {x: 0, y: 0, z: 135}
+      ease: 1
+    - time: 2
+      bone: 9
+      euler: {x: 0, y: 0, z: 135}
+      ease: 1
+    - time: 2.4
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 10
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 10
+      euler: {x: 0, y: 0, z: 15}
+      ease: 1
+    - time: 0.8
+      bone: 10
+      euler: {x: 0, y: 0, z: 45}
+      ease: 1
+    - time: 1.1
+      bone: 10
+      euler: {x: 0, y: 0, z: -10}
+      ease: 1
+    - time: 1.4
+      bone: 10
+      euler: {x: 0, y: 0, z: 45}
+      ease: 1
+    - time: 1.7
+      bone: 10
+      euler: {x: 0, y: 0, z: -10}
+      ease: 1
+    - time: 2
+      bone: 10
+      euler: {x: 0, y: 0, z: 15}
+      ease: 1
+    - time: 2.4
+      bone: 10
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.6
+      bone: 3
+      euler: {x: 0, y: -12, z: 4}
+      ease: 1
+    - time: 2
+      bone: 3
+      euler: {x: 0, y: -12, z: 4}
+      ease: 1
+    - time: 2.4
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 8
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 8
+      euler: {x: 0, y: 0, z: 8}
+      ease: 1
+  - emoteId: hands_up
+    displayName: Hands Up
+    cashPrice: 0
+    duration: 2.2
+    blendIn: 0.2
+    blendOut: 0.4
+    keys:
+    - time: 0
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 9
+      euler: {x: 0, y: 0, z: 165}
+      ease: 1
+    - time: 0.9
+      bone: 9
+      euler: {x: 0, y: 0, z: 150}
+      ease: 1
+    - time: 1.3
+      bone: 9
+      euler: {x: 0, y: 0, z: 170}
+      ease: 1
+    - time: 1.7
+      bone: 9
+      euler: {x: 0, y: 0, z: 150}
+      ease: 1
+    - time: 2.2
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 5
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 5
+      euler: {x: 0, y: 0, z: -165}
+      ease: 1
+    - time: 0.9
+      bone: 5
+      euler: {x: 0, y: 0, z: -150}
+      ease: 1
+    - time: 1.3
+      bone: 5
+      euler: {x: 0, y: 0, z: -170}
+      ease: 1
+    - time: 1.7
+      bone: 5
+      euler: {x: 0, y: 0, z: -150}
+      ease: 1
+    - time: 2.2
+      bone: 5
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 8
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 8
+      euler: {x: 0, y: 0, z: 10}
+      ease: 1
+    - time: 0
+      bone: 4
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 4
+      euler: {x: 0, y: 0, z: -10}
+      ease: 1
+    - time: 0
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 3
+      euler: {x: -16, y: 0, z: 0}
+      ease: 1
+    - time: 1.8
+      bone: 3
+      euler: {x: -16, y: 0, z: 0}
+      ease: 1
+    - time: 2.2
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 1
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 1
+      euler: {x: -8, y: 0, z: 0}
+      ease: 1
+    - time: 1.8
+      bone: 1
+      euler: {x: -8, y: 0, z: 0}
+      ease: 1
+    - time: 2.2
+      bone: 1
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+  - emoteId: flex
+    displayName: Flex
+    cashPrice: 200
+    duration: 2.4
+    blendIn: 0.3
+    blendOut: 0.4
+    keys:
+    - time: 0
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 9
+      euler: {x: 0, y: 0, z: 85}
+      ease: 1
+    - time: 2
+      bone: 9
+      euler: {x: 0, y: 0, z: 85}
+      ease: 1
+    - time: 2.4
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 5
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 5
+      euler: {x: 0, y: 0, z: -85}
+      ease: 1
+    - time: 2
+      bone: 5
+      euler: {x: 0, y: 0, z: -85}
+      ease: 1
+    - time: 2.4
+      bone: 5
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 10
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.6
+      bone: 10
+      euler: {x: 0, y: 0, z: 110}
+      ease: 1
+    - time: 0.95
+      bone: 10
+      euler: {x: 0, y: 0, z: 125}
+      ease: 1
+    - time: 1.3
+      bone: 10
+      euler: {x: 0, y: 0, z: 105}
+      ease: 1
+    - time: 1.65
+      bone: 10
+      euler: {x: 0, y: 0, z: 125}
+      ease: 1
+    - time: 2
+      bone: 10
+      euler: {x: 0, y: 0, z: 110}
+      ease: 1
+    - time: 2.4
+      bone: 10
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 6
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.6
+      bone: 6
+      euler: {x: 0, y: 0, z: -110}
+      ease: 1
+    - time: 0.95
+      bone: 6
+      euler: {x: 0, y: 0, z: -125}
+      ease: 1
+    - time: 1.3
+      bone: 6
+      euler: {x: 0, y: 0, z: -105}
+      ease: 1
+    - time: 1.65
+      bone: 6
+      euler: {x: 0, y: 0, z: -125}
+      ease: 1
+    - time: 2
+      bone: 6
+      euler: {x: 0, y: 0, z: -110}
+      ease: 1
+    - time: 2.4
+      bone: 6
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 1
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.6
+      bone: 1
+      euler: {x: 6, y: 0, z: 0}
+      ease: 1
+    - time: 2
+      bone: 1
+      euler: {x: 6, y: 0, z: 0}
+      ease: 1
+    - time: 2.4
+      bone: 1
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.6
+      bone: 3
+      euler: {x: 4, y: 0, z: 0}
+      ease: 1
+    - time: 2
+      bone: 3
+      euler: {x: 4, y: 0, z: 0}
+      ease: 1
+    - time: 2.4
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+  - emoteId: number_one
+    displayName: Number One
+    cashPrice: 300
+    duration: 2.2
+    blendIn: 0.25
+    blendOut: 0.4
+    keys:
+    - time: 0
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 9
+      euler: {x: 0, y: 0, z: 165}
+      ease: 1
+    - time: 0.8
+      bone: 9
+      euler: {x: 0, y: 0, z: 150}
+      ease: 1
+    - time: 1.15
+      bone: 9
+      euler: {x: 0, y: 0, z: 168}
+      ease: 1
+    - time: 1.5
+      bone: 9
+      euler: {x: 0, y: 0, z: 150}
+      ease: 1
+    - time: 1.85
+      bone: 9
+      euler: {x: 0, y: 0, z: 165}
+      ease: 1
+    - time: 2.2
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 5
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 5
+      euler: {x: 0, y: 0, z: -28}
+      ease: 1
+    - time: 1.85
+      bone: 5
+      euler: {x: 0, y: 0, z: -28}
+      ease: 1
+    - time: 2.2
+      bone: 5
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 6
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 6
+      euler: {x: 0, y: 0, z: 85}
+      ease: 1
+    - time: 1.85
+      bone: 6
+      euler: {x: 0, y: 0, z: 85}
+      ease: 1
+    - time: 2.2
+      bone: 6
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 3
+      euler: {x: -10, y: 10, z: 0}
+      ease: 1
+    - time: 1.85
+      bone: 3
+      euler: {x: -10, y: 10, z: 0}
+      ease: 1
+    - time: 2.2
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 0
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 0
+      euler: {x: 0, y: 8, z: 0}
+      ease: 1
+    - time: 1.85
+      bone: 0
+      euler: {x: 0, y: 8, z: 0}
+      ease: 1
+    - time: 2.2
+      bone: 0
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+  - emoteId: shrug
+    displayName: Shrug
+    cashPrice: 400
+    duration: 1.9
+    blendIn: 0.25
+    blendOut: 0.4
+    keys:
+    - time: 0
+      bone: 8
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 8
+      euler: {x: 0, y: 0, z: 14}
+      ease: 1
+    - time: 1.4
+      bone: 8
+      euler: {x: 0, y: 0, z: 14}
+      ease: 1
+    - time: 1.9
+      bone: 8
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 4
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 4
+      euler: {x: 0, y: 0, z: -14}
+      ease: 1
+    - time: 1.4
+      bone: 4
+      euler: {x: 0, y: 0, z: -14}
+      ease: 1
+    - time: 1.9
+      bone: 4
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 9
+      euler: {x: 0, y: 0, z: 28}
+      ease: 1
+    - time: 1.4
+      bone: 9
+      euler: {x: 0, y: 0, z: 28}
+      ease: 1
+    - time: 1.9
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 5
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 5
+      euler: {x: 0, y: 0, z: -28}
+      ease: 1
+    - time: 1.4
+      bone: 5
+      euler: {x: 0, y: 0, z: -28}
+      ease: 1
+    - time: 1.9
+      bone: 5
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 10
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 10
+      euler: {x: -35, y: 0, z: 50}
+      ease: 1
+    - time: 1.4
+      bone: 10
+      euler: {x: -35, y: 0, z: 50}
+      ease: 1
+    - time: 1.9
+      bone: 10
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 6
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 6
+      euler: {x: -35, y: 0, z: -50}
+      ease: 1
+    - time: 1.4
+      bone: 6
+      euler: {x: -35, y: 0, z: -50}
+      ease: 1
+    - time: 1.9
+      bone: 6
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.45
+      bone: 3
+      euler: {x: 0, y: 0, z: 12}
+      ease: 1
+    - time: 1.4
+      bone: 3
+      euler: {x: 0, y: 0, z: 12}
+      ease: 1
+    - time: 1.9
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+  - emoteId: salute
+    displayName: Salute
+    cashPrice: 500
+    duration: 2
+    blendIn: 0.3
+    blendOut: 0.4
+    keys:
+    - time: 0
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 9
+      euler: {x: -25, y: 0, z: 100}
+      ease: 1
+    - time: 1.6
+      bone: 9
+      euler: {x: -25, y: 0, z: 100}
+      ease: 1
+    - time: 2
+      bone: 9
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 10
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 10
+      euler: {x: 0, y: 0, z: 125}
+      ease: 1
+    - time: 1.6
+      bone: 10
+      euler: {x: 0, y: 0, z: 125}
+      ease: 1
+    - time: 2
+      bone: 10
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 8
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 8
+      euler: {x: 0, y: 0, z: 6}
+      ease: 1
+    - time: 0
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 3
+      euler: {x: -8, y: 0, z: 0}
+      ease: 1
+    - time: 1.6
+      bone: 3
+      euler: {x: -8, y: 0, z: 0}
+      ease: 1
+    - time: 2
+      bone: 3
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0
+      bone: 1
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+    - time: 0.5
+      bone: 1
+      euler: {x: -4, y: 0, z: 0}
+      ease: 1
+    - time: 1.6
+      bone: 1
+      euler: {x: -4, y: 0, z: 0}
+      ease: 1
+    - time: 2
+      bone: 1
+      euler: {x: 0, y: 0, z: 0}
+      ease: 1
+  defaultEmoteId: wave
