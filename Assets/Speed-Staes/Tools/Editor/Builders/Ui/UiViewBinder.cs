@@ -50,19 +50,26 @@ namespace SpeedStars.Tools.Builders
         {
             var b = new Binding(root, typeof(EntryGateModalView));
             b.Set("window", b.Child<RectTransform>("Window"));
+            b.Set("titleText", b.Child<Text>("Window/Title"));
             b.Set("eventNameText", b.Child<Text>("Window/EventName"));
+            b.Set("ticketCountText", b.Child<Text>("Window/TicketCount"));
+            b.Set("ticketIcon", b.Child<RectTransform>("Window/TicketIcon"));
+            b.Set("refillText", b.Child<Text>("Window/Refill"));
             b.Set("useTicketButton", b.Child<Button>("Window/UseEntryTicket"));
             b.Set("useTicketLabel", b.Child<Text>("Window/UseEntryTicket/Label"));
-            b.Set("remainingText", b.Child<Text>("Window/UseEntryTicket/Remaining"));
+            b.Set("remainingText", b.Child<Text>("Window/Remaining"));
             b.Set("timedLabel", b.Child<Text>("Window/TimedTicketStatus/Label"));
             b.Set("timedValue", b.Child<Text>("Window/TimedTicketStatus/Value"));
             b.Set("useTimedButton", b.Child<Button>("Window/UseTimedTicket"));
             b.Set("useTimedLabel", b.Child<Text>("Window/UseTimedTicket/Label"));
             b.Set("timedStatus", b.Child<RectTransform>("Window/TimedTicketStatus"));
             b.Set("offersCaption", b.Child<Text>("Window/GetTickets/Caption"));
-            b.Set("cashPriceText", b.Child<Text>("Window/GetTickets/BuyWithCash/Price"));
             b.Set("buyWithCashButton", b.Child<Button>("Window/GetTickets/BuyWithCash"));
+            b.Set("buyWithCashLabel", b.Child<Text>("Window/GetTickets/BuyWithCash/Label"));
+            b.Set("cashPriceText", b.Child<Text>("Window/GetTickets/BuyWithCash/Price"));
             b.Set("watchAdButton", b.Child<Button>("Window/GetTickets/WatchAd"));
+            b.Set("watchAdLabel", b.Child<Text>("Window/GetTickets/WatchAd/Label"));
+            b.Set("watchAdSpinner", b.Child<RectTransform>("Window/GetTickets/WatchAd/Spinner"));
             b.Apply();
             BindClose(root, "Window/Close"); // base UiPanel.closeButton (the view has no field of its own any more)
         }

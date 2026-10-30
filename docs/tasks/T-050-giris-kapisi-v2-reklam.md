@@ -1,7 +1,7 @@
 ---
 id: T-050
 title: Giris kapisi v2 - eldeki odul sanatiyla yeniden gorunum + sahte odullu reklam (Watch Ad -> 1 Adet Bileti)
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-043]
 owns_paths:
@@ -19,12 +19,26 @@ owns_paths:
 touches_scene: true
 branch: agent/T-050-giris-kapisi-v2
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Home/EntryGateAdFlowTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/EntryGateAdSmokeTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: WIRING
+    durum: open
+    not: "IRewardedAds -> FakeRewardedAds (yalniz #if UNITY_EDITOR || DEVELOPMENT_BUILD; ProjectInstaller: Container.BindInterfacesTo<FakeRewardedAds>().AsSingle() + AdsDevConfig asset FromInstance). Release build: baglama yok, WATCH AD pasif kalir (view [InjectOptional])."
+  - tip: ASSET
+    durum: open
+    not: "AdsDevConfig asset (menu Speed Stars/Meta/Ads Dev Config; fakeAdSeconds ~1, fakeResult Completed) + yeni dosyalarin .meta uretimi (Meta/Ads, Meta/Ads/Dev, EntryGateAdFlow.cs, testler)"
+  - tip: ASSET
+    durum: open
+    not: "EconomyConfig asset: rewardedAdEnabled=1, rewardedAdEntryTickets=1 (supervizor karari, PDF 1.2); ConfigAssetSeeder.cs:97-98 simdi false/0 seed ediyor, o dosya benim yolum degil"
+  - tip: SCENE
+    durum: open
+    not: "EntryGateModal prefab yeniden uretimi (UiPrefabBuilder.BuildAll overwrite=true; hiyerarsi UiEntryGatePrefabs, alan baglari UiViewBinder.BindEntryGate) + Home sahnesindeki EntryGateModal ornegi yenilenmeli. Yerlesim olculeri (pencere 620x700 sanat-px, daily_panel dikey gerilmis) kod okuyarak yazildi, gozle ince ayar gerekebilir; Home_entrygate ekran goruntusunu kontrol et"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -71,3 +85,8 @@ KAMERA  : yok
 - Gercek reklam SDK'si, Nakit fiyati karari (config bos kalir), giris kapisinin acilma kurali
 
 ## Calisma notu
+- Yapildi: IRewardedAds/AdResult (AdContracts.cs), AdsDevConfig + dev-only FakeRewardedAds (+Pump), saf EntryGateAdFlow (UI/Home), EntryGateModalView yeni alanlar + WATCH AD akisi (spinner, punch, sallanma), UiEntryGatePrefabs + binder, HomeTexts.
+- Pencere: daily_panel 620x600 sanati 620x700'e dikey gerildi (Timed satiri + iki buton sigsin diye); diger parcalar dogal oranda. Olculer koddan, gozle dogrulanmadi.
+- Zorluk: Unity calistirilmadi, derleme dogrulanmadi. FakeRewardedAds bekleme icin gizli DontDestroyOnLoad pompa nesnesi kullanir (Meta asmdef'inde Zenject/DOTween yok).
+- Reklam sonucu pencere kapaliyken de akis tarafinda islenir (bilet verilir + kayit); view kapaliysa UI'a dokunmaz.
+- Birakilan: WIRING/ASSET/SCENE needs (frontmatter); mevcut PlayMode testleri icin alan adlari (useTicketButton, closeButton) korundu.
