@@ -25,6 +25,7 @@ namespace SpeedStars.Tools.Builders
         private const string MenuCharacterType = "SpeedStars.Bridge.MenuCharacter";
         private const string MenuIdlePoseType = "SpeedStars.Bridge.MenuIdlePose";
         private const string MenuEmotePlayerType = "SpeedStars.Bridge.MenuEmotePlayer"; // T-040
+        private const string MenuCharacterSpinType = "SpeedStars.Bridge.MenuCharacterSpin"; // T-073
 
         // Names in Serhat's template scene (Anamenu Themalari). The builder stops with a message when one is gone.
         public const string PlatformName = "Foreground Character Platform";
@@ -80,6 +81,14 @@ namespace SpeedStars.Tools.Builders
             // T-040: procedural emotes blend on top of the idle pose (runs right after it in LateUpdate).
             Type emotePlayer = FindType(MenuEmotePlayerType);
             if (emotePlayer != null && runner.GetComponent(emotePlayer) == null) runner.AddComponent(emotePlayer);
+
+            // T-073: drag to turn the character about its vertical axis (runner root). Added as a typed component, no Find.
+            Type spin = FindType(MenuCharacterSpinType)
+                ?? throw new InvalidOperationException($"{MenuCharacterSpinType} not found (Scripts/Bridge/MenuCharacterSpin.cs).");
+            var spinComponent = runner.GetComponent(spin) ?? runner.AddComponent(spin);
+            var spinSo = new SerializedObject(spinComponent);
+            Prop(spinSo, "target").objectReferenceValue = runner.transform;
+            Apply(spinSo);
 
             Log(Source, $"Home: '{runner.name}' prefab instance under '{PlatformName}' (local {localPosition}, replaces '{TemplateCharacterName}'), {menuCharacter.Name}.{target.name} -> runner root.");
             return runner;

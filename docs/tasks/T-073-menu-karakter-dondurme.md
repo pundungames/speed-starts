@@ -1,7 +1,7 @@
 ---
 id: T-073
 title: Ana menude karakteri parmakla surukleyerek kendi ekseninde dondurme (birakinca yavaslayarak durur, oldugu yerde kalir)
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: []
 owns_paths:
@@ -16,8 +16,14 @@ tests:
   - "Assets/Speed-Staes/Tests/EditMode/Core/Menu/SpinMathTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Home sahnesini builder ile yeniden uret (SceneHomeCharacter artik MenuCharacterSpin ekliyor, target = runner koku)"
+  - tip: ASSET
+    durum: open
+    not: "Yeni .cs.meta dosyalari Unity'den: Scripts/Bridge/MenuCharacterSpin.cs, Scripts/Core/Runtime/Menu/SpinMath.cs (+ Menu klasoru meta), Tests/EditMode/Core/Menu/SpinMathTests.cs (+ klasor meta)"
+started: 2026-10-30
 finished:
 blocked_reason:
 ---
@@ -59,4 +65,8 @@ KAMERA  : yok
 - Kamera yakinlastirma, dikey donme, karakteri secme/degistirme
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+1. Matematik `SpeedStars.Core.Menu.SpinMotion` (Core asmdef, saf C#): px->derece ekran genisligine oranli, birakista hiz ortalamasi, atalet `v*exp(-k dt)` + tam integral (kare hizindan bagimsiz), esik altinda durma.
+2. `MenuCharacterSpin` (Bridge): Pointer.current (dokunma+fare), basis `EventSystem.RaycastAll` ile UI uzerindeyse yok sayilir; Update'te hareket.
+3. Donen sey runner KOKU (MenuCharacter'in isaret ettigi): MenuIdlePose/EmotePlayer kemikleri runner uzayinda her kare koktan okuyup LateUpdate'te yaziyor, kok rigden etkilenmiyor, bu yuzden cakisma yok. Kemik donse animasyon ezerdi. Bilesen platformun altinda: tema ekraninda platform kapaninca pasif kalir.
+4. Builder `SceneHomeCharacter` bileseni ekler, `target` = runner.transform (Find yok). Yon: sag surukleme = on yuz saga.
+5. Belirsiz: tam ekran raycastTarget'li bir arkaplan Image varsa surukleme hep engellenir (sahnede kontrol edilmeli); kostum ekrani ayni karakter ornegini kullaniyorsa ek is yok. Testler kosulmadi.

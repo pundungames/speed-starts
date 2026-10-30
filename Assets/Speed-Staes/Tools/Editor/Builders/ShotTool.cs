@@ -62,6 +62,46 @@ namespace SpeedStars.Tools.Builders
             EditorSceneManager.OpenScene(SceneBuilder.HomeScenePath, OpenSceneMode.Single); // never saved
         }
 
+        /// <summary>
+        /// Opens the built Race scene, puts the runner a few metres down the track with the follow camera snapped to it, and
+        /// renders every theme world once to race_theme_N.png (N = showcase index). 3D world only; add -shotUi for the UI too.
+        /// -executeMethod SpeedStars.Tools.Builders.ShotTool.CaptureRaceThemes -shotDir <folder outside Temp>
+        /// </summary>
+        public static void CaptureRaceThemes()
+        {
+            string dir = ArgValue("-shotDir") ?? Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? ".", "Logs", "shots");
+            Directory.CreateDirectory(dir);
+            EditorSceneManager.OpenScene(SceneBuilder.RaceScenePath, OpenSceneMode.Single);
+
+            var view = UnityEngine.Object.FindObjectOfType<SpeedStars.Bridge.RaceThemeView>(true);
+            var body = UnityEngine.Object.FindObjectOfType<SpeedStars.Physical.RunnerBody>(true);
+            Camera camera = Camera.main;
+            if (view == null || body == null || camera == null) { Debug.LogError("SHOT_FAILED Race scene lacks RaceThemeView / RunnerBody / main camera"); return; }
+
+            const float metresDown = 6f;
+            body.transform.position += Vector3.forward * metresDown;
+            SnapFollowCamera(camera, body.transform);
+            if (HasArg("-shotUi")) SwitchOverlayCanvasesToCamera(camera);
+
+            for (int i = 0; i < 5; i++)
+            {
+                view.ShowWorld(i);
+                RenderToPng(camera, Path.Combine(dir, $"race_theme_{i}.png"));
+            }
+            EditorSceneManager.OpenScene(SceneBuilder.RaceScenePath, OpenSceneMode.Single); // never saved
+        }
+
+        /// <summary>The follow camera's resting pose behind/beside the target (same maths as its runtime snap); edit mode never runs its LateUpdate.</summary>
+        private static void SnapFollowCamera(Camera camera, Transform fallbackTarget)
+        {
+            var follow = camera.GetComponent<SpeedStars.Runner.SideFollowCamera>();
+            if (follow == null) return;
+            Transform t = follow.target != null ? follow.target : fallbackTarget;
+            camera.transform.position = t.position + t.forward * follow.leadAhead + t.right * follow.distance + Vector3.up * follow.height;
+            camera.transform.rotation = Quaternion.LookRotation(-t.right, Vector3.up)
+                * Quaternion.Euler(Mathf.Atan2(follow.height - follow.lookHeight, follow.distance) * Mathf.Rad2Deg, 0f, 0f);
+        }
+
         /// <summary>Overlay canvases are not drawn into a camera's texture: show them as Screen Space - Camera.</summary>
         private static void SwitchOverlayCanvasesToCamera(Camera camera)
         {
