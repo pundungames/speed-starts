@@ -32,6 +32,7 @@ namespace SpeedStars.Tools.Builders
         public const string ThemeCatalogPath = Folder + "/ThemeCatalog.asset";
         public const string SettingsPath = Folder + "/SettingsConfig.asset";
         public const string AnalysisPath = Folder + "/AnalysisConfig.asset";
+        public const string LeaderboardPath = Folder + "/LeaderboardConfig.asset";
 
         /// <summary>
         /// Events in display order (PDF §1.3, MD §12). Distance only where the name states it; Training, Race of the
@@ -66,6 +67,7 @@ namespace SpeedStars.Tools.Builders
             ThemeCatalogSeed.Seed(ThemeCatalogPath, overwrite);
             SettingsConfigSeed.Seed(SettingsPath, overwrite);
             AnalysisConfigSeed.Seed(AnalysisPath, overwrite);
+            LeaderboardConfigSeed.Seed(LeaderboardPath, overwrite);
             AssetDatabase.SaveAssets();
         }
 

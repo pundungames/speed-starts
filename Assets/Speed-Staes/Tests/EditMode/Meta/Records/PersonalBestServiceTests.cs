@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using SpeedStars.Core.Race;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Leaderboard;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.Meta.Records;
 using SpeedStars.Tests.Meta.Tickets;
@@ -24,7 +25,7 @@ namespace SpeedStars.Tests.Meta.Records
         public void SetUp()
         {
             _kit = new TicketTestKit(0);
-            _service = new PersonalBestService(_kit.Repository);
+            _service = new PersonalBestService(_kit.Repository, _kit.Clock, _kit.Fixture.Create<LeaderboardConfig>());
         }
 
         [TearDown]
@@ -127,7 +128,7 @@ namespace SpeedStars.Tests.Meta.Records
 
             var reloaded = new ProgressRepository(_kit.Store, () => new StartingBalances(0, 0, 0, 0));
             reloaded.Load();
-            var service = new PersonalBestService(reloaded);
+            var service = new PersonalBestService(reloaded, _kit.Clock, _kit.Fixture.Create<LeaderboardConfig>());
 
             Assert.IsTrue(service.TryGetBest(EventA, out double stored));
             Assert.AreEqual(Base, stored, 1e-9);

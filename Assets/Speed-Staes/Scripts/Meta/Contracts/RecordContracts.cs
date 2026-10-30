@@ -1,7 +1,34 @@
+using System;
+using System.Collections.Generic;
 using SpeedStars.Core.Race;
 
 namespace SpeedStars.Meta.Contracts
 {
+    /// <summary>The player's best finished race of one event on one UTC day (what the leaderboard ranks).</summary>
+    public readonly struct DayBestRecord
+    {
+        public readonly long DayUtcTicks;
+        public readonly long ElapsedMilliseconds;
+        public readonly long AchievedUtcTicks;
+
+        public DayBestRecord(long dayUtcTicks, long elapsedMilliseconds, long achievedUtcTicks)
+        {
+            DayUtcTicks = dayUtcTicks;
+            ElapsedMilliseconds = elapsedMilliseconds;
+            AchievedUtcTicks = achievedUtcTicks;
+        }
+    }
+
+    /// <summary>Read side of the player's per-day bests, written by <c>IPersonalBests.Record</c>. The local leaderboard builds on it.</summary>
+    public interface IDayBestSource
+    {
+        /// <summary>Raised after a race changed (added or improved) a day best.</summary>
+        event Action DayBestChanged;
+
+        /// <summary>Appends the event's day bests to <paramref name="into"/>.</summary>
+        void CopyDayBests(RaceEventId eventId, List<DayBestRecord> into);
+    }
+
     /// <summary>What recording one finished race did to the event's personal best.</summary>
     public readonly struct PersonalBestUpdate
     {

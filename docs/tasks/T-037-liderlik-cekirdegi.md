@@ -1,7 +1,7 @@
 ---
 id: T-037
 title: Faz 6 liderlik cekirdegi - yerel kaynak (bot dereceleri), oyuncu gunluk en iyileri, donem/bolge sorgusu, sonuc ekrani durusu
-status: todo
+status: review
 owner: systems-agent
 depends_on: [T-033, T-031]
 owns_paths:
@@ -25,9 +25,9 @@ analytics:
 needs:
   - tip: WIRING
     durum: open
-    not: "ProjectInstaller: LeaderboardConfig + ILeaderboard (LocalLeaderboard) AsSingle"
-started:
-finished:
+    not: "ProjectInstaller: (1) [SerializeField] LeaderboardConfig leaderboard (asset Data/Config/LeaderboardConfig.asset, created by ConfigAssetSeeder.SeedAll) + BindConfig(leaderboard); (2) REPLACE the IPersonalBests line with: Container.Bind(typeof(IPersonalBests), typeof(IDayBestSource)).To<SpeedStars.Meta.Records.PersonalBestService>().AsSingle(); (3) Container.Bind(typeof(ILeaderboard), typeof(IDisposable)).To<SpeedStars.Meta.Leaderboard.LocalLeaderboard>().AsSingle(); (RaceEventCatalog, IPlayerSettings, IClock already bound; PersonalBestService now needs LeaderboardConfig + IClock)"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -75,4 +75,8 @@ public interface ILeaderboard {
 - UI (T-038), sunucu/çevrimiçi liderlik, hile koruması
 
 ## Calisma notu
-(Agent doldurur)
+- Yapildi: LeaderboardContracts (sozlesme birebir), LeaderboardConfig, BotField (FNV+SplitMix, deterministik), LocalLeaderboard, PersonalBestService gunluk en iyi + IDayBestSource, PlayerProgress.DayBests, seed, ADR.
+- Sozlesmeye ek: IDayBestSource/DayBestRecord (RecordContracts.cs); PersonalBestService ctor artik (repository, IClock, LeaderboardConfig).
+- Kararlar: mesafesiz etkinlikte bot yok; botlarin tarihi now-yas (tarih saatle kayar); ad/bayrak kayda yazilmaz, sorgu aninda ayarlardan; UK=GB; AllTime PeriodStartUtc=DateTime.MinValue.
+- Zorlanilan: yok; Unity/test kosulmadi (yeni .cs'lerin .meta'si Unity'de uretilecek). Kayit/ekonomi-benzeri degisiklik: tam suite gerekir.
+- Birakilan: installer baglamasi (needs WIRING), ekran T-038.

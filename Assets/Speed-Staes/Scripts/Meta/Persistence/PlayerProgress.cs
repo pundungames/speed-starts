@@ -37,6 +37,10 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private string languageCode = string.Empty;
         [SerializeField] private string flagCode = string.Empty;
         [SerializeField] private string playerName = string.Empty;
+        [SerializeField] private List<DayBestEntry> dayBests = new List<DayBestEntry>();
+
+        /// <summary>Best finished race per (event, UTC day), capped by the leaderboard config. Added with the leaderboard (T-037), no schema bump: older saves open with an empty list.</summary>
+        public List<DayBestEntry> DayBests => dayBests;
 
         /// <summary>Music switch the player set; Default = never touched (the settings config decides). Added with the settings window, no schema bump: older saves open as Default.</summary>
         public SettingChoice MusicChoice { get => musicChoice; set => musicChoice = value; }
@@ -141,6 +145,9 @@ namespace SpeedStars.Meta.Persistence
             if (languageCode == null) languageCode = string.Empty;
             if (flagCode == null) flagCode = string.Empty;
             if (playerName == null) playerName = string.Empty;
+            if (dayBests == null) dayBests = new List<DayBestEntry>();
+            for (int i = dayBests.Count - 1; i >= 0; i--)
+                if (dayBests[i] == null) dayBests.RemoveAt(i);
         }
     }
 
@@ -249,6 +256,34 @@ namespace SpeedStars.Meta.Persistence
             if (colorHex == null) colorHex = string.Empty;
             if (moreColorHexes == null) moreColorHexes = new List<string>();
         }
+    }
+
+    /// <summary>The player's best finished race of one event on one UTC day (leaderboard source). Time in whole milliseconds, moments as UTC ticks.</summary>
+    [System.Serializable]
+    public sealed class DayBestEntry
+    {
+        [SerializeField] private string eventId = string.Empty;
+        [SerializeField] private long dayUtcTicks;
+        [SerializeField] private long elapsedMilliseconds;
+        [SerializeField] private long achievedUtcTicks;
+
+        public DayBestEntry() { }
+
+        public DayBestEntry(RaceEventId eventId, long dayUtcTicks, long elapsedMilliseconds, long achievedUtcTicks)
+        {
+            this.eventId = eventId.Value ?? string.Empty;
+            this.dayUtcTicks = dayUtcTicks;
+            this.elapsedMilliseconds = elapsedMilliseconds;
+            this.achievedUtcTicks = achievedUtcTicks;
+        }
+
+        public RaceEventId EventId => new RaceEventId(eventId);
+
+        /// <summary>UTC ticks of 00:00 of the day this race was run.</summary>
+        public long DayUtcTicks => dayUtcTicks;
+
+        public long ElapsedMilliseconds { get => elapsedMilliseconds; set => elapsedMilliseconds = value; }
+        public long AchievedUtcTicks { get => achievedUtcTicks; set => achievedUtcTicks = value; }
     }
 
     /// <summary>Local best time of one race event.</summary>
