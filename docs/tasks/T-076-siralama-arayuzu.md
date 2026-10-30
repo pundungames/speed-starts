@@ -15,7 +15,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Results/**"
 touches_scene: true
 branch: agent/T-074-076-rakipler
-commits: [b7a800a0, 6c79308f, 9c23afd5, b43fec00, 299ab5d7, acbe1435, 0fd9e23a, 7b123541, d9d4a02b]
+commits: [3751e62f, c679c2b1, 8aba7be7, 7c650a85, 5ac1403b, 259db4d6, b4707c35, 3311c47b, 94fded81]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceStandingsFormatTests.cs"
 analytics:
