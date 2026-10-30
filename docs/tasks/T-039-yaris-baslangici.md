@@ -1,7 +1,7 @@
 ---
 id: T-039
 title: Yaris baslangici READY / SET / GO! (Yaris_Baslangic_UI_v1) - kopru basla fazlarini yonetir, girdi GO'da acilir, UI tepki verir
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: []
 owns_paths:
@@ -22,14 +22,14 @@ owns_paths:
   - "docs/TEMEL-SOZLESME.md"
 touches_scene: true
 branch: agent/T-039-yaris-baslangici
-commits: []
+commits: [2c9f315]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Core/RaceStartSequenceTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Race sahnesi: prefab builder (UiPrefabBuilder.BuildAll + ConfigAssetSeeder.SeedAll) calistirilir -> UI/Widgets/RaceStart.prefab + Data/Config/RaceStartConfig.asset olusur; sonra Race.unity icin SceneWiring.WireRace yeniden calistirilir (mevcut sahnede RaceStart prefab'i HUD canvas'ina yerlesir ve adapter.startConfig atanir) ya da BuildRace overwrite. Art: UI/Art/RaceStart/*.png (UiArt.ImportAll alir). Not: UiArt PNG'leri Compressed alir; ince cizgilerde artefakt gorulurse RaceStart icin Uncompressed gerekir (UiArt benim yolum degil)."
   - tip: DECISION
     durum: open
