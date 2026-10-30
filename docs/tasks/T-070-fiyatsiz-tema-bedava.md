@@ -1,7 +1,7 @@
 ---
 id: T-070
 title: Fiyati 0 olan tema bedava (herkes kullanir) - Sky Islands premium ama simdilik ucretsiz; fiyat girilince satin alinabilir
-status: todo
+status: review
 owner: systems-agent
 depends_on: [T-068]
 owns_paths:
@@ -13,12 +13,13 @@ owns_paths:
 touches_scene: false
 branch: agent/T-070-fiyatsiz-tema
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/ThemeServiceTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -49,3 +50,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+- Kural `ThemeService.IsOwned` icinde: fiyat <= 0 -> sahipli (her build); TryPurchase bu temada AlreadyOwned doner, para dusmez; ActionRules degismedi (owned once kontrol edilir -> UI "USE").
+- Testler (ThemeServiceTests): ActionState "d" NotForSale -> OwnedInactive; Purchase_Failures'tan "d NotForSale" cikti; Premium_Unpriced_CannotBeBought -> Premium_Unpriced_IsFree_NothingCharged; yeni FreeTheme_IsOwnedAndUsable_WithoutDevFlag_AndNeverCharges.
+- Regression testleri degismedi (ucretli tema yolu ayni). ThemeCatalogSeed yorum/log metni guncellendi, fiyatlar 0.
+- Unity/test kosulmadi; derleme riski dusuk (IsOwned'da `out ThemeEntry entry`).
+- UI (ThemeSelectPresenter) degismedi: OwnedInactive durumunu zaten USE olarak gosteriyor.

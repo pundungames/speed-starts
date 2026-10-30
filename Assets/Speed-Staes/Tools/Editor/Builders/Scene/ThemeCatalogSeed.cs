@@ -8,7 +8,8 @@ namespace SpeedStars.Tools.Builders
     /// <summary>
     /// First fill of Data/Config/ThemeCatalog.asset: the five themes of Serhat's main menu showcase, in the order of
     /// its theme list (Anamenu Themalari: Standard City, Egypt, Rome / Byzantium, Pirate Sea, Sky Islands). Prices are
-    /// NOT decided yet (the user buys themes with Cash later), so every price is 0 = no price. An existing asset is
+    /// NOT decided yet, so every price is 0 = free (owned and usable in every build; a price above 0 makes the theme
+    /// a purchase). An existing asset is
     /// the user's and is never touched unless overwrite is asked for.
     /// </summary>
     internal static class ThemeCatalogSeed
@@ -42,14 +43,14 @@ namespace SpeedStars.Tools.Builders
                 Rel(entry, "themeId").stringValue = Seeds[i].Id;
                 Rel(entry, "displayName").stringValue = Seeds[i].Name;
                 Rel(entry, "showcaseIndex").intValue = i;
-                Rel(entry, "cashPrice").intValue = 0; // price not decided: 0 = cannot be bought yet
+                Rel(entry, "cashPrice").intValue = 0; // price not decided: 0 = free for now
                 bool premium = Seeds[i].Id == PremiumId;
                 Rel(entry, "premium").boolValue = premium;
                 Rel(entry, "priceCurrency").enumValueIndex = (int)(premium ? ThemePriceCurrency.PurpleGem : ThemePriceCurrency.Cash);
             }
             Prop(so, "defaultThemeId").stringValue = Seeds[0].Id;
             Apply(so);
-            Log(Source, $"Seeded {path} with {Seeds.Length} themes (all prices 0 = not decided).");
+            Log(Source, $"Seeded {path} with {Seeds.Length} themes (all prices 0 = free until a price is set).");
             return catalog;
         }
     }

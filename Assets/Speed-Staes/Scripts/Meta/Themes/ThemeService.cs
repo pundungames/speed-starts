@@ -7,7 +7,7 @@ namespace SpeedStars.Meta.Themes
 {
     /// <summary>
     /// Active (saved) and shown (previewed) world theme, ownership and purchases (Cash, or Purple Gems for premium themes). Save: <c>PlayerProgress</c>;
-    /// prices and currency: <c>ThemeCatalog</c>. The default theme is always owned. Buying spends the price currency through the economy ledger and is
+    /// prices and currency: <c>ThemeCatalog</c>. The default theme and any theme with price 0 are always owned (free). Buying spends the price currency through the economy ledger and is
     /// idempotent: an owned theme is never charged again. <c>allThemesOwned</c> is the development switch (Editor /
     /// Development Build): every theme counts as owned; the caller decides, so tests control it.
     /// </summary>
@@ -74,8 +74,10 @@ namespace SpeedStars.Meta.Themes
 
         public bool IsOwned(string id)
         {
-            if (!_catalog.TryGet(id, out _)) return false;
+            if (!_catalog.TryGet(id, out ThemeEntry entry)) return false;
+            // Price 0 = free: owned in every build, no purchase and no charge (T-070).
             return _allThemesOwned
+                   || entry.Price <= 0
                    || string.Equals(id, DefaultId, StringComparison.Ordinal)
                    || Progress.OwnedThemeIds.Contains(id);
         }

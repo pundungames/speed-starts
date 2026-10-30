@@ -55,7 +55,7 @@ namespace SpeedStars.Tests.Meta.Themes
             Assert.AreEqual(ThemeActionState.Active, s.GetActionState("a"));
             Assert.AreEqual(ThemeActionState.UnownedAffordable, s.GetActionState("b"));   // cash == price
             Assert.AreEqual(ThemeActionState.UnownedInsufficient, s.GetActionState("c")); // cash < price
-            Assert.AreEqual(ThemeActionState.NotForSale, s.GetActionState("d"));
+            Assert.AreEqual(ThemeActionState.OwnedInactive, s.GetActionState("d")); // price 0 = free (T-070)
             s.TryPurchase("b");
             Assert.AreEqual(ThemeActionState.OwnedInactive, s.GetActionState("b"));
             s.Use("b");
@@ -139,11 +139,23 @@ namespace SpeedStars.Tests.Meta.Themes
         {
             var s = Service(PriceC - 1);
             Assert.AreEqual(ThemePurchaseResult.NotEnoughCash, s.TryPurchase("c"));
-            Assert.AreEqual(ThemePurchaseResult.NotForSale, s.TryPurchase("d"));
             Assert.AreEqual(ThemePurchaseResult.UnknownTheme, s.TryPurchase("zzz"));
             Assert.AreEqual(PriceC - 1, _kit.Progress.Cash);
             Assert.IsFalse(s.IsOwned("c"));
             Assert.AreEqual(0, _kit.Progress.OwnedThemeIds.Count);
+        }
+
+        [Test]
+        public void FreeTheme_IsOwnedAndUsable_WithoutDevFlag_AndNeverCharges()
+        {
+            var s = Service(PriceB); // release condition: allOwned off
+            Assert.IsTrue(s.IsOwned("d"));
+            Assert.AreEqual(ThemePurchaseResult.AlreadyOwned, s.TryPurchase("d"));
+            Assert.AreEqual(ThemeSelectResult.Selected, s.Use("d"));
+            Assert.AreEqual("d", s.ActiveId);
+            Assert.AreEqual(ThemeActionState.Active, s.GetActionState("d"));
+            Assert.AreEqual(PriceB, _kit.Progress.Cash);
+            Assert.IsFalse(s.IsOwned("c"), "a priced theme stays locked until bought");
         }
 
         [Test]
@@ -238,11 +250,13 @@ namespace SpeedStars.Tests.Meta.Themes
         }
 
         [Test]
-        public void Premium_Unpriced_CannotBeBought()
+        public void Premium_Unpriced_IsFree_NothingCharged()
         {
             var s = PremiumService(1000, cash: 1000);
-            Assert.AreEqual(ThemeActionState.NotForSale, s.GetActionState("q"));
-            Assert.AreEqual(ThemePurchaseResult.NotForSale, s.TryPurchase("q"));
+            Assert.IsTrue(s.IsOwned("q"));
+            Assert.AreEqual(ThemeActionState.OwnedInactive, s.GetActionState("q"));
+            Assert.AreEqual(ThemePurchaseResult.AlreadyOwned, s.TryPurchase("q"));
+            Assert.AreEqual(ThemeSelectResult.Selected, s.Use("q"));
             Assert.AreEqual(1000, _kit.Progress.PurpleGems);
             Assert.AreEqual(1000, _kit.Progress.Cash);
         }
