@@ -143,6 +143,49 @@ namespace SpeedStars.Tests.UI.Race
         }
 
         [Test]
+        public void Finished_ShowsDayBestBadge_WhenTodaysStoredBestIsThisRace()
+        {
+            var clock = new DayClock { Now = new System.DateTime(2026, 1, 5, 10, 0, 0, System.DateTimeKind.Utc) };
+            var days = new FakeDayBests();
+            days.Add(Dash, clock.Now.Date.Ticks, 9589L);
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, _prompt,
+                new FakeRecords(), null, null, days, clock).Start();
+
+            _session.Finish(Outcome(Dash, 9.589));
+            Assert.IsTrue(_results.Presented.Rows[0].ShowDayBest);
+        }
+
+        [Test]
+        public void Finished_WithoutDayBestSource_ShowsNoDayBestBadge()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            Make().Start();
+
+            _session.Finish(Outcome(Dash, 9.589));
+
+            Assert.IsFalse(_results.Presented.Rows[0].ShowDayBest);
+        }
+
+        [Test]
+        public void Finished_WhenTodaysStoredBestIsFaster_ShowsNoDayBestBadge()
+        {
+            var clock = new DayClock { Now = new System.DateTime(2026, 1, 5, 10, 0, 0, System.DateTimeKind.Utc) };
+            var days = new FakeDayBests();
+            days.Add(Dash, clock.Now.Date.Ticks, 9000L);
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, _prompt,
+                new FakeRecords(), null, null, days, clock).Start();
+
+            _session.Finish(Outcome(Dash, 9.589));
+
+            Assert.IsFalse(_results.Presented.Rows[0].ShowDayBest);
+        }
+
+        [Test]
         public void Finished_WithoutRecords_ShowsNoBestAndNoRecord()
         {
             _gate.Pending = Dash;
@@ -537,6 +580,23 @@ namespace SpeedStars.Tests.UI.Race
             {
                 Calls.Add((eventId, seconds, raceId));
                 return new PersonalBestUpdate(true, true, seconds);
+            }
+        }
+
+        private sealed class DayClock : SpeedStars.Core.Services.IClock
+        {
+            public System.DateTime Now;
+            public System.DateTime UtcNow => Now;
+        }
+
+        private sealed class FakeDayBests : IDayBestSource
+        {
+            public readonly List<(RaceEventId Event, DayBestRecord Record)> Items = new List<(RaceEventId, DayBestRecord)>();
+            public event System.Action DayBestChanged { add { } remove { } }
+            public void Add(RaceEventId id, long dayTicks, long ms) => Items.Add((id, new DayBestRecord(dayTicks, ms, 0L)));
+            public void CopyDayBests(RaceEventId eventId, List<DayBestRecord> into)
+            {
+                foreach (var item in Items) if (item.Event == eventId) into.Add(item.Record);
             }
         }
 

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using SpeedStars.Core.Race;
+using SpeedStars.Core.Services;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
@@ -26,6 +28,9 @@ namespace SpeedStars.UI.Race
         private readonly IPersonalBests _records; // optional: without it no best time is kept or shown
         private readonly IWallet _wallet; // optional: the Cash card shows 0 without it
         private readonly IPlayerSettings _settings; // optional: the player row says YOU without it
+        private readonly IDayBestSource _dayBests; // optional with the clock: without them the DB badge never shows
+        private readonly IClock _clock;
+        private readonly List<DayBestRecord> _dayScratch = new List<DayBestRecord>();
 
         private RaceEventInfo _current;
         private bool _hasCurrent;
@@ -37,8 +42,11 @@ namespace SpeedStars.UI.Race
 
         public RaceFlowLogic(IRaceSession session, IRaceEntryGate gate, IRaceSelection selection, IRaceEventLookup events,
             ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, IEntryGatePrompt prompt,
-            IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null)
+            IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null,
+            IDayBestSource dayBests = null, IClock clock = null)
         {
+            _dayBests = dayBests;
+            _clock = clock;
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _gate = gate ?? throw new ArgumentNullException(nameof(gate));
             _selection = selection ?? throw new ArgumentNullException(nameof(selection));
@@ -179,10 +187,24 @@ namespace SpeedStars.UI.Race
                 best = update.BestSeconds;
             }
 
+            bool dayBest = IsTodaysBest(outcome);
             return ResultsModel.Build(new ResultsInput(title, outcome.Rank, outcome.TimeSeconds,
                 _settings != null ? _settings.PlayerName : string.Empty,
                 _wallet != null ? _wallet.Cash : 0,
-                hasBest, best, isNewRecord, null));
+                hasBest, best, isNewRecord, null, dayBest));
+        }
+
+        /// <summary>After Record: today's stored best of the event equals this race (a slower run leaves a lower stored value).</summary>
+        private bool IsTodaysBest(RaceOutcome outcome)
+        {
+            if (_dayBests == null || _clock == null) return false;
+            _dayScratch.Clear();
+            _dayBests.CopyDayBests(outcome.EventId, _dayScratch);
+            long today = _clock.UtcNow.Date.Ticks;
+            foreach (DayBestRecord record in _dayScratch)
+                if (record.DayUtcTicks == today)
+                    return ResultsModel.IsDayBest(true, record.ElapsedMilliseconds, outcome.TimeSeconds);
+            return false;
         }
 
         private void OnRaceAgain()
