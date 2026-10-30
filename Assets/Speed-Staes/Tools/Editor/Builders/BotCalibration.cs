@@ -74,6 +74,7 @@ namespace SpeedStars.Tools.Builders
                 }
                 float mean = (float)(sum / seeds);
                 points.Add(new BotCalibrationPoint(skill, mean));
+                UnityEngine.Debug.Log($"[{Source}] CALIBRATION_ROW skill {skill:0.00}: mean {mean:0.00} s, finished {finished}/{seeds}");
                 if (finished < seeds)
                     UnityEngine.Debug.LogWarning($"[{Source}] skill {skill:0.00}: {seeds - finished}/{seeds} runs did not finish {distance:0} m within {horizon:0} s.");
             }
@@ -200,13 +201,16 @@ namespace SpeedStars.Tools.Builders
             foreach (BotPressEvent e in schedule.Events)
             {
                 if (e.Time >= seconds) break;
-                sim.Advance((float)(e.Time - sim.Time));
+                if (e.Time - sim.Time > MinAdvance) sim.Advance((float)(e.Time - sim.Time));
                 if (e.IsPress) sim.Press(e.Leg);
                 else sim.Release(e.Leg);
             }
-            if (seconds > sim.Time) sim.Advance((float)(seconds - sim.Time));
+            if (seconds - sim.Time > MinAdvance) sim.Advance((float)(seconds - sim.Time));
             return sim.Distance;
         }
+
+        /// <summary>Smallest step worth giving the sim (it ignores dt at or below 1e-6 s).</summary>
+        private const double MinAdvance = 1e-5;
 
         private static Result Done(double crossed, double firstPress) =>
             new Result(true, crossed, firstPress >= 0.0 ? crossed - firstPress : crossed);
@@ -216,11 +220,13 @@ namespace SpeedStars.Tools.Builders
         {
             const double Step = 1.0 / 120.0;
             crossed = 0.0;
-            while (sim.Time < to - 1e-9)
+            // RunnerSim.Advance ignores dt <= 1e-6, so a remainder below the margin is dropped instead of looping on it.
+            while (to - sim.Time > MinAdvance)
             {
                 double before = sim.Time;
                 float distanceBefore = sim.Distance;
                 sim.Advance((float)Math.Min(Step, to - sim.Time));
+                if (sim.Time <= before) return false; // no progress: never spin
                 if (sim.Distance >= distance)
                 {
                     float span = sim.Distance - distanceBefore;
