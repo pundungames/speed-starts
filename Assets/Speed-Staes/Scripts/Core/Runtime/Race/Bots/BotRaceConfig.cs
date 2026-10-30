@@ -138,19 +138,25 @@ namespace SpeedStars.Core.Race.Bots
         };
 
         [Header("Names")]
-        [Tooltip("Pool of opponent names and flags; a race draws without repeats.")]
+        [Tooltip("Pool of opponent names and flags; a race draws without repeats. Every country code must have flag art (flag_XX.png: BE CH DE DK FI FR GB IT JP NL NO PL SE TR UA US), otherwise the grey unknown flag shows.")]
         [SerializeField] private List<BotIdentity> identities = new List<BotIdentity>
         {
-            new BotIdentity("Kaito Arai", "JP"), new BotIdentity("Mateo Duarte", "PT"), new BotIdentity("Liam Brennan", "IE"),
-            new BotIdentity("Amara Okafor", "NG"), new BotIdentity("Soren Lindqvist", "SE"), new BotIdentity("Diego Salazar", "CO"),
-            new BotIdentity("Yusuf Demir", "TR"), new BotIdentity("Anika Rao", "IN"), new BotIdentity("Luca Ferrante", "IT"),
-            new BotIdentity("Zane Mitchell", "AU"), new BotIdentity("Elias Haddad", "LB"), new BotIdentity("Noor Rahman", "BD"),
-            new BotIdentity("Tomas Novak", "CZ"), new BotIdentity("Kofi Mensah", "GH"), new BotIdentity("Jae-won Seo", "KR"),
-            new BotIdentity("Pablo Quintero", "MX"), new BotIdentity("Ingrid Solheim", "NO"), new BotIdentity("Hamza Idrissi", "MA"),
-            new BotIdentity("Wei Lan", "CN"), new BotIdentity("Oskar Wolny", "PL"), new BotIdentity("Rafael Moreira", "BR"),
-            new BotIdentity("Thabo Nkosi", "ZA"), new BotIdentity("Ciaran Doyle", "GB"), new BotIdentity("Mika Virtanen", "FI"),
-            new BotIdentity("Andrei Popescu", "RO"), new BotIdentity("Camille Laurent", "FR"), new BotIdentity("Nikos Papas", "GR"),
-            new BotIdentity("Santiago Vera", "AR"), new BotIdentity("Dmitri Volkov", "KZ"), new BotIdentity("Jonas Keller", "DE"),
+            new BotIdentity("Kaito Arai", "JP"), new BotIdentity("Haruto Sakamoto", "JP"),
+            new BotIdentity("Soren Lindqvist", "SE"), new BotIdentity("Elsa Bergman", "SE"),
+            new BotIdentity("Ingrid Solheim", "NO"), new BotIdentity("Magnus Haugen", "NO"),
+            new BotIdentity("Mika Virtanen", "FI"), new BotIdentity("Aino Korhonen", "FI"),
+            new BotIdentity("Mads Kjeldsen", "DK"), new BotIdentity("Freja Holm", "DK"),
+            new BotIdentity("Jonas Keller", "DE"), new BotIdentity("Lena Brandt", "DE"),
+            new BotIdentity("Camille Laurent", "FR"), new BotIdentity("Theo Marchand", "FR"),
+            new BotIdentity("Luca Ferrante", "IT"), new BotIdentity("Giulia Moretti", "IT"),
+            new BotIdentity("Ciaran Doyle", "GB"), new BotIdentity("Harriet Cole", "GB"),
+            new BotIdentity("Zane Mitchell", "US"), new BotIdentity("Dana Whitfield", "US"),
+            new BotIdentity("Oskar Wolny", "PL"), new BotIdentity("Kasia Zielinska", "PL"),
+            new BotIdentity("Bram de Vries", "NL"), new BotIdentity("Sanne Visser", "NL"),
+            new BotIdentity("Lars Peeters", "BE"), new BotIdentity("Margaux Dubois", "BE"),
+            new BotIdentity("Reto Baumann", "CH"), new BotIdentity("Nadine Keller-Frei", "CH"),
+            new BotIdentity("Andriy Kovalenko", "UA"), new BotIdentity("Oksana Melnyk", "UA"),
+            new BotIdentity("Yusuf Demir", "TR"),
         };
 
         public int BotCount => botCount;
