@@ -1,0 +1,277 @@
+{
+  "reference_size": [
+    1678,
+    937
+  ],
+  "groups": [
+    {
+      "name": "seven_day_modal",
+      "size": [
+        1000,
+        700
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "layers": [
+        "seven_day_panel.png"
+      ]
+    },
+    {
+      "name": "day_card",
+      "size": [
+        190,
+        236
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "layers": [
+        "day_card_normal.png",
+        "day_card_available.png",
+        "day_card_claimed.png",
+        "day_card_locked.png",
+        "day_card_available_footer.png",
+        "day_card_claimed_footer.png",
+        "day_card_lock.png",
+        "day_card_claimed_check.png",
+        "day_card_diamond.png",
+        "day_card_timed_ticket.png"
+      ]
+    },
+    {
+      "name": "premium_card",
+      "size": [
+        316,
+        472
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "layers": [
+        "premium_card_normal.png",
+        "premium_card_available.png",
+        "premium_card_claimed.png",
+        "premium_card_locked.png",
+        "premium_card_lock.png",
+        "premium_card_claimed_check.png"
+      ]
+    },
+    {
+      "name": "action_button",
+      "size": [
+        350,
+        82
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "layers": [
+        "button_claim.png",
+        "button_secondary.png",
+        "button_pressed.png",
+        "button_disabled.png"
+      ]
+    },
+    {
+      "name": "close_button",
+      "size": [
+        80,
+        80
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "layers": [
+        "close_background.png",
+        "close_icon.png"
+      ]
+    },
+    {
+      "name": "daily_gift",
+      "size": [
+        620,
+        600
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "layers": [
+        "daily_panel.png",
+        "daily_header.png",
+        "daily_ticket_icon.png",
+        "daily_button_claim.png",
+        "daily_button_ok.png",
+        "daily_button_pressed.png",
+        "daily_button_disabled.png"
+      ]
+    },
+    {
+      "name": "calendar_launcher",
+      "size": [
+        122,
+        104
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "layers": [
+        "calendar_background.png",
+        "calendar_icon.png",
+        "calendar_notification.png"
+      ]
+    },
+    {
+      "name": "flight_ticket",
+      "size": [
+        128,
+        128
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "layers": [
+        "ticket_flight_icon.png"
+      ]
+    },
+    {
+      "name": "loading",
+      "size": [
+        64,
+        64
+      ],
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "layers": [
+        "loading_spinner.png"
+      ]
+    }
+  ],
+  "seven_day": {
+    "panel_rect": [
+      339,
+      107,
+      1000,
+      700
+    ],
+    "cards": [
+      {
+        "day": 1,
+        "position": [
+          377,
+          238
+        ],
+        "reward": "100 diamonds"
+      },
+      {
+        "day": 2,
+        "position": [
+          571,
+          238
+        ],
+        "reward": "200 diamonds"
+      },
+      {
+        "day": 3,
+        "position": [
+          765,
+          238
+        ],
+        "reward": "1 timed ticket"
+      },
+      {
+        "day": 4,
+        "position": [
+          377,
+          478
+        ],
+        "reward": "200 diamonds"
+      },
+      {
+        "day": 5,
+        "position": [
+          571,
+          478
+        ],
+        "reward": "1 timed ticket"
+      },
+      {
+        "day": 6,
+        "position": [
+          765,
+          478
+        ],
+        "reward": "300 diamonds"
+      }
+    ],
+    "premium": {
+      "rect": [
+        975,
+        238,
+        316,
+        472
+      ],
+      "item": "existing Premium 02 hat",
+      "icon_rect_local": [
+        38,
+        100,
+        240,
+        240
+      ],
+      "generate_icon": false
+    },
+    "claim_rect": [
+      664,
+      711,
+      350,
+      82
+    ]
+  },
+  "daily_gift": {
+    "panel_rect": [
+      529,
+      159,
+      620,
+      600
+    ],
+    "same_geometry_for": [
+      "available",
+      "full",
+      "claim_pending",
+      "error"
+    ],
+    "texts": {
+      "title": [
+        310,
+        64
+      ],
+      "quantity": [
+        400,
+        205
+      ],
+      "state": [
+        310,
+        344
+      ],
+      "capacity": [
+        310,
+        394
+      ],
+      "button": [
+        310,
+        501
+      ]
+    }
+  },
+  "note": "All coordinates are top-left pixels; labels runtime TMP. No trim."
+}

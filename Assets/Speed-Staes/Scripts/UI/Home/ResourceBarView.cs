@@ -35,6 +35,9 @@ namespace SpeedStars.UI.Home
         [Tooltip("Cash/Value.")]
         [SerializeField] private Text cashText;
 
+        [Tooltip("EntryTicket (the whole box): where the daily gift ticket flies to and punches. Empty = the parent of the ticket value text.")]
+        [SerializeField] private RectTransform entryTicketBox;
+
         [Tooltip("The Home screen (root of the stack): the bar is shown only while it is the top screen. Empty = always shown.")]
         [SerializeField] private UiScreen homeScreen;
 
@@ -48,6 +51,9 @@ namespace SpeedStars.UI.Home
         private ScreenNavigator _navigator;
         private CanvasGroup _group;
         private float _elapsed;
+
+        /// <summary>The Entry Ticket box of the bar: the target of the daily gift ticket flight.</summary>
+        public RectTransform EntryTicketBox => entryTicketBox != null ? entryTicketBox : entryTicketText.transform.parent as RectTransform;
 
         [Inject]
         public void ConstructResourceBar(IWallet wallet, IEntryTickets tickets, IClock clock)

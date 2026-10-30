@@ -27,11 +27,10 @@ namespace SpeedStars.Tools.Builders
                 // EventRow is no longer built: the event select screen (T-024) has cards, not a list.
                 GameObject highScoreRow = run.Build(UiPrefabPaths.HighScoreRow, UiRowPrefabs.HighScoreRow);
                 run.Build(UiPrefabPaths.CosmeticCell, UiRowPrefabs.CosmeticCell);
-                GameObject sevenDayCell = run.Build(UiPrefabPaths.SevenDayCell, UiRowPrefabs.SevenDayCell);
+                run.Build(UiPrefabPaths.SevenDayCell, UiRowPrefabs.SevenDayCell); // placeholder row, no longer nested (T-043 cards are their own prefabs)
 
                 run.Build(UiPrefabPaths.RedDot, UiWidgetPrefabs.RedDot);
                 run.Build(UiPrefabPaths.ResourceBar, UiWidgetPrefabs.ResourceBar);
-                run.Build(UiPrefabPaths.RewardFlight, UiWidgetPrefabs.RewardFlight);
 
                 run.Build(UiPrefabPaths.HomeScreen, UiScreenPrefabs.Home);
                 // The screen reads the content asset (which race behind which card); seeded here when missing, never overwritten.
@@ -47,8 +46,8 @@ namespace SpeedStars.Tools.Builders
                 UiRaceStartPrefabs.BuildAll(run.Build); // T-039: READY / SET / GO! overlay (Yaris_Baslangic_UI_v1 art)
 
                 run.Build(UiPrefabPaths.EntryGateModal, UiPopupPrefabs.EntryGate);
-                run.Build(UiPrefabPaths.DailyGiftPopup, UiPopupPrefabs.DailyGift);
-                run.Build(UiPrefabPaths.SevenDayCheckInPanel, root => UiPopupPrefabs.SevenDayCheckIn(root, sevenDayCell, scene));
+                // T-043: daily gift popup, 7 day panel (+ its card prefabs) and the ticket flight widget, with the Gunluk_Odul_UI_v2 art.
+                UiRewardPrefabs.BuildAll(run.Build, scene);
                 // T-031: the settings window (its config asset, with the flag sprites, is seeded by ConfigAssetSeeder).
                 UiSettingsPrefabs.BuildAll(run.Build, scene);
             }

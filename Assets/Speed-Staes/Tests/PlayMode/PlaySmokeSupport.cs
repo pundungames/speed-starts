@@ -2,10 +2,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
+using SpeedStars.UI.Framework;
+using SpeedStars.UI.Rewards;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Zenject;
 
 namespace SpeedStars.PlayTests
 {
@@ -59,7 +62,12 @@ namespace SpeedStars.PlayTests
             return RequireField<Button>(panel, "closeButton", "backButton");
         }
 
-        public static IEnumerator LoadScene(string sceneName)
+        /// <summary>
+        /// Loads a scene and lets Zenject and Start run. Home opens the daily gift by itself when it is due, and that modal would
+        /// swallow every tap of a test that is about something else: by default it is put away again (without claiming) once Home is up.
+        /// A test about the gift itself passes <paramref name="dismissDailyGift"/> = false.
+        /// </summary>
+        public static IEnumerator LoadScene(string sceneName, bool dismissDailyGift = true)
         {
             AsyncOperation load = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
             Assert.IsNotNull(load, $"Scene '{sceneName}' could not be loaded (is it in Build Settings?).");
@@ -67,6 +75,20 @@ namespace SpeedStars.PlayTests
             // Zenject installs the scene contexts, then Start/IInitializable run.
             yield return null;
             yield return null;
+            if (dismissDailyGift && sceneName == HomeScene) yield return DismissDailyGift();
+        }
+
+        /// <summary>Closes the daily gift popup if Home opened it, through the navigator (no claim, so the save is untouched).</summary>
+        public static IEnumerator DismissDailyGift()
+        {
+            yield return null;
+            DailyGiftPopupView popup = UnityEngine.Object.FindObjectOfType<DailyGiftPopupView>(true);
+            if (popup == null || !popup.gameObject.activeSelf) yield break;
+
+            SceneContext context = UnityEngine.Object.FindObjectOfType<SceneContext>();
+            Assert.IsNotNull(context, "Home SceneContext");
+            context.Container.Resolve<ScreenNavigator>().ClosePopup(popup);
+            yield return WaitClosed(popup, "daily gift popup to be put away");
         }
 
         public static IEnumerator WaitUntil(System.Func<bool> condition, string what, float timeout = WaitSeconds)

@@ -2,6 +2,7 @@ using SpeedStars.Core.Race;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
+using SpeedStars.UI.Rewards;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -34,7 +35,7 @@ namespace SpeedStars.UI.Home
         [Tooltip("DailyReward (root button): opens the 7-day popup.")]
         [SerializeField] private Button sevenDayButton;
 
-        [Tooltip("DailyReward/Notification: red dot, shown while a 7-day reward may be waiting. Optional.")]
+        [Tooltip("DailyReward/Notification: red dot, shown while a 7-day reward is waiting to be claimed (ISevenDayRewards.HasClaimable). Optional.")]
         [SerializeField] private GameObject sevenDayRedDot;
 
         [Tooltip("Environment (top right, picture icon): opens the theme select screen.")]
@@ -107,6 +108,9 @@ namespace SpeedStars.UI.Home
         [Tooltip("Settings popup (scene object, starts inactive).")]
         [SerializeField] private UiPopup settingsPopup;
 
+        [Tooltip("Daily gift popup (DailyGiftPopup prefab instance, starts inactive): opens by itself when Home opens and the gift is due. Scene-bound; empty = it never opens.")]
+        [SerializeField] private DailyGiftPopupView dailyGiftPopup;
+
         private ScreenNavigator _navigator;
         private IRaceSelection _selection;
         private RaceEventCatalog _catalog;
@@ -115,6 +119,8 @@ namespace SpeedStars.UI.Home
         private IPlayerSettings _settings;
         private ICosmeticService _cosmetics;
         private Sprite _soundOnSprite;
+        private IDailyGift _dailyGift;
+        private ISevenDayRewards _sevenDay;
 
         [Inject]
         public void ConstructHome(ScreenNavigator navigator, IRaceSelection selection, RaceEventCatalog catalog, IWallet wallet, HomeEntryFlow entryFlow)
@@ -132,6 +138,14 @@ namespace SpeedStars.UI.Home
         {
             _settings = settings;
             _cosmetics = cosmetics;
+        }
+
+        /// <summary>Optional so a scene without the reward services still opens; the daily gift then stays closed and the red dot as built.</summary>
+        [Inject]
+        public void ConstructHomeRewards([InjectOptional] IDailyGift dailyGift, [InjectOptional] ISevenDayRewards sevenDay)
+        {
+            _dailyGift = dailyGift;
+            _sevenDay = sevenDay;
         }
 
         protected override void Awake()
@@ -168,6 +182,26 @@ namespace SpeedStars.UI.Home
         {
             // The root screen of the stack: pushing the screen that is already on top changes nothing.
             _navigator.Push(this);
+            TryOpenDailyGift();
+        }
+
+        /// <summary>
+        /// Home just opened: a due daily gift (or the tickets-full notice) comes first, before anything else can be tapped.
+        /// Nothing else is open at this point, and the 7-day panel never opens by itself.
+        /// </summary>
+        private void TryOpenDailyGift()
+        {
+            if (_dailyGift == null) return;
+
+            bool open = RewardPanelsModel.ShouldAutoOpenDailyGift(
+                _dailyGift.State, ReferenceEquals(_navigator.CurrentScreen, this), _navigator.PopupCount > 0);
+            if (!open) return;
+            if (dailyGiftPopup == null)
+            {
+                UnityEngine.Debug.LogWarning($"{name}: {nameof(dailyGiftPopup)} is not assigned.", this);
+                return;
+            }
+            _navigator.OpenPopup(dailyGiftPopup);
         }
 
         protected override void OnEnable()
@@ -177,9 +211,11 @@ namespace SpeedStars.UI.Home
             _selection.Changed += RefreshEventName;
             if (_settings != null) _settings.Changed += RefreshSound;
             if (_cosmetics != null) _cosmetics.Changed += RefreshPresets;
+            if (_sevenDay != null) _sevenDay.Changed += RefreshSevenDayDot;
             RefreshEventName();
             RefreshSound();
             RefreshPresets();
+            RefreshSevenDayDot();
         }
 
         protected override void OnDisable()
@@ -187,6 +223,7 @@ namespace SpeedStars.UI.Home
             _selection.Changed -= RefreshEventName;
             if (_settings != null) _settings.Changed -= RefreshSound;
             if (_cosmetics != null) _cosmetics.Changed -= RefreshPresets;
+            if (_sevenDay != null) _sevenDay.Changed -= RefreshSevenDayDot;
             base.OnDisable();
         }
 
@@ -245,6 +282,12 @@ namespace SpeedStars.UI.Home
         {
             if (_cosmetics == null) return;
             _cosmetics.SelectPreset(PresetStepper.Step(_cosmetics.SelectedPreset, _cosmetics.PresetCount, direction));
+        }
+
+        /// <summary>The calendar's red dot is on while a 7-day reward waits to be claimed.</summary>
+        private void RefreshSevenDayDot()
+        {
+            if (_sevenDay != null && sevenDayRedDot != null) sevenDayRedDot.SetActive(_sevenDay.HasClaimable);
         }
 
         private void RefreshSound()

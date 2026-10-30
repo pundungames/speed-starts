@@ -11,6 +11,7 @@ using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Race;
+using SpeedStars.UI.Rewards;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -43,6 +44,7 @@ namespace SpeedStars.PlayTests
             bool captured = false;
             int entryTickets = 0, timedTickets = 0;
             long regenDue = 0, timedExpires = 0;
+            string dailyKey = string.Empty;
             RaceEventId selected = default;
             try
             {
@@ -54,13 +56,36 @@ namespace SpeedStars.PlayTests
                 timedTickets = progress.TimedTickets;
                 regenDue = progress.EntryRegenDueUtcTicks;
                 timedExpires = progress.TimedAccessExpiresUtcTicks;
+                dailyKey = progress.DailyGiftDayKey;
                 selected = container.Resolve<IRaceSelection>().Selected;
                 captured = true;
+
+                // Daily gift: due today with room for a ticket, Home opens again and shows it by itself (taken at once, then put away unclaimed).
+                progress.DailyGiftDayKey = string.Empty;
+                progress.EntryTickets = 1;
+                progress.EntryRegenDueUtcTicks = 0;
+                container.Resolve<IEntryTickets>().Refresh();
+                yield return LoadScene(HomeScene, dismissDailyGift: false);
+                DailyGiftPopupView gift = Require<DailyGiftPopupView>();
+                yield return WaitOpen(gift, "daily gift popup");
+                yield return Settle();
+                yield return Capture(dir, "Home_dailygift");
+                yield return DismissDailyGift();
 
                 HomeScreenView home = Require<HomeScreenView>();
                 yield return WaitUntil(() => home.IsVisible, "HomeScreen to be visible");
                 yield return Settle();
                 yield return Capture(dir, "Home_play");
+
+                // 7 day rewards: the calendar button opens the popup over Home.
+                UiPopup sevenDay = RequireField<UiPopup>(home, "sevenDayPopup");
+                yield return Tap(RequireField<Button>(home, "sevenDayButton"), "sevenDayButton");
+                yield return WaitOpen(sevenDay, "7 day panel");
+                yield return Settle();
+                yield return Capture(dir, "Home_sevenday");
+                yield return Tap(CloseButtonOf(sevenDay), "7 day panel X");
+                yield return WaitClosed(sevenDay, "7 day panel");
+                yield return Settle();
 
                 // Home screens: open, shoot, close (same buttons and close path as the smoke tests).
                 yield return ShootScreen(dir, home, "eventSelectButton", "eventSelectScreen", "Home_eventselect");
@@ -156,6 +181,7 @@ namespace SpeedStars.PlayTests
                         progress.TimedTickets = timedTickets;
                         progress.EntryRegenDueUtcTicks = regenDue;
                         progress.TimedAccessExpiresUtcTicks = timedExpires;
+                        progress.DailyGiftDayKey = dailyKey;
                         if (!selected.IsEmpty) container.Resolve<IRaceSelection>().Select(selected);
                     }
                 }

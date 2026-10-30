@@ -6,6 +6,7 @@ using SpeedStars.Physical;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Race;
+using SpeedStars.UI.Rewards;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -48,11 +49,32 @@ namespace SpeedStars.Tools.Builders
             var barSo = new SerializedObject(resourceBar);
             Prop(barSo, "homeScreen").objectReferenceValue = homeView; // bar shows only while Home is the top screen
             Apply(barSo);
+            WireDailyGift(scene, homeView, resourceBar); // T-043
             var costume = RequireOne<SpeedStars.UI.Costume.CostumeEditorScreenView>(scene, "Costume editor screen (CosmeticsScreen prefab instance)");
             var costumeSo = new SerializedObject(costume);
             Prop(costumeSo, "dimBackdrop").objectReferenceValue = SceneHomeDim.Find(scene);
             Apply(costumeSo);
             Log(nameof(SceneWiring), "Home: HomeScreenView screen/popup references wired.");
+        }
+
+        /// <summary>
+        /// T-043: Home opens the daily gift popup by itself; the popup starts the ticket flight; the flight flies to the resource
+        /// bar's Entry Ticket box. All three are scene objects, so the references live here and not in the prefabs.
+        /// </summary>
+        private static void WireDailyGift(Scene scene, HomeScreenView homeView, ResourceBarView resourceBar)
+        {
+            var gift = RequireInstance<DailyGiftPopupView>(scene, UiPrefabPaths.DailyGiftPopup);
+            var flight = RequireInstance<TicketFlightView>(scene, UiPrefabPaths.RewardFlight);
+
+            var homeSo = new SerializedObject(homeView);
+            Prop(homeSo, "dailyGiftPopup").objectReferenceValue = gift;
+            Apply(homeSo);
+            var giftSo = new SerializedObject(gift);
+            Prop(giftSo, "flight").objectReferenceValue = flight;
+            Apply(giftSo);
+            var flightSo = new SerializedObject(flight);
+            Prop(flightSo, "resourceBar").objectReferenceValue = resourceBar;
+            Apply(flightSo);
         }
 
         /// <summary>T-040: Home's emote button target and the emote screen's dim backdrop (both scene objects).</summary>
