@@ -10,7 +10,7 @@ owns_paths:
   - "docs/TUZAKLAR.md"
 touches_scene: false
 branch: agent/T-058-magaza-build
-commits: []
+commits: [4f1ffb1b, ee9fe1ea]
 tests:
   - "gerekmiyor: build araci; dogrulamasi supervizorun kopyada kosacagi build"
 analytics:
