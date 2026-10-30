@@ -76,6 +76,7 @@ namespace SpeedStars.PlayTests
             Assert.IsFalse(dialog.gameObject.activeSelf, "the question starts closed");
 
             // Cancel: the question closes, the record stays.
+            yield return ScrollIntoView(row);
             yield return Tap(RequireField<Button>(row, "button"), "Reset Personal Bests row");
             yield return WaitUntil(() => dialog.gameObject.activeSelf, "the question to open");
             yield return Tap(RequireField<Button>(dialog, "cancelButton"), "question Cancel");
@@ -83,6 +84,7 @@ namespace SpeedStars.PlayTests
             Assert.IsTrue(bests.TryGetBest(plantedEvent, out _), "Cancel must keep the record");
 
             // Yes: the question closes, the record is gone, the settings window stays.
+            yield return ScrollIntoView(row);
             yield return Tap(RequireField<Button>(row, "button"), "Reset Personal Bests row");
             yield return WaitUntil(() => dialog.gameObject.activeSelf, "the question to open again");
             yield return Tap(RequireField<Button>(dialog, "confirmButton"), "question RESET");
@@ -92,6 +94,20 @@ namespace SpeedStars.PlayTests
 
             yield return Tap(CloseButtonOf(settings), "settings X");
             yield return WaitClosed(settings, "settings popup");
+        }
+
+        /// <summary>The reset rows sit below the fold of the settings ScrollRect, as for a player: scroll them into view first.</summary>
+        private static System.Collections.IEnumerator ScrollIntoView(Component row)
+        {
+            ScrollRect scroll = row.GetComponentInParent<ScrollRect>();
+            if (scroll != null)
+            {
+                Canvas.ForceUpdateCanvases();
+                scroll.verticalNormalizedPosition = 0f;
+                scroll.velocity = Vector2.zero;
+            }
+            yield return null;
+            yield return null;
         }
     }
 }
