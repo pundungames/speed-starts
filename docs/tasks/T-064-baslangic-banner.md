@@ -1,0 +1,56 @@
+---
+id: T-064
+title: Yaris basi banner (Yaris_Baslangic_Banner_UI_v1) - READY/SET/GO dama bayrakli krem banner icinde, arkada lacivert dim
+status: todo
+owner: ui-agent
+depends_on: [T-063]
+owns_paths:
+  - "Assets/Speed-Staes/UI/Art/RaceStart/Banner/**"
+  - "Assets/Speed-Staes/Scripts/UI/Race/RaceStart*.cs"
+  - "Assets/Speed-Staes/Scripts/Core/Runtime/Race/RaceStartConfig.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiRaceStartPrefabs.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/RaceStartConfigSeed.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/**"
+touches_scene: true
+branch: agent/T-064-baslangic-banner
+commits: []
+tests: []
+analytics:
+  - "yok: projede analytics yok"
+needs: []
+started:
+finished:
+blocked_reason:
+---
+
+## Hedef
+Kullanici (30.10) `Yaris_Baslangic_Banner_UI_v1.zip` gonderdi (acilmis: supervizor scratchpad'i
+`C:\Users\Monster\AppData\Local\Temp\claude\d--Pundun-speed-starts\010558a9-f012-4284-b1f2-1285cf76ea87\scratchpad\banner-ui\`;
+IMPLEMENTATION.md **baglayici**, layout.json, approved_design.jpg (uc asama), preview_no_text.jpg; PNG: `start_banner_background.png` 864x184,
+`start_banner_flag.png` 864x184 (ayni tuval), `start_dimscreen.png` 1678x937 duz renk RGBA 6,26,65,135). PNG'leri
+`Assets/Speed-Staes/UI/Art/RaceStart/Banner/` altina kopyala (.meta'yi Unity uretir). Dim icin T-057 kurali: PNG yerine duz renkli `Image`
+(`UiArt.PaintDim` ya da ayni renk) — gorunum ayni, doku yok.
+
+Katman: sahne/HUD -> StartDimScreen (tam ekran, raycast kapali) -> StartVisualRoot: banner background + bayrak (ayni 864x184 rect, merkez pivot,
+grup birlikte olceklenir, ekranin orta bolgesi; onaylanan gorselde banner ekran genisliginin ~%50'si) -> mevcut hareketli kelime (TextRoot)
+**ayri sibling** olarak ustte. Kelime banner'in yazi alanina ortalanir (yerel sol-ust 242,23, 540x137, grup olcegiyle); READY ve SET **lacivert**
+dolgu, GO! **kirmizi** dolgu + lacivert kontur (T-059/T-063 ThickOutline; READY/SET icin kontur gerekmiyorsa kapat ya da ince — onaylanan
+gorsele bak). Kelime boyutu yazi alanina sigar (T-063'teki buyuk boy banner'a gore yeniden ayarlanir; config'te). GO! buyurken maske ile
+kesilmez. **Animasyon sureleri/easing/faz olaylari/sesler/girdi kilidi DEGISMEZ**; dim ve banner yalniz geri sayim gorunurken acik, gosterge
+kapaninca/iptalde kapanir (mevcut temizlikte). Yeni zamanlayici yok. Butun grafiklerde raycastTarget kapali.
+`Shots_RaceStartPhases` (T-059) 6 kareyle kontrol edilir; gerekiyorsa kareler banner'li haliyle ayni kalir.
+Kod kalici UI kurmaz; DOTween yalniz cekirdek; prefab/sahne/asset uretimi supervizorde (`needs:`).
+
+## Kabul kriterleri
+- [ ] 6 karede banner + bayrak + dim gorunur, kelime yazi alaninda ortali; READY/SET lacivert, GO kirmizi; GO kesilmiyor
+- [ ] Faz/sure davranisi ayni (var olan RaceStart testleri yesil); gorunurluk kurali (geri sayim disinda kapali) EditMode testli
+- [ ] needs: SCENE (+ ASSET gerekiyorsa) yazili
+
+## Geri bildirim
+GORSEL  : bu task
+SES     : T-052 korunur
+DOKUNSAL: yok
+ZAMAN   : degismez
+KAMERA  : yok
+
+## Calisma notu
