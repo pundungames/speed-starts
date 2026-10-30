@@ -21,12 +21,14 @@ namespace SpeedStars.UI.Costume
     /// <see cref="ICosmeticService"/> (no Unity, DOTween or Zenject types), so it is tested in EditMode. The screen view
     /// only draws what this says and forwards taps.
     /// Rules: a locked (unowned) item may be worn to look at it, but then Save is off; Random keeps the unsaved outfit
-    /// apart from the saved one; tapping the worn item takes it off; a new item keeps the colour of the category.
+    /// apart from the saved one; tapping the worn item takes it off; a new item keeps the colours of the category. The
+    /// colour picker edits one colour channel of the worn item at a time (<see cref="ChannelIndex"/>); items have 1 to 3.
     /// </summary>
     public sealed class CostumeEditorModel
     {
         private readonly ICosmeticService _service;
         private CosmeticOutfit _saved = CosmeticOutfit.Empty;
+        private int _channel;
 
         public CostumeEditorModel(ICosmeticService service)
         {
@@ -69,6 +71,41 @@ namespace SpeedStars.UI.Costume
         /// <summary>The colour picker needs an item to recolour.</summary>
         public bool CanColor => !SelectedSlot.IsEmpty;
 
+        /// <summary>How many colour channels the worn item of the category has (the colour boxes shown); 0 while the slot is bare.</summary>
+        public int ChannelCount
+        {
+            get
+            {
+                CosmeticSlot slot = SelectedSlot;
+                if (slot.IsEmpty) return 0;
+                return _service.TryGetItem(slot.CosmeticId, out CosmeticItemInfo item) ? item.ChannelCount : 1;
+            }
+        }
+
+        /// <summary>The channel the picker edits; always inside the worn item's channels.</summary>
+        public int ChannelIndex => Math.Min(_channel, Math.Max(0, ChannelCount - 1));
+
+        /// <summary>Makes the picker edit another channel. False for a channel the worn item does not have.</summary>
+        public bool SelectChannel(int index)
+        {
+            if (index < 0 || index >= ChannelCount) return false;
+            _channel = index;
+            return true;
+        }
+
+        /// <summary>
+        /// The colour a channel box shows: the colour the player set, else the colour its material has by default (from the
+        /// catalog); empty only when neither is known.
+        /// </summary>
+        public string ChannelHex(int index)
+        {
+            CosmeticSlot slot = SelectedSlot;
+            if (slot.IsEmpty) return string.Empty;
+            string set = slot.ColorAt(index);
+            if (!string.IsNullOrEmpty(set)) return set;
+            return _service.TryGetItem(slot.CosmeticId, out CosmeticItemInfo item) ? item.DefaultColorAt(index) : string.Empty;
+        }
+
         /// <summary>Starts a session on the selected preset: the working outfit is the saved one.</summary>
         public void Begin()
         {
@@ -90,11 +127,13 @@ namespace SpeedStars.UI.Costume
         {
             _saved = _service.GetOutfit(PresetIndex);
             Outfit = _saved;
+            _channel = 0;
         }
 
         public void SelectCategory(CosmeticCategory category)
         {
             Category = category;
+            _channel = 0;
         }
 
         public ItemTapOutcome TapItem(string cosmeticId)
@@ -105,18 +144,20 @@ namespace SpeedStars.UI.Costume
             if (string.Equals(current.CosmeticId, cosmeticId, StringComparison.Ordinal))
             {
                 Outfit = Outfit.Without(Category);
+                _channel = 0;
                 return ItemTapOutcome.Removed;
             }
 
-            Outfit = Outfit.With(Category, cosmeticId, current.ColorHex);
+            Outfit = Outfit.WithSlot(Category, new CosmeticSlot(cosmeticId, current.ColorAt(0), current.ColorAt(1), current.ColorAt(2)));
+            _channel = 0;
             return ItemTapOutcome.Worn;
         }
 
-        /// <summary>Recolours the worn item of the selected category. False when the slot is bare.</summary>
+        /// <summary>Recolours the selected channel of the worn item of the selected category. False when the slot is bare.</summary>
         public bool SetColor(string colorHex)
         {
             if (!CanColor) return false;
-            Outfit = Outfit.WithColor(Category, colorHex);
+            Outfit = Outfit.WithColor(Category, ChannelIndex, colorHex);
             return true;
         }
 
@@ -124,6 +165,7 @@ namespace SpeedStars.UI.Costume
         public void Randomize(System.Random random)
         {
             Outfit = _service.CreateRandomOutfit(random) ?? CosmeticOutfit.Empty;
+            _channel = 0;
         }
 
         /// <summary>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using SpeedStars.Meta.Config;
+using SpeedStars.Meta.Contracts;
 using UnityEditor;
 using UnityEngine;
 using static SpeedStars.Tools.Builders.SceneBuilderUtil;
@@ -52,6 +53,7 @@ namespace SpeedStars.Tools.Builders
             if (existing != null && !overwrite)
             {
                 Skipped(Source, catalogPath);
+                BackfillChannels(existing); // items seeded before they had several channels get theirs; nothing else is touched
                 return existing;
             }
 
@@ -129,11 +131,14 @@ namespace SpeedStars.Tools.Builders
         }
 
         /// <summary>
-        /// The first colour channel found on the item's parts, walking the parts and their material slots in order
-        /// (material names Color1_Toon / Color2_Toon / Color3_Toon). Items without a toon colour material get Color1.
+        /// The colour channels of an item in order of first appearance, walking the parts and their material slots (material
+        /// names Color1_Toon / Color2_Toon / Color3_Toon): the first is the primary channel, each is listed once, with the
+        /// "RRGGBB" its material has (the shared toon material's own colour, which the item shows until the player picks one).
+        /// Items without a toon colour material get Color1 and no default colour.
         /// </summary>
-        private static CosmeticColorChannel PrimaryChannel(Transform slotRoot, List<string> parts, string itemName)
+        private static List<(CosmeticColorChannel channel, string hex)> ReadChannels(Transform slotRoot, IReadOnlyList<string> parts, string itemName)
         {
+            var found = new List<(CosmeticColorChannel channel, string hex)>();
             foreach (string part in parts)
             {
                 Transform child = slotRoot.Find(part);
@@ -143,11 +148,66 @@ namespace SpeedStars.Tools.Builders
                     {
                         if (material == null) continue;
                         foreach (CosmeticColorChannel channel in Enum.GetValues(typeof(CosmeticColorChannel)))
-                            if (material.name.StartsWith(channel.MaterialName(), StringComparison.Ordinal)) return channel;
+                        {
+                            if (!material.name.StartsWith(channel.MaterialName(), StringComparison.Ordinal)) continue;
+                            if (found.Exists(f => f.channel == channel)) break;
+                            string hex = material.HasProperty("_Color") ? ColorUtility.ToHtmlStringRGB(material.GetColor("_Color")) : string.Empty;
+                            found.Add((channel, hex));
+                            break;
+                        }
                     }
             }
-            Warn(Source, $"{itemName}: no Color1-3_Toon material found; primary channel left at {CosmeticColorChannel.Color1}.");
-            return CosmeticColorChannel.Color1;
+            if (found.Count > CosmeticSlot.MaxChannels) found.RemoveRange(CosmeticSlot.MaxChannels, found.Count - CosmeticSlot.MaxChannels);
+            if (found.Count == 0)
+            {
+                Warn(Source, $"{itemName}: no Color1-3_Toon material found; primary channel left at {CosmeticColorChannel.Color1}.");
+                found.Add((CosmeticColorChannel.Color1, string.Empty));
+            }
+            return found;
+        }
+
+        /// <summary>Writes primaryChannel, channels and channelDefaultColors of one definition from the prefab's materials.</summary>
+        private static void WriteChannels(SerializedObject so, Transform slotRoot, IReadOnlyList<string> parts, string itemName)
+        {
+            var found = ReadChannels(slotRoot, parts, itemName);
+            Prop(so, "primaryChannel").intValue = (int)found[0].channel;
+            SerializedProperty channels = Prop(so, "channels");
+            SerializedProperty defaults = Prop(so, "channelDefaultColors");
+            channels.arraySize = found.Count;
+            defaults.arraySize = found.Count;
+            for (int i = 0; i < found.Count; i++)
+            {
+                channels.GetArrayElementAtIndex(i).intValue = (int)found[i].channel;
+                defaults.GetArrayElementAtIndex(i).stringValue = found[i].hex;
+            }
+        }
+
+        /// <summary>
+        /// Fills the channel lists of the existing items of a catalog that has none yet (assets seeded before items had
+        /// several channels). Items that already list channels are left as they are; the prefab is only read.
+        /// </summary>
+        private static void BackfillChannels(CosmeticCatalog catalog)
+        {
+            var prefab = LoadRequired<GameObject>(CharacterPrefabPath, "the runner prefab (Malik)");
+            Transform accessories = prefab.transform.Find(AccessoriesName);
+            if (accessories == null) return;
+
+            var catalogSo = new SerializedObject(catalog);
+            SerializedProperty list = Prop(catalogSo, "cosmetics");
+            int filled = 0;
+            for (int i = 0; i < list.arraySize; i++)
+            {
+                var definition = list.GetArrayElementAtIndex(i).objectReferenceValue as CosmeticDefinition;
+                if (definition == null) continue;
+                var so = new SerializedObject(definition);
+                if (Prop(so, "channels").arraySize > 0) continue;
+                Transform slotRoot = accessories.Find(definition.Category.ToString());
+                if (slotRoot == null) continue;
+                WriteChannels(so, slotRoot, definition.PartNames, definition.Id);
+                Apply(so);
+                filled++;
+            }
+            if (filled > 0) Log(Source, $"Filled the colour channels of {filled} cosmetics.");
         }
 
         private static SortedDictionary<int, List<string>> GroupBySet(string slot, Transform slotRoot)
@@ -189,7 +249,7 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "price").intValue = premium ? 50 : 0;                      // PDF §1.3 Harcama: "Fiyat 50 adet"; normal: not in the PDF (OPEN #6)
             Prop(so, "currency").intValue = (int)(premium ? CosmeticCurrency.PurpleGem : CosmeticCurrency.Cash); // PDF §2.3: premium paid with Purple Gems
             Prop(so, "sortOrder").intValue = premium ? set - LastNormalSet : set; // place inside its group, from the set number
-            Prop(so, "primaryChannel").intValue = (int)PrimaryChannel(slotRoot, parts, main);
+            WriteChannels(so, slotRoot, parts, main);
             Apply(so);
             return definition;
         }

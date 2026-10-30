@@ -8,7 +8,7 @@ namespace SpeedStars.Bridge
     /// <summary>
     /// Puts an outfit on one runner instance. Which parts are on and which channel gets which colour is decided by the
     /// engine-free <c>OutfitPlan</c>; this component only carries it out: it switches the objects under
-    /// <c>Accessories/&lt;Category&gt;/</c>, writes the primary colour into <c>_Color</c> with a MaterialPropertyBlock
+    /// <c>Accessories/&lt;Category&gt;/</c>, writes every channel's colour into <c>_Color</c> with a MaterialPropertyBlock
     /// per material slot (the shared toon materials are never touched), and hides the old base-outfit objects at the
     /// root (names come from the catalog). Added to the runner instance by a builder or by the menu/race bridges; the
     /// runner prefab is not edited.
@@ -72,18 +72,19 @@ namespace SpeedStars.Bridge
             }
         }
 
-        /// <summary>Colours only the material slots of the primary channel; the other slots return to their material's own colour.</summary>
+        /// <summary>
+        /// Writes each channel's colour into the material slots of that channel (matched by material name); slots of a
+        /// channel without a colour return to their material's own colour. The shared materials are never touched.
+        /// </summary>
         void Recolor(Transform part, SlotPlan slot)
         {
-            Color color = Color.white;
-            bool colored = slot.HasColor && CosmeticColor.TryParse(slot.ColorHex, out color);
             foreach (Renderer renderer in part.GetComponentsInChildren<Renderer>(true))
             {
                 Material[] materials = renderer.sharedMaterials;
                 for (int i = 0; i < materials.Length; i++)
                 {
-                    bool primary = colored && materials[i] != null && materials[i].name.StartsWith(slot.ColorMaterial);
-                    if (primary)
+                    if (materials[i] != null && slot.TryGetColor(materials[i].name, out string hex)
+                        && CosmeticColor.TryParse(hex, out Color color))
                     {
                         _block.Clear();
                         _block.SetColor(ColorId, color);

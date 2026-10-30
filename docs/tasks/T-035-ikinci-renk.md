@@ -1,7 +1,7 @@
 ---
 id: T-035
 title: Kostum editoru - ogenin 2. (ve varsa 3.) rengi; renk ornek kutulari kanal secer ve canli rengi gosterir
-status: todo
+status: review
 owner: systems-agent
 depends_on: [T-025, T-026, T-032]
 owns_paths:
@@ -26,9 +26,15 @@ tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Costume/CostumeEditorModelTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "Assets/Speed-Staes/Data/Config/Cosmetics/*.asset (CosmeticDefinition) (alanlar: channels, channelDefaultColors; primaryChannel ile tutarli): CosmeticCatalogSeed.Seed overwrite=false yolu BackfillChannels ile kanal listesi bos olan her ogeyi prefab materyallerinden (Color1/2/3_Toon _Color) doldurur; ConfigAssetSeeder calistirilmali. Doldurulana kadar her ogenin tek kutusu ve beyaz varsayilan rengi olur."
+  - tip: SCENE
+    durum: open
+    not: "CosmeticsScreen.prefab yeniden uretilmeli (UiCostumePrefabs.BuildAll, overwrite): ColorPanel'de SwatchColor yerine 3 kanal kutusu (Channels/Channel1..3, CostumeChannelBoxView); yeni CostumeChannelBoxView.cs icin .meta kopyada uretilip GeriAl ile alinmali."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -68,4 +74,8 @@ KAMERA  : yok
 - Yeni kanal/materyal eklemek (Malik'in prefab'ı), ten rengi kategorisi
 
 ## Calisma notu
-(Agent doldurur)
+- Yapilan: renk indeksi = ogenin kanal sirasi (0 birincil); CosmeticSlot 3 renk, kayit colorHex (birincil, eski anahtar) + moreColorHexes; sema 2 kalir (ADR-2026-10-30). Eski kayit kod gocu gerektirmeden birincil kanala duser.
+- OutfitPlan/CosmeticApplier her kanal rengini adiyla eslesen materyal yuvasina yazar; Random kanal basina palet rengi verir; tohum kanallari + varsayilan renkleri prefab materyallerinden okur (mevcut ogeler icin BackfillChannels).
+- UI: CostumeChannelBoxView (yeni) x3 colour panel altinda; CostumeEditorModel kanal secimi (ChannelIndex/ChannelHex), picker secili kutuyu canli boyar, ekran kutuya dokununca kanali degistirir + punch; builder SwatchColor yerine 3 kutu uretir (secili = kirmizi halka, yer tutucu).
+- Zorlandigim: yeni .cs icin .meta yazamam (hook); prefab/asset yeniden uretimi needs'te (ASSET + SCENE). Unity/test kosulmadi.
+- Testler: CosmeticServiceTests, CosmeticPreviewAndPlanTests, CostumeEditorModelTests genisletildi; PlayMode duman testi kutulara gercek isinli Tap atar. Kayit degisti: tam suite gerekir.

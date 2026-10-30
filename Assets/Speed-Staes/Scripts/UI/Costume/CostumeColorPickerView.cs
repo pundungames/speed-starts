@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using SpeedStars.UI.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,8 +8,9 @@ namespace SpeedStars.UI.Costume
 {
     /// <summary>
     /// The colour panel: a saturation / value square over the chosen hue (flat hue colour + white and black overlay art),
-    /// the hue strip with its handle, the cursor and the swatch. Everything is a prefab object bound in the Inspector; this
-    /// view only moves the cursor and handle, tints the flat hue layer and the swatch, and reports the colour as the
+    /// the hue strip with its handle, the cursor and the colour boxes (one per colour channel of the worn item, up to three;
+    /// the selected box is the channel the square and strip edit and shows the colour live). Everything is a prefab object
+    /// bound in the Inspector; this view only moves the cursor and handle, tints the flat hue layer and the boxes, and reports the colour as the
     /// "RRGGBB" text outfits store. Maths in <see cref="HsvColor"/>. Square: left = no saturation, top = full brightness;
     /// strip: red at the top, running down and back to red at the bottom.
     /// </summary>
@@ -28,8 +31,8 @@ namespace SpeedStars.UI.Costume
         [Tooltip("ColorPanel/HueHandle: moves up and down the strip. Anchored at one point (anchors = position).")]
         [SerializeField] private RectTransform hueHandle;
 
-        [Tooltip("ColorPanel/SwatchColor: flat colour of the chosen colour.")]
-        [SerializeField] private Image swatchColor;
+        [Tooltip("ColorPanel/Channels: the colour boxes under the square, in channel order (1st, 2nd, 3rd). Boxes beyond the item's channels are hidden.")]
+        [SerializeField] private CostumeChannelBoxView[] channelBoxes = new CostumeChannelBoxView[0];
 
         [Tooltip("Whole panel: switched off (greyed, no taps) while there is no item to recolour.")]
         [SerializeField] private CanvasGroup group;
@@ -39,20 +42,55 @@ namespace SpeedStars.UI.Costume
         [SerializeField] private float disabledAlpha = 0.5f;
 
         private HsvColor _color = new HsvColor(0f, 0f, 1f);
+        private int _selectedChannel;
 
-        /// <summary>The player picked a colour ("RRGGBB").</summary>
+        /// <summary>The player picked a colour ("RRGGBB") for the selected channel.</summary>
         public event Action<string> ColorPicked;
+
+        /// <summary>The player tapped a colour box (channel index).</summary>
+        public event Action<int> ChannelTapped;
 
         private void Awake()
         {
             svArea.Picked += OnSvPicked;
             hueArea.Picked += OnHuePicked;
+            for (int i = 0; i < channelBoxes.Length; i++)
+            {
+                channelBoxes[i].Initialize(i);
+                channelBoxes[i].Tapped += OnBoxTapped;
+            }
         }
 
         private void OnDestroy()
         {
             if (svArea != null) svArea.Picked -= OnSvPicked;
             if (hueArea != null) hueArea.Picked -= OnHuePicked;
+            foreach (CostumeChannelBoxView box in channelBoxes)
+                if (box != null) box.Tapped -= OnBoxTapped;
+        }
+
+        /// <summary>
+        /// Shows one box per entry of <paramref name="hexes"/> ("RRGGBB" each; an entry that is not a colour shows
+        /// <paramref name="fallbackHex"/>), the rest hidden, and highlights the selected one. Does not move the picker; call
+        /// <see cref="SetColor"/> for the selected channel after it.
+        /// </summary>
+        public void ShowChannels(IReadOnlyList<string> hexes, int selected, string fallbackHex)
+        {
+            _selectedChannel = selected;
+            for (int i = 0; i < channelBoxes.Length; i++)
+            {
+                bool shown = i < hexes.Count;
+                channelBoxes[i].gameObject.SetActive(shown);
+                if (!shown) continue;
+                channelBoxes[i].SetColor(ToColor(hexes[i], fallbackHex));
+                channelBoxes[i].SetSelected(i == selected);
+            }
+        }
+
+        /// <summary>A short punch on the tapped box (the colour change itself is live).</summary>
+        public void PunchChannel(int index, UiMotionConfig motion)
+        {
+            if (index >= 0 && index < channelBoxes.Length) channelBoxes[index].Punch(motion);
         }
 
         /// <summary>Shows a colour without reporting it. Text that is not a colour is ignored.</summary>
@@ -73,6 +111,8 @@ namespace SpeedStars.UI.Costume
             group.blocksRaycasts = interactable;
             group.alpha = interactable ? 1f : disabledAlpha;
         }
+
+        private void OnBoxTapped(int index) => ChannelTapped?.Invoke(index);
 
         private void OnSvPicked(float x, float y)
         {
@@ -97,11 +137,19 @@ namespace SpeedStars.UI.Costume
             _color.HueToRgb(out float hr, out float hg, out float hb);
             hueBase.color = new Color(hr, hg, hb, 1f);
 
+            // The selected box follows the picker live.
             _color.ToRgb(out float r, out float g, out float b);
-            swatchColor.color = new Color(r, g, b, 1f);
+            if (_selectedChannel >= 0 && _selectedChannel < channelBoxes.Length)
+                channelBoxes[_selectedChannel].SetColor(new Color(r, g, b, 1f));
 
             Place(svCursor, Mid(svArea, _color.Saturation, _color.Value), true, true);
             Place(hueHandle, Mid(hueArea, 0.5f, 1f - _color.Hue), false, true);
+        }
+
+        private static Color ToColor(string hex, string fallbackHex)
+        {
+            if (ColorUtility.TryParseHtmlString("#" + hex, out Color color)) return color;
+            return ColorUtility.TryParseHtmlString("#" + fallbackHex, out color) ? color : Color.white;
         }
 
         /// <summary>Point inside an area as a fraction of the parent (the panel): the area's own anchors span its rect.</summary>

@@ -34,8 +34,14 @@ namespace SpeedStars.Meta.Config
         [Tooltip("Position inside its group (premium or normal) in the category list; lower comes first.")]
         [SerializeField] private int sortOrder;
 
-        [Tooltip("The colour channel the player recolours (the material named ColorN_Toon). Items differ in which channels they have.")]
+        [Tooltip("First colour channel (the material named ColorN_Toon). Only read while 'Channels' below is empty (assets made before items had several channels).")]
         [SerializeField] private CosmeticColorChannel primaryChannel;
+
+        [Tooltip("Every colour channel the player can recolour, in order: the first is the primary one (old saves' single colour). 1-3 entries, no repeats. Seeded from the prefab's materials.")]
+        [SerializeField] private CosmeticColorChannel[] channels = new CosmeticColorChannel[0];
+
+        [Tooltip("Default colour (RRGGBB) of each channel above, same order: the material's own colour, shown in the colour boxes until the player picks one. Seeded from Materials/RunnerToon.")]
+        [SerializeField] private string[] channelDefaultColors = new string[0];
 
         public string Id => cosmeticId ?? string.Empty;
         public CosmeticCategory Category => category;
@@ -44,7 +50,25 @@ namespace SpeedStars.Meta.Config
         public int Price => price;
         public CosmeticCurrency Currency => currency;
         public int SortOrder => sortOrder;
-        public CosmeticColorChannel PrimaryChannel => primaryChannel;
+        public CosmeticColorChannel PrimaryChannel => Channels[0];
+
+        /// <summary>The colour channels in order, primary first; at least one, at most <c>CosmeticSlot.MaxChannels</c> (extras ignored).</summary>
+        public IReadOnlyList<CosmeticColorChannel> Channels
+        {
+            get
+            {
+                if (channels == null || channels.Length == 0) return new[] { primaryChannel };
+                return channels.Length <= MaxChannels ? (IReadOnlyList<CosmeticColorChannel>)channels : new ArraySegment<CosmeticColorChannel>(channels, 0, MaxChannels);
+            }
+        }
+
+        /// <summary>Default colour (RRGGBB as written in the asset) of a channel by index; empty when the asset has none.</summary>
+        public string DefaultColorAt(int channelIndex) =>
+            channelDefaultColors != null && channelIndex >= 0 && channelIndex < channelDefaultColors.Length
+                ? channelDefaultColors[channelIndex] ?? string.Empty
+                : string.Empty;
+
+        private const int MaxChannels = 3;
 
         /// <summary>False when the item has no price (e.g. normal items until Cash prices are decided).</summary>
         public bool IsForSale => price > 0;

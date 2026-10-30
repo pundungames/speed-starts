@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using SpeedStars.Meta.Config;
+using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Costume;
 using UnityEditor;
 using UnityEngine;
@@ -53,6 +54,14 @@ namespace SpeedStars.Tools.Builders
         private const float TabLabelRight = 0.96f;
         private const float TitleInset = 0.06f;
         private static readonly Color LabelWhite = Color.white;
+
+        // Colour boxes under the colour square (placeholder look until the designer draws a selected frame): up to three
+        // boxes (an item has 1-3 colour channels), side by side from the swatch frame's own spot; the selected one gets
+        // a ring of this colour (the red of the selected item card) that sticks out of the frame by HighlightMargin.
+        private const int ChannelBoxCount = CosmeticSlot.MaxChannels;
+        private const float ChannelBoxGap = 0.03f;       // between boxes, fraction of the panel width
+        private const float HighlightMargin = 0.14f;     // ring thickness, fraction of the box
+        private static readonly Color HighlightColor = new Color32(255, 32, 45, 255);
 
         private static readonly (CostumeTab tab, string stem)[] TabArt =
         {
@@ -275,11 +284,16 @@ namespace SpeedStars.Tools.Builders
             ColorDragArea hueDrag = hueArea.gameObject.AddComponent<ColorDragArea>();
             UiArt.Layer(panel, "HueSpectrum", Art("color_hue_spectrum"));
 
-            // Swatch: flat colour inside its frame (the frame's border covers the square corners).
-            Vector4 swatch = AlphaBounds("color_swatch_red_example");
-            RectTransform swatchNode = Kit.Span(Kit.Node(panel, "SwatchColor"), new Vector2(swatch.x, swatch.y), new Vector2(swatch.z, swatch.w));
-            Image swatchColor = Kit.Fill(swatchNode.gameObject, Color.red, raycast: false);
-            UiArt.Layer(panel, "SwatchFrame", Art("color_swatch_frame"));
+            // Colour boxes: one per colour channel of the worn item; the view shows as many as the item has. Box 1 sits where the
+            // single swatch used to; the rest follow to its right, still inside the panel.
+            Vector4 frame = AlphaBounds("color_swatch_frame");
+            Vector4 inner = AlphaBounds("color_swatch_red_example");
+            float pitch = frame.z - frame.x + ChannelBoxGap;
+            if (frame.z + (ChannelBoxCount - 1) * pitch > 1f)
+                throw new InvalidOperationException("UiCostumePrefabs: the colour boxes do not fit in the colour panel.");
+            RectTransform boxes = Kit.Stretch(Kit.Node(panel, "Channels"));
+            var boxViews = new CostumeChannelBoxView[ChannelBoxCount];
+            for (int i = 0; i < ChannelBoxCount; i++) boxViews[i] = ChannelBox(boxes, i, frame, inner, pitch * i);
 
             RectTransform cursor = MovingPart(panel, "SvCursor", "color_sv_cursor", panelSize);
             RectTransform handle = MovingPart(panel, "HueHandle", "color_hue_handle", panelSize);
@@ -290,8 +304,42 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "hueBase", hueBase);
             Ref(so, "svCursor", cursor);
             Ref(so, "hueHandle", handle);
-            Ref(so, "swatchColor", swatchColor);
+            SerializedProperty boxList = Find(so, "channelBoxes");
+            boxList.arraySize = boxViews.Length;
+            for (int i = 0; i < boxViews.Length; i++) boxList.GetArrayElementAtIndex(i).objectReferenceValue = boxViews[i];
             Ref(so, "group", group);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return view;
+        }
+
+        /// <summary>
+        /// One colour box: a button over the swatch frame's rect (shifted right by <paramref name="shift"/>), a ring behind it
+        /// that shows while selected, the flat colour inside, and the frame art on top (its border covers the colour's corners).
+        /// </summary>
+        private static CostumeChannelBoxView ChannelBox(RectTransform parent, int index, Vector4 frame, Vector4 inner, float shift)
+        {
+            float w = frame.z - frame.x;
+            float h = frame.w - frame.y;
+            RectTransform node = Kit.Node(parent, "Channel" + (index + 1));
+            Kit.Span(node, new Vector2(frame.x + shift, frame.y), new Vector2(frame.z + shift, frame.w));
+            var view = node.gameObject.AddComponent<CostumeChannelBoxView>();
+            Image hit = HitArea(node.gameObject);
+            Button button = UiArt.MakeButton(node.gameObject, hit, true, alphaHit: false);
+
+            RectTransform ring = Kit.Span(Kit.Node(node, "Selected"), new Vector2(-HighlightMargin, -HighlightMargin),
+                new Vector2(1f + HighlightMargin, 1f + HighlightMargin));
+            Kit.Fill(ring.gameObject, HighlightColor, raycast: false);
+            ring.gameObject.SetActive(false);
+
+            RectTransform colorNode = Kit.Span(Kit.Node(node, "Color"), new Vector2((inner.x - frame.x) / w, (inner.y - frame.y) / h),
+                new Vector2((inner.z - frame.x) / w, (inner.w - frame.y) / h));
+            Image color = Kit.Fill(colorNode.gameObject, Color.white, raycast: false);
+            CanvasLayer(node, "Frame", Art("color_swatch_frame"), frame);
+
+            var so = new SerializedObject(view);
+            Ref(so, "button", button);
+            Ref(so, "colorImage", color);
+            Ref(so, "selectedHighlight", ring.gameObject);
             so.ApplyModifiedPropertiesWithoutUndo();
             return view;
         }

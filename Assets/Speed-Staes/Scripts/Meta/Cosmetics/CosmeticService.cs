@@ -82,7 +82,7 @@ namespace SpeedStars.Meta.Cosmetics
                 // Unknown, mis-slotted or locked items (removed from the catalog, tampered file) are simply not worn.
                 if (!_catalog.TryGet(saved.CosmeticId, out CosmeticDefinition item) || item.Category != category) continue;
                 if (!IsOwned(item)) continue;
-                outfit = outfit.With(category, item.Id, CosmeticColor.Normalize(saved.ColorHex));
+                outfit = outfit.WithSlot(category, ToSlot(item.Id, saved));
             }
             return outfit;
         }
@@ -109,7 +109,7 @@ namespace SpeedStars.Meta.Cosmetics
             {
                 CosmeticSlot slot = outfit.Get(category);
                 if (slot.IsEmpty) continue;
-                slots.Add(new SelectedCosmetic(category.ToString(), slot.CosmeticId, CosmeticColor.Normalize(slot.ColorHex)));
+                slots.Add(ToSaved(category, slot));
             }
 
             bool persisted = _repository.Save();
@@ -196,8 +196,14 @@ namespace SpeedStars.Meta.Cosmetics
                 if (owned.Count == 0) continue;
 
                 CosmeticDefinition pick = owned[random.Next(owned.Count)];
-                string color = palette.Count > 0 ? palette[random.Next(palette.Count)] : string.Empty;
-                outfit = outfit.With(category, pick.Id, color);
+                // Every colour channel of the item gets its own palette colour.
+                var slot = new CosmeticSlot(pick.Id, string.Empty);
+                for (int channel = 0; channel < pick.Channels.Count; channel++)
+                {
+                    string color = palette.Count > 0 ? palette[random.Next(palette.Count)] : string.Empty;
+                    slot = slot.WithColor(channel, color);
+                }
+                outfit = outfit.WithSlot(category, slot);
             }
             return outfit;
         }
@@ -211,8 +217,19 @@ namespace SpeedStars.Meta.Cosmetics
         private CosmeticItemInfo Describe(CosmeticDefinition item)
         {
             string name = item.PartNames.Count > 0 ? item.PartNames[0] : item.Id;
-            return new CosmeticItemInfo(item.Id, item.Category, name, item.IsPremium, item.Price, item.Currency, IsOwned(item));
+            var defaults = new string[item.Channels.Count];
+            for (int i = 0; i < defaults.Length; i++) defaults[i] = CosmeticColor.Normalize(item.DefaultColorAt(i));
+            return new CosmeticItemInfo(item.Id, item.Category, name, item.IsPremium, item.Price, item.Currency, IsOwned(item), defaults);
         }
+
+        /// <summary>Saved entry to slot: colours normalized; a pre-channel save has only the primary one, which is index 0.</summary>
+        private static CosmeticSlot ToSlot(string cosmeticId, SelectedCosmetic saved) =>
+            new CosmeticSlot(cosmeticId, CosmeticColor.Normalize(saved.ColorHex),
+                CosmeticColor.Normalize(saved.MoreColorAt(1)), CosmeticColor.Normalize(saved.MoreColorAt(2)));
+
+        private static SelectedCosmetic ToSaved(CosmeticCategory category, CosmeticSlot slot) =>
+            new SelectedCosmetic(category.ToString(), slot.CosmeticId, CosmeticColor.Normalize(slot.ColorAt(0)),
+                CosmeticColor.Normalize(slot.ColorAt(1)), CosmeticColor.Normalize(slot.ColorAt(2)));
 
         /// <summary>
         /// Fills missing presets with the default outfit and keeps the selected index valid. Idempotent; changes the live
@@ -229,7 +246,7 @@ namespace SpeedStars.Meta.Cosmetics
                 foreach (CosmeticCategory category in CosmeticOutfit.Categories)
                 {
                     CosmeticSlot slot = defaults.Get(category);
-                    if (!slot.IsEmpty) preset.Slots.Add(new SelectedCosmetic(category.ToString(), slot.CosmeticId, slot.ColorHex));
+                    if (!slot.IsEmpty) preset.Slots.Add(ToSaved(category, slot));
                 }
                 progress.CosmeticPresets.Add(preset);
             }

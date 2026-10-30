@@ -23,6 +23,12 @@ namespace SpeedStars.Tests.Meta.Cosmetics
         public const string HatNoPrice = "hat-premium-noprice";
         public const string TopA = "top-a";
         public const string GlovesPair = "gloves-pair";
+        public const string ShortsTwo = "shorts-two";       // two colour channels: Color3 (primary), Color1
+        public const string SocksThree = "socks-three";     // three colour channels: Color2 (primary), Color3, Color1
+
+        // Default colours of the channels above (the materials' own colours), in channel order.
+        public static readonly string[] ShortsTwoDefaults = { "112233", "445566" };
+        public static readonly string[] SocksThreeDefaults = { "A1A1A1", "B2B2B2", "C3C3C3" };
 
         public readonly ConfigFixture Fixture = new ConfigFixture();
         public readonly FakeClock Clock = new FakeClock();
@@ -66,6 +72,16 @@ namespace SpeedStars.Tests.Meta.Cosmetics
             return item;
         }
 
+        /// <summary>Gives the item an ordered channel list (first = primary) and the default colour of each channel.</summary>
+        public static CosmeticDefinition WithChannels(CosmeticDefinition item, string[] defaultHexes, params CosmeticColorChannel[] channels)
+        {
+            var values = new int[channels.Length];
+            for (int i = 0; i < channels.Length; i++) values[i] = (int)channels[i];
+            ConfigFixture.SetInts(item, "channels", values);
+            ConfigFixture.SetStrings(item, "channelDefaultColors", defaultHexes);
+            return item;
+        }
+
         private CosmeticCatalog BuildCatalog()
         {
             var catalog = Fixture.Create<CosmeticCatalog>();
@@ -76,7 +92,11 @@ namespace SpeedStars.Tests.Meta.Cosmetics
                 Item(HatNoPrice, CosmeticCategory.Headwear, true, 0, CosmeticCurrency.PurpleGem, 2, CosmeticColorChannel.Color1),
                 Item(TopA, CosmeticCategory.Tops, false, 0, CosmeticCurrency.Cash, 1, CosmeticColorChannel.Color1),
                 Item(GlovesPair, CosmeticCategory.Gloves, false, 0, CosmeticCurrency.Cash, 1, CosmeticColorChannel.Color1,
-                    "GL", "GL-left", "GL-right"));
+                    "GL", "GL-left", "GL-right"),
+                WithChannels(Item(ShortsTwo, CosmeticCategory.Shorts, false, 0, CosmeticCurrency.Cash, 1, CosmeticColorChannel.Color3),
+                    ShortsTwoDefaults, CosmeticColorChannel.Color3, CosmeticColorChannel.Color1),
+                WithChannels(Item(SocksThree, CosmeticCategory.Socks, false, 0, CosmeticCurrency.Cash, 1, CosmeticColorChannel.Color2),
+                    SocksThreeDefaults, CosmeticColorChannel.Color2, CosmeticColorChannel.Color3, CosmeticColorChannel.Color1));
             ConfigFixture.SetInt(catalog, "presetCount", Presets);
             ConfigFixture.SetStrings(catalog, "colorPalette", "FF0000", "00ff00", "not-a-colour");
             ConfigFixture.SetStrings(catalog, "legacyOutfitObjects", "OldShirt", "OldShoes");

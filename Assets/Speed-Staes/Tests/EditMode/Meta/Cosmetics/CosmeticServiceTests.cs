@@ -392,10 +392,156 @@ namespace SpeedStars.Tests.Meta.Cosmetics
                     CosmeticSlot slot = outfit.Get(category);
                     if (slot.IsEmpty) continue;
                     Assert.IsTrue(k.Service.IsOwned(slot.CosmeticId), slot.CosmeticId + " is not owned.");
-                    Assert.IsTrue(palette.Contains(slot.ColorHex), slot.ColorHex + " is not a palette colour.");
+                    TryGetChannels(k, slot.CosmeticId, out int channels);
+                    for (int channel = 0; channel < channels; channel++)
+                        Assert.IsTrue(palette.Contains(slot.ColorAt(channel)), slot.ColorAt(channel) + " is not a palette colour (channel " + channel + ").");
                 }
                 Assert.AreEqual(CosmeticSaveResult.Saved, k.Service.SaveOutfit(0, outfit), "A random outfit must be savable.");
             }
+        }
+
+        private static void TryGetChannels(CosmeticTestKit k, string id, out int channels)
+        {
+            channels = k.Service.TryGetItem(id, out CosmeticItemInfo info) ? info.ChannelCount : 1;
+        }
+
+        [Test]
+        public void Random_GivesEveryChannelOfTheItemAColour()
+        {
+            var k = Kit(0);
+            bool sawThree = false;
+
+            for (int seed = 0; seed < 50; seed++)
+            {
+                CosmeticOutfit outfit = k.Service.CreateRandomOutfit(new Random(seed));
+                CosmeticSlot socks = outfit.Get(CosmeticCategory.Socks);
+                CosmeticSlot shorts = outfit.Get(CosmeticCategory.Shorts);
+                Assert.AreEqual(CosmeticTestKit.SocksThree, socks.CosmeticId);
+                for (int channel = 0; channel < 3; channel++) Assert.IsNotEmpty(socks.ColorAt(channel));
+                for (int channel = 0; channel < 2; channel++) Assert.IsNotEmpty(shorts.ColorAt(channel));
+                Assert.IsEmpty(shorts.ColorAt(2), "A two-channel item has no third colour.");
+                sawThree |= socks.ColorAt(2).Length > 0;
+            }
+            Assert.IsTrue(sawThree);
+        }
+
+        // --- colour channels -------------------------------------------------------------------------------------
+
+        [Test]
+        public void Channels_ComeFromTheCatalog_PrimaryFirst_WithDefaultColours()
+        {
+            var k = Kit(0);
+
+            Assert.IsTrue(k.Service.TryGetItem(CosmeticTestKit.SocksThree, out CosmeticItemInfo three));
+            Assert.AreEqual(3, three.ChannelCount);
+            CollectionAssert.AreEqual(CosmeticTestKit.SocksThreeDefaults, three.ChannelDefaults);
+
+            Assert.IsTrue(k.Service.TryGetItem(CosmeticTestKit.ShortsTwo, out CosmeticItemInfo two));
+            Assert.AreEqual(2, two.ChannelCount);
+
+            Assert.IsTrue(k.Service.TryGetItem(CosmeticTestKit.HatA, out CosmeticItemInfo one));
+            Assert.AreEqual(1, one.ChannelCount, "An asset without a channel list counts its primary channel only.");
+            Assert.AreEqual(string.Empty, one.DefaultColorAt(0), "No default is known, and none is invented.");
+        }
+
+        [Test]
+        public void ChannelColours_SaveAndSurviveRestart_PerChannel()
+        {
+            var k = Kit(0);
+            var slot = new CosmeticSlot(CosmeticTestKit.SocksThree, "#aa0000", "00bb00", "0000cc");
+
+            Assert.AreEqual(CosmeticSaveResult.Saved, k.Service.SaveOutfit(1, CosmeticOutfit.Empty.WithSlot(CosmeticCategory.Socks, slot)));
+            k.Open();
+
+            CosmeticSlot loaded = k.Service.GetOutfit(1).Get(CosmeticCategory.Socks);
+            Assert.AreEqual("AA0000", loaded.ColorAt(0));
+            Assert.AreEqual("00BB00", loaded.ColorAt(1));
+            Assert.AreEqual("0000CC", loaded.ColorAt(2));
+        }
+
+        [Test]
+        public void ChannelColours_UnsetChannelStaysUnset_WhenAnotherIsSaved()
+        {
+            var k = Kit(0);
+            var outfit = CosmeticOutfit.Empty.With(CosmeticCategory.Shorts, CosmeticTestKit.ShortsTwo).WithColor(CosmeticCategory.Shorts, 1, "123456");
+
+            k.Service.SaveOutfit(0, outfit);
+            k.Open();
+
+            CosmeticSlot loaded = k.Service.GetOutfit(0).Get(CosmeticCategory.Shorts);
+            Assert.AreEqual(string.Empty, loaded.ColorAt(0), "The first channel was never set: it keeps its material's colour.");
+            Assert.AreEqual("123456", loaded.ColorAt(1));
+        }
+
+        [Test]
+        public void ChannelColours_BadColourText_IsDroppedOnSave()
+        {
+            var k = Kit(0);
+            var slot = new CosmeticSlot(CosmeticTestKit.SocksThree, "AA0000", "nonsense", "0000CC");
+
+            k.Service.SaveOutfit(0, CosmeticOutfit.Empty.WithSlot(CosmeticCategory.Socks, slot));
+            k.Open();
+
+            CosmeticSlot loaded = k.Service.GetOutfit(0).Get(CosmeticCategory.Socks);
+            Assert.AreEqual("AA0000", loaded.ColorAt(0));
+            Assert.AreEqual(string.Empty, loaded.ColorAt(1));
+            Assert.AreEqual("0000CC", loaded.ColorAt(2));
+        }
+
+        [Test]
+        public void SavedColours_AreJsonWithTheOldKeyForThePrimaryChannel()
+        {
+            // The primary colour keeps its old key, so a build that only knows one colour still reads it.
+            var k = Kit(0);
+            k.Service.SaveOutfit(0, CosmeticOutfit.Empty.WithSlot(CosmeticCategory.Socks,
+                new CosmeticSlot(CosmeticTestKit.SocksThree, "AA0000", "00BB00", "0000CC")));
+
+            Assert.IsTrue(k.Store.TryRead(ProgressRepository.SaveKey, out string json));
+            StringAssert.Contains("\"colorHex\":\"AA0000\"", json);
+        }
+
+        [Test]
+        public void Migration_OldSingleColour_BecomesThePrimaryChannelsColour()
+        {
+            var k = Kit(0);
+            // A save from before items had several channels: one colorHex per slot, no further colours. HatA's primary is Color2.
+            k.Store.Write(ProgressRepository.SaveKey,
+                "{\"schemaVersion\":2,\"cosmeticPresets\":[{\"slots\":[" +
+                "{\"category\":\"Headwear\",\"cosmeticId\":\"" + CosmeticTestKit.HatA + "\",\"colorHex\":\"FF8800\"}," +
+                "{\"category\":\"Socks\",\"cosmeticId\":\"" + CosmeticTestKit.SocksThree + "\",\"colorHex\":\"00FF00\"}]}]}");
+
+            k.Open();
+
+            CosmeticSlot hat = k.Service.GetOutfit(0).Get(CosmeticCategory.Headwear);
+            Assert.AreEqual("FF8800", hat.ColorAt(0));
+            Assert.AreEqual(string.Empty, hat.ColorAt(1));
+            CosmeticSlot socks = k.Service.GetOutfit(0).Get(CosmeticCategory.Socks);
+            Assert.AreEqual("00FF00", socks.ColorAt(0));
+            Assert.AreEqual(string.Empty, socks.ColorAt(1));
+            Assert.AreEqual(string.Empty, socks.ColorAt(2));
+
+            // And the plan paints that colour on the item's primary material only.
+            var plan = SpeedStars.Meta.Cosmetics.OutfitPlan.Build(k.Service.GetOutfit(0), k.Catalog);
+            Assert.IsTrue(plan.Get(CosmeticCategory.Headwear).TryGetColor(CosmeticColorChannel.Color2.MaterialName(), out string onPrimary));
+            Assert.AreEqual("FF8800", onPrimary);
+            Assert.AreEqual(1, plan.Get(CosmeticCategory.Headwear).Colors.Count);
+            Assert.AreEqual(1, plan.Get(CosmeticCategory.Socks).Colors.Count);
+            Assert.IsTrue(plan.Get(CosmeticCategory.Socks).TryGetColor(CosmeticColorChannel.Color2.MaterialName(), out _));
+        }
+
+        [Test]
+        public void Migration_OldSingleColour_ResavedKeepsItsColour()
+        {
+            var k = Kit(0);
+            k.Store.Write(ProgressRepository.SaveKey,
+                "{\"schemaVersion\":2,\"cosmeticPresets\":[{\"slots\":[" +
+                "{\"category\":\"Headwear\",\"cosmeticId\":\"" + CosmeticTestKit.HatA + "\",\"colorHex\":\"FF8800\"}]}]}");
+            k.Open();
+
+            k.Service.SaveOutfit(0, k.Service.GetOutfit(0).WithColor(CosmeticCategory.Headwear, 0, "FF8800"));
+            k.Open();
+
+            Assert.AreEqual("FF8800", k.Service.GetOutfit(0).Get(CosmeticCategory.Headwear).ColorAt(0));
         }
 
         [Test]

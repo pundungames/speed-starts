@@ -4,6 +4,7 @@ using SpeedStars.Core.Race;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
+using SpeedStars.UI.Costume;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
@@ -117,6 +118,36 @@ namespace SpeedStars.PlayTests
         public IEnumerator EditRacer_Button_OpensCosmeticsScreen_AndBackReturnsHome()
         {
             yield return ScreenRoundTrip("editRacerButton", "cosmeticsScreen");
+        }
+
+        [UnityTest]
+        public IEnumerator EditRacer_ColourBoxes_TapSelectsTheChannel_AndOthersLoseTheHighlight()
+        {
+            HomeScreenView home = Require<HomeScreenView>();
+            UiScreen screen = RequireField<UiScreen>(home, "cosmeticsScreen");
+            yield return Tap(RequireField<Button>(home, "editRacerButton"), "editRacerButton");
+            yield return WaitOpen(screen, "cosmeticsScreen");
+
+            // The boxes shown are the channels of the worn item of the first tab (1 to 3, whatever the catalog says).
+            var picker = RequireField<CostumeColorPickerView>(screen, "colorPicker");
+            var boxes = RequireField<CostumeChannelBoxView[]>(picker, "channelBoxes");
+            var shown = new System.Collections.Generic.List<CostumeChannelBoxView>();
+            foreach (CostumeChannelBoxView box in boxes)
+                if (box.gameObject.activeInHierarchy) shown.Add(box);
+            Assert.IsNotEmpty(shown, "the colour panel must show at least one colour box");
+
+            foreach (CostumeChannelBoxView box in shown)
+            {
+                yield return Tap(RequireField<Button>(box, "button"), $"colour box {box.Index + 1}");
+                Assert.IsTrue(RequireField<GameObject>(box, "selectedHighlight").activeSelf, $"box {box.Index + 1} must be highlighted after the tap");
+                foreach (CostumeChannelBoxView other in shown)
+                    if (other != box)
+                        Assert.IsFalse(RequireField<GameObject>(other, "selectedHighlight").activeSelf, $"box {other.Index + 1} must lose the highlight");
+            }
+
+            yield return Tap(CloseButtonOf(screen), "cosmeticsScreen Back");
+            yield return WaitClosed(screen, "cosmeticsScreen");
+            yield return WaitOpen(home, "HomeScreen to come back");
         }
 
         private static IEnumerator ScreenRoundTrip(string buttonField, string screenField)

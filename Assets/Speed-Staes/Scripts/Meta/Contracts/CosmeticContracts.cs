@@ -4,26 +4,67 @@ using SpeedStars.Meta.Config;
 
 namespace SpeedStars.Meta.Contracts
 {
-    /// <summary>What a worn slot holds: an item id and the colour of its primary channel. Empty = nothing worn.</summary>
+    /// <summary>
+    /// What a worn slot holds: an item id and the colour of each of its colour channels. Colours are indexed by the item's
+    /// own channel order (index 0 = its primary channel, the only colour old saves have; the catalog says which material
+    /// each index paints). Empty colour = that channel keeps its material's own colour. Empty id = nothing worn.
+    /// </summary>
     public readonly struct CosmeticSlot : IEquatable<CosmeticSlot>
     {
-        public CosmeticSlot(string cosmeticId, string colorHex)
+        /// <summary>Most colour channels an item can have (Color1_Toon .. Color3_Toon).</summary>
+        public const int MaxChannels = 3;
+
+        private readonly string _color0;
+        private readonly string _color1;
+        private readonly string _color2;
+
+        public CosmeticSlot(string cosmeticId, string colorHex) : this(cosmeticId, colorHex, null, null) { }
+
+        public CosmeticSlot(string cosmeticId, string colorHex, string colorHex2, string colorHex3)
         {
             CosmeticId = cosmeticId ?? string.Empty;
-            ColorHex = colorHex ?? string.Empty;
+            _color0 = colorHex ?? string.Empty;
+            _color1 = colorHex2 ?? string.Empty;
+            _color2 = colorHex3 ?? string.Empty;
         }
 
         /// <summary>Empty = the slot is bare.</summary>
         public string CosmeticId { get; }
 
-        /// <summary>"RRGGBB". Empty = the item's own colours.</summary>
-        public string ColorHex { get; }
+        /// <summary>"RRGGBB" of the primary channel (index 0). Empty = the item's own colours.</summary>
+        public string ColorHex => _color0 ?? string.Empty;
+
+        /// <summary>"RRGGBB" of a channel by index; empty for an unset channel or an index outside 0..MaxChannels-1.</summary>
+        public string ColorAt(int channelIndex)
+        {
+            switch (channelIndex)
+            {
+                case 0: return _color0 ?? string.Empty;
+                case 1: return _color1 ?? string.Empty;
+                case 2: return _color2 ?? string.Empty;
+                default: return string.Empty;
+            }
+        }
+
+        /// <summary>A copy with one channel's colour changed. An index outside the channels returns the slot as it is.</summary>
+        public CosmeticSlot WithColor(int channelIndex, string colorHex)
+        {
+            switch (channelIndex)
+            {
+                case 0: return new CosmeticSlot(CosmeticId, colorHex, _color1, _color2);
+                case 1: return new CosmeticSlot(CosmeticId, _color0, colorHex, _color2);
+                case 2: return new CosmeticSlot(CosmeticId, _color0, _color1, colorHex);
+                default: return this;
+            }
+        }
 
         public bool IsEmpty => string.IsNullOrEmpty(CosmeticId);
 
         public bool Equals(CosmeticSlot other) =>
             string.Equals(CosmeticId ?? string.Empty, other.CosmeticId ?? string.Empty, StringComparison.Ordinal)
-            && string.Equals(ColorHex ?? string.Empty, other.ColorHex ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+            && string.Equals(ColorAt(0), other.ColorAt(0), StringComparison.OrdinalIgnoreCase)
+            && string.Equals(ColorAt(1), other.ColorAt(1), StringComparison.OrdinalIgnoreCase)
+            && string.Equals(ColorAt(2), other.ColorAt(2), StringComparison.OrdinalIgnoreCase);
 
         public override bool Equals(object obj) => obj is CosmeticSlot other && Equals(other);
         public override int GetHashCode() => (CosmeticId ?? string.Empty).GetHashCode();
@@ -52,20 +93,27 @@ namespace SpeedStars.Meta.Contracts
             return index >= 0 && index < _slots.Length ? _slots[index] : default;
         }
 
-        /// <summary>A copy wearing this item (colour optional) in the category.</summary>
-        public CosmeticOutfit With(CosmeticCategory category, string cosmeticId, string colorHex = "")
+        /// <summary>A copy wearing this item (primary-channel colour optional) in the category.</summary>
+        public CosmeticOutfit With(CosmeticCategory category, string cosmeticId, string colorHex = "") =>
+            WithSlot(category, new CosmeticSlot(cosmeticId, colorHex));
+
+        /// <summary>A copy with this slot (item and every channel colour) in the category.</summary>
+        public CosmeticOutfit WithSlot(CosmeticCategory category, CosmeticSlot slot)
         {
             var copy = (CosmeticSlot[])_slots.Clone();
-            copy[(int)category] = new CosmeticSlot(cosmeticId, colorHex);
+            copy[(int)category] = slot;
             return new CosmeticOutfit(copy);
         }
 
         /// <summary>A copy with the category bare.</summary>
         public CosmeticOutfit Without(CosmeticCategory category) => With(category, string.Empty, string.Empty);
 
-        /// <summary>A copy with only the colour of the category's item changed.</summary>
-        public CosmeticOutfit WithColor(CosmeticCategory category, string colorHex) =>
-            With(category, Get(category).CosmeticId, colorHex);
+        /// <summary>A copy with only the primary-channel colour of the category's item changed.</summary>
+        public CosmeticOutfit WithColor(CosmeticCategory category, string colorHex) => WithColor(category, 0, colorHex);
+
+        /// <summary>A copy with only one channel's colour of the category's item changed (other channels keep theirs).</summary>
+        public CosmeticOutfit WithColor(CosmeticCategory category, int channelIndex, string colorHex) =>
+            WithSlot(category, Get(category).WithColor(channelIndex, colorHex));
 
         public bool Equals(CosmeticOutfit other)
         {
@@ -95,9 +143,12 @@ namespace SpeedStars.Meta.Contracts
     /// <summary>One catalog item as the editor screen needs it, with the player's ownership.</summary>
     public readonly struct CosmeticItemInfo
     {
+        private readonly IReadOnlyList<string> _channelDefaults;
+
         public CosmeticItemInfo(string id, CosmeticCategory category, string name, bool isPremium, int price,
-            CosmeticCurrency currency, bool isOwned)
+            CosmeticCurrency currency, bool isOwned, IReadOnlyList<string> channelDefaults = null)
         {
+            _channelDefaults = channelDefaults;
             Id = id;
             Category = category;
             Name = name;
@@ -125,6 +176,19 @@ namespace SpeedStars.Meta.Contracts
         public bool IsLocked => !IsOwned;
 
         public bool IsForSale => Price > 0;
+
+        /// <summary>
+        /// One entry per colour channel of the item, primary first: the "RRGGBB" its material has by default (empty when the
+        /// catalog does not know it). Never null; empty for an item whose channels are unknown (then it counts as one channel).
+        /// </summary>
+        public IReadOnlyList<string> ChannelDefaults => _channelDefaults ?? Array.Empty<string>();
+
+        /// <summary>How many colours the player can set on this item (1 to <see cref="CosmeticSlot.MaxChannels"/>).</summary>
+        public int ChannelCount => Math.Min(CosmeticSlot.MaxChannels, Math.Max(1, ChannelDefaults.Count));
+
+        /// <summary>Default colour of a channel by index; empty when unknown or out of range.</summary>
+        public string DefaultColorAt(int channelIndex) =>
+            channelIndex >= 0 && channelIndex < ChannelDefaults.Count ? ChannelDefaults[channelIndex] ?? string.Empty : string.Empty;
     }
 
     public enum CosmeticPurchaseResult

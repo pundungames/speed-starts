@@ -127,6 +127,9 @@ namespace SpeedStars.Meta.Persistence
             sevenDay.EnsureValid();
             if (ownedCosmeticIds == null) ownedCosmeticIds = new List<string>();
             if (selectedCosmetics == null) selectedCosmetics = new List<SelectedCosmetic>();
+            for (int i = selectedCosmetics.Count - 1; i >= 0; i--)
+                if (selectedCosmetics[i] == null) selectedCosmetics.RemoveAt(i);
+            foreach (SelectedCosmetic legacy in selectedCosmetics) legacy.EnsureValid();
             if (cosmeticPresets == null) cosmeticPresets = new List<CosmeticPreset>();
             for (int i = cosmeticPresets.Count - 1; i >= 0; i--)
                 if (cosmeticPresets[i] == null) cosmeticPresets.RemoveAt(i);
@@ -165,6 +168,7 @@ namespace SpeedStars.Meta.Persistence
             if (slots == null) slots = new List<SelectedCosmetic>();
             for (int i = slots.Count - 1; i >= 0; i--)
                 if (slots[i] == null) slots.RemoveAt(i);
+            foreach (SelectedCosmetic slot in slots) slot.EnsureValid();
         }
     }
 
@@ -188,8 +192,10 @@ namespace SpeedStars.Meta.Persistence
     }
 
     /// <summary>
-    /// The cosmetic worn in one category, plus its color. The category is stored by enum NAME so reordering the
-    /// category enum cannot move a saved choice into another slot.
+    /// The cosmetic worn in one category, plus the colour of each of its colour channels. The category is stored by enum
+    /// NAME so reordering the category enum cannot move a saved choice into another slot. Colours go by the item's channel
+    /// order: <c>colorHex</c> is the primary channel (the only colour saves had before items had several channels, so old
+    /// saves need no migration), <c>moreColorHexes</c> holds the second and third channel (absent in old saves).
     /// </summary>
     [System.Serializable]
     public sealed class SelectedCosmetic
@@ -197,21 +203,52 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private string category = string.Empty;
         [SerializeField] private string cosmeticId = string.Empty;
         [SerializeField] private string colorHex = string.Empty;
+        [SerializeField] private List<string> moreColorHexes = new List<string>();
 
         public SelectedCosmetic() { }
 
         public SelectedCosmetic(string category, string cosmeticId, string colorHex)
+            : this(category, cosmeticId, colorHex, string.Empty, string.Empty) { }
+
+        public SelectedCosmetic(string category, string cosmeticId, string colorHex, string colorHex2, string colorHex3)
         {
             Category = category;
             CosmeticId = cosmeticId;
             ColorHex = colorHex;
+            SetMoreColors(colorHex2, colorHex3);
         }
 
         public string Category { get => category; set => category = value ?? string.Empty; }
         public string CosmeticId { get => cosmeticId; set => cosmeticId = value ?? string.Empty; }
 
-        /// <summary>"RRGGBB". Empty = the item's own default color.</summary>
+        /// <summary>"RRGGBB" of the primary channel. Empty = the item's own default color.</summary>
         public string ColorHex { get => colorHex; set => colorHex = value ?? string.Empty; }
+
+        /// <summary>"RRGGBB" of the second (index 1) or third (index 2) channel; empty when unset. Other indexes: empty.</summary>
+        public string MoreColorAt(int index)
+        {
+            if (moreColorHexes == null || index < 1) return string.Empty;
+            return index - 1 < moreColorHexes.Count ? moreColorHexes[index - 1] ?? string.Empty : string.Empty;
+        }
+
+        /// <summary>Replaces the second and third channel colours; trailing empty ones are not stored.</summary>
+        public void SetMoreColors(string colorHex2, string colorHex3)
+        {
+            EnsureValid();
+            moreColorHexes.Clear();
+            colorHex2 = colorHex2 ?? string.Empty;
+            colorHex3 = colorHex3 ?? string.Empty;
+            if (colorHex2.Length > 0 || colorHex3.Length > 0) moreColorHexes.Add(colorHex2);
+            if (colorHex3.Length > 0) moreColorHexes.Add(colorHex3);
+        }
+
+        internal void EnsureValid()
+        {
+            if (category == null) category = string.Empty;
+            if (cosmeticId == null) cosmeticId = string.Empty;
+            if (colorHex == null) colorHex = string.Empty;
+            if (moreColorHexes == null) moreColorHexes = new List<string>();
+        }
     }
 
     /// <summary>Local best time of one race event.</summary>

@@ -16,6 +16,7 @@ namespace SpeedStars.Tests.UI.Costume
         private const string TopA = "top-a";
         private const string Red = "FF0000";
         private const string Blue = "0000FF";
+        private const string Green = "00FF00";
 
         private FakeCosmeticService _service;
         private CostumeEditorModel _model;
@@ -108,6 +109,144 @@ namespace SpeedStars.Tests.UI.Costume
         {
             Assert.IsFalse(_model.SetColor(Blue));
             Assert.IsFalse(_model.IsDirty);
+        }
+
+        // ---- colour channels ----
+
+        [Test]
+        public void TheBoxesFollowTheWornItemsChannels()
+        {
+            Assert.AreEqual(0, _model.ChannelCount, "a bare slot has no boxes");
+
+            _model.TapItem(HatA);
+            Assert.AreEqual(FakeCosmeticService.HatAChannels, _model.ChannelCount);
+
+            _model.TapItem(HatA); // off
+            _model.TapItem(HatB);
+            Assert.AreEqual(1, _model.ChannelCount);
+        }
+
+        [Test]
+        public void AnItemWithUnknownChannelsHasOneBox()
+        {
+            _model.TapItem(HatPremium);
+
+            Assert.AreEqual(1, _model.ChannelCount);
+        }
+
+        [Test]
+        public void AFreshItemShowsTheMaterialDefaultsNotAPlaceholder()
+        {
+            _model.TapItem(HatA);
+
+            for (int i = 0; i < _model.ChannelCount; i++)
+            {
+                Assert.AreEqual(FakeCosmeticService.HatADefaults[i], _model.ChannelHex(i));
+                Assert.IsNotEmpty(_model.ChannelHex(i));
+            }
+            Assert.IsFalse(_model.IsDirty, "showing defaults is not an edit");
+        }
+
+        [Test]
+        public void ThePickerEditsOnlyTheSelectedChannel()
+        {
+            _model.TapItem(HatA);
+            Assert.AreEqual(0, _model.ChannelIndex);
+
+            Assert.IsTrue(_model.SelectChannel(1));
+            Assert.IsTrue(_model.SetColor(Green));
+
+            CosmeticSlot slot = _model.SelectedSlot;
+            Assert.AreEqual(Green, slot.ColorAt(1));
+            Assert.AreEqual(string.Empty, slot.ColorAt(0), "the first channel was not touched");
+            Assert.AreEqual(Green, _model.ChannelHex(1));
+            Assert.AreEqual(FakeCosmeticService.HatADefaults[0], _model.ChannelHex(0), "an unset channel still shows its default");
+            Assert.IsTrue(_model.IsDirty);
+        }
+
+        [Test]
+        public void EachChannelKeepsItsOwnColour()
+        {
+            _model.TapItem(HatA);
+            _model.SetColor(Red);
+            _model.SelectChannel(1);
+            _model.SetColor(Blue);
+            _model.SelectChannel(0);
+
+            Assert.AreEqual(Red, _model.ChannelHex(0));
+            Assert.AreEqual(Blue, _model.ChannelHex(1));
+            _model.SetColor(Green);
+            Assert.AreEqual(Green, _model.ChannelHex(0));
+            Assert.AreEqual(Blue, _model.ChannelHex(1));
+        }
+
+        [Test]
+        public void AChannelTheItemDoesNotHaveCannotBeSelected()
+        {
+            _model.TapItem(HatB);
+
+            Assert.IsFalse(_model.SelectChannel(1));
+            Assert.IsFalse(_model.SelectChannel(-1));
+            Assert.AreEqual(0, _model.ChannelIndex);
+        }
+
+        [Test]
+        public void ChangingItemOrTabGoesBackToTheFirstChannel()
+        {
+            _model.TapItem(HatA);
+            _model.SelectChannel(1);
+
+            _model.TapItem(HatB);
+            Assert.AreEqual(0, _model.ChannelIndex);
+
+            _model.TapItem(HatA);
+            _model.SelectChannel(1);
+            _model.SelectCategory(CosmeticCategory.Tops);
+            Assert.AreEqual(0, _model.ChannelIndex);
+        }
+
+        [Test]
+        public void ANewItemKeepsTheColoursOfEveryChannel()
+        {
+            _model.TapItem(HatA);
+            _model.SetColor(Red);
+            _model.SelectChannel(1);
+            _model.SetColor(Blue);
+
+            _model.TapItem(HatPremium);
+
+            Assert.AreEqual(Red, _model.SelectedSlot.ColorAt(0));
+            Assert.AreEqual(Blue, _model.SelectedSlot.ColorAt(1));
+        }
+
+        [Test]
+        public void SavingKeepsTheColourOfEveryChannel()
+        {
+            _model.TapItem(HatA);
+            _model.SetColor(Red);
+            _model.SelectChannel(1);
+            _model.SetColor(Blue);
+
+            Assert.AreEqual(CosmeticSaveResult.Saved, _model.Save());
+
+            CosmeticSlot saved = _service.Saved[_model.PresetIndex].Get(CosmeticCategory.Headwear);
+            Assert.AreEqual(Red, saved.ColorAt(0));
+            Assert.AreEqual(Blue, saved.ColorAt(1));
+        }
+
+        [Test]
+        public void ARandomOutfitOrRevertGoesBackToTheFirstChannel()
+        {
+            _model.TapItem(HatA);
+            _model.SelectChannel(1);
+            _service.RandomOutfit = CosmeticOutfit.Empty.With(CosmeticCategory.Headwear, HatA, Blue);
+
+            _model.Randomize(new Random(1));
+            Assert.AreEqual(0, _model.ChannelIndex);
+
+            _model.SelectChannel(1);
+            _model.Revert();
+            Assert.AreEqual(0, _model.ChannelIndex);
         }
 
         // ---- locked items and purchase ----
@@ -301,6 +440,10 @@ namespace SpeedStars.Tests.UI.Costume
         {
             public const int PremiumPrice = 12;
 
+            // HatA has two colour channels with these default colours; every other item is left without channel information.
+            public const int HatAChannels = 2;
+            public static readonly string[] HatADefaults = { "A0A0A0", "B0B0B0" };
+
             private readonly List<(string id, CosmeticCategory category, bool premium, int price)> _catalog =
                 new List<(string, CosmeticCategory, bool, int)>
                 {
@@ -405,7 +548,8 @@ namespace SpeedStars.Tests.UI.Costume
             private CosmeticItemInfo Info((string id, CosmeticCategory category, bool premium, int price) entry)
             {
                 bool owned = !entry.premium || _bought.Contains(entry.id);
-                return new CosmeticItemInfo(entry.id, entry.category, entry.id, entry.premium, entry.price, CosmeticCurrency.PurpleGem, owned);
+                return new CosmeticItemInfo(entry.id, entry.category, entry.id, entry.premium, entry.price, CosmeticCurrency.PurpleGem, owned,
+                    entry.id == HatA ? HatADefaults : entry.id == HatB ? new[] { "C0C0C0" } : null);
             }
         }
     }

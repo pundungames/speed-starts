@@ -50,7 +50,7 @@ namespace SpeedStars.UI.Costume
         [SerializeField] private ScrollIndicatorView scrollIndicator;
 
         [Header("Left side")]
-        [Tooltip("ColorPanel: colour of the worn item of the selected tab.")]
+        [Tooltip("ColorPanel: colour channels of the worn item of the selected tab (boxes + square + strip).")]
         [SerializeField] private CostumeColorPickerView colorPicker;
 
         [Tooltip("Resources: the four resource boxes.")]
@@ -98,6 +98,7 @@ namespace SpeedStars.UI.Costume
         private DeniedFeedback _purchaseDenied;
         private readonly List<CostumeItemCardView> _cards = new List<CostumeItemCardView>();
         private readonly List<string> _presetNames = new List<string>();
+        private readonly List<string> _channelHexes = new List<string>();
 
         [Inject]
         public void ConstructCostumeEditor(ICosmeticService service, ICosmeticPreview preview, IInstantiator instantiator, UiMotionConfig motion)
@@ -115,6 +116,7 @@ namespace SpeedStars.UI.Costume
             foreach (CostumeTabView tabView in tabs) tabView.Tapped += OnTab;
             presetDropdown.PresetChosen += OnPresetChosen;
             colorPicker.ColorPicked += OnColorPicked;
+            colorPicker.ChannelTapped += OnChannelTapped;
             randomButton.onClick.AddListener(OnRandom);
             saveButton.onClick.AddListener(OnSave);
             purchaseButton.onClick.AddListener(OnPurchase);
@@ -157,7 +159,11 @@ namespace SpeedStars.UI.Costume
             foreach (CostumeTabView tabView in tabs)
                 if (tabView != null) tabView.Tapped -= OnTab;
             if (presetDropdown != null) presetDropdown.PresetChosen -= OnPresetChosen;
-            if (colorPicker != null) colorPicker.ColorPicked -= OnColorPicked;
+            if (colorPicker != null)
+            {
+                colorPicker.ColorPicked -= OnColorPicked;
+                colorPicker.ChannelTapped -= OnChannelTapped;
+            }
             if (randomButton != null) randomButton.onClick.RemoveListener(OnRandom);
             if (saveButton != null) saveButton.onClick.RemoveListener(OnSave);
             if (purchaseButton != null) purchaseButton.onClick.RemoveListener(OnPurchase);
@@ -213,13 +219,29 @@ namespace SpeedStars.UI.Costume
             }
 
             colorPicker.SetInteractable(_model.CanColor);
-            colorPicker.SetColor(slot.IsEmpty || string.IsNullOrEmpty(slot.ColorHex) ? config.EmptyColorHex : slot.ColorHex);
+            DrawColorBoxes();
 
             saveButton.interactable = _model.CanSave;
 
             bool buyable = _model.TryGetBuyableItem(out CosmeticItemInfo buy);
             purchaseButton.gameObject.SetActive(buyable);
             if (buyable) purchasePriceText.text = buy.Price.ToString();
+        }
+
+        /// <summary>
+        /// One box per colour channel of the worn item (a bare slot shows one greyed box): each shows its channel's colour,
+        /// the one the player set or else the material's default; the square and strip edit the selected channel.
+        /// </summary>
+        private void DrawColorBoxes()
+        {
+            int count = Mathf.Max(1, _model.ChannelCount);
+            _channelHexes.Clear();
+            for (int i = 0; i < count; i++) _channelHexes.Add(_model.ChannelHex(i));
+
+            int selected = _model.ChannelIndex;
+            colorPicker.ShowChannels(_channelHexes, selected, config.EmptyColorHex);
+            string current = _channelHexes[selected];
+            colorPicker.SetColor(string.IsNullOrEmpty(current) ? config.EmptyColorHex : current);
         }
 
         /// <summary>The grid of the selected tab: cards are reused, extra ones are switched off.</summary>
@@ -282,6 +304,14 @@ namespace SpeedStars.UI.Costume
             if (!_model.SetColor(hex)) return;
             _preview.Show(_model.Outfit);
             RefreshSaveButton();
+        }
+
+        private void OnChannelTapped(int index)
+        {
+            presetDropdown.Close();
+            if (!_model.SelectChannel(index)) return;
+            colorPicker.PunchChannel(index, _cardMotion);
+            RefreshAll();
         }
 
         private void OnRandom()
