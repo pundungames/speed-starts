@@ -57,6 +57,7 @@ namespace SpeedStars.Tools.Builders
             var costume = RequireOne<SpeedStars.UI.Costume.CostumeEditorScreenView>(scene, "Costume editor screen (CosmeticsScreen prefab instance)");
             var costumeSo = new SerializedObject(costume);
             Prop(costumeSo, "dimBackdrop").objectReferenceValue = SceneHomeDim.Find(scene);
+            Prop(costumeSo, "emoteScreen").objectReferenceValue = emoteScreen; // T-066: the Emote tab opens the same emote screen Home does
             Apply(costumeSo);
             Log(nameof(SceneWiring), "Home: HomeScreenView screen/popup references wired.");
         }
