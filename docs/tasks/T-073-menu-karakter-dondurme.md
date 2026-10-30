@@ -19,10 +19,10 @@ analytics:
 needs:
   - tip: SCENE
     durum: open
-    not: "Home sahnesini builder ile yeniden uret (SceneHomeCharacter artik MenuCharacterSpin ekliyor, target = runner koku)"
+    not: "Home sahnesini builder ile yeniden uret (SceneHomeCharacter artik MenuCharacterSpin ekliyor, target = runner koku). Uretildi: agent/T-072-073 06d75c2c; main'e alinmadi cunku kullanicinin Unity'sinde Home kaydedilmemis (*)"
   - tip: ASSET
-    durum: open
-    not: "Yeni .cs.meta dosyalari Unity'den: Scripts/Bridge/MenuCharacterSpin.cs, Scripts/Core/Runtime/Menu/SpinMath.cs (+ Menu klasoru meta), Tests/EditMode/Core/Menu/SpinMathTests.cs (+ klasor meta)"
+    durum: closed
+    not: "Yeni .cs.meta dosyalari Unity'den: Scripts/Bridge/MenuCharacterSpin.cs, Scripts/Core/Runtime/Menu/SpinMath.cs (+ Menu klasoru meta), Tests/EditMode/Core/Menu/SpinMathTests.cs (+ klasor meta) -> c4a26db8"
 started: 2026-10-30
 finished:
 blocked_reason:

@@ -1,7 +1,7 @@
 ---
 id: T-072
 title: Yaris sahnesinde ana menude secilen tema (Serhat'in akan dunyasi, aktif temaya gore)
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-070]
 owns_paths:
@@ -13,21 +13,20 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/RaceThemeSlotsTests.cs"
 touches_scene: true
 branch: agent/T-072-073
-commits: []
+commits: [1e4cf912, c4a26db8]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/RaceThemeSlotsTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "Race.unity yeniden uretilmeli (SceneBuilder.BuildRace overwrite): 'Race Worlds' (RaceThemeView + Standard City + 4 ThemedLoopWay), Track kapali. Sonra ShotTool.CaptureRaceThemes ile 5 cekim."
+    durum: closed
+    not: "Race.unity yeniden uretilmeli (SceneBuilder.BuildRace overwrite): 'Race Worlds' (RaceThemeView + Standard City + 4 ThemedLoopWay), Track kapali. Sonra ShotTool.CaptureRaceThemes ile 5 cekim. -> c4a26db8 (kopyada builder, 5 cekim bakildi)"
   - tip: ASSET
-    durum: open
-    not: "Yeni .cs dosyalari icin .meta Unity'den gelir (RaceThemeView, RaceThemeSlots, SceneRaceTheme, RaceThemeSlotsTests) - kopyada derleyip .meta'yi al (TUZAKLAR 183)."
-
-started:
-finished:
+    durum: closed
+    not: "Yeni .cs dosyalari icin .meta Unity'den gelir (RaceThemeView, RaceThemeSlots, SceneRaceTheme, RaceThemeSlotsTests) - kopyada derleyip .meta'yi al (TUZAKLAR 183). -> c4a26db8"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
