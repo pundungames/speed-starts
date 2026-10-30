@@ -43,6 +43,7 @@ namespace SpeedStars.Tools.Builders
                 run.Build(UiPrefabPaths.RaceHud, UiScreenPrefabs.RaceHud);
                 UiResultsPrefabs.BuildAll(run.Build); // T-033: table row prefab + the results screen with the Oyun_Bitis_UI_v1 art
                 UiAnalysisPrefabs.BuildAll(run.Build); // T-036: ranking row prefab + the Analysis screen (Analiz_UI_v1 art)
+                UiRaceStartPrefabs.BuildAll(run.Build); // T-039: READY / SET / GO! overlay (Yaris_Baslangic_UI_v1 art)
 
                 run.Build(UiPrefabPaths.EntryGateModal, UiPopupPrefabs.EntryGate);
                 run.Build(UiPrefabPaths.DailyGiftPopup, UiPopupPrefabs.DailyGift);

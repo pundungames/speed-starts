@@ -1,7 +1,7 @@
 ---
 id: T-039
 title: Yaris baslangici READY / SET / GO! (Yaris_Baslangic_UI_v1) - kopru basla fazlarini yonetir, girdi GO'da acilir, UI tepki verir
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: []
 owns_paths:
@@ -28,11 +28,14 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs:
+  - tip: SCENE
+    durum: open
+    not: "Race sahnesi: prefab builder (UiPrefabBuilder.BuildAll + ConfigAssetSeeder.SeedAll) calistirilir -> UI/Widgets/RaceStart.prefab + Data/Config/RaceStartConfig.asset olusur; sonra Race.unity icin SceneWiring.WireRace yeniden calistirilir (mevcut sahnede RaceStart prefab'i HUD canvas'ina yerlesir ve adapter.startConfig atanir) ya da BuildRace overwrite. Art: UI/Art/RaceStart/*.png (UiArt.ImportAll alir). Not: UiArt PNG'leri Compressed alir; ince cizgilerde artefakt gorulurse RaceStart icin Uncompressed gerekir (UiArt benim yolum degil)."
   - tip: DECISION
     durum: open
     not: "Malik: RaceController sureyi ILK BASISTA baslatiyor (sim.LastPressTime); gercek kurala gore sure GO aninda baslamali (tepki suresi). Bizim taraf GO'da girdiyi acar; saatin GO'dan baslamasi Malik'in kodu"
-started:
-finished:
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -75,4 +78,8 @@ KAMERA  : yok (README: sürekli kamera sallanması yok)
 - Malik'in RaceController'ı (saatin GO'da başlaması), yanlış çıkış kuralı, rakip koşucular, ses
 
 ## Calisma notu
-(Agent doldurur)
+- Yapildi: `RaceStartPhase` + yan arayuz `IRaceStartSignal` (IRaceSession'a uye eklenmedi: RaceFlowLogicTests'teki sahte oturum kirilirdi, o dosya benim yolum degil), saf `RaceStartSequence` + `RaceStartConfig`; adapter her RequestStart'ta girdiyi kapatir, Ready/Set/Go calistirir, girdiyi Go'da acar, bitis/OnDisable'da iptal eder.
+- UI: `RaceStartMotion` (saf, poz = f(faz, sure)) + `RaceStartView` (olaylara tepki, DOTween yok: unscaled sure ile ornekleme; erken faz = saati sifirla, Idle = gizle). Prefab `UiRaceStartPrefabs`, sahne yerlestirme `RaceStartWiring` (RaceStartConfigSeed.cs icinde); paylasilan dosyalara birer satir.
+- Testler: EditMode RaceStartSequenceTests (sira, aralik, iptal/restart, erken/dev kare), RaceStartMotionTests; PlayMode: girdi Go'ya kadar kapali + Go'da acik, geri sayim sirasinda DevForceFinish, ekran goruntusu `Race_countdown`. Hicbiri kosulmadi (merkezi dogrulama).
+- Kararlar: `Started` degismedi (Malik'in saati ilk basista basliyor); installer'a baglama gerekmedi (config Inspector alani, view `IRaceSession as IRaceStartSignal`); azaltilmis hareket config bayragi (ayar ekranina baglanmadi).
+- Riskler: sahne/prefab uretilmeden `Require<RaceStartView>` testi ve geri sayim gorseli yok (needs SCENE); START sesi icin tetik noktasi view'daki yorumda.

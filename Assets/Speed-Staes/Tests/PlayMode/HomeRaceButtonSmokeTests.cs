@@ -307,6 +307,68 @@ namespace SpeedStars.PlayTests
             yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen after Analysis Back");
         }
 
+        // ---- 7. Race start countdown (T-039) ----
+
+        [UnityTest]
+        public IEnumerator Race_Countdown_KeepsRunnerInputClosedUntilGo_ThenOpens()
+        {
+            SetTickets(1);
+            yield return EnterRaceWithTicket();
+
+            yield return WaitUntil(() => FindRaceSession() != null, "race session");
+            IRaceSession session = FindRaceSession();
+            var signal = session as IRaceStartSignal;
+            Assert.IsNotNull(signal, "the race session must expose the start phases (IRaceStartSignal)");
+
+            // The runner body is the adapter's private field and lives in Assembly-CSharp: reached by reflection.
+            Component body = RequireField<Component>(session, "body");
+            System.Reflection.FieldInfo acceptInput = body.GetType().GetField("acceptInput");
+            Assert.IsNotNull(acceptInput, "RunnerBody.acceptInput is gone; the input gate cannot be checked.");
+
+            // Frame by frame, whatever the timing: input is closed while the countdown shows and open from GO on.
+            float start = Time.realtimeSinceStartup;
+            while (signal.StartPhase != RaceStartPhase.Go)
+            {
+                if (signal.StartPhase == RaceStartPhase.Ready || signal.StartPhase == RaceStartPhase.Set)
+                    Assert.IsFalse((bool)acceptInput.GetValue(body), $"input must be closed during {signal.StartPhase}");
+                if (Time.realtimeSinceStartup - start > 10f) Assert.Fail($"the countdown never reached GO (phase {signal.StartPhase})");
+                yield return null;
+            }
+            Assert.IsTrue((bool)acceptInput.GetValue(body), "input must be open at GO");
+
+            // The start words react and clean up: the view is in the scene and hides itself after the burst.
+            RaceStartView words = Require<RaceStartView>();
+            Transform group = RequireField<RectTransform>(words, "group");
+            yield return WaitUntil(() => !group.gameObject.activeSelf, "the GO! words to leave the screen");
+        }
+
+        [UnityTest]
+        public IEnumerator Race_ForceFinishDuringCountdown_StillOpensResults_AndInputStaysClosed()
+        {
+            SetTickets(1);
+            yield return EnterRaceWithTicket();
+
+            yield return WaitUntil(() => FindRaceSession() != null, "race session");
+            IRaceSession session = FindRaceSession();
+            System.Reflection.MethodInfo finish = session.GetType().GetMethod("DevForceFinish");
+            if (finish == null) Assert.Ignore("RaceSessionAdapter.DevForceFinish is not compiled in (non-dev build).");
+            finish.Invoke(session, null);
+
+            ResultsScreenView results = Require<ResultsScreenView>();
+            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish");
+
+            // A GO that comes after the finish must not reopen input under Results (and there must be no start words left).
+            Component body = RequireField<Component>(session, "body");
+            System.Reflection.FieldInfo acceptInput = body.GetType().GetField("acceptInput");
+            float until = Time.realtimeSinceStartup + 3f;
+            while (Time.realtimeSinceStartup < until)
+            {
+                Assert.IsFalse((bool)acceptInput.GetValue(body), "input must stay closed under Results");
+                yield return null;
+            }
+            Assert.AreEqual(RaceStartPhase.Idle, ((IRaceStartSignal)session).StartPhase, "the finish cancels the countdown");
+        }
+
         // ---- helpers ----
 
         private IEnumerator EnterRaceWithTicket()

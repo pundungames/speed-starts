@@ -68,6 +68,7 @@ namespace SpeedStars.Tools.Builders
             SettingsConfigSeed.Seed(SettingsPath, overwrite);
             AnalysisConfigSeed.Seed(AnalysisPath, overwrite);
             LeaderboardConfigSeed.Seed(LeaderboardPath, overwrite);
+            RaceStartConfigSeed.Seed(overwrite); // T-039: READY / SET timing + start motion
             AssetDatabase.SaveAssets();
         }
 

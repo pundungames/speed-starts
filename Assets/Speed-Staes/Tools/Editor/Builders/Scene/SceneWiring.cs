@@ -93,6 +93,7 @@ namespace SpeedStars.Tools.Builders
             Log(nameof(SceneWiring), "Race: RaceSession (adapter + DevRaceFinish) and RaceSceneInstaller fields wired.");
 
             WireAnalysis(scene, results);
+            RaceStartWiring.Wire(scene, adapter, raceHud.transform.parent); // T-039: adapter config + start words over the HUD
         }
 
         /// <summary>

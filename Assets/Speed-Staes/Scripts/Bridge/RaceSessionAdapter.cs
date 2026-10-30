@@ -10,9 +10,12 @@ namespace SpeedStars.Bridge
     /// Translates the runner system (RaceController / RunnerBody, read-only) into IRaceSession and IRaceTelemetry. No decisions here.
     /// Today the runner has no finish event and resets in the finish frame, so a RunReset that follows a changed
     /// LastRaceTime is the finish. When the runner gets a real finish event, only this class changes.
+    /// It also owns the race start (T-039): every RequestStart closes the runner's input and runs the READY / SET / GO countdown
+    /// (timing in RaceStartSequence); input opens exactly at GO and the phase event follows. Views only react to the events.
+    /// The runner's own clock still starts at the first press after GO (Malik's RaceController; see the T-039 needs).
     /// </summary>
     [DefaultExecutionOrder(10)]
-    public sealed class RaceSessionAdapter : MonoBehaviour, IRaceSession, IRaceTelemetry
+    public sealed class RaceSessionAdapter : MonoBehaviour, IRaceSession, IRaceTelemetry, IRaceStartSignal
     {
         [SerializeField, Tooltip("The scene's RaceController (race length, clock, state).")]
         RaceController race;
@@ -20,6 +23,8 @@ namespace SpeedStars.Bridge
         RunnerBody body;
         [SerializeField, Min(0.1f), Tooltip("Cadence window (s): presses per second is the press count of this recent span divided by it.")]
         float cadenceWindowSeconds = 1f;
+        [SerializeField, Tooltip("Countdown numbers (READY time, SET wait range). Empty = the config's own defaults.")]
+        RaceStartConfig startConfig;
 
         RaceSessionState _state = RaceSessionState.Ready;
         RaceEventId _eventId;
@@ -28,6 +33,9 @@ namespace SpeedStars.Bridge
         bool _requesting;
         bool _subscribed;
         readonly Queue<double> _pressTimes = new Queue<double>();
+        readonly System.Random _random = new System.Random();
+        RaceStartSequence _sequence;
+        RaceStartConfig _fallbackConfig;
 
         public RaceSessionState State => _state;
         public float TargetDistance => race ? race.raceDistance : 0f;
@@ -73,14 +81,18 @@ namespace SpeedStars.Bridge
             }
         }
 
+        public RaceStartPhase StartPhase => _sequence != null ? _sequence.Phase : RaceStartPhase.Idle;
+
         public event Action Started;
         public event Action<RaceOutcome> Finished;
+        public event Action<RaceStartPhase> StartPhaseChanged;
 
         void Awake() => Initialize();
         void OnEnable() => Initialize();
 
         void OnDisable()
         {
+            _sequence?.Cancel(); // scene change / disable: no countdown survives, views drop their state
             if (_subscribed && body)
             {
                 body.RunReset -= OnRunReset;
@@ -111,15 +123,44 @@ namespace SpeedStars.Bridge
 
             _requesting = true;
             _state = RaceSessionState.Ready;
-            race.ResetRace();
+            race.ResetRace(); // the runner reopens its input on a reset; the countdown closes it again right below
             _requesting = false;
 
             _lastSeenFinishTime = race.LastRaceTime;
-            if (body) body.acceptInput = true;
+            BeginCountdown();
+        }
+
+        /// <summary>Input off, then Ready: a restart (also mid-countdown or mid-race) always starts the countdown over, never a second GO.</summary>
+        void BeginCountdown()
+        {
+            if (body) body.acceptInput = false;
+            // A fresh sequence per start: the config's numbers apply, and a pending Go of the old one cannot fire.
+            if (_sequence != null) _sequence.PhaseChanged -= OnSequencePhase;
+            RaceStartConfig config = StartConfig();
+            _sequence = new RaceStartSequence(config.ReadySeconds, config.SetWaitMinSeconds, config.SetWaitMaxSeconds, _random);
+            _sequence.PhaseChanged += OnSequencePhase;
+            _sequence.Begin();
+        }
+
+        void OnSequencePhase(RaceStartPhase phase)
+        {
+            // The gate first, then the event: a view or sound reacting to Go sees input already open (the authoritative start).
+            if (phase == RaceStartPhase.Go && body) body.acceptInput = true;
+            StartPhaseChanged?.Invoke(phase);
+        }
+
+        RaceStartConfig StartConfig()
+        {
+            if (startConfig) return startConfig;
+            if (!_fallbackConfig) _fallbackConfig = ScriptableObject.CreateInstance<RaceStartConfig>();
+            return _fallbackConfig;
         }
 
         void Update()
         {
+            if (_sequence != null && _sequence.IsCounting)
+                _sequence.Tick(Mathf.Min(Time.deltaTime, StartConfig().MaxFrameSeconds));
+
             // Ready -> Running: the runner's own state is the source.
             if (_state == RaceSessionState.Ready && race && race.Current == RaceController.State.Running)
                 BeginRunning();
@@ -154,6 +195,7 @@ namespace SpeedStars.Bridge
         {
             _state = RaceSessionState.Finished;
             _outcome = new RaceOutcome(_eventId, seconds, TargetDistance, 1, 1);
+            _sequence?.Cancel(); // a finish during the countdown (dev key): GO must not reopen input under Results
             // After RunnerBody set acceptInput = true (it runs before raising RunReset): keep the runner still under Results.
             if (body) body.acceptInput = false;
             Finished?.Invoke(_outcome);

@@ -29,6 +29,18 @@ namespace SpeedStars.Core.Race
         Finished
     }
 
+    /// <summary>
+    /// Where the race start is. Idle = no countdown (before the first request, after a cancel or scene change); Ready and Set are the
+    /// countdown words; Go = the runner may run (input is open from this very moment). Go stays until the next start or a cancel.
+    /// </summary>
+    public enum RaceStartPhase
+    {
+        Idle,
+        Ready,
+        Set,
+        Go
+    }
+
     /// <summary>What the meta side asks the race to be: which event and how long. Tickets are settled before this.</summary>
     public readonly struct RaceStartRequest
     {

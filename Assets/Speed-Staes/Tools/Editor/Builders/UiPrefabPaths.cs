@@ -25,6 +25,7 @@ namespace SpeedStars.Tools.Builders
         public const string ResourceBar = Root + "/Widgets/ResourceBar.prefab";
         public const string RedDot = Root + "/Widgets/RedDot.prefab";
         public const string RewardFlight = Root + "/Widgets/RewardFlight.prefab";
+        public const string RaceStart = Root + "/Widgets/RaceStart.prefab";
 
         public const string EventRow = Root + "/Rows/EventRow.prefab";
         public const string CosmeticCell = Root + "/Rows/CosmeticCell.prefab";

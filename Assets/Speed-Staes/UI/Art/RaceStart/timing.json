@@ -1,0 +1,18 @@
+{
+  "units": "seconds",
+  "preview_start_signal": 1.6,
+  "ready": {
+    "enter": 0.12,
+    "rebound": 0.1,
+    "preview_hold_until": 0.8
+  },
+  "set": {
+    "compress": 0.12,
+    "hold_until": "authoritative start signal"
+  },
+  "go": {
+    "trigger": "authoritative start signal",
+    "duration": 0.3
+  },
+  "note": "Preview timing only. Gameplay timing is owned by race controller."
+}

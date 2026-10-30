@@ -104,6 +104,19 @@ namespace SpeedStars.PlayTests
                 yield return WaitOpen(gate, "entry gate");
                 yield return Tap(RequireField<Button>(gate, "useTicketButton"), "Use Entry Ticket");
                 yield return WaitForScene(RaceScene);
+
+                // Countdown: the SET word (or, on a very slow load, whatever is up by then), taken before the race moves on.
+                IRaceStartSignal startSignal = null;
+                foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>(true))
+                    if (behaviour is IRaceStartSignal found) { startSignal = found; break; }
+                if (startSignal != null)
+                {
+                    yield return WaitUntil(() => startSignal.StartPhase == RaceStartPhase.Set || startSignal.StartPhase == RaceStartPhase.Go, "SET to show");
+                    yield return null;
+                    yield return null;
+                    yield return Capture(dir, "Race_countdown");
+                }
+
                 yield return Settle();
                 yield return Capture(dir, "Race_play");
 
