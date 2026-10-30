@@ -1,7 +1,7 @@
 ---
 id: T-074
 title: Rakip botlarin plani (saf C#) - config, saha plani, basis takvimi, canli siralama modeli
-status: todo
+status: review
 owner: systems-agent
 depends_on: []
 owns_paths:
@@ -12,12 +12,17 @@ owns_paths:
 touches_scene: false
 branch: agent/T-074-076-rakipler
 commits: []
-tests: []
+tests:
+  - Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/BotPlanningTests.cs
+  - Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/RaceStandingsModelTests.cs
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "Data/Config/BotRaceConfig.asset uretilecek (kopyada ConfigAssetSeeder.SeedAll -> BotRaceConfigSeed); alanlar kod varsayilani; .cs.meta dosyalarini Unity uretir (Scripts/Core/Runtime/Race/Bots, BotRaceConfigSeed.cs, Tests/.../Bots)"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -63,4 +68,8 @@ RaceSessionAdapter) ve T-076 (UI) calisiyor — onlarin dosyalarina dokunma.
 - Sahnede kosturma, kalibrasyon araci (T-075), arayuz (T-076), ayar ekranindan zorluk secimi
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+1. Bots/ altinda BotPlan, BotRaceConfig (+BotCalibrationPoint, BotIdentity, BotSkillCurve), BotFieldPlanner, BotPressSchedule (+BotPressEvent), RaceStandingsModel; saf C#, Unity yalniz config SO.
+2. Hedef sure = referans x lerp(kolay, zor, zorluk); alan [-1,1] esit dagitilir, yayilim lerp(dar, genis, skillRange), yaris basi rastgelelik carpani; beceri = kalibrasyon tablosunun tersi.
+3. Takvim: bacaklar sirayla, k. basis = tepki + k*periyot + titreme (+ olasilikli hata kaymasi), onceki birakmadan once baslamaz; birakma = basis + tutma.
+4. Standings: biten sureyle, kosan mesafeyle, beraberlikte girdi sirasi; Changed sira/bitis imzasi degisince; Reset bos baslangic.
+5. Test calistirilmadi; kalibrasyon tablosu ve bot suruculeri yer tutucu (T-075 doldurur); asset uretimi supervizorde.

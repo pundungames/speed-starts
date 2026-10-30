@@ -1,7 +1,7 @@
 ---
 id: T-075
 title: Yarista botlar kossun - kosucu kopyalari, Inject ile surme, seritler, bitis sureleri, siralama, kalibrasyon araci
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-074]
 owns_paths:
@@ -15,12 +15,21 @@ owns_paths:
 touches_scene: true
 branch: agent/T-074-076-rakipler
 commits: []
-tests: []
+tests: "gerekmiyor: sahne/surme, T-074 testleri + cekim + kalibrasyon"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Race sahnesini builder ile yeniden kur (SceneBuilder.BuildRace overwrite): 'Race Bots' nesnesi (RaceBots) + adapter.bots + RaceController.body/dunya runner alanlari. Sonra ShotTool.CaptureRaceBots cekimi"
+  - tip: ASSET
+    durum: open
+    not: "Yeni .cs dosyalarinin .meta'lari kopyada derlenip alinacak: Scripts/Bridge/RaceBots.cs, Tools/Editor/Builders/Scene/SceneRaceBots.cs, Tools/Editor/Builders/BotCalibration.cs. BotRaceConfig.asset T-074 seeder'indan (ConfigAssetSeeder). Kalibrasyon kosusundan sonra tablo config'e (-apply)"
+  - tip: WIRING
+    durum: open
+    not: "IRaceStandings -> RaceSceneInstaller: [SerializeField] private RaceBots raceBots; Install'da raceBots varsa Container.Bind<IRaceStandings>().FromInstance(raceBots).AsSingle(). Builder SceneRaceBots 'raceBots' alanini sahnede doldurur (alan yoksa uyarir). RaceBots hem IRaceStandings'i uygular hem Changed olayini ileten tek nesnedir"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -74,4 +83,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+Yapildi: Bridge/RaceBots (bot kopyalari, Inject ile surme, seritler, bitis, siralama -> IRaceStandings), RaceSessionAdapter (bots alani, CurrentEventId, Rank/RunnerCount), SceneRaceBots + BuildRace cagrisi, BotCalibration (Editor, -executeMethod), ShotTool.CaptureRaceBots.
+Karar: botlar prefab'tan ilk karede kurulur (tum Start'lardan sonra); inaktif tutucu altinda olusturulup RunnerInput kapatilir, HUD/Replay yok edilir, sonra aktiflenir. Sure oyuncuyla ayni: ilk basistan (RaceController gibi).
+Zorlandigim: T-074 dosyalari sonradan geldi; BotSimDriver.PlanForSkill BotFieldPlanner'in skill->surucu lerp'lerini elle kopyalar (planner degisirse esitle).
+Birakilan: kalibrasyon tablosunu calistirmak ve config'e islemek (supervizor), serit genisligi/kamera kapanmasi cekimle dogrulanacak, 5 ek rig performansi cihazda olculmedi.
+Test yok (sahne/surme); Unity/batchmode/verify calistirilmadi, derleme dogrulanmadi.

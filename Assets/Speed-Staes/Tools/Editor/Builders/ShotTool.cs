@@ -91,6 +91,73 @@ namespace SpeedStars.Tools.Builders
             EditorSceneManager.OpenScene(SceneBuilder.RaceScenePath, OpenSceneMode.Single); // never saved
         }
 
+        /// <summary>
+        /// Opens the built Race scene, builds the bot runners and lays the field out where a race would have it about 3 s and 8 s after GO
+        /// (distances from the bots' own key schedules run through the runner sim, the player placed like a mid-field bot), with the follow
+        /// camera snapped to the player: race_bots_3s.png / race_bots_8s.png, plus a wide view of the same moments (race_bots_*_wide.png)
+        /// that shows every lane. Edit mode runs no animation, so the runners stand in their prefab pose; lanes, spacing and what hides what
+        /// are what this checks. Add -shotUi for the UI on top, -shotWorld N for a theme world (showcase index, default 0).
+        /// -executeMethod SpeedStars.Tools.Builders.ShotTool.CaptureRaceBots -shotDir <folder outside Temp>
+        /// </summary>
+        public static void CaptureRaceBots()
+        {
+            string dir = ArgValue("-shotDir") ?? Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? ".", "Logs", "shots");
+            Directory.CreateDirectory(dir);
+            EditorSceneManager.OpenScene(SceneBuilder.RaceScenePath, OpenSceneMode.Single);
+
+            var bots = UnityEngine.Object.FindObjectOfType<SpeedStars.Bridge.RaceBots>(true);
+            Camera camera = Camera.main;
+            if (bots == null || bots.Player == null || bots.Config == null || camera == null)
+            {
+                Debug.LogError("SHOT_FAILED Race scene lacks RaceBots (with player + config) / main camera; rebuild the Race scene");
+                return;
+            }
+
+            bots.BuildRunners();
+            if (bots.RunnerRoots.Count == 0) { Debug.LogError("SHOT_FAILED RaceBots built no runners (runner prefab missing?)"); return; }
+
+            Transform player = bots.Player.transform;
+            Vector3 playerStart = player.position;
+            Vector3 forward = player.forward;
+            SpeedStars.Physical.RunnerTuning tuning = bots.Player.tuning;
+
+            var random = new System.Random(11);
+            var plans = SpeedStars.Core.Race.Bots.BotFieldPlanner.Plan(bots.Config, null, random);
+            var schedules = new SpeedStars.Core.Race.Bots.BotPressSchedule[plans.Count];
+            for (int i = 0; i < plans.Count; i++)
+                schedules[i] = new SpeedStars.Core.Race.Bots.BotPressSchedule(plans[i], random, plans[i].TargetSeconds * 2.0 + 10.0);
+            var playerSchedule = new SpeedStars.Core.Race.Bots.BotPressSchedule(
+                plans.Count > 0 ? plans[plans.Count / 2] : BotSimDriver.PlanForSkill(bots.Config, 0.5f), random, 60.0);
+
+            var view = UnityEngine.Object.FindObjectOfType<SpeedStars.Bridge.RaceThemeView>(true);
+            int world = 0;
+            if (int.TryParse(ArgValue("-shotWorld"), out int parsed)) world = parsed;
+
+            foreach (double seconds in new[] { 3.0, 8.0 })
+            {
+                float playerDistance = BotSimDriver.DistanceAt(tuning, playerSchedule, seconds);
+                player.position = playerStart + forward * playerDistance;
+                for (int i = 0; i < bots.RunnerRoots.Count && i < plans.Count; i++)
+                    bots.RunnerRoots[i].position = bots.StartPositionOf(i) + forward * BotSimDriver.DistanceAt(tuning, schedules[i], seconds);
+                if (view != null) view.ShowWorld(world);
+
+                string tag = seconds.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "s";
+                SnapFollowCamera(camera, player);
+                if (HasArg("-shotUi")) SwitchOverlayCanvasesToCamera(camera);
+                RenderToPng(camera, Path.Combine(dir, $"race_bots_{tag}.png"));
+
+                // Wide: the same moment from farther away and higher, so the whole field and every lane is in the picture.
+                var follow = camera.GetComponent<SpeedStars.Runner.SideFollowCamera>();
+                float back = follow != null ? follow.distance * 2.5f : 11f;
+                float up = follow != null ? follow.height * 2f : 2f;
+                Vector3 focus = player.position + forward * (follow != null ? follow.leadAhead : 0f);
+                camera.transform.position = focus + player.right * back + Vector3.up * up;
+                camera.transform.rotation = Quaternion.LookRotation(-player.right, Vector3.up) * Quaternion.Euler(8f, 0f, 0f);
+                RenderToPng(camera, Path.Combine(dir, $"race_bots_{tag}_wide.png"));
+            }
+            EditorSceneManager.OpenScene(SceneBuilder.RaceScenePath, OpenSceneMode.Single); // never saved
+        }
+
         /// <summary>The follow camera's resting pose behind/beside the target (same maths as its runtime snap); edit mode never runs its LateUpdate.</summary>
         private static void SnapFollowCamera(Camera camera, Transform fallbackTarget)
         {

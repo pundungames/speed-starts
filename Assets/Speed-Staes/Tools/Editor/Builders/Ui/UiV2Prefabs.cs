@@ -194,6 +194,7 @@ namespace SpeedStars.Tools.Builders
         private static readonly Vector2 CashSize = new Vector2(185f, 67f);
         private static readonly Vector2 EnergyGroupSize = new Vector2(428f, 39f);   // icon (left) + track
         private static readonly Vector2 CadenceGroupSize = new Vector2(542f, 39f);  // label + track + pointer
+        private const float PlaceGap = 14f;       // between the Cash panel and the Place panel
         private const float CadenceLabelWidth = 150f;
         private const float EnergyTrackX = 40f;   // track offset inside the Energy group (icon is at 0)
         private const float CadenceTrackX = 160f; // track offset inside the Cadence group (after the label)
@@ -227,6 +228,14 @@ namespace SpeedStars.Tools.Builders
             plus.raycastTarget = true; // the visible plus is the hit area
             UiArt.MakeButton(plus.gameObject, plus, false, alphaHit: false); // no shop yet
 
+            // Place (beside Cash, same panel art): "3rd" while opponents run. The view hides the whole panel without opponents.
+            RectTransform place = Kit.Node(root, "Place");
+            Kit.Anchor(place, topLeft, topLeft, new Vector2(52f + CashSize.x + PlaceGap, -138f), CashSize);
+            UiArt.Paint(place.gameObject, UiArt.RaceHud("counter_panel"), raycast: false);
+            Text placeLabel = Kit.Label(place, "Label", "1st", 38f, UiArt.Navy, TextAnchor.MiddleCenter);
+            Kit.Span(placeLabel.rectTransform, new Vector2(0.08f, 0.05f), new Vector2(0.92f, 0.95f));
+            place.gameObject.SetActive(false); // starts hidden; the view shows it when standings exist
+
             // Energy (top-center): icon | track with a Filled-type fill centered inside it.
             RectTransform energy = Kit.Node(root, "Energy");
             Kit.Anchor(energy, topCenter, topCenter, new Vector2(-21f, -50f), EnergyGroupSize);
@@ -256,6 +265,22 @@ namespace SpeedStars.Tools.Builders
             SquareButton(root, "Exit", "exit_icon", -186f);
 
             UiViewBinder.BindRaceHud(root);
+            BindPlace(root, place.gameObject, placeLabel);
+        }
+
+        /// <summary>Place panel + label onto the RaceHudView (separate from UiViewBinder so the older binding stays untouched).</summary>
+        private static void BindPlace(RectTransform root, GameObject placeRoot, Text placeLabel)
+        {
+            var view = root.GetComponent<SpeedStars.UI.Race.RaceHudView>();
+            if (view == null) throw new System.InvalidOperationException("UiV2Prefabs: RaceHud has no RaceHudView to bind the Place panel on.");
+            var so = new SerializedObject(view);
+            SerializedProperty rootProp = so.FindProperty("placeRoot");
+            SerializedProperty textProp = so.FindProperty("placeText");
+            if (rootProp == null || textProp == null)
+                throw new System.InvalidOperationException("UiV2Prefabs: RaceHudView has no placeRoot / placeText field.");
+            rootProp.objectReferenceValue = placeRoot;
+            textProp.objectReferenceValue = placeLabel;
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         /// <summary>An Image at its sprite's native size (SetNativeSize equivalent: art px = canvas units).</summary>

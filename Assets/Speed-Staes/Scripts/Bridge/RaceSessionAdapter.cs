@@ -25,6 +25,8 @@ namespace SpeedStars.Bridge
         float cadenceWindowSeconds = 1f;
         [SerializeField, Tooltip("Countdown numbers (READY time, SET wait range). Empty = the config's own defaults.")]
         RaceStartConfig startConfig;
+        [SerializeField, Tooltip("The opponents (T-075). Their order at the player's finish gives the outcome's rank and runner count. Empty = the player runs alone: rank 1 of 1.")]
+        RaceBots bots;
 
         RaceSessionState _state = RaceSessionState.Ready;
         RaceEventId _eventId;
@@ -82,6 +84,9 @@ namespace SpeedStars.Bridge
         }
 
         public RaceStartPhase StartPhase => _sequence != null ? _sequence.Phase : RaceStartPhase.Idle;
+
+        /// <summary>The event of the current race (empty before the first RequestStart). The opponents scale to the player's best of it.</summary>
+        public RaceEventId CurrentEventId => _eventId;
 
         public event Action Started;
         public event Action<RaceOutcome> Finished;
@@ -194,7 +199,16 @@ namespace SpeedStars.Bridge
         void Complete(double seconds)
         {
             _state = RaceSessionState.Finished;
-            _outcome = new RaceOutcome(_eventId, seconds, TargetDistance, 1, 1);
+            int rank = 1;
+            int runnerCount = 1;
+            if (bots)
+            {
+                // The order at the finish frame: bots that crossed earlier in this frame are counted before the rank is read.
+                bots.NotifyPlayerFinished(seconds);
+                runnerCount = Mathf.Max(1, bots.RunnerCount);
+                rank = Mathf.Clamp(bots.PlayerRank, 1, runnerCount);
+            }
+            _outcome = new RaceOutcome(_eventId, seconds, TargetDistance, rank, runnerCount);
             _sequence?.Cancel(); // a finish during the countdown (dev key): GO must not reopen input under Results
             // After RunnerBody set acceptInput = true (it runs before raising RunReset): keep the runner still under Results.
             if (body) body.acceptInput = false;
