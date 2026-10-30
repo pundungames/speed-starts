@@ -1,7 +1,7 @@
 ---
 id: T-067
 title: Ana menu - sol alttaki Upgrade ve Players butonlari kalkar; tema secimi ve emote ekraninda ana menunun sol sayaclari (kaynak cubugu) aynen kalir
-status: todo
+status: review
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -19,12 +19,16 @@ owns_paths:
 touches_scene: true
 branch: agent/T-067-ana-menu
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/PlayMode/HomeSharedResourceBarSmokeTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Builder yeniden calistirilir (HomeScreen, ThemeSelectScreen, EmoteScreen prefab uretimi + SceneWiring). Home: Upgrade/Players kalkti, HighScores sol alt koseye (upgrade slotuna) kaydi. ThemeSelect/Emote prefablarinda kopya kaynak kutulari (PurpleGem/EntryTicket/TimedTicket/Cash) kalmadi. Sahnede ResourceBar.alsoVisibleOn = [ThemeSelectScreen, EmoteScreen] (SceneWiring doldurur). Prefablarda fileID:0 kalan alan olmamali."
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -59,3 +63,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
+1) Sebep: ResourceBarView yalniz Home ust ekranken gorunuyordu (CanvasGroup alpha 0); tema/emote kendi kopya kutularini cizdi. Cozum: ResourceBarView.alsoVisibleOn (UiScreen[]), SceneWiring tema+emote ile doldurur; kopya kutular view+builder dan silindi.
+2) Home: Upgrade/Players builder, binder ve view alanlarindan kalkti; HighScores, Upgrade in eski sol-alt x konumuna kaydi (bosluk kalmasin).
+3) Back sayacla cakismiyor (Back ustte, bar altinda; emote ta Back y 40-145, bar y 260+); kaydirma yapilmadi.
+4) Test: HomeSharedResourceBarSmokeTests (Upgrade/Players yok, HighScores Tap, tema+emote ta bar alpha 1, kopya kutu yok). Calistirilmadi.
+5) Prefab/sahne uretimi supervizorde (needs SCENE). ThemeSelectScreenView T-068 ile ayni dosya: yalniz kaynak alanlari ve Redraw sonu degisti.

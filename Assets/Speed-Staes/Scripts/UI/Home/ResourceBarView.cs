@@ -10,8 +10,8 @@ namespace SpeedStars.UI.Home
 {
     /// <summary>
     /// Resource bar (prefab ResourceBar, on the overlay canvas): Purple Gems, Entry Tickets with the regen countdown,
-    /// Timed Tickets and Cash. Visible only while the Home screen is the top screen (other full screens have their own
-    /// resource columns or none); popups do not hide it. Redraws when the wallet or tickets change; about once a second it calls
+    /// Timed Tickets and Cash. Visible while the Home screen or one of <c>alsoVisibleOn</c> (theme select, emote) is the top
+    /// screen, so those screens show this same bar instead of a copy; other full screens have their own columns. Popups do not hide it. Redraws when the wallet or tickets change; about once a second it calls
     /// <c>IEntryTickets.Refresh</c> (regen is lazy) and updates the countdown. Binds existing texts, creates nothing.
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
@@ -40,6 +40,9 @@ namespace SpeedStars.UI.Home
 
         [Tooltip("The Home screen (root of the stack): the bar is shown only while it is the top screen. Empty = always shown.")]
         [SerializeField] private UiScreen homeScreen;
+
+        [Tooltip("Other screens that keep the bar visible (theme select, emote). Scene-bound; SceneWiring fills it.")]
+        [SerializeField] private UiScreen[] alsoVisibleOn;
 
         [Tooltip("Seconds between ticket refresh ticks.")]
         [Min(0.1f)]
@@ -95,10 +98,20 @@ namespace SpeedStars.UI.Home
         private void ApplyVisibility()
         {
             IUiView top = _navigator?.CurrentScreen;
-            bool visible = homeScreen == null || top == null || ReferenceEquals(top, homeScreen);
+            bool visible = homeScreen == null || top == null || ReferenceEquals(top, homeScreen) || IsAlsoVisibleOn(top);
             _group.alpha = visible ? 1f : 0f;
             _group.blocksRaycasts = visible;
             _group.interactable = visible;
+        }
+
+        private bool IsAlsoVisibleOn(IUiView top)
+        {
+            if (alsoVisibleOn == null) return false;
+            foreach (UiScreen screen in alsoVisibleOn)
+            {
+                if (screen != null && ReferenceEquals(top, screen)) return true;
+            }
+            return false;
         }
 
         private void Update()

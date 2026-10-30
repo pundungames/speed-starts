@@ -56,14 +56,6 @@ namespace SpeedStars.UI.Home
         [Tooltip("CharacterCard/Emote: opens the emote screen.")]
         [SerializeField] private Button emoteButton;
 
-        [Header("Buttons without a system yet (shown, not interactable)")]
-
-        [Tooltip("Upgrade: no upgrade system yet.")]
-        [SerializeField] private Button upgradeButton;
-
-        [Tooltip("Players: no multiplayer system yet.")]
-        [SerializeField] private Button playersButton;
-
         [Tooltip("CharacterCard/Previous: selects the previous racer preset (wraps around).")]
         [SerializeField] private Button previousRacerButton;
 
@@ -166,16 +158,6 @@ namespace SpeedStars.UI.Home
             if (previousRacerButton != null) previousRacerButton.onClick.AddListener(OnPreviousRacer);
             if (nextRacerButton != null) nextRacerButton.onClick.AddListener(OnNextRacer);
             if (emoteButton != null) emoteButton.onClick.AddListener(OnEmote);
-            DisableUnbuilt(upgradeButton, playersButton);
-        }
-
-        /// <summary>Designed buttons whose system does not exist yet stay visible but dead (they may be left empty).</summary>
-        private static void DisableUnbuilt(params Button[] buttons)
-        {
-            foreach (Button button in buttons)
-            {
-                if (button != null) button.interactable = false;
-            }
         }
 
         private void Start()

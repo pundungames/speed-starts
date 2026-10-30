@@ -11,7 +11,7 @@ namespace SpeedStars.UI.Themes
     /// <summary>
     /// Theme select screen (opened by Home's environment button). The world behind it is the theme being browsed; the
     /// arrows preview the neighbouring theme (no Cash, no save), the action button buys / uses it. Leaving the screen by
-    /// any way drops an unapplied preview. All logic is <see cref="ThemeSelectPresenter"/>; this view binds prefab objects,
+    /// any way drops an unapplied preview. The resource counters are the Home resource bar (it stays visible here), not a copy. All logic is <see cref="ThemeSelectPresenter"/>; this view binds prefab objects,
     /// draws the presenter's snapshot and listens to the service and the wallet. Back is UiPanel's close button.
     /// </summary>
     public sealed class ThemeSelectScreenView : UiScreen
@@ -97,19 +97,6 @@ namespace SpeedStars.UI.Themes
 
         [Tooltip("ThemeAction/GemIcon: price icon when the theme costs Purple Gems (the cash icon is CurrencyIcon).")]
         [SerializeField] private GameObject gemIcon;
-
-        [Header("Resources (left column)")]
-        [Tooltip("PurpleGem/Value.")]
-        [SerializeField] private Text purpleGemText;
-
-        [Tooltip("EntryTicket/Value: 'count/cap'.")]
-        [SerializeField] private Text entryTicketText;
-
-        [Tooltip("TimedTicket/Value.")]
-        [SerializeField] private Text timedTicketText;
-
-        [Tooltip("Cash/Value.")]
-        [SerializeField] private Text cashText;
 
         private ThemeSelectPresenter _presenter;
         private IThemeService _themes;
@@ -236,10 +223,6 @@ namespace SpeedStars.UI.Themes
 
             DrawPremium(snapshot.Premium);
 
-            purpleGemText.text = _wallet.PurpleGems.ToString();
-            cashText.text = _wallet.Cash.ToString();
-            timedTicketText.text = _wallet.TimedTickets.ToString();
-            entryTicketText.text = HomeTexts.TicketCount(_tickets.Count, _tickets.Cap);
         }
 
         /// <summary>

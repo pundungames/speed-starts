@@ -34,7 +34,7 @@ namespace SpeedStars.Tools.Builders
             var sevenDay = RequireInstance<UiPopup>(scene, UiPrefabPaths.SevenDayCheckInPanel);
             var themeSelect = RequireInstance<UiScreen>(scene, UiPrefabPaths.ThemeSelectScreen);
             var settings = RequireInstance<UiPopup>(scene, UiPrefabPaths.SettingsPopup);
-            WireEmoteScreen(scene, homeView); // T-040
+            UiScreen emoteScreen = WireEmoteScreen(scene, homeView); // T-040
 
             var so = new SerializedObject(homeView);
             Prop(so, "eventSelectScreen").objectReferenceValue = eventSelect;
@@ -47,7 +47,11 @@ namespace SpeedStars.Tools.Builders
             Apply(so);
             var resourceBar = RequireOne<ResourceBarView>(scene, "ResourceBar widget (ResourceBar prefab instance)");
             var barSo = new SerializedObject(resourceBar);
-            Prop(barSo, "homeScreen").objectReferenceValue = homeView; // bar shows only while Home is the top screen
+            Prop(barSo, "homeScreen").objectReferenceValue = homeView; // bar shows while Home is the top screen...
+            SerializedProperty also = Prop(barSo, "alsoVisibleOn"); // ...and on theme select / emote (T-067: one shared bar)
+            also.arraySize = 2;
+            also.GetArrayElementAtIndex(0).objectReferenceValue = themeSelect;
+            also.GetArrayElementAtIndex(1).objectReferenceValue = emoteScreen;
             Apply(barSo);
             WireDailyGift(scene, homeView, resourceBar); // T-043
             var costume = RequireOne<SpeedStars.UI.Costume.CostumeEditorScreenView>(scene, "Costume editor screen (CosmeticsScreen prefab instance)");
@@ -78,7 +82,7 @@ namespace SpeedStars.Tools.Builders
         }
 
         /// <summary>T-040: Home's emote button target and the emote screen's dim backdrop (both scene objects).</summary>
-        private static void WireEmoteScreen(Scene scene, HomeScreenView homeView)
+        private static UiScreen WireEmoteScreen(Scene scene, HomeScreenView homeView)
         {
             var emote = RequireOne<SpeedStars.UI.Emotes.EmoteScreenView>(scene, "Emote screen (EmoteScreen prefab instance)");
             var homeSo = new SerializedObject(homeView);
@@ -87,6 +91,7 @@ namespace SpeedStars.Tools.Builders
             var emoteSo = new SerializedObject(emote);
             Prop(emoteSo, "dimBackdrop").objectReferenceValue = SceneHomeDim.Find(scene);
             Apply(emoteSo);
+            return emote;
         }
 
         /// <summary>Race: RaceSession object (adapter + dev finish) and the RaceSceneInstaller fields.</summary>

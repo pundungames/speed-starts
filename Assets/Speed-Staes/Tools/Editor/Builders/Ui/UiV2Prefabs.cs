@@ -41,10 +41,14 @@ namespace SpeedStars.Tools.Builders
             ArtButton(root, layout, "Sound", "sound", "sound_background", "sound_icon", true);
             ArtButton(root, layout, "Environment", "environment", "environment_background", "environment_icon", true);
 
-            // Bottom row.
-            ArtButton(root, layout, "Upgrade", "upgrade", "upgrade_background", "upgrade_icon", false);
-            ArtButton(root, layout, "Players", "players", "players_background", "players_icon", false);
-            ArtButton(root, layout, "HighScores", "high_scores", "high_scores_background", "high_scores_icon", true);
+            // Bottom-left: High Scores only (Upgrade and Players were removed, T-067); it takes the far-left slot Upgrade had.
+            UiArt.LayoutComponent highScores = layout.Get("high_scores");
+            UiArt.LayoutComponent firstSlot = layout.Get("upgrade");
+            var highScoresSpot = new UiArt.LayoutComponent
+            {
+                rect = new[] { firstSlot.rect[0], highScores.rect[1], highScores.rect[2], highScores.rect[3] }
+            };
+            ArtButton(root, layout, "HighScores", highScoresSpot, "high_scores_background", "high_scores_icon", true);
 
             RectTransform race = ArtButton(root, layout, "RaceSelect", "race_select", "race_select_background", "race_select_icon", true);
             UiArt.Slot(race, "Label", "100m", 56f, RaceLabelMin, RaceLabelMax, TextAnchor.MiddleLeft);
@@ -131,9 +135,13 @@ namespace SpeedStars.Tools.Builders
         /// <summary>Screen-level button: background on the node, "Icon" child on the same rect, placed from layout.json.</summary>
         private static RectTransform ArtButton(Transform parent, UiArt.Layout layout, string name, string layoutName,
             string background, string icon, bool interactable)
+            => ArtButton(parent, layout, name, layout.Get(layoutName), background, icon, interactable);
+
+        private static RectTransform ArtButton(Transform parent, UiArt.Layout layout, string name, UiArt.LayoutComponent spot,
+            string background, string icon, bool interactable)
         {
             RectTransform node = Kit.Node(parent, name);
-            layout.PlaceOnScreen(node, layout.Get(layoutName));
+            layout.PlaceOnScreen(node, spot);
             Image image = UiArt.Paint(node.gameObject, UiArt.Home(background), raycast: true);
             UiArt.Layer(node, "Icon", UiArt.Home(icon));
             UiArt.MakeButton(node.gameObject, image, interactable, alphaHit: false);

@@ -11,7 +11,7 @@ namespace SpeedStars.UI.Emotes
 {
     /// <summary>
     /// Emote screen: a two-column list of emote cards on the wardrobe panel, the menu character on the pedestal playing the
-    /// selected emote, the Cash box, and one action under the pedestal: Equip (owned), or the price button (locked). Every
+    /// selected emote, and one action under the pedestal: Equip (owned), or the price button (locked). Every
     /// object is a prefab object bound in the Inspector; the cards come from a prefab under the list's content. What is
     /// selected and what the action does lives in <see cref="EmoteScreenModel"/> (pure C#); ownership, Cash and the saved
     /// emote live in <see cref="IEmoteService"/>; the character follows <see cref="IEmotePreview"/>, which this screen only
@@ -41,10 +41,7 @@ namespace SpeedStars.UI.Emotes
         [Tooltip("Wardrobe/ScrollTrack: the handle that follows the list.")]
         [SerializeField] private ScrollIndicatorView scrollIndicator;
 
-        [Header("Left side and actions")]
-        [Tooltip("Cash/Value: the Cash balance.")]
-        [SerializeField] private Text cashText;
-
+        [Header("Actions")]
         [Tooltip("Equip: equips the selected owned emote.")]
         [SerializeField] private Button equipButton;
 
@@ -62,7 +59,6 @@ namespace SpeedStars.UI.Emotes
 
         private IEmoteService _service;
         private IEmotePreview _preview;
-        private IWallet _wallet;
         private IInstantiator _instantiator;
         private UiMotionConfig _cardMotion;
         private EmoteScreenModel _model;
@@ -74,7 +70,6 @@ namespace SpeedStars.UI.Emotes
         {
             _service = service;
             _preview = preview;
-            _wallet = wallet;
             _instantiator = instantiator;
             _cardMotion = motion;
             _model = new EmoteScreenModel(service);
@@ -95,13 +90,11 @@ namespace SpeedStars.UI.Emotes
             if (_model == null) return;
 
             _service.Changed += RefreshAll;
-            _wallet.Changed += RefreshCash;
             if (dimBackdrop != null) dimBackdrop.SetActive(true);
 
             _model.Begin();
             BuildCards();
             RefreshAll();
-            RefreshCash();
         }
 
         protected override void OnDisable()
@@ -109,7 +102,6 @@ namespace SpeedStars.UI.Emotes
             if (_model != null)
             {
                 _service.Changed -= RefreshAll;
-                _wallet.Changed -= RefreshCash;
                 StopPreview();
             }
             if (dimBackdrop != null) dimBackdrop.SetActive(false);
@@ -168,8 +160,6 @@ namespace SpeedStars.UI.Emotes
             equipLabel.text = action == EmoteAction.Equipped ? EmoteTexts.Equipped : EmoteTexts.Equip;
             if (action == EmoteAction.Buy) purchasePriceText.text = _model.SelectedPrice.ToString();
         }
-
-        private void RefreshCash() => cashText.text = _wallet.Cash.ToString();
 
         // ---------------------------------------------------------------- taps
 

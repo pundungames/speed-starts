@@ -9,8 +9,7 @@ using Kit = SpeedStars.Tools.Builders.UiBuildKit;
 namespace SpeedStars.Tools.Builders
 {
     /// <summary>
-    /// ThemeSelectScreen prefab dressed with the designer's art (UI/Art/ThemeSelect): Back, the four resource boxes on the
-    /// left, theme name with the two arrows and the action button on the lower right. No dimscreen and no character: the
+    /// ThemeSelectScreen prefab dressed with the designer's art (UI/Art/ThemeSelect): Back, theme name with the two arrows and the action button on the lower right. No dimscreen and no character: the
     /// 3D world behind is the content. Component rects come from ThemeSelect/layout.json; layers of one component share its
     /// art canvas at 100% scale. The action button has one background Image (the view swaps its sprite per state) plus
     /// the currency icon and two labels (price / USE-IN USE). Text slots are fractions of the art, read off the design
@@ -22,13 +21,10 @@ namespace SpeedStars.Tools.Builders
         private const string LayoutPath = ArtFolder + "/layout.json";
         private const string PremiumFolder = ArtFolder + "/Premium";
 
-        private const float ValueSize = 48f;
         private const float NameSize = 56f;
         private const float ActionSize = 64f;
 
         // Text slots as fractions of their art (min, max; y from the bottom).
-        private const float ValueGap = 0.04f; // between a resource icon and its value
-        private const float ValueEdge = 0.93f;
         // Theme name: the plate's inner area, read off layout.json's theme_name_rect (231x78 at 1267,579 inside the 277x90 plate at 1243,572).
         private static readonly Vector2 NameMin = new Vector2(0.087f, 0.056f), NameMax = new Vector2(0.921f, 0.922f);
         private const float ActionGap = 0.03f; // between the currency icon and the price
@@ -45,10 +41,7 @@ namespace SpeedStars.Tools.Builders
             UiArt.Layer(back, "Icon", Art("back_icon"));
             UiArt.MakeButton(back.gameObject, backImage, true, alphaHit: false);
 
-            Text purpleGem = ResourceItem(root, layout, "PurpleGem", "purple_gem", "0");
-            Text entryTicket = ResourceItem(root, layout, "EntryTicket", "entry_ticket", "0/0");
-            Text timedTicket = ResourceItem(root, layout, "TimedTicket", "timed_ticket", "0");
-            Text cash = ResourceItem(root, layout, "Cash", "diamond", "0");
+            // No resource boxes here: the Home ResourceBar stays visible on this screen (ResourceBarView.alsoVisibleOn).
 
             RectTransform nameNode = Kit.Node(root, "ThemeName");
             layout.PlaceOnScreen(nameNode, layout.Get("theme_name"));
@@ -99,10 +92,6 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "actionFrameRed", actionPremium.Red);
             Ref(so, "actionDisabledOverlay", actionPremium.Overlay);
             Ref(so, "gemIcon", gemIcon.gameObject);
-            Ref(so, "purpleGemText", purpleGem);
-            Ref(so, "entryTicketText", entryTicket);
-            Ref(so, "timedTicketText", timedTicket);
-            Ref(so, "cashText", cash);
             so.ApplyModifiedPropertiesWithoutUndo();
 
             UiViewBinder.BindClose(root, "Back"); // base UiPanel.closeButton: the same close rule as every screen
@@ -172,18 +161,6 @@ namespace SpeedStars.Tools.Builders
             UiArt.CanvasLayer(fit, "Art", Art("purple_gem_icon"), bounds);
             holder.gameObject.SetActive(false);
             return holder;
-        }
-
-        /// <summary>Resource box: background, icon, and a left-aligned value text right of the icon.</summary>
-        private static Text ResourceItem(Transform root, UiArt.Layout layout, string nodeName, string artName, string placeholder)
-        {
-            RectTransform node = Kit.Node(root, nodeName);
-            layout.PlaceOnScreen(node, layout.Get(artName));
-            UiArt.Paint(node.gameObject, Art(artName + "_background"), raycast: false);
-            UiArt.Layer(node, "Icon", Art(artName + "_icon"));
-            Vector4 icon = AlphaBounds(artName + "_icon");
-            return UiArt.Slot(node, "Value", placeholder, ValueSize,
-                new Vector2(icon.z + ValueGap, 0.05f), new Vector2(ValueEdge, 0.95f), TextAnchor.MiddleLeft);
         }
 
         private static Button ArrowButton(Transform root, UiArt.Layout layout, string nodeName, string artName)

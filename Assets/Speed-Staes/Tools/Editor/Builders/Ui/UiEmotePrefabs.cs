@@ -26,7 +26,6 @@ namespace SpeedStars.Tools.Builders
 
         private const float NameSize = 34f;
         private const float PriceSize = 34f;
-        private const float ValueSize = 48f;
         private const float PurchasePriceSize = 56f;
         private const float ActionLabelSize = 40f;
         private const float TabLabelSize = 34f;
@@ -41,8 +40,6 @@ namespace SpeedStars.Tools.Builders
         private const float NameHeight = 0.2f;
         private const float PriceBottom = 0.03f;
         private static readonly Vector2 IconMin = new Vector2(0.2f, 0.52f), IconMax = new Vector2(0.8f, 0.95f);
-        private static readonly Vector2 ValueMin = new Vector2(0.06f, 0.05f);
-        private const float ValueTop = 0.04f;
 
         public static void BuildAll(Func<string, Action<RectTransform>, GameObject> build)
         {
@@ -109,7 +106,6 @@ namespace SpeedStars.Tools.Builders
             Kit.Fill(dim.gameObject, new Color(1f, 1f, 1f, 0f), raycast: true);
 
             Button back = BackButton(root, layout);
-            Text cash = CashBox(root, layout);
 
             RectTransform wardrobe = Kit.Stretch(Kit.Node(root, "Wardrobe"));
             RectTransform panel = Kit.Node(wardrobe, "Panel");
@@ -129,7 +125,6 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "itemsContent", content);
             Ref(so, "cardPrefab", cardPrefab);
             Ref(so, "scrollIndicator", indicator);
-            Ref(so, "cashText", cash);
             Ref(so, "equipButton", equip);
             Ref(so, "equipLabel", equipLabel);
             Ref(so, "purchaseButton", purchase);
@@ -147,17 +142,6 @@ namespace SpeedStars.Tools.Builders
             Image image = UiArt.Paint(back.gameObject, Art("back_background"), raycast: true);
             UiArt.Layer(back, "Icon", Art("back_icon"));
             return UiArt.MakeButton(back.gameObject, image, true, alphaHit: false);
-        }
-
-        /// <summary>The Cash box of the costume editor: its art and the value text under the icon.</summary>
-        private static Text CashBox(RectTransform root, UiArt.Layout layout)
-        {
-            RectTransform box = Kit.Node(root, "Cash");
-            layout.PlaceOnScreen(box, layout.Get("diamond"));
-            UiArt.Paint(box.gameObject, Art("diamond_background"), raycast: false);
-            UiArt.Layer(box, "Icon", Art("diamond_icon"));
-            Vector4 icon = UiArt.AlphaBounds(ArtPath("diamond_icon"));
-            return UiArt.Slot(box, "Value", "0", ValueSize, ValueMin, new Vector2(1f - ValueMin.x, icon.y - ValueTop));
         }
 
         /// <summary>The Emote tab art (selected look) as the panel's title: art layers only, not a button.</summary>

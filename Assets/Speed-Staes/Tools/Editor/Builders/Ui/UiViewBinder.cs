@@ -29,8 +29,6 @@ namespace SpeedStars.Tools.Builders
             b.Set("settingsButton", b.Child<Button>("Settings"));
             b.Set("soundButton", b.Child<Button>("Sound"));
             b.Set("environmentButton", b.Child<Button>("Environment"));
-            b.Set("upgradeButton", b.Child<Button>("Upgrade"));
-            b.Set("playersButton", b.Child<Button>("Players"));
             b.Set("highScoresButton", b.Child<Button>("HighScores"));
             b.Set("eventSelectButton", b.Child<Button>("RaceSelect"));
             b.Set("eventNameText", b.Child<Text>("RaceSelect/Label"));
