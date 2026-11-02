@@ -49,7 +49,7 @@ namespace SpeedStars.Tools.Builders
             group.blocksRaycasts = false;
 
             // Behind the words: the dim and the banner. A sibling BEFORE the Group (drawn under it), so the word never squashes them.
-            // The banner is shifted so its text area (not its middle) sits on the Group's centre, where the word is.
+            // Centre the complete banner on screen; place the word group in the banner's text area beside the flag.
             float bannerScale = config.BannerScale;
             Vector2 areaCentreFromBannerCentre = new Vector2(
                 BannerTextArea.center.x - BannerCanvas.x * 0.5f,
@@ -60,7 +60,7 @@ namespace SpeedStars.Tools.Builders
             RectTransform dim = Kit.Stretch(Kit.Node(backdrop, "StartDimScreen"));
             Kit.Fill(dim.gameObject, config.DimColor, raycast: false);
             RectTransform visual = Kit.Node(backdrop, "StartVisualRoot");
-            Kit.Anchor(visual, anchor, new Vector2(0.5f, 0.5f), -areaCentreFromBannerCentre * bannerScale, BannerCanvas * bannerScale);
+            Kit.Anchor(visual, anchor, new Vector2(0.5f, 0.5f), Vector2.zero, BannerCanvas * bannerScale);
             Layer(visual, "start_banner_background");
             Layer(visual, "start_banner_flag");
 
@@ -68,7 +68,7 @@ namespace SpeedStars.Tools.Builders
             // Centre at a share of the screen height from the top (config), so every aspect ratio puts it at the runner's head height.
             // The size carries the group scale (scale stays 1) so the word's font can be real-size and sharp.
             float scale = config.GroupScale;
-            Kit.Anchor(groupRt, anchor, new Vector2(0.5f, 0.5f), Vector2.zero, ArtCanvas * scale);
+            Kit.Anchor(groupRt, anchor, new Vector2(0.5f, 0.5f), areaCentreFromBannerCentre * bannerScale, ArtCanvas * scale);
 
             RectTransform effects = Kit.Stretch(Kit.Node(groupRt, "EffectsRoot"));
             Image[] impact = Layers(effects, Impact);

@@ -64,6 +64,37 @@ namespace SpeedStars.UI.Emotes
         private EmoteScreenModel _model;
         private DeniedFeedback _purchaseDenied;
         private readonly List<EmoteCardView> _cards = new List<EmoteCardView>();
+        private bool _actionsWired, _embedded;
+
+        /// <summary>Reuse the emote controller and cards inside the wardrobe's existing grid.</summary>
+        public void ShowEmbedded(Transform host, ScrollRect scroll, Transform content, ScrollIndicatorView indicator)
+        {
+            if (_model == null) return;
+            WireActions();
+            itemsScroll = scroll;
+            itemsContent = content;
+            scrollIndicator = indicator;
+            equipButton.transform.SetParent(host, false);
+            purchaseButton.transform.SetParent(host, false);
+            if (!_embedded) _service.Changed += RefreshAll;
+            _embedded = true;
+            _model.Begin();
+            BuildCards();
+            RefreshAll();
+            if (!string.IsNullOrEmpty(_model.SelectedId)) _preview.Play(_model.SelectedId);
+        }
+
+        public void HideEmbedded()
+        {
+            if (!_embedded) return;
+            _service.Changed -= RefreshAll;
+            _embedded = false;
+            StopPreview();
+            foreach (var card in _cards) if (card) card.gameObject.SetActive(false);
+            if (equipButton) equipButton.gameObject.SetActive(false);
+            if (purchaseButton) purchaseButton.gameObject.SetActive(false);
+            _purchaseDenied?.Stop();
+        }
 
         [Inject]
         public void ConstructEmotes(IEmoteService service, IEmotePreview preview, IWallet wallet, IInstantiator instantiator, UiMotionConfig motion)
@@ -78,6 +109,13 @@ namespace SpeedStars.UI.Emotes
         protected override void Awake()
         {
             base.Awake();
+            WireActions();
+        }
+
+        private void WireActions()
+        {
+            if (_actionsWired) return;
+            _actionsWired = true;
             equipButton.onClick.AddListener(OnEquip);
             purchaseButton.onClick.AddListener(OnPurchase);
             backButton.onClick.AddListener(StopPreview);
@@ -111,6 +149,7 @@ namespace SpeedStars.UI.Emotes
 
         protected override void OnDestroy()
         {
+            HideEmbedded();
             if (equipButton != null) equipButton.onClick.RemoveListener(OnEquip);
             if (purchaseButton != null) purchaseButton.onClick.RemoveListener(OnPurchase);
             if (backButton != null) backButton.onClick.RemoveListener(StopPreview);

@@ -27,7 +27,7 @@ namespace SpeedStars.Themes
         readonly List<ThemeChunk> live=new List<ThemeChunk>();
         Transform generated;int next;
         void Start(){if(Application.isPlaying&&streamAtRuntime){if(!runner){var r=FindObjectOfType<RunnerBody>();if(r)runner=r.transform;}if(loopCount<2)loopCount=2;if(live.Count==0)Generate();}}
-        void Update(){if(!Application.isPlaying||!streamAtRuntime||!runner||live.Count==0)return;float z=transform.InverseTransformPoint(runner.position).z;for(int n=0;n<8&&live.Count>0&&z>live[0].end+retireDistance;n++){var old=live[0];live.RemoveAt(0);old.gameObject.SetActive(false);Destroy(old.gameObject);live.Add(Build(next++));}}
+        void Update(){if(!Application.isPlaying||!streamAtRuntime||!runner||live.Count==0)return;float z=transform.InverseTransformPoint(runner.position).z;if(live[0].index>0&&z<live[0].start-retireDistance){Generate();return;}for(int n=0;n<8&&live.Count>0&&z>live[0].end+retireDistance;n++){var old=live[0];live.RemoveAt(0);old.gameObject.SetActive(false);Destroy(old.gameObject);live.Add(Build(next++));}}
         public void Generate()
         {
             if(theme&&theme.concept==EnvironmentConcept.Egypt&&Application.isPlaying&&streamAtRuntime){loopCount=Mathf.Max(4,loopCount);retireDistance=Mathf.Max(70,retireDistance);}

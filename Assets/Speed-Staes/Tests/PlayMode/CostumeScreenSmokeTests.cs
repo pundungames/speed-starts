@@ -81,16 +81,13 @@ namespace SpeedStars.PlayTests
             yield return WaitUntil(() => Near(SkinColorOf(skin), wanted), "the runner's skin to take the tapped tone");
             Assert.IsTrue(RequireField<GameObject>(target, "check").activeSelf, "the tapped swatch shows its tick");
 
-            // Emote tab: the emote screen opens over the costume screen; Back brings the costume screen back with the unsaved skin.
+            // Emotes share the wardrobe without dropping its unsaved skin preview.
             UiScreen emote = RequireField<UiScreen>(screen, "emoteScreen");
             Assert.IsFalse(emote.gameObject.activeSelf, "emoteScreen must start closed");
             yield return Tap(RequireField<Button>(TabOf(screen, CostumeTab.Emote), "button"), "Emote tab");
-            yield return WaitOpen(emote, "emoteScreen");
-            yield return WaitClosed(screen, "cosmeticsScreen to step aside");
-
-            yield return Tap(CloseButtonOf(emote), "emoteScreen Back");
-            yield return WaitClosed(emote, "emoteScreen");
-            yield return WaitOpen(screen, "cosmeticsScreen to come back");
+            Assert.IsFalse(emote.gameObject.activeSelf);
+            Assert.IsTrue(screen.gameObject.activeInHierarchy);
+            yield return Tap(RequireField<Button>(TabOf(screen, CostumeTab.Body), "button"), "return to Body tab");
             yield return WaitUntil(() => Near(SkinColorOf(skin), wanted), "the unsaved skin to be shown again after the emote screen");
 
             yield return Tap(CloseButtonOf(screen), "cosmeticsScreen Back");

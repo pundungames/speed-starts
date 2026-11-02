@@ -112,6 +112,7 @@ namespace SpeedStars.Bridge
             if (raceController) race = raceController;
             if (runnerBody) body = runnerBody;
             if (!body && race) body = race.body;
+            if (body) body.EnablePlayerFeedback();
             if (race) _lastSeenFinishTime = race.LastRaceTime;
             if (_subscribed || !body) return;
             body.RunReset += OnRunReset;

@@ -54,6 +54,30 @@ namespace SpeedStars.UI.Home
         private ScreenNavigator _navigator;
         private CanvasGroup _group;
         private float _elapsed;
+        private UiScreen _wardrobeOwner;
+        private Vector2 _homePosition, _wardrobePosition;
+
+        /// <summary>The same live Home resource boxes, placed below the wardrobe Back button.</summary>
+        public void ShowInWardrobe(UiScreen owner, RectTransform backButton)
+        {
+            var rect = (RectTransform)transform;
+            if (_wardrobeOwner == null) _homePosition = rect.anchoredPosition;
+            _wardrobeOwner = owner;
+            var parent = (RectTransform)rect.parent;
+            var corners = new Vector3[4];
+            backButton.GetWorldCorners(corners);
+            float belowBack = parent.rect.yMax - parent.InverseTransformPoint(corners[0]).y + 16f;
+            _wardrobePosition = new Vector2(_homePosition.x, -belowBack);
+            ApplyVisibility();
+        }
+
+        public void LeaveWardrobe(UiScreen owner)
+        {
+            if (_wardrobeOwner != owner) return;
+            ((RectTransform)transform).anchoredPosition = _homePosition;
+            _wardrobeOwner = null;
+            ApplyVisibility();
+        }
 
         /// <summary>The Entry Ticket box of the bar: the target of the daily gift ticket flight.</summary>
         public RectTransform EntryTicketBox => entryTicketBox != null ? entryTicketBox : entryTicketText.transform.parent as RectTransform;
@@ -98,7 +122,9 @@ namespace SpeedStars.UI.Home
         private void ApplyVisibility()
         {
             IUiView top = _navigator?.CurrentScreen;
-            bool visible = homeScreen == null || top == null || ReferenceEquals(top, homeScreen) || IsAlsoVisibleOn(top);
+            bool wardrobe = _wardrobeOwner != null && ReferenceEquals(top, _wardrobeOwner);
+            if (_wardrobeOwner != null) ((RectTransform)transform).anchoredPosition = wardrobe ? _wardrobePosition : _homePosition;
+            bool visible = wardrobe || homeScreen == null || top == null || ReferenceEquals(top, homeScreen) || IsAlsoVisibleOn(top);
             _group.alpha = visible ? 1f : 0f;
             _group.blocksRaycasts = visible;
             _group.interactable = visible;

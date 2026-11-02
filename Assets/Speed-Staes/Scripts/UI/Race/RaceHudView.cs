@@ -44,7 +44,7 @@ namespace SpeedStars.UI.Race
         [Tooltip("Exit: back to the main menu (no ticket refund).")]
         [SerializeField] private Button exitButton;
 
-        [Tooltip("Restart: same event again through the entry gate.")]
+        [Tooltip("Restart: reset the current attempt and begin the countdown again.")]
         [SerializeField] private Button restartButton;
 
         [Header("Optional (old distance bar)")]

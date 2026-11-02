@@ -380,30 +380,31 @@ namespace SpeedStars.Tests.UI.Race
         }
 
         [Test]
-        public void Restart_WhileTheRaceRuns_EntersAgainAndRestartsWithoutTouchingResults()
+        public void Restart_WhileTheRaceRuns_ResetsWithoutAnotherEntry()
         {
             RaceFlowLogic flow = StartRunning();
             _gate.NextResult = EntryResult.EnteredWithTicket;
 
             flow.Restart();
 
-            CollectionAssert.AreEqual(new[] { Dash }, _gate.EnterCalls);
+            Assert.IsEmpty(_gate.EnterCalls);
             Assert.AreEqual(2, _session.Requests.Count);
             Assert.AreSame(_hud, _navigator.CurrentScreen);
             Assert.AreEqual(0, _results.DeniedCount);
         }
 
         [Test]
-        public void Restart_WithNoTicketWhileRunning_OpensTheGateModalWithoutShakingResults()
+        public void Restart_WithNoTicketWhileRunning_StillResetsTheAttempt()
         {
             RaceFlowLogic flow = StartRunning();
             _gate.NextResult = EntryResult.NoTicket;
 
             flow.Restart();
 
-            CollectionAssert.AreEqual(new[] { Dash }, _prompt.Opened);
+            Assert.IsEmpty(_prompt.Opened);
+            Assert.IsEmpty(_gate.EnterCalls);
             Assert.AreEqual(0, _results.DeniedCount);
-            Assert.AreEqual(1, _session.Requests.Count);
+            Assert.AreEqual(2, _session.Requests.Count);
         }
 
         [Test]

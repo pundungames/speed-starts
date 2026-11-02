@@ -97,7 +97,7 @@ namespace SpeedStars.Core.Race
 
         [Tooltip("Where the words' centre sits, as a share of the screen height measured from the top (0.38 = the runner's head height, clear of the HUD's top row). Horizontally always the screen centre. Read when the prefab is built.")]
         [Range(0.05f, 0.95f)]
-        [SerializeField] private float groupCenterFromTopShare = 0.38f;
+        [SerializeField] private float groupCenterFromTopShare = 0.28f;
 
         [Tooltip("READY and SET fill colour: navy (#061A41) on the cream banner (T-064). Replaces the old cream Word Color, which an existing asset still holds but nothing reads.")]
         [SerializeField] private Color readySetColor = new Color(0.024f, 0.102f, 0.255f, 1f);

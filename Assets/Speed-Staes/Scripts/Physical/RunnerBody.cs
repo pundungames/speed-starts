@@ -37,6 +37,11 @@ namespace SpeedStars.Physical
             Sim = new RunnerSim(tuning);
             _origin = Time.timeAsDouble;
             if (input) input.JumpPressed += OnJumpPressed;
+        }
+
+        /// <summary>Only the scene's explicitly selected player receives gameplay feedback.</summary>
+        public void EnablePlayerFeedback()
+        {
             if (!GetComponent<PerfectStepFeedback>()) gameObject.AddComponent<PerfectStepFeedback>();
             if (!GetComponent<EarlyStepFeedback>()) gameObject.AddComponent<EarlyStepFeedback>();
             if (!GetComponent<LateStepFeedback>()) gameObject.AddComponent<LateStepFeedback>();

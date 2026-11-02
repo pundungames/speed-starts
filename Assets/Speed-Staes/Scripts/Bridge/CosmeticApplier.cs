@@ -44,11 +44,18 @@ namespace SpeedStars.Bridge
         {
             if (catalog == null) { Debug.LogWarning("[CosmeticApplier] No cosmetic catalog; outfit not applied.", this); return; }
             Apply(OutfitPlan.Build(outfit, catalog));
+            if (Application.isPlaying && _accessories)
+            {
+                var sparkles = _root.GetComponent<PremiumCosmeticSparkles>() ?? _root.gameObject.AddComponent<PremiumCosmeticSparkles>();
+                sparkles.Refresh(outfit, catalog, _accessories);
+            }
         }
 
         public void Apply(OutfitPlan plan)
         {
             Initialize();
+            var oldSparkles = _root.GetComponent<PremiumCosmeticSparkles>();
+            if (oldSparkles) oldSparkles.Clear();
             HideLegacy(plan);
             ApplySkin(plan.Skin);
             _accessories = _root.Find(accessoriesName);
@@ -59,6 +66,11 @@ namespace SpeedStars.Bridge
                 return;
             }
             foreach (SlotPlan slot in plan.Slots) ApplySlot(slot);
+            if (Application.isPlaying)
+            {
+                var trails = _root.GetComponent<PremiumShoeTrails>() ?? _root.gameObject.AddComponent<PremiumShoeTrails>();
+                trails.Refresh(_accessories.Find("Shoes"));
+            }
         }
 
         void ApplySlot(SlotPlan slot)
@@ -81,6 +93,7 @@ namespace SpeedStars.Bridge
         {
             foreach (Renderer renderer in part.GetComponentsInChildren<Renderer>(true))
             {
+                if (renderer is ParticleSystemRenderer || renderer is TrailRenderer) continue;
                 Material[] materials = renderer.sharedMaterials;
                 for (int i = 0; i < materials.Length; i++)
                 {

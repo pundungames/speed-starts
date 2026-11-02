@@ -3,6 +3,7 @@ using NUnit.Framework;
 using SpeedStars.UI.Emotes;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
+using SpeedStars.UI.Costume;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -38,10 +39,13 @@ namespace SpeedStars.PlayTests
         {
             HomeScreenView home = Require<HomeScreenView>();
             UiScreen screen = RequireField<UiScreen>(home, "emoteScreen");
+            var wardrobe = RequireField<UiScreen>(home, "cosmeticsScreen") as CostumeEditorScreenView;
+            Assert.IsNotNull(wardrobe);
             Assert.IsFalse(screen.gameObject.activeSelf, "emoteScreen must start closed");
 
             yield return Tap(RequireField<Button>(home, "emoteButton"), "emoteButton");
-            yield return WaitOpen(screen, "emoteScreen");
+            yield return WaitOpen(wardrobe, "wardrobe Emote tab");
+            Assert.IsFalse(screen.gameObject.activeSelf, "Standalone emote screen must stay inactive.");
             yield return WaitClosed(home, "HomeScreen to step aside");
 
             Transform content = RequireField<Transform>(screen, "itemsContent");
@@ -67,8 +71,8 @@ namespace SpeedStars.PlayTests
                 Assert.AreNotEqual(equip.gameObject.activeSelf, purchase.gameObject.activeSelf, "exactly one of Equip / Purchase is shown");
             }
 
-            yield return Tap(CloseButtonOf(screen), "emoteScreen Back");
-            yield return WaitClosed(screen, "emoteScreen");
+            yield return Tap(CloseButtonOf(wardrobe), "wardrobe Back");
+            yield return WaitClosed(wardrobe, "wardrobe");
             yield return WaitOpen(home, "HomeScreen to come back");
         }
     }

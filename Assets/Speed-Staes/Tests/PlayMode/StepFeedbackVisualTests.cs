@@ -10,12 +10,28 @@ namespace SpeedStars.PlayTests
 {
     public sealed class StepFeedbackVisualTests
     {
+        int _previousCaptureRate;
+        [SetUp]
+        public void StableCaptureTiming()
+        {
+            _previousCaptureRate = Time.captureFramerate;
+            Time.captureFramerate = 60;
+        }
+        [TearDown]
+        public void RestoreCaptureTiming() => Time.captureFramerate = _previousCaptureRate;
         [UnityTest]
         public IEnumerator CaptureActualRaceFeedback()
         {
             yield return PlaySmokeSupport.LoadScene("Race");
             yield return new WaitForSeconds(4f);
-            var body = UnityEngine.Object.FindObjectsOfType<MonoBehaviour>().First(b => b.GetType().Name == "RunnerBody");
+            var adapter = UnityEngine.Object.FindObjectsOfType<MonoBehaviour>().First(b => b.GetType().Name == "RaceSessionAdapter");
+            var body = (MonoBehaviour)adapter.GetType().GetField("body",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(adapter);
+            Assert.IsNotNull(body, "Capture must use the player's runner, not a background runner.");
+            foreach (var other in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>().Where(b => b.GetType().Name == "RunnerBody" && b != body))
+                Assert.IsFalse(other.GetComponents<MonoBehaviour>().Any(c => c.GetType().Name == "PerfectStepFeedback"
+                    || c.GetType().Name == "EarlyStepFeedback" || c.GetType().Name == "LateStepFeedback"
+                    || c.GetType().Name == "MomentumWindFeedback"), "NPCs must not have player feedback components.");
             var type = body.GetType();
             var input = type.GetField("input").GetValue(body);
             var inject = input.GetType().GetMethod("Inject");
@@ -29,26 +45,81 @@ namespace SpeedStars.PlayTests
             tap(0, false);
             float deadline = Time.time + 2;
             while (!airborne() && Time.time < deadline) yield return null;
+            Assert.IsTrue(airborne(), "Initial stride must enter flight before the next press.");
             while (airborne() && Time.time < deadline) yield return null;
             tap(1, true);
             yield return null;
             tap(1, false);
             yield return new WaitForEndOfFrame();
             Capture("contact");
+            AssertLabelBehind(body.transform, "PERFECT");
             foreach (var line in UnityEngine.Object.FindObjectsOfType<LineRenderer>())
                 if (line.name == "Contact Ring") Debug.Log($"VFX CONTACT position={line.transform.position} width={line.widthMultiplier} color={line.startColor} shader={line.sharedMaterial.shader.name} supported={line.sharedMaterial.shader.isSupported}");
             var tuning = type.GetField("tuning").GetValue(body);
             tuning.GetType().GetField("pushGain").SetValue(tuning, 8f);
+            float oldKick = (float)tuning.GetType().GetField("headKick").GetValue(tuning);
+            float oldNod = (float)tuning.GetType().GetField("headNod").GetValue(tuning);
+            tuning.GetType().GetField("headKick").SetValue(tuning, 0f);
+            tuning.GetType().GetField("headNod").SetValue(tuning, 0f);
             type.GetMethod("ResetRun").Invoke(body, null);
             tap(0, true);
             yield return null;
             tap(0, false);
-            yield return new WaitForSeconds(0.3f);
+            for (int step = 0; step < 3; step++)
+            {
+                deadline = Time.time + 2;
+                while (!airborne() && Time.time < deadline) yield return null;
+                Assert.IsTrue(airborne());
+                while (airborne() && Time.time < deadline) yield return null;
+                tap((step + 1) % 2, true);
+                yield return null;
+                tap((step + 1) % 2, false);
+                yield return null;
+            }
             yield return new WaitForEndOfFrame();
             Capture("wind");
+            Assert.AreEqual(3, body.GetComponentsInChildren<LineRenderer>().Count(l => l.name == "Momentum Air Stroke"));
             foreach (var line in UnityEngine.Object.FindObjectsOfType<LineRenderer>())
                 if (line.name == "Momentum Wind Ribbon") Debug.Log($"VFX WIND width={line.widthMultiplier} alpha={line.colorGradient.Evaluate(0).a} start={line.GetPosition(0)} end={line.GetPosition(line.positionCount-1)} shader={line.sharedMaterial.shader.name} supported={line.sharedMaterial.shader.isSupported} enabled={line.enabled} bounds={line.bounds} camera={Camera.main.transform.position}");
             Assert.IsNotNull(Camera.main);
+            tuning.GetType().GetField("pushGain").SetValue(tuning, 1.5f);
+            tuning.GetType().GetField("headKick").SetValue(tuning, oldKick);
+            tuning.GetType().GetField("headNod").SetValue(tuning, oldNod);
+            tuning.GetType().GetField("lateSpeed").SetValue(tuning, 0.3f);
+            type.GetMethod("ResetRun").Invoke(body, null);
+            tap(0, true);
+            yield return null;
+            tap(0, false);
+            yield return new WaitForSeconds(0.48f);
+            tap(1, true);
+            yield return null;
+            tap(1, false);
+            yield return new WaitForEndOfFrame();
+            Capture("late");
+            AssertLabelBehind(body.transform, "LATE");
+            deadline = Time.time + 2;
+            while (!airborne() && Time.time < deadline) yield return null;
+            Assert.IsTrue(airborne());
+            while (airborne() && Time.time < deadline) yield return null;
+            tap(0, true);
+            yield return null;
+            tap(0, false);
+            yield return new WaitForEndOfFrame();
+            Capture("recovery");
+            AssertLabelBehind(body.transform, "RECOVER!");
+            Assert.IsFalse(UnityEngine.Object.FindObjectsOfType<TextMesh>().Any(t => t.text == "LATE"),
+                "Recovery must replace the late warning without overlapping text.");
+        }
+        static void AssertLabelBehind(Transform runner, string text)
+        {
+            var label = UnityEngine.Object.FindObjectsOfType<TextMesh>().FirstOrDefault(t => t.text == text);
+            Assert.IsNotNull(label, text + " label must be visible.");
+            Vector3 head = runner.GetComponentsInChildren<Transform>(true).First(t => t.name == "B-head").position;
+            Vector3 right = Camera.main.transform.right;
+            float side = Vector3.Dot(runner.forward, right) < 0 ? -1 : 1;
+            Assert.Less(Vector3.Dot(label.transform.position - head, right) * side, -0.5f);
+            Assert.Greater(label.transform.position.y, head.y - 0.05f,
+                "Text must clear the chest-height wind ribbon.");
         }
         static void Capture(string name)
         {

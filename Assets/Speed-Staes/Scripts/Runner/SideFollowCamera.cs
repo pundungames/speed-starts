@@ -1,4 +1,5 @@
 using UnityEngine;
+using SpeedStars.Physical;
 
 namespace SpeedStars.Runner
 {
@@ -15,6 +16,27 @@ namespace SpeedStars.Runner
         public float leadAhead = 0.6f;
         public float lookHeight = 0.9f;
         public float followSharpness = 12f;
+        RunnerBody _body;
+
+        void OnEnable()
+        {
+            _body = target ? target.GetComponent<RunnerBody>() : null;
+            if (_body) _body.RunReset += SnapToTarget;
+        }
+
+        void OnDisable()
+        {
+            if (_body) _body.RunReset -= SnapToTarget;
+            _body = null;
+        }
+
+        public void SnapToTarget()
+        {
+            if (!target) return;
+            transform.position = target.position + target.forward * leadAhead + target.right * distance + Vector3.up * height;
+            transform.rotation = Quaternion.LookRotation(-target.right, Vector3.up)
+                * Quaternion.Euler(Mathf.Atan2(height - lookHeight, distance) * Mathf.Rad2Deg, 0f, 0f);
+        }
 
         void LateUpdate()
         {

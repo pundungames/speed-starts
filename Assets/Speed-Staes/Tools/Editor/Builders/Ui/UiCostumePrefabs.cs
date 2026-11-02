@@ -84,8 +84,8 @@ namespace SpeedStars.Tools.Builders
             (CostumeTab.Emote, "category_emote"),
         };
 
-        private const string BodyTabIcon = "stats_height_icon";
-        private const string BodyTabIconBounds = "category_emote_icon"; // where the figure and the label sit inside the tab
+        private const string BodyTabIcon = "category_face_icon";
+        private const string BodyTabIconBounds = "category_face_icon";
         private const int DropdownVisibleRows = 5;                      // rows of the open preset list before it scrolls
 
         // Swatch colour inside its card frame (fractions of the card), so the frame stays visible around it.
@@ -277,6 +277,9 @@ namespace SpeedStars.Tools.Builders
             Button purchase = PurchaseButton(root, layout, out Text price, out Image purchaseBackground);
 
             RectTransform wardrobe = Kit.Stretch(Kit.Node(root, "Wardrobe"));
+            wardrobe.pivot = Vector2.one;
+            wardrobe.offsetMin = wardrobe.offsetMax = Vector2.zero;
+            wardrobe.localScale = new Vector3(1.2f, 1.2f, 1f);
             RectTransform panel = Kit.Node(wardrobe, "Panel");
             layout.PlaceOnScreen(panel, layout.Get("wardrobe"));
             UiArt.Paint(panel.gameObject, Art("wardrobe_background"), raycast: true);
@@ -560,6 +563,18 @@ namespace SpeedStars.Tools.Builders
                 };
                 tabs[i] = Tab(group, layout, rect, TabArt[i].tab, TabArt[i].stem);
             }
+            // Keep all ten categories inside the actual panel, independent of the source art's canvas.
+            var panel = wardrobe.Find("Panel") as RectTransform;
+            const float columnTop = 0.87f, columnBottom = 0.035f, columnGap = 0.006f;
+            float cell = (columnTop - columnBottom - columnGap * (tabs.Length - 1)) / tabs.Length;
+            for (int i = 0; i < tabs.Length; i++)
+            {
+                var rect = (RectTransform)tabs[i].transform;
+                rect.SetParent(panel, false);
+                rect.anchorMin = new Vector2(0.685f, columnTop - i * (cell + columnGap) - cell);
+                rect.anchorMax = new Vector2(0.98f, columnTop - i * (cell + columnGap));
+                rect.offsetMin = rect.offsetMax = Vector2.zero;
+            }
             return tabs;
         }
 
@@ -588,12 +603,16 @@ namespace SpeedStars.Tools.Builders
             }
             else if (figure)
             {
-                // The figure sits where the Emote tab's icon sits; kept in its own aspect.
-                Vector4 spot = AlphaBounds(BodyTabIconBounds);
-                RectTransform figureNode = Kit.Span(Kit.Node(node, "Icon"), new Vector2(spot.x, spot.y), new Vector2(spot.z, spot.w));
-                Image figureImage = UiArt.Paint(figureNode.gameObject, Art(BodyTabIcon), raycast: false);
-                figureImage.preserveAspect = true;
-                icon = figureNode.gameObject;
+                // The former Face figure already carries its tab-sized transparent canvas.
+                icon = UiArt.Layer(node, "Icon", Art(BodyTabIcon)).gameObject;
+            }
+            else if (tab == CostumeTab.Face)
+            {
+                Vector4 spot = AlphaBounds("category_face_icon");
+                RectTransform glasses = Kit.Span(Kit.Node(node, "Icon"), new Vector2(spot.x, spot.y), new Vector2(spot.z, spot.w));
+                Image glassesImage = UiArt.Paint(glasses.gameObject, Art("category_face_glasses"), raycast: false);
+                glassesImage.preserveAspect = true;
+                icon = glasses.gameObject;
             }
             else
             {

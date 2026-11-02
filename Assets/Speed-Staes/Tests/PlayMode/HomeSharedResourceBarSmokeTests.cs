@@ -52,7 +52,7 @@ namespace SpeedStars.PlayTests
         [UnityTest]
         public IEnumerator Emote_KeepsTheHomeResourceBar_WithoutItsOwnBoxes()
         {
-            yield return OpenAndCheck("emoteButton", "emoteScreen");
+            yield return OpenAndCheck("emoteButton", "cosmeticsScreen");
         }
 
         private static IEnumerator OpenAndCheck(string buttonField, string screenField)

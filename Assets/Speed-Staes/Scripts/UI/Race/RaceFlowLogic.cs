@@ -12,7 +12,7 @@ namespace SpeedStars.UI.Race
     /// The decisions of the Race scene, as pure C# (RaceFlow is the thin Zenject shell around it). Start: take the
     /// confirmed entry from the gate and start the race with the catalog distance; with no pending entry (Play pressed
     /// in the editor straight from the Race scene) start the selected event for free and warn once. Finish: pay the gem reward once and open Results.
-    /// Race again and the HUD Restart go through the entry gate again (a ticket may be spent again); no ticket opens the Entry Gate modal.
+    /// Results Race Again enters a new race through the gate; HUD Restart resets the current attempt immediately.
     /// </summary>
     public sealed class RaceFlowLogic : IDisposable
     {
@@ -214,12 +214,20 @@ namespace SpeedStars.UI.Race
         }
 
         /// <summary>
-        /// Runs the current event again through the entry gate (a ticket may be spent again, none is refunded for the run
-        /// being left). Works while the race runs and from Results alike; ignored before the first start or during a scene move.
+        /// Resets an unfinished attempt directly. From Results, enters a new race through the entry gate.
+        /// Ignored before the first start or during a scene move.
         /// </summary>
         public void Restart()
         {
             if (!_started || !_hasCurrent || _sceneFlow.IsTransitioning) return;
+
+            // Restarting an unfinished attempt must not be blocked by the entry balance.
+            // Results Race Again still enters a new race through the gate below.
+            if (!_resultsOpen)
+            {
+                BeginRace(_current.Id);
+                return;
+            }
 
             EntryResult result = _gate.Enter(_current.Id);
             switch (result)

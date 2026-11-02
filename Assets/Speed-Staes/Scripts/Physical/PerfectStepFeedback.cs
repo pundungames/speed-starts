@@ -153,7 +153,7 @@ namespace SpeedStars.Physical
                 b.showLabel = _pendingLabel;
                 b.recovery = _pendingRecovery;
                 b.label.text = b.recovery ? "RECOVER!" : "PERFECT";
-                b.label.characterSize = b.recovery ? 0.04f : 0.035f;
+                b.label.characterSize = b.recovery ? 0.026f : 0.024f;
                 b.flash.gameObject.SetActive(!b.recovery);
                 foreach (var spark in b.sparks) spark.gameObject.SetActive(!b.recovery);
                 foreach (var trail in b.trails) trail.gameObject.SetActive(!b.recovery);

@@ -7,8 +7,8 @@ namespace SpeedStars.Physical
     [DefaultExecutionOrder(1200)]
     public sealed class LateStepFeedback : MonoBehaviour
     {
-        const float Duration = 0.55f;
-        const float RepeatDelay = 1.5f;
+        const float Duration = 0.4f;
+        const float RepeatDelay = 2f;
         RunnerBody _body;
         Transform _head;
         Camera _camera;
@@ -47,7 +47,7 @@ namespace SpeedStars.Physical
             text.anchor = TextAnchor.MiddleCenter;
             text.fontStyle = FontStyle.Bold;
             text.fontSize = 64;
-            text.characterSize = 0.045f;
+            text.characterSize = 0.024f;
             var renderer = go.GetComponent<MeshRenderer>();
             renderer.sortingOrder = order;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -56,6 +56,14 @@ namespace SpeedStars.Physical
         }
         void OnTapped(int leg, bool pressed, double at)
         {
+            if (pressed && _body.Sim.LastResult == PressResult.Good && _body.Sim.LastEfficiency >= 0.7f)
+            {
+                // A successful recovery replaces the old warning; retain its repeat cooldown.
+                _pending = false;
+                _age = Duration;
+                if (_root) _root.SetActive(false);
+                return;
+            }
             if (!pressed || _body.Sim.LastResult != PressResult.Late || at - _lastShown < RepeatDelay) return;
             _lastShown = at;
             _pending = true;
@@ -82,8 +90,8 @@ namespace SpeedStars.Physical
             _root.transform.rotation = _camera ? _camera.transform.rotation : Quaternion.identity;
             // Keep the first part fully readable, then fade smoothly.
             float alpha = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.3f, 1f, t));
-            _label.color = new Color(1f, 0.18f, 0.2f, alpha);
-            _shadow.color = new Color(0.12f, 0.02f, 0.03f, alpha * 0.85f);
+            _label.color = new Color(0.86f, 0.25f, 0.27f, alpha * 0.8f);
+            _shadow.color = new Color(0.12f, 0.02f, 0.03f, alpha * 0.5f);
             _age += Time.deltaTime;
         }
         void Clear()

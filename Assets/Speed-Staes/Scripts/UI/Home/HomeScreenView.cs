@@ -320,7 +320,12 @@ namespace SpeedStars.UI.Home
 
         private void OnEditRacer() => PushScreen(cosmeticsScreen, nameof(cosmeticsScreen));
 
-        private void OnEmote() => PushScreen(emoteScreen, nameof(emoteScreen));
+        private void OnEmote()
+        {
+            if (cosmeticsScreen is SpeedStars.UI.Costume.CostumeEditorScreenView wardrobe)
+                wardrobe.OpenEmoteTab();
+            PushScreen(cosmeticsScreen, nameof(cosmeticsScreen));
+        }
 
         private void OnHighScores() => PushScreen(highScoresScreen, nameof(highScoresScreen));
 

@@ -56,6 +56,8 @@ namespace SpeedStars.Runner
         {
             if(!Application.isPlaying||!streamAtRuntime||!runner||live.Count==0)return;
             float z=transform.InverseTransformPoint(runner.position).z;
+            // Restart can return behind sections already retired from the stream.
+            if(live[0].index>1&&z<live[0].start-retireDistance){Generate();return;}
             // A teleport can retire several sections. Keep work bounded in one frame.
             for(int n=0;n<8&&live.Count>0&&z>live[0].end+retireDistance;n++)
             {

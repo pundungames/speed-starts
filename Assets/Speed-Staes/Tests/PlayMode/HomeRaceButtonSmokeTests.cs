@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using SpeedStars.Core.Race;
 using SpeedStars.Meta.Config;
@@ -386,6 +387,58 @@ namespace SpeedStars.PlayTests
         }
 
         // ---- helpers ----
+
+        [UnityTest]
+        public IEnumerator Race_RestartButton_ResetsPlayerClockCameraAndCountdown()
+        {
+            SetTickets(1);
+            yield return EnterRaceWithTicket();
+            SetTickets(0); // HUD restart must work even when entry used the last ticket.
+            IRaceSession session = FindRaceSession();
+            var signal = (IRaceStartSignal)session;
+            yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.Go, "initial GO", 12f);
+            Component body = RequireField<Component>(session, "body");
+            Vector3 startPosition = body.transform.position;
+            var input = body.GetType().GetField("input").GetValue(body);
+            var inject = input.GetType().GetMethod("Inject");
+            inject.Invoke(input, new object[] { 0, true, Time.timeAsDouble });
+            yield return null;
+            inject.Invoke(input, new object[] { 0, false, Time.timeAsDouble });
+            yield return new WaitForSeconds(0.5f);
+            Assert.Greater(session.Distance, 0);
+            // Reproduce a late restart after the streaming world has retired the start sections.
+            ((Behaviour)body).enabled = false;
+            body.transform.position = startPosition + body.transform.forward * 240f;
+            yield return null;
+            yield return null;
+            var hud = Require<RaceHudView>();
+            yield return Tap(RequireField<Button>(hud, "restartButton"), "HUD Restart");
+            Assert.AreEqual(RaceStartPhase.Ready, signal.StartPhase);
+            Assert.AreEqual(0, session.Distance, 0.001f);
+            Assert.AreEqual(0, session.RaceTime, 0.001);
+            Assert.AreEqual(startPosition, body.transform.position);
+            Assert.IsFalse((bool)body.GetType().GetField("acceptInput").GetValue(body));
+            yield return null;
+            Assert.AreEqual("0.00", RequireField<Text>(hud, "timeText").text);
+            var follow = Object.FindObjectsOfType<MonoBehaviour>().FirstOrDefault(c => c.GetType().Name == "SideFollowCamera");
+            Assert.IsNotNull(follow);
+            float lead = (float)follow.GetType().GetField("leadAhead").GetValue(follow);
+            float distance = (float)follow.GetType().GetField("distance").GetValue(follow);
+            float height = (float)follow.GetType().GetField("height").GetValue(follow);
+            Vector3 expectedCamera = startPosition + body.transform.forward * lead + body.transform.right * distance + Vector3.up * height;
+            Assert.Less(Vector3.Distance(expectedCamera, follow.transform.position), 0.1f, "Restart must snap the camera back immediately.");
+            yield return null;
+            var chunks = Object.FindObjectsOfType<MonoBehaviour>().Where(c => c.GetType().Name == "LoopWayChunk" || c.GetType().Name == "ThemeChunk")
+                .Where(c => c.gameObject.activeInHierarchy).ToArray();
+            Assert.Greater(chunks.Length, 0, "Restart must restore streamed track sections.");
+            Assert.LessOrEqual(chunks.Min(c => (int)c.GetType().GetField("index").GetValue(c)), 1,
+                "Start sections retired by the previous run must be rebuilt.");
+            ((Behaviour)body).enabled = true;
+            yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.Go, "restart GO", 12f);
+            Assert.IsTrue((bool)body.GetType().GetField("acceptInput").GetValue(body));
+            yield return Tap(RequireField<Button>(hud, "exitButton"), "HUD Main Menu");
+            yield return WaitForScene(HomeScene);
+        }
 
         private IEnumerator EnterRaceWithTicket()
         {

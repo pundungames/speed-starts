@@ -27,7 +27,7 @@ namespace SpeedStars.Themes
         bool appliedDemoRunning;
         void SyncDemoMode(){appliedDemoRunning=demoRunning;if(input){input.enabled=!demoRunning;input.Clear();for(int leg=0;leg<2;leg++)input.Inject(leg,false,Time.timeAsDouble);}heldLeg=-1;demoLeg=0;nextTap=Time.timeAsDouble+.2;}
         GUIStyle title,label,small;Texture2D pixel;
-        void Start(){Application.runInBackground=true;if(wardrobe){wardrobe.handleInput=false;wardrobe.showControls=false;}SelectTheme(activeTheme);SyncDemoMode();}
+        void Start(){Application.runInBackground=true;if(body)body.EnablePlayerFeedback();if(wardrobe){wardrobe.handleInput=false;wardrobe.showControls=false;}SelectTheme(activeTheme);SyncDemoMode();}
         void Update()
         {
             if(activeTheme!=appliedTheme)SelectTheme(activeTheme);

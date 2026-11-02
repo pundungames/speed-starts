@@ -31,6 +31,7 @@ namespace SpeedStars.PlayTests
             _runner = new GameObject("Perfect Step Test Runner");
             _input = _runner.AddComponent(RuntimeType("SpeedStars.Runner.RunnerInput"));
             _body = _runner.AddComponent(RuntimeType("SpeedStars.Physical.RunnerBody"));
+            _body.GetType().GetMethod("EnablePlayerFeedback").Invoke(_body, null);
             yield return null;
             Inject(0, true);
             yield return null;
@@ -66,6 +67,7 @@ namespace SpeedStars.PlayTests
             _runner = new GameObject("Perfect Step Test Runner");
             _input = _runner.AddComponent(RuntimeType("SpeedStars.Runner.RunnerInput"));
             _body = _runner.AddComponent(RuntimeType("SpeedStars.Physical.RunnerBody"));
+            _body.GetType().GetMethod("EnablePlayerFeedback").Invoke(_body, null);
             yield return null;
             Inject(0, true);
             yield return null;
@@ -125,30 +127,42 @@ namespace SpeedStars.PlayTests
             _runner = new GameObject("Momentum Wind Test Runner");
             _input = _runner.AddComponent(RuntimeType("SpeedStars.Runner.RunnerInput"));
             _body = _runner.AddComponent(RuntimeType("SpeedStars.Physical.RunnerBody"));
+            _body.GetType().GetMethod("EnablePlayerFeedback").Invoke(_body, null);
             var tuning = _body.GetType().GetField("tuning").GetValue(_body);
             tuning.GetType().GetField("pushGain").SetValue(tuning, 8f);
+            tuning.GetType().GetField("headKick").SetValue(tuning, 0f);
+            tuning.GetType().GetField("headNod").SetValue(tuning, 0f);
             yield return null;
             Assert.IsFalse(UnityEngine.Object.FindObjectsOfType<LineRenderer>()
-                .Any(l => l.name == "Momentum Wind Ribbon"));
+                .Any(l => l.name == "Momentum Air Stroke"));
             Inject(0, true);
+            yield return null;
             Inject(0, false);
-            yield return new WaitForSeconds(0.3f);
+            for (int step = 0; step < 3; step++)
+            {
+                float deadline = Time.time + 2;
+                while (!Read<bool>("Airborne") && Time.time < deadline) yield return null;
+                while (Read<bool>("Airborne") && Time.time < deadline) yield return null;
+                Inject((step + 1) % 2, true);
+                yield return null;
+                Inject((step + 1) % 2, false);
+                yield return null;
+                Assert.AreEqual("Good", Read<object>("LastResult").ToString());
+                if (step < 2) Assert.IsFalse(UnityEngine.Object.FindObjectsOfType<LineRenderer>()
+                    .Any(l => l.name == "Momentum Air Stroke"), "Speed alone or fewer than three good steps must not emit.");
+            }
             var ribbon = UnityEngine.Object.FindObjectsOfType<LineRenderer>()
-                .FirstOrDefault(l => l.name == "Momentum Wind Ribbon");
-            Assert.IsNotNull(ribbon, "Running at speed must show back airflow.");
+                .FirstOrDefault(l => l.name == "Momentum Air Stroke");
+            Assert.IsNotNull(ribbon, "Three efficient alternating good steps produce brief air strokes.");
             Assert.Greater(ribbon.widthMultiplier, 0);
             Vector3 head = ribbon.GetPosition(0), tail = ribbon.GetPosition(ribbon.positionCount - 1);
-            Assert.Less(Vector3.Dot(tail - head, _runner.transform.forward), -0.2f,
+            Assert.Less(Vector3.Dot(tail - head, _runner.transform.forward), -0.15f,
                 "Airflow must trail behind the back.");
             Assert.Greater(head.y - _runner.transform.position.y, 1f);
+            yield return new WaitForSeconds(0.4f);
+            Assert.IsFalse(ribbon.gameObject.activeInHierarchy, "Air strokes expire even if the runner still has speed.");
             _body.GetType().GetMethod("ResetRun").Invoke(_body, null);
-            Assert.IsFalse(ribbon.gameObject.activeInHierarchy, "Reset clears airflow immediately.");
-            Inject(0, true);
-            Inject(0, false);
-            yield return new WaitForSeconds(0.3f);
-            Assert.IsTrue(ribbon.gameObject.activeInHierarchy);
-            yield return new WaitForSeconds(4f);
-            Assert.IsFalse(ribbon.gameObject.activeInHierarchy, "Wind must fade as the runner slows to a stop.");
+            Assert.IsFalse(ribbon.gameObject.activeInHierarchy);
         }
 
         [UnityTest]
@@ -157,6 +171,7 @@ namespace SpeedStars.PlayTests
             _runner = new GameObject("Recovery Test Runner");
             _input = _runner.AddComponent(RuntimeType("SpeedStars.Runner.RunnerInput"));
             _body = _runner.AddComponent(RuntimeType("SpeedStars.Physical.RunnerBody"));
+            _body.GetType().GetMethod("EnablePlayerFeedback").Invoke(_body, null);
             var tuning = _body.GetType().GetField("tuning").GetValue(_body);
             tuning.GetType().GetField("lateSpeed").SetValue(tuning, 0.3f);
             yield return null;
@@ -198,3 +213,4 @@ namespace SpeedStars.PlayTests
         }
     }
 }
+
