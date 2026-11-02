@@ -149,7 +149,7 @@ namespace SpeedStars.Tools.Builders
                 // Wide: the same moment from farther away and higher, so the whole field and every lane is in the picture.
                 var follow = camera.GetComponent<SpeedStars.Runner.SideFollowCamera>();
                 float back = follow != null ? follow.distance * 2.5f : 11f;
-                float up = follow != null ? follow.height * 2f : 2f;
+                float up = follow != null ? follow.StandingHeight * 2f : 2f;
                 Vector3 focus = player.position + forward * (follow != null ? follow.leadAhead : 0f);
                 camera.transform.position = focus + player.right * back + Vector3.up * up;
                 camera.transform.rotation = Quaternion.LookRotation(-player.right, Vector3.up) * Quaternion.Euler(8f, 0f, 0f);
@@ -164,9 +164,9 @@ namespace SpeedStars.Tools.Builders
             var follow = camera.GetComponent<SpeedStars.Runner.SideFollowCamera>();
             if (follow == null) return;
             Transform t = follow.target != null ? follow.target : fallbackTarget;
-            camera.transform.position = t.position + t.forward * follow.leadAhead + t.right * follow.distance + Vector3.up * follow.height;
+            camera.transform.position = t.position + t.forward * follow.leadAhead + t.right * follow.distance + Vector3.up * follow.StandingHeight;
             camera.transform.rotation = Quaternion.LookRotation(-t.right, Vector3.up)
-                * Quaternion.Euler(Mathf.Atan2(follow.height - follow.lookHeight, follow.distance) * Mathf.Rad2Deg, 0f, 0f);
+                * Quaternion.Euler(follow.pitch, 0f, 0f);
         }
 
         /// <summary>Overlay canvases are not drawn into a camera's texture: show them as Screen Space - Camera.</summary>

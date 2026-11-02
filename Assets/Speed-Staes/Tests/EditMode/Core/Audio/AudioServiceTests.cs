@@ -23,6 +23,10 @@ namespace SpeedStars.Tests.Audio
 
             public bool MusicOn => Music;
             public bool SfxOn => Sfx;
+            public float CameraDistance => 1f;
+            public float CameraDistanceMin => 1f;
+            public float CameraDistanceMax => 1f;
+            public void SetCameraDistance(float value) { }
             public string LanguageCode => "en";
             public string FlagCode => "TR";
             public string PlayerName => "Player";

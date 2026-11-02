@@ -132,6 +132,7 @@ namespace SpeedStars.Meta.Persistence
             PlayerProgress fresh = CreateNew();
             fresh.MusicChoice = old.MusicChoice;
             fresh.SfxChoice = old.SfxChoice;
+            fresh.CameraDistance = old.CameraDistance;
             fresh.LanguageCode = old.LanguageCode;
             fresh.FlagCode = old.FlagCode;
             fresh.PlayerName = old.PlayerName;

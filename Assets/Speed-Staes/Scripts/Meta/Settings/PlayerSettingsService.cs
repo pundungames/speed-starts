@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
+using UnityEngine;
 
 namespace SpeedStars.Meta.Settings
 {
@@ -25,6 +26,9 @@ namespace SpeedStars.Meta.Settings
 
         public bool MusicOn => Resolve(Progress.MusicChoice, _config.DefaultMusicOn);
         public bool SfxOn => Resolve(Progress.SfxChoice, _config.DefaultSfxOn);
+        public float CameraDistance => Progress.CameraDistance > 0f ? Progress.CameraDistance : _config.DefaultCameraDistance;
+        public float CameraDistanceMin => _config.MinCameraDistance;
+        public float CameraDistanceMax => _config.MaxCameraDistance;
 
         public string LanguageCode
         {
@@ -61,6 +65,14 @@ namespace SpeedStars.Meta.Settings
         {
             if (MusicOn == on) return;
             Progress.MusicChoice = ToChoice(on);
+            Commit();
+        }
+
+        public void SetCameraDistance(float value)
+        {
+            float clamped = Mathf.Clamp(value, _config.MinCameraDistance, _config.MaxCameraDistance);
+            if (Mathf.Approximately(CameraDistance, clamped)) return;
+            Progress.CameraDistance = clamped;
             Commit();
         }
 

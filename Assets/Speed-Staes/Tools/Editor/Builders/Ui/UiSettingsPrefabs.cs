@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.IO;
 using SpeedStars.UI.Settings;
 using UnityEditor;
@@ -346,6 +347,7 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "nameLabel", nameRow.Find("Label").GetComponent<Text>());
             Ref(so, "doneLabel", doneLabel);
             Ref(so, "musicToggle", toggle);
+            AddCameraRow(rowPrefab, musicRow, so, scene);
             Ref(so, "languageButton", languageButton);
             Ref(so, "languageValueText", languageValue);
             Ref(so, "languageArrow", languageArrow);
@@ -481,6 +483,80 @@ namespace SpeedStars.Tools.Builders
         }
 
         private static RectTransform Slot(RectTransform row) => (RectTransform)row.Find("ControlSlot");
+
+        /// <summary>The Camera row right under the Music row, wired to the view: a thin line with a small round handle.</summary>
+        private static void AddCameraRow(GameObject rowPrefab, RectTransform musicRow, SerializedObject so, UnityEngine.SceneManagement.Scene scene)
+        {
+            RectTransform row = Row(rowPrefab, musicRow.parent, "CameraRow", "row_camera_icon", SettingsTexts.CameraDistance, scene);
+            row.SetSiblingIndex(musicRow.GetSiblingIndex() + 1);
+
+            float inset = P(CameraHandleSize * 0.5f);
+            RectTransform node = Kit.Stretch(Kit.Node(Slot(row), "CameraDistanceSlider"));
+            Image hit = node.gameObject.AddComponent<Image>(); // the line is thin: the whole slot takes the finger
+            hit.color = Color.clear;
+
+            Image line = Band(node, "Line", P(CameraLineHeight), inset).gameObject.AddComponent<Image>();
+            line.color = new Color(UiArt.Navy.r, UiArt.Navy.g, UiArt.Navy.b, 0.25f);
+            line.raycastTarget = false;
+
+            RectTransform fill = Kit.Node(Band(node, "FillArea", P(CameraLineHeight), inset), "Fill");
+            Image fillImage = fill.gameObject.AddComponent<Image>();
+            fillImage.color = new Color32(255, 32, 45, 255); // the red of toggle_on_track
+            fillImage.raycastTarget = false;
+
+            RectTransform handle = Kit.Node(Band(node, "HandleArea", P(CameraHandleSize), inset), "Handle");
+            Image handleImage = handle.gameObject.AddComponent<Image>();
+            handleImage.sprite = Art("slider_knob");
+            handleImage.preserveAspect = true;
+
+            Slider slider = node.gameObject.AddComponent<Slider>();
+            slider.targetGraphic = handleImage;
+            slider.fillRect = fill; // the slider takes over the anchors of these two; their sizes below are what stays
+            slider.handleRect = handle;
+            slider.direction = Slider.Direction.LeftToRight;
+            fill.sizeDelta = Vector2.zero;
+            handle.sizeDelta = new Vector2(P(CameraHandleSize), 0f);
+
+            Ref(so, "cameraDistanceLabel", row.Find("Label").GetComponent<Text>());
+            Ref(so, "cameraDistanceSlider", slider);
+        }
+
+        private const float CameraLineHeight = 6f;
+        private const float CameraHandleSize = 44f;
+
+        /// <summary>A strip of this height across the middle of the parent, kept this far from both ends.</summary>
+        private static RectTransform Band(RectTransform parent, string name, float height, float inset)
+        {
+            RectTransform band = Kit.Node(parent, name);
+            band.anchorMin = new Vector2(0f, 0.5f);
+            band.anchorMax = new Vector2(1f, 0.5f);
+            band.anchoredPosition = Vector2.zero;
+            band.sizeDelta = new Vector2(-2f * inset, height);
+            return band;
+        }
+
+        /// <summary>Puts a fresh Camera row into the existing popup prefab, leaving the rest of it as it is.</summary>
+        internal static void AddCameraRowToPrefab()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(UiPrefabPaths.SettingsPopup);
+            try
+            {
+                SettingsPopupView view = root.GetComponentInChildren<SettingsPopupView>(true);
+                var so = new SerializedObject(view);
+                GameObject rowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(UiPrefabPaths.SettingsRow);
+                RectTransform[] rects = root.GetComponentsInChildren<RectTransform>(true);
+                RectTransform musicRow = rects.First(t => t.name == "MusicRow");
+                RectTransform oldRow = rects.FirstOrDefault(t => t.name == "CameraRow");
+                if (oldRow != null) UnityEngine.Object.DestroyImmediate(oldRow.gameObject);
+                AddCameraRow(rowPrefab, musicRow, so, root.scene);
+                so.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, UiPrefabPaths.SettingsPopup);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
 
         // ---------------------------------------------------------------- controls
 

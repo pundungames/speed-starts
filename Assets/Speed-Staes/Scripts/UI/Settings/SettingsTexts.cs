@@ -10,6 +10,7 @@ namespace SpeedStars.UI.Settings
     {
         public const string Title = "SETTINGS";
         public const string Music = "Music";
+        public const string CameraDistance = "Camera";
         public const string Language = "Language";
         public const string Flag = "Flag";
         public const string PlayerName = "Player Name";

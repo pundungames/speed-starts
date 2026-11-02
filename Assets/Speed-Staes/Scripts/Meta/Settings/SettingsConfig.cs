@@ -52,6 +52,15 @@ namespace SpeedStars.Meta.Settings
         [Tooltip("Sound effects switch of a new player.")]
         [SerializeField] private bool defaultSfxOn = true;
 
+        [Tooltip("Camera distance of a new player, as a multiple of the normal distance.")]
+        [SerializeField, Min(0.1f)] private float defaultCameraDistance = 1f;
+
+        [Tooltip("Left end of the camera distance slider.")]
+        [SerializeField, Min(0.1f)] private float minCameraDistance = 0.7f;
+
+        [Tooltip("Right end of the camera distance slider.")]
+        [SerializeField, Min(0.1f)] private float maxCameraDistance = 1.3f;
+
         [Tooltip("Language code of a new player. Empty or unknown = the first language in the list.")]
         [SerializeField] private string defaultLanguageCode;
 
@@ -86,6 +95,9 @@ namespace SpeedStars.Meta.Settings
         [SerializeField] private FlagOption[] flags = new FlagOption[0];
 
         public bool DefaultMusicOn => defaultMusicOn;
+        public float DefaultCameraDistance => defaultCameraDistance;
+        public float MinCameraDistance => minCameraDistance;
+        public float MaxCameraDistance => maxCameraDistance;
         public bool DefaultSfxOn => defaultSfxOn;
         public string DefaultPlayerName => defaultPlayerName ?? string.Empty;
         public int NameMinLength => Mathf.Max(1, nameMinLength);

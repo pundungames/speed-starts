@@ -83,6 +83,11 @@ namespace SpeedStars.Meta.Contracts
         string FlagCode { get; }
         string PlayerName { get; }
 
+        /// <summary>The race camera's distance as a multiple of its normal one; the zoom with speed works on top of it.</summary>
+        float CameraDistance { get; }
+        float CameraDistanceMin { get; }
+        float CameraDistanceMax { get; }
+
         /// <summary>Longest name the player may type (for the input field's limit).</summary>
         int MaxNameLength { get; }
 
@@ -91,6 +96,9 @@ namespace SpeedStars.Meta.Contracts
 
         void SetMusic(bool on);
         void SetSfx(bool on);
+
+        /// <summary>Kept inside the min and max.</summary>
+        void SetCameraDistance(float value);
 
         /// <summary>False for a code that is not in the language list; nothing changes then.</summary>
         bool SetLanguage(string code);

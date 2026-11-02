@@ -33,6 +33,7 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private string selectedThemeId = string.Empty;
         [SerializeField] private List<string> ownedThemeIds = new List<string>();
         [SerializeField] private SettingChoice musicChoice;
+        [SerializeField] private float cameraDistance;
         [SerializeField] private SettingChoice sfxChoice;
         [SerializeField] private string languageCode = string.Empty;
         [SerializeField] private string flagCode = string.Empty;
@@ -46,6 +47,9 @@ namespace SpeedStars.Meta.Persistence
 
         /// <summary>Music switch the player set; Default = never touched (the settings config decides). Added with the settings window, no schema bump: older saves open as Default.</summary>
         public SettingChoice MusicChoice { get => musicChoice; set => musicChoice = value; }
+
+        /// <summary>Camera distance the player set; 0 = never touched (the settings config decides). No schema bump: older saves open as 0.</summary>
+        public float CameraDistance { get => cameraDistance; set => cameraDistance = value; }
 
         /// <summary>Sound effects switch the player set; Default = never touched.</summary>
         public SettingChoice SfxChoice { get => sfxChoice; set => sfxChoice = value; }

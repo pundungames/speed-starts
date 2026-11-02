@@ -69,7 +69,7 @@ namespace SpeedStars.Themes
             SyncDemoMode();
         }
         public void ResetRun(){if(heldLeg>=0&&input)input.Inject(heldLeg,false,Time.timeAsDouble);heldLeg=-1;demoLeg=0;nextTap=Time.timeAsDouble+.2;if(race)race.ResetRace();else if(body)body.ResetRun();SelectTheme(activeTheme);SnapCamera();}
-        public void SnapCamera(){if(!followCamera||!followCamera.target)return;var t=followCamera.target;followCamera.transform.position=t.position+t.forward*followCamera.leadAhead+t.right*followCamera.distance+Vector3.up*followCamera.height;followCamera.transform.rotation=Quaternion.LookRotation(-t.right,Vector3.up)*Quaternion.Euler(Mathf.Atan2(followCamera.height-followCamera.lookHeight,followCamera.distance)*Mathf.Rad2Deg,0,0);}
+        public void SnapCamera(){if(!followCamera||!followCamera.target)return;var t=followCamera.target;followCamera.transform.position=t.position+t.forward*followCamera.leadAhead+t.right*followCamera.distance+Vector3.up*followCamera.StandingHeight;followCamera.transform.rotation=Quaternion.LookRotation(-t.right,Vector3.up)*Quaternion.Euler(followCamera.pitch,0,0);}
         void Styles(){if(title!=null)return;title=new GUIStyle(GUI.skin.label){fontSize=18,fontStyle=FontStyle.Bold};title.normal.textColor=Color.white;label=new GUIStyle(GUI.skin.label){fontSize=14};label.normal.textColor=Color.white;small=new GUIStyle(label){fontSize=12};pixel=new Texture2D(1,1);pixel.SetPixel(0,0,Color.white);pixel.Apply();}
         void Panel(Rect rect){var c=GUI.color;GUI.color=new Color(.06f,.10f,.16f,.90f);GUI.DrawTexture(rect,pixel);GUI.color=c;}
         void OnGUI()

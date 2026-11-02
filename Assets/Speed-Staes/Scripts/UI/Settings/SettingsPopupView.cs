@@ -43,6 +43,17 @@ namespace SpeedStars.UI.Settings
         [Tooltip("Switch in the Music row.")]
         [SerializeField] private SettingsToggleView musicToggle;
 
+        [Header("Camera")]
+        [Tooltip("Label of the Camera Distance row.")]
+        [SerializeField] private Text cameraDistanceLabel;
+
+        [Tooltip("Slider in the Camera Distance row.")]
+        [SerializeField] private Slider cameraDistanceSlider;
+
+        [Tooltip("The slider moves in steps of this size, so a drag saves only when the value really changes.")]
+        [Min(0.001f)]
+        [SerializeField] private float cameraDistanceStep = 0.05f;
+
         [Header("Language")]
         [Tooltip("Closed Language field: opens the list.")]
         [SerializeField] private Button languageButton;
@@ -194,6 +205,7 @@ namespace SpeedStars.UI.Settings
             flagCatcher.onClick.AddListener(CloseFlagWindow);
             doneButton.onClick.AddListener(OnDone);
             nameInput.onValueChanged.AddListener(OnNameEdited);
+            if (cameraDistanceSlider != null) cameraDistanceSlider.onValueChanged.AddListener(OnCameraDistance);
             _shakeBase = nameShakeTarget.anchoredPosition;
             FillFixedTexts();
         }
@@ -234,6 +246,7 @@ namespace SpeedStars.UI.Settings
             if (flagCatcher != null) flagCatcher.onClick.RemoveListener(CloseFlagWindow);
             if (doneButton != null) doneButton.onClick.RemoveListener(OnDone);
             if (nameInput != null) nameInput.onValueChanged.RemoveListener(OnNameEdited);
+            if (cameraDistanceSlider != null) cameraDistanceSlider.onValueChanged.RemoveListener(OnCameraDistance);
             base.OnDestroy();
         }
 
@@ -252,11 +265,17 @@ namespace SpeedStars.UI.Settings
         {
             titleText.text = SettingsTexts.Title;
             musicLabel.text = SettingsTexts.Music;
+            if (cameraDistanceLabel != null) cameraDistanceLabel.text = SettingsTexts.CameraDistance;
             languageLabel.text = SettingsTexts.Language;
             flagLabel.text = SettingsTexts.Flag;
             nameLabel.text = SettingsTexts.PlayerName;
             doneLabel.text = SettingsTexts.Done;
             namePlaceholder.text = SettingsTexts.NamePlaceholder;
+        }
+
+        private void OnCameraDistance(float value)
+        {
+            _settings.SetCameraDistance(Mathf.Round(value / cameraDistanceStep) * cameraDistanceStep);
         }
 
         private void BuildListsOnce()
@@ -282,6 +301,12 @@ namespace SpeedStars.UI.Settings
         private void RefreshValues()
         {
             musicToggle.SetOn(_settings.MusicOn, animate: false); // no-op when the toggle already shows it, so its own slide is not cut
+            if (cameraDistanceSlider != null)
+            {
+                cameraDistanceSlider.minValue = _settings.CameraDistanceMin;
+                cameraDistanceSlider.maxValue = _settings.CameraDistanceMax;
+                cameraDistanceSlider.SetValueWithoutNotify(_settings.CameraDistance);
+            }
 
             string language = _settings.LanguageCode;
             languageValueText.text = string.Empty;

@@ -111,6 +111,10 @@ namespace SpeedStars.Tests.Meta.Leaderboard
             public int MaxNameLength => 16;
             public IReadOnlyList<LanguageInfo> Languages => new List<LanguageInfo>();
             public IReadOnlyList<FlagInfo> Flags => new List<FlagInfo>();
+            public float CameraDistance => 1f;
+            public float CameraDistanceMin => 1f;
+            public float CameraDistanceMax => 1f;
+            public void SetCameraDistance(float value) { }
             public void SetMusic(bool on) { }
             public void SetSfx(bool on) { }
             public bool SetLanguage(string code) => false;
