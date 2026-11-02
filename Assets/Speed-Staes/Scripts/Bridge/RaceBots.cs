@@ -36,6 +36,8 @@ namespace SpeedStars.Bridge
         RaceController race;
         [SerializeField, Tooltip("Race session adapter: the READY / SET / GO signal and the event id. Empty = bots only stand.")]
         RaceSessionAdapter session;
+        [SerializeField, Tooltip("The hurdle object on the bots' lanes in a hurdle event.")]
+        GameObject hurdlePrefab;
 
         [Header("Track")]
         [SerializeField, Min(0.1f), Tooltip("Distance (m) between neighbouring lanes. Lanes lie on the side away from the follow camera (the camera sits to the runner's right), so no bot can hide the player.")]
@@ -69,6 +71,9 @@ namespace SpeedStars.Bridge
             public double FinishSeconds;
             public double PrevSimTime;
             public float PrevDistance;
+            public RunnerHurdles Hurdles;
+            public int PlannedHurdle;
+            public float JumpError;
         }
 
         readonly List<Bot> _bots = new List<Bot>();
@@ -92,6 +97,8 @@ namespace SpeedStars.Bridge
         bool _playerFinished;
         double _playerTime;
         const float TraceStepMeters = 0.25f; // a chart point per this many metres at most
+        const float CalibrationMeters = 100f; // the config's time-to-driver table was measured over this length
+        const float JumpAsked = float.MaxValue; // this hurdle's jump is already on its way
 
         string _playerName = string.Empty;
         string _playerFlag = string.Empty;
@@ -211,7 +218,25 @@ namespace SpeedStars.Bridge
             root.transform.SetPositionAndRotation(bot.Start, player.transform.rotation);
             root.transform.SetParent(transform, true);
             _roots.Add(root.transform);
+            bot.Hurdles = CreateLane(bot, index);
             return bot;
+        }
+
+        /// <summary>The bot's own hurdles: same judging as the player's, without the screen flash. Set up while inactive, so its Awake sees them.</summary>
+        RunnerHurdles CreateLane(Bot bot, int index)
+        {
+            var go = new GameObject("Bot " + (index + 1) + " Hurdles");
+            go.SetActive(false);
+            go.transform.SetParent(transform, false);
+            RunnerHurdles hurdles = go.AddComponent<RunnerHurdles>();
+            hurdles.body = bot.Body;
+            hurdles.race = race;
+            hurdles.raceDistance = 0f;
+            hurdles.count = 0;
+            hurdles.hurdlePrefab = hurdlePrefab;
+            hurdles.screenFlash = false;
+            go.SetActive(true);
+            return hurdles;
         }
 
         void OnStartPhase(RaceStartPhase phase)
@@ -258,7 +283,49 @@ namespace SpeedStars.Bridge
             for (int i = 0; i < _bots.Count; i++)
                 if (!_bots[i].Active) _bots[i].Root.SetActive(false);
 
+            SetUpLanes();
             PushStandings();
+        }
+
+        /// <summary>The current event's hurdles on every running bot's lane; none on an empty lane or in a flat event.</summary>
+        void SetUpLanes()
+        {
+            RaceEventDefinition definition = null;
+            bool found = _events != null && session && _events.TryGet(session.CurrentEventId, out definition);
+            int count = found ? definition.HurdleCount : 0;
+            float first = found ? definition.FirstHurdleMeters : 0f;
+            float spacing = found ? definition.HurdleSpacingMeters : 0f;
+            for (int i = 0; i < _bots.Count; i++)
+            {
+                Bot bot = _bots[i];
+                bot.Hurdles.Configure(bot.Active ? count : 0, first, spacing);
+                bot.PlannedHurdle = -1;
+            }
+        }
+
+        /// <summary>
+        /// Asks for the jump that puts the middle of the bot's flight over the next hurdle, from its speed now. Each hurdle gets one
+        /// timing error: the plan's jitter, or with its mistake chance a whole flight early or late, which knocks the hurdle.
+        /// </summary>
+        void DriveJump(Bot bot)
+        {
+            RunnerSim sim = bot.Body.Sim;
+            if (sim == null || !bot.Hurdles.TryGetNext(out float hurdle, out int index)) return;
+            float speed01 = sim.Speed / sim.T.maxSpeed;
+            float air = Mathf.Lerp(sim.T.jumpTime.x, sim.T.jumpTime.y, speed01);
+            if (bot.PlannedHurdle < index)
+            {
+                bot.PlannedHurdle = index;
+                float sign = _random.Next(2) == 0 ? -1f : 1f;
+                bot.JumpError = sign * (_random.NextDouble() < bot.Plan.MistakeChance ? air : (float)_random.NextDouble() * bot.Plan.JitterSeconds);
+            }
+            else if (bot.JumpError == JumpAsked) return;
+
+            if (sim.InJump || sim.Speed <= 0.1f) return;
+            float windup = Mathf.Lerp(sim.T.jumpWindup.x, sim.T.jumpWindup.y, speed01);
+            if ((hurdle - sim.Distance) / sim.Speed > windup + air * 0.5f + bot.JumpError) return;
+            bot.Input.InjectJump();
+            bot.JumpError = JumpAsked;
         }
 
         void StartRace()
@@ -290,6 +357,7 @@ namespace SpeedStars.Bridge
                     BotPressEvent e = events[bot.Next++];
                     bot.Input.Inject(e.Leg, e.IsPress, _goTime + e.Time); // its own timestamp, not the frame's
                 }
+                DriveJump(bot);
             }
         }
 
@@ -389,7 +457,8 @@ namespace SpeedStars.Bridge
             if (_bests == null || !session) return null;
             RaceEventId id = session.CurrentEventId;
             if (id.IsEmpty) return null;
-            return _bests.TryGetBest(id, out double seconds) && seconds > 0.0 ? (float)seconds : (float?)null;
+            // A rough scale to the table's length, good near 100 m; a much longer event needs its own measurement.
+            return _bests.TryGetBest(id, out double seconds) && seconds > 0.0 ? (float)seconds * CalibrationMeters / RaceDistance : (float?)null;
         }
 
         void CachePlayerIdentity()

@@ -17,6 +17,8 @@ namespace SpeedStars.Physical
         public RunnerTuning tuning = new RunnerTuning();
         [Tooltip("Presses are ignored while false (e.g. after the finish).")]
         public bool acceptInput = true;
+        [Tooltip("Jumps are ignored while false (a race without hurdles).")]
+        public bool acceptJump = true;
 
         public RunnerSim Sim { get; private set; }
 
@@ -73,7 +75,7 @@ namespace SpeedStars.Physical
                     if (wasDown != Sim.Legs[tap.Leg].Pressed) Tapped?.Invoke(tap.Leg, tap.Pressed, Sim.Time);
                 }
             }
-            if (_jumpAsked && acceptInput) Sim.Jump();
+            if (_jumpAsked && acceptInput && acceptJump) Sim.Jump();
             _jumpAsked = false;
             if (now > Sim.Time) Sim.Advance((float)(now - Sim.Time));
             transform.position = _startPos + _forward * Sim.Distance;

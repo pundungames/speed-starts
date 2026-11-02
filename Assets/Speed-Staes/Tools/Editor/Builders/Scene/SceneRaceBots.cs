@@ -54,6 +54,7 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "player").objectReferenceValue = player;
             Prop(so, "race").objectReferenceValue = race;
             Prop(so, "session").objectReferenceValue = adapter;
+            Prop(so, "hurdlePrefab").objectReferenceValue = LoadRequired<GameObject>(SceneRaceHurdles.HurdlePrefabPath, "the hurdle prefab");
             Apply(so);
 
             var adapterSo = new SerializedObject(adapter);

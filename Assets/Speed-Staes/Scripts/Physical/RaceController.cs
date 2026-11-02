@@ -15,7 +15,7 @@ namespace SpeedStars.Physical
         public RunnerBody body;
         [Tooltip("Race length (m): crossing it keeps the time and puts the runner back at the start line.")]
         public float raceDistance = 100f;
-        [Tooltip("Optional: placed raceDistance ahead of the runner's start at play start.")]
+        [Tooltip("Optional: placed raceDistance ahead of the runner's start at play start and at every race reset.")]
         public Transform finishLine;
 
         public State Current { get; private set; }
@@ -30,11 +30,15 @@ namespace SpeedStars.Physical
         void Start()
         {
             if (!body) body = FindObjectOfType<RunnerBody>();
-            if (finishLine && body)
-            {
-                Vector3 p = body.transform.position + body.transform.forward * raceDistance;
-                finishLine.position = new Vector3(finishLine.position.x, finishLine.position.y, p.z);
-            }
+            PlaceFinishLine();
+        }
+
+        /// <summary>The runner stands on the start line here; the length may have changed with the event.</summary>
+        void PlaceFinishLine()
+        {
+            if (!finishLine || !body) return;
+            Vector3 p = body.transform.position + body.transform.forward * raceDistance;
+            finishLine.position = new Vector3(finishLine.position.x, finishLine.position.y, p.z);
         }
 
         void Update()
@@ -86,6 +90,7 @@ namespace SpeedStars.Physical
         public void ResetRace()
         {
             if (body) body.ResetRun();
+            PlaceFinishLine();
             Current = State.Ready;
             RaceTime = 0f;
         }

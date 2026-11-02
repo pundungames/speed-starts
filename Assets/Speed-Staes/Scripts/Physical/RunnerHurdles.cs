@@ -6,7 +6,8 @@ namespace SpeedStars.Physical
     /// A hurdle race on the runner's own lane: builds the hurdles and judges each one as the runner's distance
     /// passes it, from one fact only: is the runner in the air (a jump) there. In the air it clears the hurdle
     /// (green flash); on the ground it knocks it over (yellow flash, the sim loses speed). A jump too early or too
-    /// late is simply on the ground at the hurdle.
+    /// late is simply on the ground at the hurdle. The test scene uses the Inspector's layout; the game sets the
+    /// layout of the current event through <see cref="Configure"/>.
     /// </summary>
     public sealed class RunnerHurdles : MonoBehaviour
     {
@@ -14,8 +15,10 @@ namespace SpeedStars.Physical
         public RunnerBody body;
         [Tooltip("Its race length is set to raceDistance.")]
         public RaceController race;
-        [Tooltip("Race length with hurdles (m).")]
+        [Tooltip("Race length with hurdles (m). 0 = leave the race length alone (the game takes it from the event).")]
         public float raceDistance = 110f;
+        [Tooltip("The hurdle object, facing along the lane with its pivot on the ground. Empty = simple built-in hurdles.")]
+        public GameObject hurdlePrefab;
         [Tooltip("Number of hurdles.")]
         public int count = 10;
         [Tooltip("Distance of the first hurdle from the start (m).")]
@@ -32,6 +35,8 @@ namespace SpeedStars.Physical
         public Color frameColor = Color.white;
         [Tooltip("How long a knocked hurdle takes to lie flat (s).")]
         public float fallTime = 0.2f;
+        [Tooltip("Flash the screen on each hurdle. Only for the player's lane.")]
+        public bool screenFlash = true;
         [Tooltip("Screen flash for a cleared hurdle.")]
         public Color clearFlash = new Color(0.2f, 0.9f, 0.2f, 0.4f);
         [Tooltip("Screen flash for a knocked hurdle.")]
@@ -49,11 +54,19 @@ namespace SpeedStars.Physical
         public int Cleared { get; private set; }
         public int Knocked { get; private set; }
 
+        /// <summary>Distance of the hurdle still ahead; false when none is left. Its index tells hurdles apart.</summary>
+        public bool TryGetNext(out float distance, out int index)
+        {
+            index = _next;
+            distance = first + spacing * _next;
+            return _hurdles != null && _next < count;
+        }
+
         void Awake()
         {
             if (!body) body = FindObjectOfType<RunnerBody>();
             if (!race) race = FindObjectOfType<RaceController>();
-            if (race) race.raceDistance = raceDistance;
+            if (race && raceDistance > 0f) race.raceDistance = raceDistance;
         }
 
         void OnEnable()
@@ -70,7 +83,27 @@ namespace SpeedStars.Physical
 
         void Start()
         {
+            if (_hurdles == null) Rebuild();
+        }
+
+        /// <summary>A new layout, standing and uncounted. A count of 0 leaves the lane empty.</summary>
+        public void Configure(int hurdleCount, float firstMeters, float spacingMeters)
+        {
+            count = hurdleCount;
+            first = firstMeters;
+            spacing = spacingMeters;
+            Rebuild();
+        }
+
+        void Rebuild()
+        {
             if (!body || body.Sim == null) return;
+            if (_hurdles != null)
+            {
+                foreach (Transform hurdle in _hurdles) Destroy(hurdle.gameObject);
+            }
+            _next = 0;
+            Cleared = Knocked = 0;
             Vector3 start = body.transform.position - body.transform.forward * body.Sim.Distance;
             _hurdles = new Transform[count];
             _fallStart = new float[count];
@@ -83,6 +116,8 @@ namespace SpeedStars.Physical
 
         Transform Build(Vector3 position)
         {
+            if (hurdlePrefab) return Instantiate(hurdlePrefab, position, body.transform.rotation, transform).transform;
+
             var root = new GameObject("Hurdle").transform;
             root.SetParent(transform, false);
             root.SetPositionAndRotation(position, body.transform.rotation);
@@ -137,6 +172,7 @@ namespace SpeedStars.Physical
 
         void Flash(Color color)
         {
+            if (!screenFlash) return;
             _flash = color;
             _flashStart = Time.time;
         }

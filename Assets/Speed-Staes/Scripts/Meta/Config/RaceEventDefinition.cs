@@ -33,6 +33,15 @@ namespace SpeedStars.Meta.Config
         [Tooltip("Off = the player runs alone, with no opponent bots (Practice).")]
         [SerializeField] private bool hasOpponents = true;
 
+        [Tooltip("Hurdles on the player's lane. 0 = a flat race.")]
+        [SerializeField, Min(0)] private int hurdleCount;
+
+        [Tooltip("Distance of the first hurdle from the start (m).")]
+        [SerializeField, Min(0f)] private float firstHurdleMeters;
+
+        [Tooltip("Distance between hurdles (m).")]
+        [SerializeField, Min(0f)] private float hurdleSpacingMeters;
+
         public RaceEventId Id => new RaceEventId(eventId);
         public string DisplayName => displayName ?? string.Empty;
         public float DistanceMeters => distanceMeters;
@@ -40,5 +49,8 @@ namespace SpeedStars.Meta.Config
         public bool AwardsPurpleGems => awardsPurpleGems;
         public bool IsPlayable => isPlayable;
         public bool HasOpponents => hasOpponents;
+        public int HurdleCount => hurdleCount;
+        public float FirstHurdleMeters => firstHurdleMeters;
+        public float HurdleSpacingMeters => hurdleSpacingMeters;
     }
 }

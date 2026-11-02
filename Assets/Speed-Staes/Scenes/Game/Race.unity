@@ -4789,6 +4789,7 @@ MonoBehaviour:
   player: {fileID: 7868829318101808434}
   race: {fileID: 1247231511}
   session: {fileID: 1845115163}
+  hurdlePrefab: {fileID: 5467886561479074728, guid: e32b4d6fc7319f5478e2cb63d518d1c1, type: 3}
   laneSpacing: 1.2
   scheduleHorizonFactor: 2
   scheduleHorizonPadding: 10
@@ -5900,6 +5901,81 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 10
   m_TargetDisplay: 0
+--- !u!1 &2020783485
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2020783488}
+  - component: {fileID: 2020783487}
+  - component: {fileID: 2020783486}
+  m_Layer: 0
+  m_Name: Hurdles
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2020783486
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2020783485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2e4adc62c3459b479b78eb610be3f55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  session: {fileID: 1845115163}
+  hurdles: {fileID: 2020783487}
+--- !u!114 &2020783487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2020783485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05ce00f4b5ea0924f83629249f103232, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  body: {fileID: 7868829318101808434}
+  race: {fileID: 1247231511}
+  raceDistance: 0
+  hurdlePrefab: {fileID: 5467886561479074728, guid: e32b4d6fc7319f5478e2cb63d518d1c1, type: 3}
+  count: 0
+  first: 13.72
+  spacing: 9.14
+  height: 0.8
+  width: 1
+  barColor: {r: 0.55, g: 0.35, b: 0.85, a: 1}
+  frameColor: {r: 1, g: 1, b: 1, a: 1}
+  fallTime: 0.2
+  screenFlash: 1
+  clearFlash: {r: 0.2, g: 0.9, b: 0.2, a: 0.4}
+  hitFlash: {r: 1, g: 0.75, b: 0.1, a: 0.45}
+  flashTime: 0.3
+--- !u!4 &2020783488
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2020783485}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2097364288
 GameObject:
   m_ObjectHideFlags: 0
@@ -6246,3 +6322,4 @@ SceneRoots:
   - {fileID: 521755053}
   - {fileID: 1845115165}
   - {fileID: 1429518844}
+  - {fileID: 2020783488}

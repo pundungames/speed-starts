@@ -40,7 +40,8 @@ namespace SpeedStars.Tools.Builders
         /// Events in display order (PDF §1.3, MD §12). Distance only where the name states it; Training, Race of the
         /// Day and Medley have none in the documents, so 0. Purple Gems: PDF §1.3 ("yalnizca 400m, 60mH, Medley").
         /// Ticket: only 100m, the slice assumption (OPEN #3: which events were paid in the original is unverified).
-        /// Playable: only 100m, the one race the runner mechanic has (OPEN #9: hurdles, relay, Medley rules).
+        /// Playable: 100m and 110mH, the races the runner mechanic has (OPEN #9: relay, Medley rules). Hurdle layouts are
+        /// the athletics standard; only 110mH is checked against the reference videos and the bots' times.
         /// </summary>
         private static readonly EventSeed[] Events =
         {
@@ -49,9 +50,9 @@ namespace SpeedStars.Tools.Builders
             new EventSeed("100m", "100m", 100f, ticket: true, gems: false, playable: true),
             new EventSeed("200m", "200m", 200f, ticket: false, gems: false, playable: false),
             new EventSeed("400m", "400m", 400f, ticket: false, gems: true, playable: false),
-            new EventSeed("60mh", "60mH", 60f, ticket: false, gems: true, playable: false),
-            new EventSeed("110mh", "110mH", 110f, ticket: false, gems: false, playable: false),
-            new EventSeed("400mh", "400mH", 400f, ticket: false, gems: false, playable: false),
+            new EventSeed("60mh", "60mH", 60f, ticket: false, gems: true, playable: false, hurdles: 5, firstHurdle: 13.72f, hurdleSpacing: 9.14f),
+            new EventSeed("110mh", "110mH", 110f, ticket: false, gems: false, playable: true, hurdles: 10, firstHurdle: 13.72f, hurdleSpacing: 9.14f),
+            new EventSeed("400mh", "400mH", 400f, ticket: false, gems: false, playable: false, hurdles: 10, firstHurdle: 45f, hurdleSpacing: 35f),
             new EventSeed("4x100m", "4×100m", 400f, ticket: false, gems: false, playable: false), // relay: 4 legs x 100 m, from the name
             new EventSeed("medley", "Medley", 0f, ticket: false, gems: true, playable: false),
         };
@@ -191,6 +192,9 @@ namespace SpeedStars.Tools.Builders
                 Prop(so, "awardsPurpleGems").boolValue = seed.AwardsPurpleGems;
                 Prop(so, "isPlayable").boolValue = seed.IsPlayable;
                 Prop(so, "hasOpponents").boolValue = seed.Id != PracticeEventId;
+                Prop(so, "hurdleCount").intValue = seed.HurdleCount;
+                Prop(so, "firstHurdleMeters").floatValue = seed.FirstHurdleMeters;
+                Prop(so, "hurdleSpacingMeters").floatValue = seed.HurdleSpacingMeters;
                 Apply(so);
                 definitions.Add(definition);
             }
@@ -219,8 +223,12 @@ namespace SpeedStars.Tools.Builders
             public readonly bool RequiresTicket;
             public readonly bool AwardsPurpleGems;
             public readonly bool IsPlayable;
+            public readonly int HurdleCount;
+            public readonly float FirstHurdleMeters;
+            public readonly float HurdleSpacingMeters;
 
-            public EventSeed(string id, string displayName, float distanceMeters, bool ticket, bool gems, bool playable)
+            public EventSeed(string id, string displayName, float distanceMeters, bool ticket, bool gems, bool playable,
+                int hurdles = 0, float firstHurdle = 0f, float hurdleSpacing = 0f)
             {
                 Id = id;
                 DisplayName = displayName;
@@ -228,6 +236,9 @@ namespace SpeedStars.Tools.Builders
                 RequiresTicket = ticket;
                 AwardsPurpleGems = gems;
                 IsPlayable = playable;
+                HurdleCount = hurdles;
+                FirstHurdleMeters = firstHurdle;
+                HurdleSpacingMeters = hurdleSpacing;
             }
         }
     }
