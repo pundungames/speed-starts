@@ -57,11 +57,11 @@ namespace SpeedStars.Core.Race.Bots
 
         [Tooltip("Middle target = reference x this at difficulty 0 (above 1 = slower than the player).")]
         [Min(0.1f)]
-        [SerializeField] private float easyMultiplier = 1.30f;
+        [SerializeField] private float easyMultiplier = 1.27f;
 
         [Tooltip("Middle target = reference x this at difficulty 1.")]
         [Min(0.1f)]
-        [SerializeField] private float hardMultiplier = 0.90f;
+        [SerializeField] private float hardMultiplier = 0.87f;
 
         [Tooltip("Half-width of the field as a fraction of the middle target at skill range 0.")]
         [Range(0f, 1f)]
@@ -118,7 +118,7 @@ namespace SpeedStars.Core.Race.Bots
 
         [Tooltip("Timing jitter of the best bot, either way (milliseconds).")]
         [Min(0f)]
-        [SerializeField] private float jitterBestMs = 10f;
+        [SerializeField] private float jitterBestMs = 5f;
 
         [Tooltip("Timing jitter of the worst bot, either way (milliseconds).")]
         [Min(0f)]
@@ -126,7 +126,7 @@ namespace SpeedStars.Core.Race.Bots
 
         [Tooltip("Chance of an early or late press for the best bot (0..1).")]
         [Range(0f, 1f)]
-        [SerializeField] private float mistakeBestChance = 0.02f;
+        [SerializeField] private float mistakeBestChance = 0f;
 
         [Tooltip("Chance of an early or late press for the worst bot (0..1).")]
         [Range(0f, 1f)]
@@ -141,16 +141,16 @@ namespace SpeedStars.Core.Race.Bots
         [SerializeField] private List<BotCalibrationPoint> calibration = new List<BotCalibrationPoint>
         {
             new BotCalibrationPoint(0f, 22.25944f),
-            new BotCalibrationPoint(0.1f, 21.20873f),
-            new BotCalibrationPoint(0.2f, 20.25657f),
-            new BotCalibrationPoint(0.3f, 19.29506f),
-            new BotCalibrationPoint(0.4f, 18.17385f),
-            new BotCalibrationPoint(0.5f, 16.69018f),
-            new BotCalibrationPoint(0.6f, 14.89909f),
-            new BotCalibrationPoint(0.7f, 13.15331f),
-            new BotCalibrationPoint(0.8f, 11.90123f),
-            new BotCalibrationPoint(0.9f, 10.85996f),
-            new BotCalibrationPoint(1f, 10.49337f),
+            new BotCalibrationPoint(0.1f, 21.2107f),
+            new BotCalibrationPoint(0.2f, 20.2525f),
+            new BotCalibrationPoint(0.3f, 19.31754f),
+            new BotCalibrationPoint(0.4f, 18.22453f),
+            new BotCalibrationPoint(0.5f, 16.69791f),
+            new BotCalibrationPoint(0.6f, 14.90964f),
+            new BotCalibrationPoint(0.7f, 13.11304f),
+            new BotCalibrationPoint(0.8f, 11.83936f),
+            new BotCalibrationPoint(0.9f, 10.79216f),
+            new BotCalibrationPoint(1f, 10.32615f),
         };
 
         [Header("Names")]
