@@ -3,9 +3,9 @@ using UnityEngine;
 namespace SpeedStars.Physical
 {
     /// <summary>
-    /// Race flow: Ready (standing at the line) → Running (clock starts with the first press). Crossing
-    /// the finish puts the runner straight back at the start line, Ready again; the finished time is kept
-    /// in LastRaceTime.
+    /// Race flow: Ready (standing at the line) → Running: the clock starts at GO (StartClock), or with the first
+    /// press where nothing calls GO (the test scene). Crossing the finish puts the runner straight back at the start
+    /// line, Ready again; the finished time, interpolated inside the frame, is kept in LastRaceTime.
     /// </summary>
     public sealed class RaceController : MonoBehaviour
     {
@@ -19,12 +19,13 @@ namespace SpeedStars.Physical
         public Transform finishLine;
 
         public State Current { get; private set; }
-        /// <summary>Race clock (s): from the first press.</summary>
+        /// <summary>Race clock (s): from GO, the reaction included (from the first press without a GO).</summary>
         public float RaceTime { get; private set; }
         /// <summary>Time of the last finished race (s), 0 before the first finish.</summary>
         public float LastRaceTime { get; private set; }
 
-        double _startTime;
+        double _startTime, _prevTime;
+        float _prevDistance;
 
         void Start()
         {
@@ -46,19 +47,40 @@ namespace SpeedStars.Physical
                 case State.Ready:
                     if (sim.Presses > 0)
                     {
-                        Current = State.Running;
-                        _startTime = sim.LastPressTime;
+                        Begin(sim, sim.LastPressTime);
                     }
                     break;
                 case State.Running:
                     RaceTime = (float)(sim.Time - _startTime);
                     if (sim.Distance >= raceDistance)
                     {
-                        LastRaceTime = RaceTime;
+                        float span = sim.Distance - _prevDistance;
+                        double fraction = span > 0f ? (raceDistance - _prevDistance) / span : 1.0;
+                        LastRaceTime = (float)(_prevTime + fraction * (sim.Time - _prevTime) - _startTime);
                         ResetRace();
+                    }
+                    else
+                    {
+                        _prevDistance = sim.Distance;
+                        _prevTime = sim.Time;
                     }
                     break;
             }
+        }
+
+        /// <summary>GO: the clock starts now for everyone, whenever the first press comes.</summary>
+        public void StartClock()
+        {
+            if (!body || body.Sim == null || Current != State.Ready) return;
+            Begin(body.Sim, body.Sim.Time);
+        }
+
+        void Begin(RunnerSim sim, double start)
+        {
+            Current = State.Running;
+            _startTime = start;
+            _prevDistance = sim.Distance;
+            _prevTime = sim.Time;
         }
 
         public void ResetRace()

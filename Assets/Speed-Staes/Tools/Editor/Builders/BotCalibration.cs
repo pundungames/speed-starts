@@ -14,7 +14,7 @@ namespace SpeedStars.Tools.Builders
     /// Runs Malik's RunnerSim headless (no scene, no Play mode) with the bots' key schedules to measure what 100 m time a given bot
     /// skill really produces, and writes the skill -> time table the bot planner needs (BotRaceConfig.calibration, T-074).
     /// The schedule is fed to the sim exactly the way RunnerBody.Update does it: advance to the event's time, then Press / Release.
-    /// Times are measured from the first press (what RaceController and RaceBots measure), the CSV also holds the time from GO.
+    /// Times are measured from GO, the reaction included (what RaceController and RaceBots measure).
     /// <code>
     /// Unity.exe -batchmode -nographics -quit -projectPath &lt;copy&gt; -executeMethod SpeedStars.Tools.Builders.BotCalibration.Run
     ///     -out &lt;csv&gt; [-seeds 20] [-step 0.1] [-distance 100] [-horizon 120] [-config &lt;asset path&gt;] [-prefab &lt;prefab path&gt;] [-apply]
@@ -130,7 +130,7 @@ namespace SpeedStars.Tools.Builders
                        .Append(Format(r.Finished ? r.SecondsFromFirstPress : double.NaN)).Append(',')
                        .Append(Format(r.Finished ? r.SecondsFromGo : double.NaN)).Append('\n');
                     // A run that never finished counts as the horizon: the table stays usable and the row says it in the log.
-                    sum += r.Finished ? r.SecondsFromFirstPress : horizon;
+                    sum += r.Finished ? r.SecondsFromGo : horizon;
                     if (r.Finished) finished++;
                 }
                 float mean = (float)(sum / seeds);
@@ -173,7 +173,7 @@ namespace SpeedStars.Tools.Builders
         private static string TableText(List<BotCalibrationPoint> measured, List<BotCalibrationPoint> table)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("// Measured mean 100 m time per skill (from the first press). Paste into BotRaceConfig.calibration or run with -apply.");
+            sb.AppendLine("// Measured mean 100 m time per skill (from GO). Paste into BotRaceConfig.calibration or run with -apply.");
             for (int i = 0; i < table.Count; i++)
             {
                 string note = Mathf.Abs(table[i].seconds - measured[i].seconds) > 0.0005f
