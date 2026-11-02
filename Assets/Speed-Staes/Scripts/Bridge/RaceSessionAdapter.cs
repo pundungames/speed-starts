@@ -151,7 +151,11 @@ namespace SpeedStars.Bridge
         void OnSequencePhase(RaceStartPhase phase)
         {
             // The gate first, then the event: a view or sound reacting to Go sees input already open (the authoritative start).
-            if (phase == RaceStartPhase.Go && body) body.acceptInput = true;
+            if (phase == RaceStartPhase.Go)
+            {
+                if (body) body.acceptInput = true;
+                if (race) race.StartClock(); // the race clock runs from GO, the reaction included, as the bots' does
+            }
             StartPhaseChanged?.Invoke(phase);
         }
 

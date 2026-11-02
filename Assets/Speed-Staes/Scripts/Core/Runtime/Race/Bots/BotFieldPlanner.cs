@@ -5,7 +5,8 @@ namespace SpeedStars.Core.Race.Bots
 {
     /// <summary>
     /// Plans the opponents of one race. Middle target = player's reference time x lerp(easy, hard, difficulty); the field is spread
-    /// evenly around it, as wide as skill range says; each target then moves a little by the per-race randomness. Skill comes from
+    /// evenly around it, as wide as skill range says; each target then moves a little by the per-race randomness, and the whole field
+    /// by the race's draw (an easy, normal or hard race, decided before the start: no bot reacts to the player). Skill comes from
     /// the target time through the calibration table (inverse), and the driver numbers from the skill. Pure; the same seed gives the same plan.
     /// </summary>
     public static class BotFieldPlanner
@@ -29,6 +30,7 @@ namespace SpeedStars.Core.Race.Bots
                 : config.FallbackReferenceSeconds;
             float center = reference * Lerp(config.EasyMultiplier, config.HardMultiplier, config.Difficulty);
             float spread = Lerp(config.NarrowSpread, config.WideSpread, config.SkillRange);
+            center *= RaceMultiplier(config, (float)random.NextDouble());
 
             var targets = new float[count];
             for (int i = 0; i < count; i++)
@@ -62,6 +64,13 @@ namespace SpeedStars.Core.Race.Bots
                     mistakeShiftRatio: config.MistakeShiftRatio));
             }
             return plans;
+        }
+
+        private static float RaceMultiplier(BotRaceConfig config, float draw)
+        {
+            if (draw < config.EasyRaceChance) return config.EasyRaceMultiplier;
+            if (draw < config.EasyRaceChance + config.HardRaceChance) return config.HardRaceMultiplier;
+            return 1f;
         }
 
         private static float Lerp(float a, float b, float t) => a + (b - a) * Clamp01(t);

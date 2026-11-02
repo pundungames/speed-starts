@@ -23,6 +23,8 @@ namespace SpeedStars.Tools.Builders
     /// </summary>
     internal static class SceneUiLayout
     {
+        private const string LoadingLabelName = "LoadingLabel";
+
         // Canvas layers, bottom to top. The overlay canvas must be the top-most: the transition blocker lives there.
         public const int BaseCanvasOrder = 0;
         public const int PopupCanvasOrder = 10;
@@ -113,8 +115,9 @@ namespace SpeedStars.Tools.Builders
         }
 
         /// <summary>
-        /// Full-screen, invisible (alpha 0), raycast-target Image as the last child of the top-most canvas; inactive
-        /// until a scene move switches it on (SceneTransitionBlocker). Wired into the blocker component on UI Root.
+        /// Full-screen, opaque, raycast-target "Loading" cover as the last child of the top-most canvas; inactive
+        /// until a scene move switches it on (SceneTransitionBlocker), so a move never looks like a frozen screen.
+        /// Wired into the blocker component on UI Root.
         /// </summary>
         public static GameObject CreateTransitionBlocker(GameObject uiRoot, Transform overlayCanvas)
         {
@@ -126,9 +129,7 @@ namespace SpeedStars.Tools.Builders
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
 
-            var image = go.GetComponent<Image>();
-            image.color = new Color(0f, 0f, 0f, 0f);
-            image.raycastTarget = true;
+            ApplyLoadingCover(go);
 
             go.transform.SetAsLastSibling();
             go.SetActive(false);
@@ -139,6 +140,33 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "blocker").objectReferenceValue = go;
             Apply(so);
             return go;
+        }
+
+        /// <summary>Makes the blocker the visible cover: opaque dark Image, "Loading" in the middle. Running it again only updates them.</summary>
+        public static void ApplyLoadingCover(GameObject cover)
+        {
+            var image = cover.GetComponent<Image>();
+            image.color = new Color(0.05f, 0.06f, 0.1f, 1f);
+            image.raycastTarget = true;
+
+            Transform found = cover.transform.Find(LoadingLabelName);
+            GameObject labelObject = found != null
+                ? found.gameObject
+                : CreateChild(cover.transform, LoadingLabelName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            var rect = (RectTransform)labelObject.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(800f, 160f);
+
+            var label = labelObject.GetComponent<Text>();
+            label.text = "Loading";
+            label.font = AssetDatabase.LoadAssetAtPath<Font>(UiRaceStartPrefabs.FontPath) ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.fontSize = 72;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.color = Color.white;
+            label.raycastTarget = false;
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.verticalOverflow = VerticalWrapMode.Overflow;
         }
 
         /// <summary>

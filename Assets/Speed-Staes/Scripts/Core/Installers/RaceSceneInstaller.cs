@@ -1,5 +1,6 @@
 using SpeedStars.Bridge;
 using SpeedStars.Core.Race;
+using SpeedStars.UI.Home;
 using SpeedStars.UI.Race;
 using UnityEngine;
 
@@ -20,6 +21,9 @@ namespace SpeedStars.Installers
         [Tooltip("Opponent bots of this race (Bridge); they also keep the live order. Empty = no opponents, the HUD place and the results list stay single-runner.")]
         [SerializeField] private RaceBots raceBots;
 
+        [Tooltip("Entry gate modal in this scene; it opens when Race again finds no ticket. Empty = Race again only logs a warning.")]
+        [SerializeField] private EntryGateModalView entryGateModal;
+
         protected override void InstallSceneBindings()
         {
             if (raceSession == null || results == null)
@@ -33,6 +37,7 @@ namespace SpeedStars.Installers
             // T-075/T-076: the bots keep the live order the HUD and the results list read (both inject it as optional).
             if (raceBots != null) Container.Bind<IRaceStandings>().FromInstance(raceBots).AsSingle();
             Container.Bind<IRaceEventLookup>().To<CatalogRaceEventLookup>().AsSingle();
+            if (entryGateModal != null) Container.Bind<IEntryGatePrompt>().To<RaceFlowEntryGatePrompt>().AsSingle().WithArguments(entryGateModal);
             Container.BindInterfacesAndSelfTo<RaceFlow>().AsSingle().NonLazy();
         }
     }

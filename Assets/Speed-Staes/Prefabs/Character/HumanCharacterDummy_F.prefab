@@ -195,6 +195,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c74f1f70a80bc934eb90aba10c0675ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  swipeUpDistance: 0.06
+  swipeUpTime: 0.25
 --- !u!114 &7426618603301864697
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -292,10 +294,11 @@ MonoBehaviour:
     stopDelay: 0.6
     stopRamp: 0.3
     stanceTime: 0.08
-    stepTime: {x: 0.4, y: 0.22}
+    stepTime: {x: 0.255, y: 0.21}
     gravity: 5
     togetherWindow: 0.08
     earlyEfficiency: 0.15
+    earlySoftTime: 0.05
     lateGrace: 0.04
     lateFloorTime: 0.2
     lateFloor: 0.55
@@ -354,6 +357,12 @@ MonoBehaviour:
     headSpoil: 90
     headSpoilPower: 1.1
     headDrag: 0.8
+    jumpWindup: {x: 0.2, y: 0.05}
+    jumpTime: {x: 0.3, y: 0.18}
+    jumpHeight: 0.3
+    jumpHang: 4
+    hitLoss: 0.3
+    hitTime: 0.45
     energyMax: 100
     drainPerPush: 0.25
     drainHoldPerSecond: 2
@@ -416,6 +425,10 @@ MonoBehaviour:
     toeRoll: 0
     swingAnkle: 0
     swingW: 0
+    jumpAnkle: 0
+    jumpW: 0
+    sideOut: 0
+    sideTurn: {x: 0, y: 0, z: 0, w: 1}
     swingToe: 0
     reachNext: 0
     easeOut: 0
@@ -462,6 +475,10 @@ MonoBehaviour:
     toeRoll: 0
     swingAnkle: 0
     swingW: 0
+    jumpAnkle: 0
+    jumpW: 0
+    sideOut: 0
+    sideTurn: {x: 0, y: 0, z: 0, w: 1}
     swingToe: 0
     reachNext: 0
     easeOut: 0
@@ -537,7 +554,7 @@ MonoBehaviour:
   frontHomeTime: 0.3
   stepTimeMin: 0.2
   stepTimeMax: 0.6
-  stepSlow: 2
+  stepSlow: 2.667
   stepFollow: 0.5
   restToBaseSpeed: {x: 0.5, y: 3}
   stanceBlend: 8
@@ -971,6 +988,27 @@ MonoBehaviour:
   elbowBack: 30
   armOutward: 8
   shoulderFollow: 12
+  jumpLeadThigh: 97
+  jumpLeadKnee: 150
+  jumpStanceThigh: -5
+  jumpStanceKnee: 165
+  jumpTrailPath:
+  - {x: 0.26, y: -0.67, z: -0.69}
+  - {x: 0.71, y: -0.14, z: -0.69}
+  - {x: 0.29, y: -0.14, z: 0.95}
+  - {x: 0, y: 0.12, z: 0.99}
+  jumpTrailTimes:
+  - 0
+  - 0.35
+  - 0.7
+  - 1
+  jumpTrailKnee: 105
+  jumpLandThigh: 20
+  jumpLandKnee: 170
+  jumpLeadAnkle: -17
+  jumpTrailAnkle: 25
+  jumpLean: 25
+  hitSit: 18
   preview: 0
   previewPose: {fileID: 0}
   previewLean: 0

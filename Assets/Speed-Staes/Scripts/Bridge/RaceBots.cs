@@ -18,7 +18,7 @@ namespace SpeedStars.Bridge
     /// player's presses arrive. Nothing in Malik's code is changed and the bots never touch the player's runner.
     /// Flow: READY (from <see cref="RaceSessionAdapter"/>'s start signal) plans a new field and puts everybody on the line, GO starts the
     /// schedules, every frame the live order is fed to a <see cref="RaceStandingsModel"/> that this component exposes as
-    /// <see cref="IRaceStandings"/>. A bot's time is measured like the player's: from its first press (RaceController does the same).
+    /// <see cref="IRaceStandings"/>. A bot's time is measured like the player's: from GO, its reaction included.
     /// The runner copies are built on the first frame, after every scene Start, so the mechanic's single-runner fallback lookups
     /// (FindObjectOfType) never see them at start-up; the builder also fills those references explicitly.
     /// </summary>
@@ -63,7 +63,7 @@ namespace SpeedStars.Bridge
             public BotPressSchedule Schedule;
             public int Next;
             public bool Started;
-            public double FirstPressSimTime;
+            public double GoSimTime;
             public bool Finished;
             public double FinishSeconds;
             public double PrevSimTime;
@@ -225,7 +225,7 @@ namespace SpeedStars.Bridge
                 bot.Started = false;
                 bot.Finished = false;
                 bot.FinishSeconds = 0.0;
-                bot.FirstPressSimTime = 0.0;
+                bot.GoSimTime = 0.0;
                 bot.PrevSimTime = 0.0;
                 bot.PrevDistance = 0f;
                 bot.Active = true;
@@ -243,6 +243,8 @@ namespace SpeedStars.Bridge
         {
             if (!_runnersReady) return;
             _goTime = Time.timeAsDouble;
+            for (int i = 0; i < _bots.Count; i++)
+                if (_bots[i].Active && _bots[i].Body.Sim != null) _bots[i].GoSimTime = _bots[i].Body.Sim.Time;
             _racing = true;
         }
 
@@ -299,11 +301,7 @@ namespace SpeedStars.Bridge
                 Bot bot = _bots[i];
                 if (!bot.Active || bot.Finished || bot.Body.Sim == null) continue;
                 RunnerSim sim = bot.Body.Sim;
-                if (!bot.Started && sim.Presses > 0)
-                {
-                    bot.Started = true;
-                    bot.FirstPressSimTime = sim.LastPressTime; // the clock starts at the first press, like RaceController's
-                }
+                if (!bot.Started && sim.Presses > 0) bot.Started = true;
 
                 float d = sim.Distance;
                 double t = sim.Time;
@@ -312,7 +310,7 @@ namespace SpeedStars.Bridge
                     float span = d - bot.PrevDistance;
                     double fraction = span > 0f ? (distance - bot.PrevDistance) / span : 1.0;
                     double crossed = bot.PrevSimTime + fraction * (t - bot.PrevSimTime);
-                    bot.FinishSeconds = crossed - bot.FirstPressSimTime;
+                    bot.FinishSeconds = crossed - bot.GoSimTime;
                     bot.Finished = true;
                     LetGo(bot);
                 }

@@ -129,6 +129,7 @@ namespace SpeedStars.Tools.Builders
             var installerSo = new SerializedObject(installer);
             Prop(installerSo, "raceSession").objectReferenceValue = adapter;
             Prop(installerSo, "results").objectReferenceValue = results;
+            Prop(installerSo, "entryGateModal").objectReferenceValue = RequireOne<EntryGateModalView>(scene, "EntryGate modal (EntryGateModal prefab instance)");
             Prop(installerSo, "rootScreen").objectReferenceValue = hudScreen;
             Apply(installerSo);
             Log(nameof(SceneWiring), "Race: RaceSession (adapter + DevRaceFinish) and RaceSceneInstaller fields wired.");

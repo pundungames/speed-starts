@@ -14,7 +14,7 @@ namespace SpeedStars.Tools.Builders
     /// Runs Malik's RunnerSim headless (no scene, no Play mode) with the bots' key schedules to measure what 100 m time a given bot
     /// skill really produces, and writes the skill -> time table the bot planner needs (BotRaceConfig.calibration, T-074).
     /// The schedule is fed to the sim exactly the way RunnerBody.Update does it: advance to the event's time, then Press / Release.
-    /// Times are measured from the first press (what RaceController and RaceBots measure), the CSV also holds the time from GO.
+    /// Times are measured from GO, the reaction included (what RaceController and RaceBots measure).
     /// <code>
     /// Unity.exe -batchmode -nographics -quit -projectPath &lt;copy&gt; -executeMethod SpeedStars.Tools.Builders.BotCalibration.Run
     ///     -out &lt;csv&gt; [-seeds 20] [-step 0.1] [-distance 100] [-horizon 120] [-config &lt;asset path&gt;] [-prefab &lt;prefab path&gt;] [-apply]
@@ -30,9 +30,74 @@ namespace SpeedStars.Tools.Builders
         private const float DefaultDistance = 100f;
         private const double DefaultHorizon = 120.0;
         private const float MinGapBetweenRows = 0.01f; // seconds; keeps the table strictly falling so it can be inverted
+        private const int SearchSeeds = 10;
+        private const float SearchPeriodMin = 0.20f, SearchHoldMin = 0.06f, SearchStep = 0.02f;
+        private const int SearchPeriodSteps = 10, SearchHoldSteps = 5; // period up to 0.40 s, hold up to 0.16 s
+        private const double SearchHorizon = 60.0;
 
         [MenuItem("Tools/Speed Stars/Run bot calibration")]
-        public static void Run()
+        public static void Run() => Calibrate(HasArg("-apply"));
+
+        /// <summary>Same run, writing the measured table into the config asset.</summary>
+        [MenuItem("Tools/Speed Stars/Run bot calibration and apply")]
+        public static void RunAndApply() => Calibrate(true);
+
+        /// <summary>
+        /// The fastest driver the physics allows: every press period x hold in the search range, with the best bot's jitter and mistakes,
+        /// over a few seeds. The result goes to BotRaceConfig periodBest / holdBest by hand, then the table is measured again.
+        /// </summary>
+        [MenuItem("Tools/Speed Stars/Search bot driver")]
+        public static void Search()
+        {
+            string outPath = ArgValue("-out") ?? Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? ".", "Logs", "bot-driver-search.csv");
+            int seeds = Mathf.Max(1, ArgInt("-seeds", SearchSeeds));
+            var config = AssetDatabase.LoadAssetAtPath<BotRaceConfig>(BotRaceConfigSeed.Path)
+                ?? throw new InvalidOperationException($"BotRaceConfig not found at '{BotRaceConfigSeed.Path}'.");
+            RunnerTuning tuning = PrefabTuning(DefaultPrefab);
+            BotPlan best = BotSimDriver.PlanForSkill(config, 1f);
+
+            var csv = new StringBuilder("period,hold,finished,mean_seconds_from_first_press,mean_seconds_from_go,worst_seconds_from_first_press\n");
+            for (int p = 0; p <= SearchPeriodSteps; p++)
+            {
+                for (int h = 0; h <= SearchHoldSteps; h++)
+                {
+                    float period = SearchPeriodMin + p * SearchStep, hold = SearchHoldMin + h * SearchStep;
+                    var plan = new BotPlan("search", string.Empty, best.TargetSeconds, 1f, best.ReactionSeconds, period, hold,
+                        best.JitterSeconds, best.MistakeChance, best.MistakeShiftRatio);
+                    double sumPress = 0.0, sumGo = 0.0, worst = 0.0;
+                    int finished = 0;
+                    for (int seed = 0; seed < seeds; seed++)
+                    {
+                        var schedule = new BotPressSchedule(plan, new System.Random(unchecked(p * 7919 + h * 104729 + seed * 1299709 + 17)), SearchHorizon);
+                        BotSimDriver.Result r = BotSimDriver.Run(tuning, schedule, DefaultDistance, SearchHorizon);
+                        if (!r.Finished) continue;
+                        finished++;
+                        sumPress += r.SecondsFromFirstPress;
+                        sumGo += r.SecondsFromGo;
+                        worst = Math.Max(worst, r.SecondsFromFirstPress);
+                    }
+                    double meanPress = finished > 0 ? sumPress / finished : double.NaN;
+                    double meanGo = finished > 0 ? sumGo / finished : double.NaN;
+                    csv.Append(Format(period)).Append(',').Append(Format(hold)).Append(',').Append(finished).Append(',')
+                       .Append(Format(meanPress)).Append(',').Append(Format(meanGo)).Append(',').Append(Format(worst)).Append('\n');
+                    UnityEngine.Debug.Log($"[{Source}] SEARCH_ROW period {period:0.00} hold {hold:0.00}: {meanPress:0.00} s, finished {finished}/{seeds}");
+                }
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outPath)) ?? ".");
+            File.WriteAllText(outPath, csv.ToString(), new UTF8Encoding(false));
+            UnityEngine.Debug.Log($"[{Source}] SEARCH_OK {outPath}");
+        }
+
+        private static RunnerTuning PrefabTuning(string prefabPath)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath)
+                ?? throw new InvalidOperationException($"Runner prefab not found at '{prefabPath}'.");
+            var body = prefab.GetComponentInChildren<RunnerBody>(true)
+                ?? throw new InvalidOperationException($"'{prefabPath}' has no RunnerBody; its tuning is the sim's numbers.");
+            return body.tuning;
+        }
+
+        private static void Calibrate(bool apply)
         {
             string outPath = ArgValue("-out") ?? Path.Combine(Path.GetDirectoryName(Application.dataPath) ?? ".", "Logs", "bot-calibration.csv");
             int seeds = Mathf.Max(1, ArgInt("-seeds", DefaultSeeds));
@@ -44,11 +109,7 @@ namespace SpeedStars.Tools.Builders
 
             var config = AssetDatabase.LoadAssetAtPath<BotRaceConfig>(configPath)
                 ?? throw new InvalidOperationException($"BotRaceConfig not found at '{configPath}'; seed the configs first (ConfigAssetSeeder).");
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath)
-                ?? throw new InvalidOperationException($"Runner prefab not found at '{prefabPath}'.");
-            var body = prefab.GetComponentInChildren<RunnerBody>(true)
-                ?? throw new InvalidOperationException($"'{prefabPath}' has no RunnerBody; its tuning is the sim's numbers.");
-            RunnerTuning tuning = body.tuning;
+            RunnerTuning tuning = PrefabTuning(prefabPath);
 
             var csv = new StringBuilder("skill,seed,finished,seconds_from_first_press,seconds_from_go\n");
             var points = new List<BotCalibrationPoint>();
@@ -69,7 +130,7 @@ namespace SpeedStars.Tools.Builders
                        .Append(Format(r.Finished ? r.SecondsFromFirstPress : double.NaN)).Append(',')
                        .Append(Format(r.Finished ? r.SecondsFromGo : double.NaN)).Append('\n');
                     // A run that never finished counts as the horizon: the table stays usable and the row says it in the log.
-                    sum += r.Finished ? r.SecondsFromFirstPress : horizon;
+                    sum += r.Finished ? r.SecondsFromGo : horizon;
                     if (r.Finished) finished++;
                 }
                 float mean = (float)(sum / seeds);
@@ -86,7 +147,7 @@ namespace SpeedStars.Tools.Builders
             File.WriteAllText(outPath + ".table.txt", tableText, new UTF8Encoding(false));
             UnityEngine.Debug.Log($"[{Source}] CALIBRATION_OK {outPath}\n{tableText}");
 
-            if (HasArg("-apply"))
+            if (apply)
             {
                 config.SetCalibration(table);
                 EditorUtility.SetDirty(config);
@@ -112,7 +173,7 @@ namespace SpeedStars.Tools.Builders
         private static string TableText(List<BotCalibrationPoint> measured, List<BotCalibrationPoint> table)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("// Measured mean 100 m time per skill (from the first press). Paste into BotRaceConfig.calibration or run with -apply.");
+            sb.AppendLine("// Measured mean 100 m time per skill (from GO). Paste into BotRaceConfig.calibration or run with -apply.");
             for (int i = 0; i < table.Count; i++)
             {
                 string note = Mathf.Abs(table[i].seconds - measured[i].seconds) > 0.0005f
