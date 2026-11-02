@@ -1,5 +1,7 @@
 # Devir notu — 30.10.2026 akşam (Malik'e ve sonraki oturuma)
 
+> **Güncel ve tek başına yeten not: `docs/MALIK-YAPILACAKLAR.md` (02.11).** Bu dosya geçmiş kaydıdır.
+
 > Kullanıcı bilgisayarı kapattı; bu turun işleri **test edilmedi**. Main çalışan halde (rakip botlar dahil, kopyada yeşil:
 > EditMode 111, PlayMode 27 + 2 çekim). Yarım işler ayrı dalda: **`agent/T-077-080-duzeltmeler`** (worktree
 > `D:\Pundun\speed-starts-duzeltme`). Dal main'e GİRMEDİ. Uzaktan çalışacaksan kullanıcının bu dalı push etmesi gerekir.

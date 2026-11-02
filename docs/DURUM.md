@@ -8,7 +8,8 @@ MOD: süpervizör
 Son güncelleme: 2026-10-30 (akşam) · main bce0ddb5 (push kullanıcıda) · dal `main`
 
 ## Sürüyor
-- **Yarım, test edilmedi:** dal `agent/T-077-080-duzeltmeler` (worktree `D:\Pundun\speed-starts-duzeltme`, 77a3c763) — T-077 Stats'ta
+- **Malik'e devredildi (kullanıcı kararı 02.11):** yarım işlerin hepsi Malik'te — `docs/MALIK-YAPILACAKLAR.md`. Biz bu dala yazmıyoruz.
+- Yarım, test edilmedi: dal `agent/T-077-080-duzeltmeler` (worktree `D:\Pundun\speed-starts-duzeltme`, 77a3c763) — T-077 Stats'ta
   botlar, T-078 süre GO'dan + iz kaydı + ok tuşları (sürücü araması yok, blocked), T-079 bilet penceresi Race'te + Practice +
   COMING SOON, T-080 yükleme ölçümü. Bitirme sırası ve olası sorunlar: `docs/DEVIR-2026-10-30-aksam.md`. Installer bağlamaları
   kullanıcı onayı bekliyor. Referans oyun rakip analizi: `docs/analiz/2026-10-30-referans-oyun-rakipler.md` (Global players = sabit hayalet,
