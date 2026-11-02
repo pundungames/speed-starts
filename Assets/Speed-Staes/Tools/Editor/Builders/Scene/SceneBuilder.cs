@@ -125,6 +125,7 @@ namespace SpeedStars.Tools.Builders
                 Scene scene = EditorSceneManager.OpenScene(RaceScenePath, OpenSceneMode.Single);
                 DisableRunnerDebugTools(scene);
                 SceneCosmetics.AddToRaceRunner(scene); // T-025: the runner wears the selected preset
+                SceneRaceTheme.Add(scene);             // T-072: the picked theme's streaming world, flat track off
                 if (FindInScene<SceneContext>(scene) != null)
                     throw new InvalidOperationException($"'{PhysicalTestScenePath}' already has a SceneContext; merge the Race scene by hand.");
 
@@ -143,6 +144,7 @@ namespace SpeedStars.Tools.Builders
 
                 SceneUiLayout.CreateSceneContext<RaceSceneInstaller>(scene, SceneUiLayout.RootScreenOf(raceHud, UiPrefabPaths.RaceHud));
                 SceneWiring.WireRace(scene);
+                SceneRaceBots.Add(scene);              // T-075: opponents + rank (needs the adapter WireRace made)
                 Save(scene, RaceScenePath);
                 done = true;
             }
@@ -154,7 +156,7 @@ namespace SpeedStars.Tools.Builders
                 else if (!done && copied)
                     Warn(Source, $"Race build failed after the copy; '{RaceScenePath}' now holds a bare PhysicalTest copy. Fix the error and rebuild with overwrite.");
             }
-            Log(Source, $"Wrote {RaceScenePath} (copy of {PhysicalTestScenePath} + UI).");
+            Log(Source, $"Wrote {RaceScenePath} (copy of {PhysicalTestScenePath} + theme worlds + UI).");
         }
 
         /// <summary>Home at 0 and Race at 1, both enabled. Entries the user added before are kept after them.</summary>

@@ -1,7 +1,7 @@
 ---
 id: T-072
 title: Yaris sahnesinde ana menude secilen tema (Serhat'in akan dunyasi, aktif temaya gore)
-status: todo
+status: merged
 owner: gameplay-agent
 depends_on: [T-070]
 owns_paths:
@@ -13,14 +13,20 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/RaceThemeSlotsTests.cs"
 touches_scene: true
 branch: agent/T-072-073
-commits: []
+commits: [1e4cf912, c4a26db8]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Themes/RaceThemeSlotsTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: closed
+    not: "Race.unity yeniden uretilmeli (SceneBuilder.BuildRace overwrite): 'Race Worlds' (RaceThemeView + Standard City + 4 ThemedLoopWay), Track kapali. Sonra ShotTool.CaptureRaceThemes ile 5 cekim. -> c4a26db8 (kopyada builder, 5 cekim bakildi)"
+  - tip: ASSET
+    durum: closed
+    not: "Yeni .cs dosyalari icin .meta Unity'den gelir (RaceThemeView, RaceThemeSlots, SceneRaceTheme, RaceThemeSlotsTests) - kopyada derleyip .meta'yi al (TUZAKLAR 183). -> c4a26db8"
+started: 2026-10-30
+finished: 2026-10-30
 blocked_reason:
 ---
 
@@ -71,4 +77,8 @@ KAMERA  : yok
 - Tema ekraninin kendisi, fiyat/sahiplik, rakip kosucular, kamera ayari
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+- Yapildi: RaceThemeSlots (saf secim) + testi, RaceThemeView (Bridge; ThemeRunPlayground.SelectTheme mantigi, RunnerBody.RunReset'te dunyayi bastan kurar), SceneRaceTheme (builder), BuildRace'e cagri, ShotTool.CaptureRaceThemes (race_theme_0..4).
+- Standart sehir: Serhat'in yapilandirilmis `LoopWay.prefab`i (Kevin Iglesias/.../Models) instance'i, loopCount 3; 4 tema: Definition.asset basina bir ThemedLoopWay (sira Egypt, Rome, Pirate, Sky = enum sirasi, builder dogruluyor). Hepsi kapali baslar, view acar.
+- Hizalama: oyuncu x=-1.184, dunya yolu x=-5.63 icin yazilmis; view dunyayi (runner.x - authoredRunnerX) kadar kaydirir (Serhat/Malik kodu degismedi). Olculmedi (Unity calistirilmadi): cekimlerde yol kosucunun altinda mi bakilmali.
+- Duz `Track` (Ground, Ground(1), serit cizgileri) kapatildi; FinishLine (y=0.005, genislik 12, x=0) acik: tema yolunun ustunde z-fight/gorunmeme riski, cekimde bakilacak.
+- Zorlandigim/birakilan: sahne uretimi ve cekim supervizorde (needs); isik/gokyuzu temaya gore degismiyor (kapsam disi); LoopWayGenerator.Start kendi Generate'ini bir kez daha cagirir (zararsiz).

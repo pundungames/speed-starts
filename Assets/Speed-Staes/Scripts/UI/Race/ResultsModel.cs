@@ -28,9 +28,13 @@ namespace SpeedStars.UI.Race
         /// <summary>DB: this race is the player's best of today, UTC (player row only).</summary>
         public readonly bool ShowDayBest;
 
+        /// <summary>ISO 3166-1 alpha-2 of the runner's flag; empty = no flag (the rows of the single-runner table have none).</summary>
+        public readonly string CountryCode;
+
         public ResultRowData(int rank, string name, string timeText, bool isPlayer, ResultTrophy trophy,
-            bool showPersonalBest = false, bool showDayBest = false)
+            bool showPersonalBest = false, bool showDayBest = false, string countryCode = "")
         {
+            CountryCode = countryCode ?? string.Empty;
             ShowPersonalBest = showPersonalBest;
             ShowDayBest = showDayBest;
             Rank = rank;
@@ -99,6 +103,9 @@ namespace SpeedStars.UI.Race
 
         /// <summary>The Best of the day panel has no data source yet.</summary>
         public const string NoDailyBest = "No races today";
+
+        /// <summary>Time cell of a runner still on the track.</summary>
+        public const string NotFinished = "-";
 
         /// <summary>"9.58s": stopwatch time with the unit.</summary>
         public static string Time(double seconds) => RaceDisplayFormat.Time(seconds) + "s";

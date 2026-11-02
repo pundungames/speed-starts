@@ -56,7 +56,8 @@ namespace SpeedStars.Tools.Builders
         private static readonly Vector2 PlayerColMin = new Vector2(0.27f, 0.10f), PlayerColMax = new Vector2(0.60f, 0.90f);
         private static readonly Vector2 TimeColMin = new Vector2(0.70f, 0.10f), TimeColMax = new Vector2(0.99f, 0.90f);
         private static readonly Vector2 RankMin = new Vector2(0.17f, 0.08f), RankMax = new Vector2(0.26f, 0.92f);
-        private static readonly Vector2 NameMin = new Vector2(0.29f, 0.08f), NameMax = new Vector2(0.64f, 0.92f);
+        private static readonly Vector2 FlagMin = new Vector2(0.27f, 0.22f), FlagMax = new Vector2(0.345f, 0.78f);
+        private static readonly Vector2 NameMin = new Vector2(0.355f, 0.08f), NameMax = new Vector2(0.64f, 0.92f);
         private static readonly Vector2 TimeMin = new Vector2(0.64f, 0.08f), TimeMax = new Vector2(0.94f, 0.92f);
         private static readonly Vector2 PbBadgeMin = new Vector2(0.56f, 0.2f), PbBadgeMax = new Vector2(0.66f, 0.8f);
         private static readonly Vector2 DbBadgeMin = new Vector2(0.66f, 0.2f), DbBadgeMax = new Vector2(0.76f, 0.8f);
@@ -190,7 +191,22 @@ namespace SpeedStars.Tools.Builders
                 sheet.Table.first_row_position[0], sheet.Table.first_row_position[1], sheet.Table.row_canvas[0],
                 (int)(sheet.Table.row_step_y * (TableRows - 1) + rowHeight)
             };
-            RectTransform rows = Inside(panel, "Rows", layout, rowsRect, layout.Get("results_panel").rect[0], layout.Get("results_panel").rect[1], recenter: false);
+            // The window shows TableRows lines; more runners (opponents) scroll inside it. Rows = the scrolling content.
+            RectTransform rowsScrollNode = Inside(panel, "RowsScroll", layout, rowsRect, layout.Get("results_panel").rect[0], layout.Get("results_panel").rect[1], recenter: false);
+            Kit.Fill(rowsScrollNode.gameObject, new Color(0f, 0f, 0f, 0f), raycast: true); // transparent catcher so empty space drags
+            ScrollRect rowsScroll = rowsScrollNode.gameObject.AddComponent<ScrollRect>();
+            RectTransform viewport = Kit.Stretch(Kit.Node(rowsScrollNode, "Viewport"));
+            viewport.gameObject.AddComponent<RectMask2D>();
+            RectTransform rows = Kit.Place(Kit.Node(viewport, "Rows"), new Vector2(0f, 1f), Vector2.one, new Vector2(0.5f, 1f), Vector2.zero, Vector2.zero);
+            ContentSizeFitter fitter = rows.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            rowsScroll.viewport = viewport;
+            rowsScroll.content = rows;
+            rowsScroll.horizontal = false;
+            rowsScroll.vertical = true;
+            rowsScroll.movementType = ScrollRect.MovementType.Clamped;
+            rowsScroll.scrollSensitivity = 40f;
             VerticalLayoutGroup stack = rows.gameObject.AddComponent<VerticalLayoutGroup>();
             stack.spacing = (sheet.Table.row_step_y - rowHeight) * layout.Scale;
             stack.childAlignment = TextAnchor.UpperLeft;
@@ -229,6 +245,8 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "eventTitleText", eventTitle);
             Ref(so, "rowsContent", rows);
             Ref(so, "rowPrefab", rowPrefab);
+            Ref(so, "rowsScroll", rowsScroll);
+            BindFlags(so);
             Ref(so, "dailyBestText", dailyText);
             Ref(so, "gemRewardRoot", gem.gameObject);
             Ref(so, "gemRewardText", gemText);
@@ -240,6 +258,25 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "practiceButton", practice);
             RefArray(so, "revealItems", reveal);
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Flag icons (the leaderboard's art, same country list) for the runners' flags; the code entry holds the icon only.</summary>
+        private static void BindFlags(SerializedObject so)
+        {
+            SerializedProperty array = so.FindProperty("flags");
+            string[] codes = UiSettingsPrefabs.FlagCodes;
+            array.arraySize = codes.Length;
+            for (int i = 0; i < codes.Length; i++) FillFlag(array.GetArrayElementAtIndex(i), codes[i], codes[i]);
+            FillFlag(so.FindProperty("unknownFlag"), string.Empty, "unknown");
+        }
+
+        private static void FillFlag(SerializedProperty entry, string code, string art)
+        {
+            string path = UiLeaderboardPrefabs.ArtFolder + "/flag_" + art + ".png";
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite == null) throw new InvalidOperationException($"UiResultsPrefabs: flag sprite '{path}' not found or not imported as a Sprite.");
+            entry.FindPropertyRelative("code").stringValue = code;
+            entry.FindPropertyRelative("icon").objectReferenceValue = sprite;
         }
 
         // ---------------------------------------------------------------- pieces
@@ -295,6 +332,14 @@ namespace SpeedStars.Tools.Builders
             silver.gameObject.SetActive(false);
             bronze.gameObject.SetActive(false);
 
+            // Flag between the place and the name; off until the view gives it a sprite (a sprite-less Image draws a white box).
+            RectTransform flagNode = Kit.Span(Kit.Node(root, "Flag"), FlagMin, FlagMax);
+            Image flag = UiArt.Paint(flagNode.gameObject, null, raycast: false);
+            flag.preserveAspect = true;
+            flag.enabled = false;
+
+            CanvasGroup revealGroup = root.gameObject.AddComponent<CanvasGroup>(); // fade-in of a runner joining the open table
+
             Text rank = UiArt.Slot(root, "Rank", "1", RowSize, RankMin, RankMax);
             Text playerName = UiArt.Slot(root, "Name", "YOU", RowSize, NameMin, NameMax, TextAnchor.MiddleLeft);
             Text time = UiArt.Slot(root, "Time", "0.00s", RowSize, TimeMin, TimeMax, TextAnchor.MiddleRight);
@@ -306,6 +351,8 @@ namespace SpeedStars.Tools.Builders
             db.gameObject.SetActive(false);
 
             var so = new SerializedObject(view);
+            Ref(so, "flagImage", flag);
+            Ref(so, "revealGroup", revealGroup);
             Ref(so, "personalBestBadge", pb);
             Ref(so, "dayBestBadge", db);
             Ref(so, "rankText", rank);

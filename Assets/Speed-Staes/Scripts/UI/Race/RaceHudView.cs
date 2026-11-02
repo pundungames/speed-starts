@@ -1,3 +1,4 @@
+using DG.Tweening;
 using SpeedStars.Core.Race;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
@@ -53,7 +54,18 @@ namespace SpeedStars.UI.Race
         [Tooltip("Progress/Distance: meters run, e.g. '37 m'. May stay empty.")]
         [SerializeField] private Text distanceText;
 
+        [Header("Place (opponents)")]
+        [Tooltip("Place: the panel that holds the player's place; hidden while nobody else runs.")]
+        [SerializeField] private GameObject placeRoot;
+
+        [Tooltip("Place/Label: the player's place, e.g. '3rd'.")]
+        [SerializeField] private Text placeText;
+
         private IRaceSession _session;
+        private IRaceStandings _standings;
+        private UiMotionConfig _motion;
+        private string _shownPlace;
+        private Tween _placePunch;
         private IRaceTelemetry _telemetry;
         private IWallet _wallet;
         private IRaceHudActions _actions;
@@ -74,6 +86,14 @@ namespace SpeedStars.UI.Race
             _actions = actions;
         }
 
+        /// <summary>Optional: without opponents the Place panel stays hidden; without the motion config the place changes without a pop.</summary>
+        [Inject]
+        public void InjectStandings([InjectOptional] IRaceStandings standings, [InjectOptional] UiMotionConfig motion)
+        {
+            _standings = standings;
+            _motion = motion;
+        }
+
         protected override void Awake()
         {
             base.Awake();
@@ -90,6 +110,55 @@ namespace SpeedStars.UI.Race
             _shownSpeedTenths = -1;
             _shownCash = -1;
             _shownCadence = -1f;
+
+            _shownPlace = null;
+            if (_standings != null) _standings.Changed += OnStandingsChanged;
+            RefreshPlace(punch: false);
+        }
+
+        protected override void OnDisable()
+        {
+            if (_standings != null) _standings.Changed -= OnStandingsChanged;
+            KillPlacePunch();
+            base.OnDisable();
+        }
+
+        private void OnStandingsChanged() => RefreshPlace(punch: true);
+
+        /// <summary>"3rd" while opponents run, hidden otherwise; the label pops when the place changes.</summary>
+        private void RefreshPlace(bool punch)
+        {
+            string text = _standings != null ? RaceStandingsFormat.PlaceText(_standings.PlayerRank, _standings.RunnerCount) : string.Empty;
+            if (placeRoot != null) placeRoot.SetActive(text.Length > 0);
+            if (text == _shownPlace) return;
+
+            bool hadPlace = !string.IsNullOrEmpty(_shownPlace);
+            _shownPlace = text;
+            if (placeText != null) placeText.text = text;
+            if (punch && hadPlace && text.Length > 0) PunchPlace();
+        }
+
+        private void PunchPlace()
+        {
+            if (_motion == null || placeText == null || !isActiveAndEnabled) return;
+            KillPlacePunch();
+            Transform target = placeRoot != null ? placeRoot.transform : placeText.transform;
+            Tween punch = target.DOPunchScale(Vector3.one * _motion.ButtonPunchScale, _motion.ButtonPunchDuration, _motion.ButtonPunchVibrato)
+                .SetLink(gameObject);
+            punch.OnKill(() =>
+            {
+                if (_placePunch == punch) _placePunch = null;
+                if (target != null) target.localScale = Vector3.one;
+            });
+            _placePunch = punch;
+        }
+
+        private void KillPlacePunch()
+        {
+            if (_placePunch == null) return;
+            Tween running = _placePunch;
+            _placePunch = null;
+            running.Kill();
         }
 
         protected override void OnDestroy()

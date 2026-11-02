@@ -50,11 +50,20 @@ namespace SpeedStars.UI.Race
         [Tooltip("ResultsPanel/Header/Title: event name.")]
         [SerializeField] private Text eventTitleText;
 
-        [Tooltip("ResultsPanel/Rows: parent the row prefabs are created under.")]
+        [Tooltip("ResultsPanel/RowsScroll/Viewport/Rows: parent the row prefabs are created under (the scrolling content).")]
         [SerializeField] private Transform rowsContent;
 
         [Tooltip("ResultsTableRow prefab with a ResultsTableRowView on its root.")]
         [SerializeField] private ResultsTableRowView rowPrefab;
+
+        [Tooltip("ResultsPanel/RowsScroll: scrolls the table when more runners than the panel has room for are listed. May stay empty (then the table just overflows).")]
+        [SerializeField] private ScrollRect rowsScroll;
+
+        [Tooltip("Flag art of the countries that have one (the same entries as the leaderboard; only the icon is used).")]
+        [SerializeField] private LeaderboardFlagEntry[] flags = new LeaderboardFlagEntry[0];
+
+        [Tooltip("Flag art for a country without its own (the neutral flag).")]
+        [SerializeField] private LeaderboardFlagEntry unknownFlag;
 
         [Header("Best of the day")]
         [Tooltip("DailyBest/Row/Label: today's best (name and time) from the leaderboard, an empty-state text without data.")]
@@ -102,6 +111,10 @@ namespace SpeedStars.UI.Race
         private ILeaderboard _resultsLeaderboard;
         private IRaceSelection _resultsSelection;
         private readonly List<ResultsTableRowView> _rows = new List<ResultsTableRowView>();
+        private IRaceStandings _standings;
+        private LeaderboardFlagLibrary _flagLibrary;
+        private ResultsData _presented;
+        private bool _hasPresented;
         private Vector3[] _baseScales;
         private Color _normalTitleColor;
         private Sequence _reveal;
@@ -126,6 +139,13 @@ namespace SpeedStars.UI.Race
             _resultsNavigator = navigator;
             _resultsLeaderboard = leaderboard;
             _resultsSelection = selection;
+        }
+
+        /// <summary>Optional: without opponents (no standings) the table shows the player's own race as before.</summary>
+        [Inject]
+        public void InjectStandings([InjectOptional] IRaceStandings standings)
+        {
+            _standings = standings;
         }
 
         public float SplitStepMeters => analysisScreen != null ? analysisScreen.SplitStepMeters : 0f;
@@ -162,11 +182,17 @@ namespace SpeedStars.UI.Race
         protected override void OnEnable()
         {
             base.OnEnable();
+            if (_standings != null)
+            {
+                _standings.Changed += OnStandingsChanged;
+                if (_hasPresented) RefreshRows(animateNew: false); // a runner may have finished between Present and opening
+            }
             PlayReveal();
         }
 
         protected override void OnDisable()
         {
+            if (_standings != null) _standings.Changed -= OnStandingsChanged;
             base.OnDisable();
             KillDenied();
             KillReveal();
@@ -202,7 +228,9 @@ namespace SpeedStars.UI.Race
             }
             _punchRecord = data.IsNewRecord; // the screen is not on yet: the punch plays when it opens
 
-            FillRows(data.Rows);
+            _presented = data;
+            _hasPresented = true;
+            RefreshRows(animateNew: false);
             ShowLeaderboardCards();
         }
 
@@ -249,27 +277,87 @@ namespace SpeedStars.UI.Race
             _denied = shake;
         }
 
-        private void FillRows(IReadOnlyList<ResultRowData> rows)
+        private void OnStandingsChanged() => RefreshRows(animateNew: true);
+
+        /// <summary>
+        /// The table: every runner of the live standings when opponents run, else the player's own race from the model.
+        /// Existing lines are refilled in place; only lines beyond the old count are created (and fade in when the table is open).
+        /// </summary>
+        private void RefreshRows(bool animateNew)
         {
-            foreach (ResultsTableRowView old in _rows)
+            if (!_hasPresented) return;
+
+            IReadOnlyList<ResultRowData> rows = _presented.Rows;
+            ResultRowData playerRow = default;
+            bool hasPlayerRow = false;
+            foreach (ResultRowData candidate in _presented.Rows)
             {
-                if (old == null) continue;
-                old.gameObject.SetActive(false); // out of the layout now, destroyed at the end of the frame
-                Destroy(old.gameObject);
+                if (!candidate.IsPlayer) continue;
+                playerRow = candidate;
+                hasPlayerRow = true;
+                break;
             }
-            _rows.Clear();
+            if (_standings != null && hasPlayerRow && _standings.RunnerCount > 1)
+                rows = RaceStandingsFormat.Rows(_standings.Entries, playerRow);
 
             if (rowsContent == null || rowPrefab == null)
             {
                 Debug.LogWarning($"{name}: results rows content or row prefab is not assigned; the table is empty.", this);
                 return;
             }
-            foreach (ResultRowData row in rows)
+
+            for (int i = 0; i < rows.Count; i++)
             {
-                ResultsTableRowView view = Instantiate(rowPrefab, rowsContent);
-                view.Fill(row, _resultsMotion);
-                _rows.Add(view);
+                bool created = i >= _rows.Count;
+                ResultsTableRowView view = created ? Instantiate(rowPrefab, rowsContent) : _rows[i];
+                if (created) _rows.Add(view);
+                view.Fill(rows[i], _resultsMotion, FlagIcon(rows[i].CountryCode));
+                if (created && animateNew && isActiveAndEnabled) view.Reveal(_resultsMotion);
             }
+
+            for (int i = _rows.Count - 1; i >= rows.Count; i--)
+            {
+                ResultsTableRowView old = _rows[i];
+                _rows.RemoveAt(i);
+                if (old == null) continue;
+                old.gameObject.SetActive(false); // out of the layout now, destroyed at the end of the frame
+                Destroy(old.gameObject);
+            }
+
+            if (hasPlayerRow) KeepPlayerRowVisible(rows);
+        }
+
+        /// <summary>The flag icon of a country; no code = no flag, a code without art = the neutral flag.</summary>
+        private Sprite FlagIcon(string countryCode)
+        {
+            if (string.IsNullOrEmpty(countryCode)) return null;
+            if (_flagLibrary == null) _flagLibrary = new LeaderboardFlagLibrary(flags, unknownFlag);
+            LeaderboardFlagEntry entry = _flagLibrary.Get(countryCode);
+            return entry != null ? entry.Icon : null;
+        }
+
+        /// <summary>With more lines than the panel shows, scrolls just far enough that the player's own line is in view.</summary>
+        private void KeepPlayerRowVisible(IReadOnlyList<ResultRowData> rows)
+        {
+            if (rowsScroll == null || rowsScroll.viewport == null || rowsScroll.content == null) return;
+            int at = -1;
+            for (int i = 0; i < rows.Count; i++)
+                if (rows[i].IsPlayer) { at = i; break; }
+            if (at < 0 || at >= _rows.Count || _rows[at] == null) return;
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rowsScroll.content);
+            RectTransform viewport = rowsScroll.viewport;
+            Bounds bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, (RectTransform)_rows[at].transform);
+            Rect view = viewport.rect;
+            float shift = 0f;
+            if (bounds.min.y < view.yMin) shift = view.yMin - bounds.min.y;      // line below the view: content moves up
+            else if (bounds.max.y > view.yMax) shift = view.yMax - bounds.max.y; // line above the view: content moves down
+            if (Mathf.Approximately(shift, 0f)) return;
+
+            Vector2 position = rowsScroll.content.anchoredPosition;
+            position.y += shift;
+            rowsScroll.content.anchoredPosition = position;
         }
 
         // ---------------------------------------------------------------- open animation
