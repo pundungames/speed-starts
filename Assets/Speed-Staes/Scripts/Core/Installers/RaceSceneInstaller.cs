@@ -35,7 +35,7 @@ namespace SpeedStars.Installers
             Container.Bind(typeof(IRaceSession), typeof(IRaceTelemetry)).FromInstance(raceSession).AsSingle();
             Container.Bind<IResultsView>().FromInstance(results).AsSingle();
             // T-075/T-076: the bots keep the live order the HUD and the results list read (both inject it as optional).
-            if (raceBots != null) Container.Bind<IRaceStandings>().FromInstance(raceBots).AsSingle();
+            if (raceBots != null) Container.Bind(typeof(IRaceStandings), typeof(IRaceTraces)).FromInstance(raceBots).AsSingle();
             Container.Bind<IRaceEventLookup>().To<CatalogRaceEventLookup>().AsSingle();
             if (entryGateModal != null) Container.Bind<IEntryGatePrompt>().To<RaceFlowEntryGatePrompt>().AsSingle().WithArguments(entryGateModal);
             Container.BindInterfacesAndSelfTo<RaceFlow>().AsSingle().NonLazy();

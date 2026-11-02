@@ -23,7 +23,7 @@ namespace SpeedStars.Bridge
     /// (FindObjectOfType) never see them at start-up; the builder also fills those references explicitly.
     /// </summary>
     [DefaultExecutionOrder(-150)] // after RunnerInput (-200), before RunnerBody (-100): events with old timestamps land in the same frame
-    public sealed class RaceBots : MonoBehaviour, IRaceStandings
+    public sealed class RaceBots : MonoBehaviour, IRaceStandings, IRaceTraces
     {
         [Header("Wiring (set by the Race scene builder)")]
         [SerializeField, Tooltip("Opponent numbers: count, difficulty, spread, driver limits, calibration, names.")]
@@ -64,6 +64,7 @@ namespace SpeedStars.Bridge
             public int Next;
             public bool Started;
             public double GoSimTime;
+            public readonly List<RaceTraceSample> Samples = new List<RaceTraceSample>();
             public bool Finished;
             public double FinishSeconds;
             public double PrevSimTime;
@@ -89,10 +90,26 @@ namespace SpeedStars.Bridge
         double _goTime;
         bool _playerFinished;
         double _playerTime;
+        const float TraceStepMeters = 0.25f; // a chart point per this many metres at most
+
         string _playerName = string.Empty;
         string _playerFlag = string.Empty;
         Vector3 _basePosition;
         Vector3 _laneDirection;
+
+        /// <summary>IRaceTraces: every racing bot's run so far, for the Analysis screen.</summary>
+        public IReadOnlyList<RaceTrace> Traces
+        {
+            get
+            {
+                var traces = new List<RaceTrace>(_bots.Count);
+                foreach (Bot bot in _bots)
+                    if (bot.Active) traces.Add(new RaceTrace(bot.Plan.Name, bot.Samples, bot.Finished, bot.FinishSeconds));
+                return traces;
+            }
+        }
+
+        public event Action TracesChanged;
 
         // IRaceStandings: the model's own list and event; before the first frame it is empty.
         public IReadOnlyList<RaceEntry> Entries => _model.Entries;
@@ -226,6 +243,7 @@ namespace SpeedStars.Bridge
                 bot.Finished = false;
                 bot.FinishSeconds = 0.0;
                 bot.GoSimTime = 0.0;
+                bot.Samples.Clear();
                 bot.PrevSimTime = 0.0;
                 bot.PrevDistance = 0f;
                 bot.Active = true;
@@ -312,10 +330,14 @@ namespace SpeedStars.Bridge
                     double crossed = bot.PrevSimTime + fraction * (t - bot.PrevSimTime);
                     bot.FinishSeconds = crossed - bot.GoSimTime;
                     bot.Finished = true;
+                    bot.Samples.Add(new RaceTraceSample(distance, bot.FinishSeconds));
                     LetGo(bot);
+                    TracesChanged?.Invoke();
                 }
                 else
                 {
+                    if (bot.Samples.Count == 0 || d >= bot.Samples[bot.Samples.Count - 1].DistanceMeters + TraceStepMeters)
+                        bot.Samples.Add(new RaceTraceSample(d, t - bot.GoSimTime));
                     bot.PrevDistance = d;
                     bot.PrevSimTime = t;
                 }
