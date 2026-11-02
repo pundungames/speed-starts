@@ -7,7 +7,7 @@ namespace SpeedStars.Physical
     [DefaultExecutionOrder(1250)]
     public sealed class MomentumWindFeedback : MonoBehaviour
     {
-        const float Duration = 0.32f, Cooldown = 1.8f;
+        const float Duration = 0.9f, Cooldown = 1.8f;
         readonly LineRenderer[] _strokes = new LineRenderer[3];
         RunnerBody _body;
         Transform _chest;
@@ -37,7 +37,7 @@ namespace SpeedStars.Physical
                 line.sharedMaterial = material;
                 line.useWorldSpace = true;
                 line.positionCount = 3;
-                line.widthMultiplier = 0.025f;
+                line.widthMultiplier = 0.075f;
                 line.widthCurve = new AnimationCurve(new Keyframe(0, 0), new Keyframe(0.5f, 1), new Keyframe(1, 0));
                 line.numCapVertices = 2;
                 line.shadowCastingMode = ShadowCastingMode.Off;
@@ -73,11 +73,13 @@ namespace SpeedStars.Physical
             Vector3 anchor = _chest ? _chest.position : position + Vector3.up * 1.35f;
             for (int i = 0; i < 3; i++)
             {
-                Vector3 start = anchor - transform.forward * (0.45f + i * 0.13f + t * 0.25f)
-                    + Vector3.up * ((i - 1) * 0.1f);
-                float length = i == 1 ? 0.28f : 0.18f;
+                Vector3 start = anchor - transform.forward * (0.55f + i * 0.13f + t * 0.3f)
+                    + Vector3.up * ((i - 1) * 0.19f);
+                float length = i == 1 ? 0.75f : 0.52f;
                 for (int j = 0; j < 3; j++) _strokes[i].SetPosition(j, start - transform.forward * (j * 0.5f * length));
-                var color = new Color(0.75f, 0.88f, 0.96f, 0.65f * (1f - t));
+                // Hold the initial opacity briefly so the burst reads before fading away.
+                float fade = 1f - Mathf.Clamp01((t - 0.25f) / 0.75f);
+                var color = new Color(0.85f, 0.95f, 1f, 0.9f * fade);
                 _strokes[i].startColor = _strokes[i].endColor = color;
             }
             _age += Time.deltaTime;
