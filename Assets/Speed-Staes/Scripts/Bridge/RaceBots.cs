@@ -81,6 +81,7 @@ namespace SpeedStars.Bridge
         CosmeticCatalog _catalog;
         IPlayerSettings _settings;
         IPersonalBests _bests;
+        RaceEventCatalog _events;
 
         bool _initialized;
         bool _subscribed;
@@ -125,6 +126,9 @@ namespace SpeedStars.Bridge
         public IReadOnlyList<Transform> RunnerRoots => _roots;
         public BotRaceConfig Config => config;
         public RunnerBody Player => player;
+
+        [Inject]
+        void ConstructEvents([InjectOptional] RaceEventCatalog events) => _events = events;
 
         [Inject]
         void Construct([InjectOptional] ICosmeticService cosmetics, [InjectOptional] CosmeticCatalog catalog,
@@ -228,7 +232,7 @@ namespace SpeedStars.Bridge
             _model.Reset();
             CachePlayerIdentity();
 
-            IReadOnlyList<BotPlan> plans = BotFieldPlanner.Plan(config, ReferenceSeconds(), _random);
+            IReadOnlyList<BotPlan> plans = HasOpponents() ? BotFieldPlanner.Plan(config, ReferenceSeconds(), _random) : Array.Empty<BotPlan>();
             int[] lanes = ShuffledLanes(_bots.Count);
             for (int i = 0; i < _bots.Count; i++) _bots[i].Active = false;
 
@@ -372,6 +376,14 @@ namespace SpeedStars.Bridge
         float RaceDistance => race ? race.raceDistance : 100f;
 
         /// <summary>The player's best time of the current event (the difficulty is relative to it); null = none yet, the config's fallback.</summary>
+        /// <summary>The current event may be run alone (Practice); an event not found keeps the opponents.</summary>
+        bool HasOpponents()
+        {
+            if (_events == null || !session) return true;
+            RaceEventId id = session.CurrentEventId;
+            return id.IsEmpty || !_events.TryGet(id, out RaceEventDefinition definition) || definition.HasOpponents;
+        }
+
         float? ReferenceSeconds()
         {
             if (_bests == null || !session) return null;

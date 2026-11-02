@@ -99,7 +99,7 @@ namespace SpeedStars.UI.Race
             base.Awake();
             if (exitButton != null) exitButton.onClick.AddListener(OnExit);
             if (restartButton != null) restartButton.onClick.AddListener(OnRestart);
-            if (cashPlusButton != null) cashPlusButton.interactable = false;
+            if (cashPlusButton != null) cashPlusButton.transform.parent.gameObject.SetActive(false); // no Cash box in a race: it looked like a reward, and there is no shop behind the plus
         }
 
         protected override void OnEnable()
