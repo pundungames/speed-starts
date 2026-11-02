@@ -30,6 +30,7 @@ namespace SpeedStars.UI.Race
         private readonly IPlayerSettings _settings; // optional: the player row says YOU without it
         private readonly IDayBestSource _dayBests; // optional with the clock: without them the DB badge never shows
         private readonly IClock _clock;
+        private readonly IRaceTraces _traces; // optional: without it Analysis shows the player alone
         private readonly List<DayBestRecord> _dayScratch = new List<DayBestRecord>();
 
         private RaceEventInfo _current;
@@ -39,12 +40,17 @@ namespace SpeedStars.UI.Race
         private bool _warnedFreeStart;
         private string _payoutId = string.Empty;
         private RaceSplitRecorder _splits; // null until a race started and the results view can take analysis data
+        private SplitSeries _analysisPlayerSeries; // the finished race's data, kept to redraw as bots cross the line
+        private string _analysisTitle = string.Empty;
+        private float _analysisDistance;
+        private int _analysisRank;
 
         public RaceFlowLogic(IRaceSession session, IRaceEntryGate gate, IRaceSelection selection, IRaceEventLookup events,
             ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, IEntryGatePrompt prompt,
             IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null,
-            IDayBestSource dayBests = null, IClock clock = null)
+            IDayBestSource dayBests = null, IClock clock = null, IRaceTraces traces = null)
         {
+            _traces = traces;
             _dayBests = dayBests;
             _clock = clock;
             _session = session ?? throw new ArgumentNullException(nameof(session));
@@ -74,6 +80,7 @@ namespace SpeedStars.UI.Race
             _session.Finished += OnFinished;
             _results.RaceAgainRequested += OnRaceAgain;
             _results.MainMenuRequested += OnMainMenu;
+            if (_traces != null) _traces.TracesChanged += OnTracesChanged;
 
             RaceEventId id;
             if (!_gate.TryTakePending(out id))
@@ -96,6 +103,7 @@ namespace SpeedStars.UI.Race
             _session.Finished -= OnFinished;
             _results.RaceAgainRequested -= OnRaceAgain;
             _results.MainMenuRequested -= OnMainMenu;
+            if (_traces != null) _traces.TracesChanged -= OnTracesChanged;
         }
 
         private bool BeginRace(RaceEventId id)
@@ -108,6 +116,7 @@ namespace SpeedStars.UI.Race
             _current = info;
             _hasCurrent = true;
             _resultsOpen = false;
+            _analysisPlayerSeries = null;
             _payoutId = Guid.NewGuid().ToString("N"); // one reward id per race start: a repeated finish cannot pay twice
             _session.RequestStart(new RaceStartRequest(info.Id, info.DistanceMeters));
             return true;
@@ -164,10 +173,41 @@ namespace SpeedStars.UI.Race
             }
             _splits.Sample(_session.Distance, _session.RaceTime);
             float distance = outcome.DistanceMeters > 0f ? outcome.DistanceMeters : _session.TargetDistance;
-            SplitSeries series = _splits.Finish(AnalysisModel.PlayerRunnerId, outcome.TimeSeconds);
+            _analysisPlayerSeries = _splits.Finish(AnalysisModel.PlayerRunnerId, outcome.TimeSeconds);
+            _analysisTitle = title;
+            _analysisDistance = distance;
+            _analysisRank = outcome.Rank;
+            RedrawAnalysis(sink);
+        }
 
-            sink.PresentAnalysis(AnalysisModel.Build(title, _wallet != null ? _wallet.Cash : 0, distance,
-                _settings != null ? _settings.PlayerName : string.Empty, outcome.Rank, series, null));
+        /// <summary>A bot crossed the line after the player: the open Analysis data gets its time instead of DNF.</summary>
+        private void OnTracesChanged()
+        {
+            if (_resultsOpen && _analysisPlayerSeries != null && _results is IAnalysisSink sink) RedrawAnalysis(sink);
+        }
+
+        private void RedrawAnalysis(IAnalysisSink sink)
+        {
+            sink.PresentAnalysis(AnalysisModel.Build(_analysisTitle, _wallet != null ? _wallet.Cash : 0, _analysisDistance,
+                _settings != null ? _settings.PlayerName : string.Empty, _analysisRank, _analysisPlayerSeries, BuildRivals(sink)));
+        }
+
+        /// <summary>The bots' runs as Analysis series, with the same step and tolerance as the player's; one still running is a DNF so far.</summary>
+        private List<AnalysisRival> BuildRivals(IAnalysisSink sink)
+        {
+            if (_traces == null) return null;
+            IReadOnlyList<RaceTrace> traces = _traces.Traces;
+            var rivals = new List<AnalysisRival>(traces.Count);
+            for (int i = 0; i < traces.Count; i++)
+            {
+                RaceTrace trace = traces[i];
+                var recorder = new RaceSplitRecorder(sink.SplitStepMeters, sink.FinishToleranceMeters);
+                recorder.Begin(_analysisDistance);
+                foreach (RaceTraceSample sample in trace.Samples) recorder.Sample(sample.DistanceMeters, sample.Seconds);
+                int runnerId = AnalysisModel.PlayerRunnerId + 1 + i;
+                rivals.Add(new AnalysisRival(trace.Name, recorder.Finish(runnerId, trace.Finished ? trace.FinishSeconds : 0d)));
+            }
+            return rivals;
         }
 
         /// <summary>

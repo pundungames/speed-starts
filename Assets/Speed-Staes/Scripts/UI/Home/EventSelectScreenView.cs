@@ -162,6 +162,7 @@ namespace SpeedStars.UI.Home
             raceOfTheDayMark.enabled = _model.Target == EventSelectTarget.RaceOfTheDay;
             practiceMark.enabled = _model.Target == EventSelectTarget.Practice;
             continueDimmed.SetActive(!_model.CanContinue);
+            continueLabel.text = _model.CanContinue ? layout.ContinueLabel : HomeTexts.ComingSoonButton;
         }
 
         private void OnCategory(EventCategory category)

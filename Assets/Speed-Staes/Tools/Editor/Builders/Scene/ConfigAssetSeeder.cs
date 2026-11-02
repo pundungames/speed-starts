@@ -44,7 +44,7 @@ namespace SpeedStars.Tools.Builders
         /// </summary>
         private static readonly EventSeed[] Events =
         {
-            new EventSeed("training", "Antrenman Alanı", 0f, ticket: false, gems: false, playable: false),
+            new EventSeed("training", "Antrenman Alanı", 100f, ticket: false, gems: false, playable: true),
             new EventSeed("race_of_the_day", "Race of the Day", 0f, ticket: false, gems: false, playable: false),
             new EventSeed("100m", "100m", 100f, ticket: true, gems: false, playable: true),
             new EventSeed("200m", "200m", 200f, ticket: false, gems: false, playable: false),
@@ -190,6 +190,7 @@ namespace SpeedStars.Tools.Builders
                 Prop(so, "requiresTicket").boolValue = seed.RequiresTicket;
                 Prop(so, "awardsPurpleGems").boolValue = seed.AwardsPurpleGems;
                 Prop(so, "isPlayable").boolValue = seed.IsPlayable;
+                Prop(so, "hasOpponents").boolValue = seed.Id != PracticeEventId;
                 Apply(so);
                 definitions.Add(definition);
             }
@@ -207,6 +208,8 @@ namespace SpeedStars.Tools.Builders
             if (asset == null) { Skipped(Source, UiMotionPath); return; }
             Log(Source, $"Created {UiMotionPath} with the field defaults.");
         }
+
+        private const string PracticeEventId = "training"; // runs alone
 
         private readonly struct EventSeed
         {

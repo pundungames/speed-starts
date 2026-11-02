@@ -11,6 +11,7 @@ namespace SpeedStars.UI.Home
         public const string TimedTicketLabel = "Timed Ticket";
         public const string NoTicketWarning = "No Entry Ticket left";
         public const string NotPlayableWarning = "Coming soon";
+        public const string ComingSoonButton = "COMING SOON";
         public const string UnknownEventWarning = "Event not found";
         public const string BuyWithCash = "BUY WITH CASH";
         public const string WatchAd = "WATCH AD";

@@ -30,11 +30,15 @@ namespace SpeedStars.Meta.Config
         [Tooltip("Off = listed but not playable yet (its race rules are not built).")]
         [SerializeField] private bool isPlayable;
 
+        [Tooltip("Off = the player runs alone, with no opponent bots (Practice).")]
+        [SerializeField] private bool hasOpponents = true;
+
         public RaceEventId Id => new RaceEventId(eventId);
         public string DisplayName => displayName ?? string.Empty;
         public float DistanceMeters => distanceMeters;
         public bool RequiresTicket => requiresTicket;
         public bool AwardsPurpleGems => awardsPurpleGems;
         public bool IsPlayable => isPlayable;
+        public bool HasOpponents => hasOpponents;
     }
 }
