@@ -20,13 +20,25 @@ namespace SpeedStars.Runner
 
     /// <summary>
     /// Collects left/right press and release events with their own timestamps.
-    /// Keyboard (N left, M right) and touch (left/right half of the screen; a finger keeps
-    /// the side it started on until it lifts). Nothing here judges or moves anything.
+    /// Keyboard (N left, M right, K jump) and touch (left/right half of the screen; a finger keeps
+    /// the side it started on until it lifts). A finger going up quickly is a jump, and is still the press it
+    /// started as. Nothing here judges or moves anything.
     /// </summary>
     [DefaultExecutionOrder(-200)]
     public sealed class RunnerInput : MonoBehaviour
     {
+        [Tooltip("A finger going up this share of the screen height is a jump.")]
+        public float swipeUpDistance = 0.06f;
+        [Tooltip("...within this long of touching down (s).")]
+        public float swipeUpTime = 0.25f;
+
         readonly Queue<TapEvent> _queue = new Queue<TapEvent>();
+
+        /// <summary>A jump was asked for (finger going up, or the K key).</summary>
+        public event System.Action JumpPressed;
+
+        /// <summary>Ask for a jump (tests / bots).</summary>
+        public void InjectJump() => JumpPressed?.Invoke();
 
         public bool TryDequeue(out TapEvent tap)
         {
@@ -45,8 +57,9 @@ namespace SpeedStars.Runner
         public event System.Action EmotePressed;
 
 #if ENABLE_INPUT_SYSTEM
-        InputAction _left, _right, _emote;
+        InputAction _left, _right, _emote, _jump;
         readonly Dictionary<int, int> _fingerLeg = new Dictionary<int, int>();
+        readonly Dictionary<int, Vector2> _fingerStart = new Dictionary<int, Vector2>();
 
         void OnEnable()
         {
@@ -67,32 +80,56 @@ namespace SpeedStars.Runner
             _emote.performed += ctx => EmotePressed?.Invoke();
             _emote.Enable();
 
+            _jump = new InputAction("Jump", InputActionType.Button);
+            _jump.AddBinding("<Keyboard>/k");
+            _jump.performed += ctx => JumpPressed?.Invoke();
+            _jump.Enable();
+
             EnhancedTouchSupport.Enable();
             ETouch.onFingerDown += OnFingerDown;
             ETouch.onFingerUp += OnFingerUp;
+            ETouch.onFingerMove += OnFingerMove;
         }
 
         void OnDisable()
         {
             ETouch.onFingerDown -= OnFingerDown;
             ETouch.onFingerUp -= OnFingerUp;
+            ETouch.onFingerMove -= OnFingerMove;
             _left?.Dispose();
             _right?.Dispose();
             _emote?.Dispose();
+            _jump?.Dispose();
             _fingerLeg.Clear();
+            _fingerStart.Clear();
         }
 
         void OnFingerDown(Finger finger)
         {
             int leg = finger.screenPosition.x < Screen.width * 0.5f ? 0 : 1;
             _fingerLeg[finger.index] = leg;
+            _fingerStart[finger.index] = finger.screenPosition;
             Enqueue(leg, true, finger.currentTouch.startTime);
+        }
+
+        void OnFingerMove(Finger finger)
+        {
+            if (!_fingerStart.TryGetValue(finger.index, out Vector2 start)) return;
+            if (Time.realtimeSinceStartupAsDouble - finger.currentTouch.startTime > swipeUpTime)
+            {
+                _fingerStart.Remove(finger.index);
+                return;
+            }
+            if (finger.screenPosition.y - start.y < swipeUpDistance * Screen.height) return;
+            _fingerStart.Remove(finger.index);   // one jump per touch
+            JumpPressed?.Invoke();
         }
 
         void OnFingerUp(Finger finger)
         {
             if (!_fingerLeg.TryGetValue(finger.index, out int leg)) return;
             _fingerLeg.Remove(finger.index);
+            _fingerStart.Remove(finger.index);
             Enqueue(leg, false, finger.currentTouch.time);
         }
 
@@ -111,6 +148,7 @@ namespace SpeedStars.Runner
             if (Input.GetKeyUp(KeyCode.N)) Enqueue(0, false);
             if (Input.GetKeyDown(KeyCode.M)) Enqueue(1, true);
             if (Input.GetKeyUp(KeyCode.M)) Enqueue(1, false);
+            if (Input.GetKeyDown(KeyCode.K)) JumpPressed?.Invoke();
             if (Input.GetKeyDown(KeyCode.J)) EmotePressed?.Invoke();
             for (int i = 0; i < Input.touchCount; i++)
             {

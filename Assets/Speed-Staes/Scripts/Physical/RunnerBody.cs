@@ -27,6 +27,7 @@ namespace SpeedStars.Physical
 
         Vector3 _startPos, _forward;
         double _origin;
+        bool _jumpAsked;
 
         void Awake()
         {
@@ -35,7 +36,22 @@ namespace SpeedStars.Physical
             _forward = transform.forward;
             Sim = new RunnerSim(tuning);
             _origin = Time.timeAsDouble;
+<<<<<<< HEAD
+            if (input) input.JumpPressed += OnJumpPressed;
+=======
+            if (!GetComponent<PerfectStepFeedback>()) gameObject.AddComponent<PerfectStepFeedback>();
+            if (!GetComponent<EarlyStepFeedback>()) gameObject.AddComponent<EarlyStepFeedback>();
+            if (!GetComponent<LateStepFeedback>()) gameObject.AddComponent<LateStepFeedback>();
+            if (!GetComponent<MomentumWindFeedback>()) gameObject.AddComponent<MomentumWindFeedback>();
+>>>>>>> edf0e1f20cb39055f38759b85e58f8a1a0210c02
         }
+
+        void OnDestroy()
+        {
+            if (input) input.JumpPressed -= OnJumpPressed;
+        }
+
+        void OnJumpPressed() => _jumpAsked = true;
 
         void Update()
         {
@@ -55,6 +71,8 @@ namespace SpeedStars.Physical
                     if (wasDown != Sim.Legs[tap.Leg].Pressed) Tapped?.Invoke(tap.Leg, tap.Pressed, Sim.Time);
                 }
             }
+            if (_jumpAsked && acceptInput) Sim.Jump();
+            _jumpAsked = false;
             if (now > Sim.Time) Sim.Advance((float)(now - Sim.Time));
             transform.position = _startPos + _forward * Sim.Distance;
         }

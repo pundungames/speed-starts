@@ -150,6 +150,20 @@ namespace SpeedStars.Physical
         [Tooltip("Extra loss with the head all the way forward (m/s² at headForwardMax, in proportion below).")]
         public float headDrag = 0.8f;
 
+        [Header("Hurdle jump")]
+        [Tooltip("Before leaving the ground the leading leg comes up with the other foot still planted (s), standing (x) and at max speed (y).")]
+        public Vector2 jumpWindup = new Vector2(0.2f, 0.05f);
+        [Tooltip("Time in the air (s), standing (x) and at max speed (y). Speed does not fall in the air.")]
+        public Vector2 jumpTime = new Vector2(0.3f, 0.18f);
+        [Tooltip("How high the body rises at the top of a jump (m).")]
+        public float jumpHeight = 0.3f;
+        [Tooltip("Shape of the jump: 2 = a plain arc, higher = up quickly, a moment hanging at the top over the bar, down quickly.")]
+        public float jumpHang = 4f;
+        [Tooltip("Share of the speed a knocked hurdle takes away.")]
+        [Range(0f, 1f)] public float hitLoss = 0.3f;
+        [Tooltip("How long the stumble after a knocked hurdle lasts (s): the runner stays on its feet.")]
+        public float hitTime = 0.45f;
+
         [Header("Energy")]
         [Tooltip("Full energy, at the start of a run.")]
         public float energyMax = 100f;
@@ -236,7 +250,21 @@ namespace SpeedStars.Physical
         public float HeadUpright => 1f - Mathf.Pow(Mathf.Clamp01(HeadAngle / Mathf.Max(1f, T.headSpoil)), T.headSpoilPower);
         /// <summary>The part of the lean the hold poses ask for (deg); Lean − PoseLean beyond stumbleLean is stumbling.</summary>
         public float PoseLean { get; private set; }
-        public bool Airborne => HopY > 0f;
+        public bool Airborne => HopY > 0f || JumpInAir;
+        /// <summary>From the jump being asked for to the landing, the wind-up on the ground included.</summary>
+        public bool InJump => _windupLeft > 0f || _jumpLeft > 0f;
+        /// <summary>Off the ground in a jump: only this clears a hurdle.</summary>
+        public bool JumpInAir => _windupLeft <= 0f && _jumpLeft > 0f;
+        /// <summary>How far through the wind-up on the ground (0..1), 1 once in the air.</summary>
+        public float JumpWindupProgress => !InJump ? 0f : _windupLeft > 0f ? 1f - _windupLeft / _windupTotal : 1f;
+        /// <summary>How far through the air (0..1), 0 on the ground.</summary>
+        public float JumpProgress => JumpInAir ? 1f - _jumpLeft / _jumpTotal : 0f;
+        /// <summary>The body's rise in the jump (m).</summary>
+        public float JumpY => JumpInAir ? T.jumpHeight * (1f - Mathf.Pow(Mathf.Abs(2f * JumpProgress - 1f), T.jumpHang)) : 0f;
+        /// <summary>The leg going over first: the one that did not push last.</summary>
+        public int JumpLeg { get; private set; }
+        /// <summary>The stumble after a knocked hurdle (1 at the hit, 0 when over).</summary>
+        public float HitWeight => Mathf.Clamp01(_hitLeft / Mathf.Max(0.01f, T.hitTime));
         /// <summary>Press to press on time at this speed (s): a full push lands then (stepTime, standing to max speed).</summary>
         public float StepTime => Mathf.Lerp(T.stepTime.x, T.stepTime.y, Speed / T.maxSpeed);
         public int HoldingCount => (Legs[0].Holding ? 1 : 0) + (Legs[1].Holding ? 1 : 0);
@@ -245,6 +273,7 @@ namespace SpeedStars.Physical
         Spring _head, _headFwd;   // the head angle; where the keys have taken it, coming back with no key down
         double _keyUpTime;        // sim time the last key down came up
         double _launchTime, _landTime;
+        float _windupLeft, _windupTotal, _jumpLeft, _jumpTotal, _hitLeft;
 
         public RunnerSim(RunnerTuning tuning)
         {
@@ -256,6 +285,7 @@ namespace SpeedStars.Physical
         {
             Time = 0.0;
             Speed = Distance = HopY = _hopVelocity = _pending = 0f;
+            _windupLeft = _jumpLeft = _hitLeft = 0f;
             Energy = T.energyMax;
             Presses = 0;
             LastLeg = -1;
@@ -343,6 +373,24 @@ namespace SpeedStars.Physical
             Presses++;
         }
 
+        /// <summary>A jump: the wind-up on the ground, then the air. Asked again during one it does nothing.</summary>
+        public void Jump()
+        {
+            if (InJump) return;
+            _launchTime = -1.0;
+            HopY = _hopVelocity = 0f;
+            _windupLeft = _windupTotal = Mathf.Lerp(T.jumpWindup.x, T.jumpWindup.y, Speed / T.maxSpeed);
+            _jumpLeft = _jumpTotal = Mathf.Lerp(T.jumpTime.x, T.jumpTime.y, Speed / T.maxSpeed);
+            JumpLeg = LastLeg >= 0 ? 1 - LastLeg : 1;
+        }
+
+        /// <summary>The runner went through a hurdle: it loses speed and stumbles, staying on its feet.</summary>
+        public void HitHurdle()
+        {
+            Speed *= 1f - T.hitLoss;
+            _hitLeft = T.hitTime;
+        }
+
         public void Release(int leg)
         {
             var l = Legs[leg];
@@ -398,6 +446,21 @@ namespace SpeedStars.Physical
         void Step(float h)
         {
             Time += h;
+            _hitLeft = Mathf.Max(0f, _hitLeft - h);
+            if (_windupLeft > 0f)
+            {
+                _windupLeft -= h;
+                if (_windupLeft <= 0f)
+                {
+                    _launchTime = -1.0;
+                    HopY = _hopVelocity = 0f;
+                }
+            }
+            else if (_jumpLeft > 0f)
+            {
+                _jumpLeft -= h;
+                if (_jumpLeft <= 0f) _landTime = Time;
+            }
 
             // Take-off at the end of the stance; a held foot stays down (hold pose, no flight).
             if (_launchTime >= 0.0 && Time >= _launchTime)
@@ -455,6 +518,7 @@ namespace SpeedStars.Physical
             float brake = T.stopBrake * Mathf.SmoothStep(0f, 1f, idle / Mathf.Max(0.001f, T.stopRamp));
             float drag = T.dragConstant + T.dragLinear * Speed + T.dragQuadratic * Speed * Speed + brake + T.holdDrag * maxHold
                          + T.headDrag * Mathf.Clamp01(HeadAngle / Mathf.Max(1f, T.headForwardMax));
+            if (JumpInAir) drag = 0f;
             Speed = Mathf.Clamp(Speed + applied + (thrust - drag) * h, 0f, T.maxSpeed);
             Distance += Speed * h;
 

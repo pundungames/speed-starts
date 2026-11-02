@@ -128,6 +128,10 @@ namespace SpeedStars.Physical
             [HideInInspector] public float toeRoll;     // toes rolling over their tips (deg, end of the push)
             [HideInInspector] public float swingAnkle;  // ankle bend relative to the shin in the air (deg)
             [HideInInspector] public float swingW;      // 1 = ankle follows swingAnkle, 0 = foot pitch
+            [HideInInspector] public float jumpAnkle;   // ankle bend on the shin in a jump (deg, + = toes down)
+            [HideInInspector] public float jumpW;       // 1 = the ankle takes jumpAnkle, toes in line
+            [HideInInspector] public float sideOut;     // thigh turned out of the leg's plane (deg, + = away from the body)
+            [HideInInspector] public Quaternion sideTurn = Quaternion.identity; // that turn, this frame
             [HideInInspector] public float swingToe;    // toe bend in the air (deg, + = toes up)
             [HideInInspector] public bool reachNext;    // the other key went down while this leg was going back: reach once back
             [HideInInspector] public bool easeOut;      // this phase starts at the leg's own speed and slows into its target
@@ -422,6 +426,37 @@ namespace SpeedStars.Physical
         [Tooltip("Shoulder (clavicle) follows the arm swing (deg at full swing).")]
         public float shoulderFollow = 12f;
 
+        [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
+        [Tooltip("The leg going over first: thigh and knee over the bar (knee 180 = straight).")]
+        public float jumpLeadThigh = 97f;
+        public float jumpLeadKnee = 150f;
+        [Tooltip("The other leg in the wind-up, foot still planted under the body.")]
+        public float jumpStanceThigh = -5f;
+        public float jumpStanceKnee = 165f;
+        [Tooltip("The trailing thigh's way over the hurdle: where it points (x = out to its side, y = up, z = forward), " +
+                 "from behind, out to the side and level, round to the front, in, and over at the hip. It goes round the " +
+                 "side between the points, never under the body.")]
+        public Vector3[] jumpTrailPath =
+        {
+            new Vector3(0.26f, -0.67f, -0.69f), new Vector3(0.71f, -0.14f, -0.69f), new Vector3(0.29f, -0.14f, 0.95f),
+            new Vector3(0f, 0.12f, 0.99f),
+        };
+        [Tooltip("How far through the air (0..1) the thigh reaches each point of jumpTrailPath.")]
+        public float[] jumpTrailTimes = { 0f, 0.35f, 0.7f, 1f };
+        [Tooltip("The trailing knee behind the body (180 = straight); it ends at jumpLeadKnee, in the front pose.")]
+        public float jumpTrailKnee = 105f;
+        [Tooltip("The leading leg as its foot comes to the ground, where the input takes it over.")]
+        public float jumpLandThigh = 20f;
+        public float jumpLandKnee = 170f;
+        [Tooltip("The leading leg's ankle on its shin (+ = toes down): about square to the shin, toes up, not in line with it.")]
+        public float jumpLeadAnkle = -17f;
+        [Tooltip("The trailing leg's ankle on its shin (+ = toes down): loose, toes hanging a little.")]
+        public float jumpTrailAnkle = 25f;
+        [Tooltip("Forward lean over the bar.")]
+        public float jumpLean = 25f;
+        [Tooltip("Leaning back at the hit of a knocked hurdle (the runner stays on its feet).")]
+        public float hitSit = 18f;
+
         [Header("Preview (play mode): hold one pose; edit the asset live, changes stay")]
         [Tooltip("Play mode: hold previewPose instead of running, to edit pose assets live.")]
         public bool preview;
@@ -437,8 +472,10 @@ namespace SpeedStars.Physical
         const float ToesUpFree = 5f;           // foot this far toes up (deg) keeps its toes in line instead of flat
         const float MinPelvis = 0.1f;          // the pelvis never goes lower than this above the ground (m)
         const float MinFlowRate = 50f;         // a leg turning forward slower than this (deg/s) starts its reach from rest
+        const float JumpAnkleFade = 10f;       // after a jump the ankles go back to the run's angles this fast (1/s)
         const float FollowRate = 6f;           // a leg changes between turning with the hips and keeping to the ground this fast (1/s)
 
+        bool _wasInJump;                           // last frame in a jump: this frame's landing
         Vector3 _restHip;
         Quaternion _restHipRot, _restSpineRoot, _restSpineTip;
         float _ground, _sole, _profileW, _runHome;
@@ -659,6 +696,8 @@ namespace SpeedStars.Physical
             _tip.Reset();
             _settle.Reset();
             _carried = true;
+            _wasInJump = false;
+            leftLeg.sideOut = rightLeg.sideOut = leftLeg.jumpW = rightLeg.jumpW = 0f;
             ResetLeg(leftLeg);
             ResetLeg(rightLeg);
             _heightSet = false;
@@ -895,6 +934,14 @@ namespace SpeedStars.Physical
             leg.knee = joint + new Vector3(0f, -Mathf.Cos(th), Mathf.Sin(th)) * leg.thighLength;
             leg.ankle = leg.knee + new Vector3(0f, -Mathf.Cos(sh), Mathf.Sin(sh)) * leg.shinLength;
             leg.width = width;
+            // Out of the leg's plane the whole leg turns about the hip joint (only over a hurdle: 0 in the run).
+            leg.sideTurn = Quaternion.identity;
+            if (Mathf.Approximately(leg.sideOut, 0f)) return;
+            Vector3 thigh = new Vector3(0f, -Mathf.Cos(th), Mathf.Sin(th));
+            Vector3 axis = Vector3.Cross(thigh, new Vector3(Side(leg), 0f, 0f));
+            leg.sideTurn = Quaternion.AngleAxis(leg.sideOut, axis);
+            leg.knee = joint + leg.sideTurn * (leg.knee - joint);
+            leg.ankle = joint + leg.sideTurn * (leg.ankle - joint);
         }
 
         void Update()
@@ -916,7 +963,7 @@ namespace SpeedStars.Physical
             {
                 // The Ready crouch is where the runner always heads; the run stance only lasts while a key is
                 // down, so with no input it goes straight back to the crouch (no upright stance on the way).
-                bool stepping = sim.Legs[0].Pressed || sim.Legs[1].Pressed;
+                bool stepping = sim.Legs[0].Pressed || sim.Legs[1].Pressed || sim.InJump;   // a jump is still the run
                 _stepping = Mathf.Lerp(_stepping, stepping ? 1f : 0f, 1f - Mathf.Exp(-stanceBlend * dt));
                 p = PoseData.Lerp(Get(ready, RunnerPoseDefaults.Ready), Get(run, RunnerPoseDefaults.Run),
                     Mathf.SmoothStep(0f, 1f, sim.Speed / Mathf.Max(0.01f, runPoseSpeed)) * _stepping);
@@ -932,6 +979,7 @@ namespace SpeedStars.Physical
             // 2. Legs: phases → angles → knee and ankle points.
             double now = sim.Time;
             TickLegs(now);
+            if (!preview) StepJumpLanding(sim, now);
             _runHome = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(restToBaseSpeed.x, restToBaseSpeed.y, sim.Speed)) * _stepping;
             float profileTarget = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(accelProfileSpeed, maxProfileSpeed, sim.Speed));
             _profileW = Mathf.Lerp(_profileW, profileTarget, 1f - Mathf.Exp(-4f * dt));
@@ -942,7 +990,7 @@ namespace SpeedStars.Physical
             {
                 lean = UpdateLean(dt, out baseBend, out bend, out legLean);
                 tip = UpdateTip(dt, pelvisPitchRange.y - p.pelvisPitch - lean);
-                lean += tip;
+                lean += tip + jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
                 // The head on the ground with no foot carrying lets the body settle after it: the waist opens.
                 float settle = _carried ? 0f : _headDown ? 1f : _settle.Value;
                 _settle.Step(settle, settleSpring.frequency, settleSpring.damping, dt);
@@ -963,6 +1011,7 @@ namespace SpeedStars.Physical
             UpdateLeg(rightLeg, now, dt, legTurn, _holdR, _holdL);
             FollowHips(leftLeg, rightLeg, legTurn, hipPitch + legLean, dt);
             FollowHips(rightLeg, leftLeg, legTurn, hipPitch + legLean, dt);
+            if (!preview) PoseJump(sim);
             Vector3 hip = _restHip + new Vector3(0f, 0f, p.pelvis.x);
             LegFK(leftLeg, hip, pelvisTilt, p.width);
             LegFK(rightLeg, hip, pelvisTilt, p.width);
@@ -970,7 +1019,7 @@ namespace SpeedStars.Physical
             // 4. Body height from the legs (the whole body moves, legs included); nothing goes into the ground.
             //    A carrying foot the height spring lags under stays on the ground: the IK bends its knee.
             float bodyY = preview ? 0f : UpdateBodyHeight(sim, dt);
-            if (!preview) bodyY = KeepAboveGround(hip, bodyY);
+            if (!preview) bodyY = KeepAboveGround(hip, bodyY) + sim.JumpY;
             hip.y += bodyY;
             foreach (var leg in new[] { leftLeg, rightLeg })
             {
@@ -999,6 +1048,93 @@ namespace SpeedStars.Physical
             // with it); a leg held back keeps its arm back.
             StepArm(leftArm, p.leftArm, LegBack(rightLeg));
             StepArm(rightArm, p.rightArm, LegBack(leftLeg));
+        }
+
+        /// <summary>How much of the jump's pose is on: in over the wind-up, out over the last quarter of the air.</summary>
+        static float JumpWeight(RunnerSim sim)
+        {
+            if (!sim.InJump) return 0f;
+            return Mathf.SmoothStep(0f, 1f, sim.JumpWindupProgress) *
+                   (1f - Mathf.SmoothStep(0f, 1f, (sim.JumpProgress - 0.75f) / 0.25f));
+        }
+
+        /// <summary>
+        /// The legs over a hurdle: in the wind-up the leading leg comes up nearly straight over the other, planted
+        /// foot and comes down to the ground by the landing; in the air the other goes out to the side and round
+        /// to the front pose (jumpTrailPath). Past the landing see StepJumpLanding.
+        /// </summary>
+        void PoseJump(RunnerSim sim)
+        {
+            Leg lead = sim.JumpLeg == 0 ? leftLeg : rightLeg, trail = sim.JumpLeg == 0 ? rightLeg : leftLeg;
+            lead.sideOut = trail.sideOut = 0f;
+            if (!sim.InJump)
+            {
+                float fade = JumpAnkleFade * Time.deltaTime;
+                lead.jumpW = Mathf.MoveTowards(lead.jumpW, 0f, fade);
+                trail.jumpW = Mathf.MoveTowards(trail.jumpW, 0f, fade);
+                return;
+            }
+
+            float s = sim.JumpProgress;
+            float up = Mathf.SmoothStep(0f, 1f, sim.JumpWindupProgress);
+            float down = Mathf.SmoothStep(0f, 1f, (s - 0.7f) / 0.3f);
+            lead.thighWorld = Mathf.Lerp(lead.thighWorld, Mathf.Lerp(jumpLeadThigh, jumpLandThigh, down), up);
+            lead.angles.knee = Mathf.Lerp(lead.angles.knee, Mathf.Lerp(jumpLeadKnee, jumpLandKnee, down), up);
+            lead.jumpAnkle = jumpLeadAnkle;
+            lead.jumpW = up * (1f - down);
+
+            float planted = Mathf.SmoothStep(0f, 1f, sim.JumpWindupProgress * 2f);
+            float off = Mathf.SmoothStep(0f, 1f, s / 0.3f);
+            float through = Mathf.SmoothStep(0f, 1f, (s - 0.35f) / 0.65f);
+            Vector3 aim = Vector3.Slerp(LegPlane(jumpStanceThigh), TrailPathPoint(s), off);
+            aim = Vector3.Slerp(LegPlane(trail.thighWorld), aim, planted);
+            // Split into the leg's own swing and the turn out of its plane, so the knee keeps bending the way it can.
+            trail.thighWorld = Mathf.Atan2(aim.z, -aim.y) * Mathf.Rad2Deg;
+            trail.sideOut = Mathf.Asin(Mathf.Clamp(aim.x, -1f, 1f)) * Mathf.Rad2Deg;
+            float knee = Mathf.Lerp(jumpStanceKnee, Mathf.Lerp(jumpTrailKnee, jumpLeadKnee, through), off);
+            trail.angles.knee = Mathf.Lerp(trail.angles.knee, knee, planted);
+            trail.jumpAnkle = Mathf.Lerp(jumpTrailAnkle, jumpLeadAnkle, through);
+            trail.jumpW = planted * off;
+        }
+
+        /// <summary>
+        /// The legs change roles at the landing: the leading leg, now on the ground, is the input's again; the other
+        /// goes straight on from the front pose to its place, without stopping, and a press takes it from wherever it is.
+        /// </summary>
+        void StepJumpLanding(RunnerSim sim, double now)
+        {
+            bool inJump = sim.InJump;
+            if (_wasInJump && !inJump)
+            {
+                Leg lead = sim.JumpLeg == 0 ? leftLeg : rightLeg, trail = sim.JumpLeg == 0 ? rightLeg : leftLeg;
+                lead.angles.thigh = jumpLandThigh;
+                lead.angles.knee = jumpLandKnee;
+                lead.follow = 0f;
+                Enter(lead, LegPhase.Rest, now, StepPart(frontHomeTime));
+                trail.angles.thigh = jumpLeadThigh;
+                trail.angles.knee = jumpLeadKnee;
+                trail.follow = 0f;
+                Enter(trail, LegPhase.Rest, now, StepPart(frontHomeTime));
+                trail.easeOut = true;   // already moving: no slow start
+            }
+            _wasInJump = inJump;
+        }
+
+        /// <summary>Where a thigh at this angle points (x = out to its side, y = up, z = forward), in the leg's plane.</summary>
+        static Vector3 LegPlane(float thigh) =>
+            new Vector3(0f, -Mathf.Cos(thigh * Mathf.Deg2Rad), Mathf.Sin(thigh * Mathf.Deg2Rad));
+
+        /// <summary>Where the trailing thigh points this far through the air: round the path, on the sphere about the hip.</summary>
+        Vector3 TrailPathPoint(float s)
+        {
+            int last = Mathf.Min(jumpTrailPath.Length, jumpTrailTimes.Length) - 1;
+            for (int i = 0; i < last; i++)
+            {
+                if (s > jumpTrailTimes[i + 1]) continue;
+                float k = Mathf.InverseLerp(jumpTrailTimes[i], jumpTrailTimes[i + 1], s);
+                return Vector3.Slerp(jumpTrailPath[i].normalized, jumpTrailPath[i + 1].normalized, Mathf.SmoothStep(0f, 1f, k));
+            }
+            return jumpTrailPath[last].normalized;
         }
 
         /// <summary>
@@ -1065,6 +1201,12 @@ namespace SpeedStars.Physical
         /// </summary>
         float UpdateBodyHeight(RunnerSim sim, float dt)
         {
+            // Over a hurdle no foot is on the ground to ask for a height: the legs' folding must not sink the body.
+            if (sim.JumpInAir)
+            {
+                _carried = true;
+                return _bodyY.Value;
+            }
             bool carryL = Carries(leftLeg), carryR = Carries(rightLeg);
             if (carryL || carryR)
             {
@@ -1189,7 +1331,7 @@ namespace SpeedStars.Physical
         {
             leg.target.position = transform.TransformPoint(leg.ankle);
             float th = leg.thighWorld * Mathf.Deg2Rad;
-            leg.hint.position = transform.TransformPoint(leg.knee + new Vector3(0f, Mathf.Sin(th), Mathf.Cos(th)) * HintDistance);
+            leg.hint.position = transform.TransformPoint(leg.knee + leg.sideTurn * new Vector3(0f, Mathf.Sin(th), Mathf.Cos(th)) * HintDistance);
         }
 
         /// <summary>−1 = left, +1 = right.</summary>
@@ -1319,7 +1461,7 @@ namespace SpeedStars.Physical
             // the ground pitch asks for an impossible bend that would drag the swing curve far toes up.
             float bend = Mathf.Lerp(Mathf.Clamp(Vector3.SignedAngle(from, to, axis), -ankleUpMax, ankleDownMax),
                 leg.swingAnkle, leg.swingW * leg.strideW);
-            bend = Mathf.Clamp(bend, -ankleUpMax, ankleDownMax);
+            bend = Mathf.Clamp(Mathf.Lerp(bend, leg.jumpAnkle, leg.jumpW), -ankleUpMax, ankleDownMax);
             leg.footBone.rotation = Quaternion.AngleAxis(bend, axis) * neutral;
         }
 
@@ -1344,7 +1486,7 @@ namespace SpeedStars.Physical
             onGround *= 1f - Mathf.Clamp01(-(leg.pitch + leg.rock) / ToesUpFree);
 
             float bend = Mathf.Lerp(-leg.swingToe * leg.strideW * leg.swingW, leg.toeRoll * leg.strideW - footPitch, onGround); // + = toes down
-            bend = Mathf.Clamp(bend, -toeUpMax, toeDownMax);
+            bend = Mathf.Clamp(Mathf.Lerp(bend, 0f, leg.jumpW), -toeUpMax, toeDownMax);
             leg.toeBone.rotation = Quaternion.AngleAxis(bend, axis) * (leg.footBone.rotation * leg.restToeInFoot);
         }
 
