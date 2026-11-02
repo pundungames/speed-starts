@@ -57,11 +57,11 @@ namespace SpeedStars.Core.Race.Bots
 
         [Tooltip("Middle target = reference x this at difficulty 0 (above 1 = slower than the player).")]
         [Min(0.1f)]
-        [SerializeField] private float easyMultiplier = 1.25f;
+        [SerializeField] private float easyMultiplier = 1.30f;
 
         [Tooltip("Middle target = reference x this at difficulty 1.")]
         [Min(0.1f)]
-        [SerializeField] private float hardMultiplier = 0.85f;
+        [SerializeField] private float hardMultiplier = 0.90f;
 
         [Tooltip("Half-width of the field as a fraction of the middle target at skill range 0.")]
         [Range(0f, 1f)]
@@ -73,7 +73,23 @@ namespace SpeedStars.Core.Race.Bots
 
         [Tooltip("Per-race randomness: each bot's target time moves by up to this fraction, so the same bot runs a different time each race.")]
         [Range(0f, 0.5f)]
-        [SerializeField] private float raceRandomRatio = 0.05f;
+        [SerializeField] private float raceRandomRatio = 0.03f;
+
+        [Tooltip("Share of races (0..1) where the whole field is slower: the player's chance at a win without a perfect run.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float easyRaceChance = 0.3f;
+
+        [Tooltip("In such a race every target time is multiplied by this (above 1 = slower).")]
+        [Min(0.1f)]
+        [SerializeField] private float easyRaceMultiplier = 1.08f;
+
+        [Tooltip("Share of races (0..1) where the whole field is faster. The rest of the races are unchanged.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float hardRaceChance = 0.2f;
+
+        [Tooltip("In such a race every target time is multiplied by this (below 1 = faster).")]
+        [Min(0.1f)]
+        [SerializeField] private float hardRaceMultiplier = 0.96f;
 
         [Header("Press driver (best skill .. worst skill)")]
         [Tooltip("Reaction after GO of the best bot (seconds).")]
@@ -86,7 +102,7 @@ namespace SpeedStars.Core.Race.Bots
 
         [Tooltip("Time between presses of the best bot (seconds). The runner likes about 0.32.")]
         [Min(0.05f)]
-        [SerializeField] private float periodBestSeconds = 0.32f;
+        [SerializeField] private float periodBestSeconds = 0.24f;
 
         [Tooltip("Time between presses of the worst bot (seconds).")]
         [Min(0.05f)]
@@ -94,7 +110,7 @@ namespace SpeedStars.Core.Race.Bots
 
         [Tooltip("How long the best bot keeps a key down (seconds).")]
         [Min(0.02f)]
-        [SerializeField] private float holdBestSeconds = 0.10f;
+        [SerializeField] private float holdBestSeconds = 0.08f;
 
         [Tooltip("How long the worst bot keeps a key down (seconds).")]
         [Min(0.02f)]
@@ -124,17 +140,17 @@ namespace SpeedStars.Core.Race.Bots
         [Tooltip("Skill to expected time rows, skill ascending, seconds falling. Measured against the runner sim by the calibration tool.")]
         [SerializeField] private List<BotCalibrationPoint> calibration = new List<BotCalibrationPoint>
         {
-            new BotCalibrationPoint(0f, 22.343836f),
-            new BotCalibrationPoint(0.1f, 21.805595f),
-            new BotCalibrationPoint(0.2f, 21.106363f),
-            new BotCalibrationPoint(0.3f, 20.491817f),
-            new BotCalibrationPoint(0.4f, 19.861803f),
-            new BotCalibrationPoint(0.5f, 19.182318f),
-            new BotCalibrationPoint(0.6f, 18.5784f),
-            new BotCalibrationPoint(0.7f, 17.932213f),
-            new BotCalibrationPoint(0.8f, 17.238714f),
-            new BotCalibrationPoint(0.9f, 16.595211f),
-            new BotCalibrationPoint(1f, 15.965787f),
+            new BotCalibrationPoint(0f, 22.25944f),
+            new BotCalibrationPoint(0.1f, 21.20873f),
+            new BotCalibrationPoint(0.2f, 20.25657f),
+            new BotCalibrationPoint(0.3f, 19.29506f),
+            new BotCalibrationPoint(0.4f, 18.17385f),
+            new BotCalibrationPoint(0.5f, 16.69018f),
+            new BotCalibrationPoint(0.6f, 14.89909f),
+            new BotCalibrationPoint(0.7f, 13.15331f),
+            new BotCalibrationPoint(0.8f, 11.90123f),
+            new BotCalibrationPoint(0.9f, 10.85996f),
+            new BotCalibrationPoint(1f, 10.49337f),
         };
 
         [Header("Names")]
@@ -168,6 +184,10 @@ namespace SpeedStars.Core.Race.Bots
         public float NarrowSpread => narrowSpread;
         public float WideSpread => wideSpread;
         public float RaceRandomRatio => raceRandomRatio;
+        public float EasyRaceChance => easyRaceChance;
+        public float EasyRaceMultiplier => easyRaceMultiplier;
+        public float HardRaceChance => hardRaceChance;
+        public float HardRaceMultiplier => hardRaceMultiplier;
         public float ReactionBestSeconds => reactionBestSeconds;
         public float ReactionWorstSeconds => reactionWorstSeconds;
         public float PeriodBestSeconds => periodBestSeconds;

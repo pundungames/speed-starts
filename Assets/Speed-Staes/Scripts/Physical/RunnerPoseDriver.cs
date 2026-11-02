@@ -282,7 +282,7 @@ namespace SpeedStars.Physical
         public float stepTimeMax = 0.6f;
         [Tooltip("The swing takes this many times the press-to-press time (after stepTimeMin/Max): above 1 the legs " +
                  "and arms move slower than the presses come, and the next press takes the leg on from where it is.")]
-        public float stepSlow = 2f;
+        public float stepSlow = 2.667f;
         [Tooltip("How much of each new press-to-press time the step takes on (1 = just the last one): one odd press " +
                  "does not jerk the legs.")]
         [Range(0.1f, 1f)] public float stepFollow = 0.5f;

@@ -47,7 +47,7 @@ namespace SpeedStars.Physical
         [Tooltip("The step's tempo (s), standing (x) and at max speed (y): a full push lands this long after its press, " +
                  "so the next press lands on time then (the flight is this minus stanceTime). The visual step " +
                  "(RunnerPoseDriver) is done by then too, so a press on time comes as the foot is in front.")]
-        public Vector2 stepTime = new Vector2(0.4f, 0.22f);
+        public Vector2 stepTime = new Vector2(0.255f, 0.21f);
         [Tooltip("Gravity (m/s²): the hop between strides here, and the body's fall in a dive (RunnerPoseDriver).")]
         public float gravity = 7f;
 
@@ -57,6 +57,9 @@ namespace SpeedStars.Physical
         public float togetherWindow = 0.08f;
         [Tooltip("Efficiency of a press in the air or while the other foot is still pushing.")]
         [Range(0f, 1f)] public float earlyEfficiency = 0.15f;
+        [Tooltip("A press this long (s) before the landing is not wasted: it counts from the landing, its push growing from " +
+                 "earlyEfficiency to full as the landing nears, so being a little early costs a little.")]
+        public float earlySoftTime = 0.05f;
         [Tooltip("After landing, presses within this time (s) are full.")]
         public float lateGrace = 0.04f;
         [Tooltip("Time after landing (s) where a late press reaches lateFloor.")]
@@ -325,6 +328,7 @@ namespace SpeedStars.Physical
             bool together = LastLeg >= 0 && LastLeg != leg && sinceLast < T.togetherWindow;
             PressResult result;
             float eff;
+            bool nearLanding = false;
             if (Speed < 0.3f && !Airborne && !launchPending)
             {
                 result = PressResult.Start;
@@ -332,8 +336,12 @@ namespace SpeedStars.Physical
             }
             else if (Airborne || (launchPending && !together))
             {
-                result = PressResult.Early;
-                eff = T.earlyEfficiency;
+                float toLand = TimeToLand();
+                nearLanding = !launchPending && toLand < T.earlySoftTime;
+                eff = nearLanding
+                    ? Mathf.Lerp(1f, T.earlyEfficiency, Mathf.SmoothStep(0f, 1f, toLand / Mathf.Max(0.001f, T.earlySoftTime)))
+                    : T.earlyEfficiency;
+                result = eff > 0.9f ? PressResult.Good : PressResult.Early;
             }
             else
             {
@@ -356,11 +364,12 @@ namespace SpeedStars.Physical
 
             LeanSpring.Velocity += T.leanKick * (1f + T.stumbleKick * (1f - eff));
 
-            if (result == PressResult.Start || result == PressResult.Good || result == PressResult.Late)
+            if (result == PressResult.Start || result == PressResult.Good || result == PressResult.Late || nearLanding)
             {
-                _launchTime = Time + T.stanceTime;
-                // Flight = StepTime − stance for a full push: it comes down as the next press is due.
-                _launchVelocity = 0.5f * T.gravity * Mathf.Max(0f, StepTime - T.stanceTime) * eff;
+                _launchTime = Time + (nearLanding ? TimeToLand() : 0f) + T.stanceTime;
+                // Flight = StepTime − stance whatever the press was worth: it comes down as the next press is due, so
+                // the rhythm depends on the speed only and a bad press costs speed, not the beat.
+                _launchVelocity = 0.5f * T.gravity * Mathf.Max(0f, StepTime - T.stanceTime);
             }
 
             Energy = Mathf.Max(0f, Energy - T.drainPerPush);
@@ -389,6 +398,15 @@ namespace SpeedStars.Physical
         {
             Speed *= 1f - T.hitLoss;
             _hitLeft = T.hitTime;
+        }
+
+        /// <summary>Time (s) until the body is back on the ground; 0 on the ground.</summary>
+        float TimeToLand()
+        {
+            if (JumpInAir) return _jumpLeft;
+            if (_windupLeft > 0f) return 0f;
+            if (HopY <= 0f && _hopVelocity <= 0f) return 0f;
+            return (_hopVelocity + Mathf.Sqrt(_hopVelocity * _hopVelocity + 2f * T.gravity * HopY)) / T.gravity;
         }
 
         public void Release(int leg)
@@ -462,12 +480,11 @@ namespace SpeedStars.Physical
                 if (_jumpLeft <= 0f) _landTime = Time;
             }
 
-            // Take-off at the end of the stance; a held foot stays down (hold pose, no flight).
+            // Take-off at the end of the stance, however long the finger stays down: the beat must not depend on it.
             if (_launchTime >= 0.0 && Time >= _launchTime)
             {
                 _launchTime = -1.0;
-                bool held = LastLeg >= 0 && Legs[LastLeg].Pressed;
-                if (!held && _launchVelocity > 0.05f) _hopVelocity = _launchVelocity;
+                if (_launchVelocity > 0.05f) _hopVelocity = _launchVelocity;
                 else _landTime = Time;
             }
             if (HopY > 0f || _hopVelocity > 0f)
@@ -500,6 +517,13 @@ namespace SpeedStars.Physical
                 var hs = holdTarget > l.Hold.Value ? T.holdRise : T.holdFall;
                 l.Hold.Step(holdTarget, hs.frequency, hs.damping, h);
                 maxHold = Mathf.Max(maxHold, l.HoldValue);
+            }
+
+            // A press that has become a hold brings the body down: the hold pose has no flight.
+            if (HoldingCount > 0 && (HopY > 0f || _hopVelocity > 0f))
+            {
+                HopY = _hopVelocity = 0f;
+                _landTime = Time;
             }
 
             StepHead(h);
