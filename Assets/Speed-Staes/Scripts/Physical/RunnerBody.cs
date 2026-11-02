@@ -36,14 +36,11 @@ namespace SpeedStars.Physical
             _forward = transform.forward;
             Sim = new RunnerSim(tuning);
             _origin = Time.timeAsDouble;
-<<<<<<< HEAD
             if (input) input.JumpPressed += OnJumpPressed;
-=======
             if (!GetComponent<PerfectStepFeedback>()) gameObject.AddComponent<PerfectStepFeedback>();
             if (!GetComponent<EarlyStepFeedback>()) gameObject.AddComponent<EarlyStepFeedback>();
             if (!GetComponent<LateStepFeedback>()) gameObject.AddComponent<LateStepFeedback>();
             if (!GetComponent<MomentumWindFeedback>()) gameObject.AddComponent<MomentumWindFeedback>();
->>>>>>> edf0e1f20cb39055f38759b85e58f8a1a0210c02
         }
 
         void OnDestroy()
