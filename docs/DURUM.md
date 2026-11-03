@@ -5,14 +5,15 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-11-03 öğleden sonra · main 39163716 (push kullanıcıda) · worktree: t087, t090
+Son güncelleme: 2026-11-03 13:00 · main 9ccef4f7 (push kullanıcıda) · worktree yok
 
-## Faz 8 (cila) — bugün main'e girenler (kopyada yeşil: EditMode 1060, PlayMode 40/40, Zenject)
+## Faz 8 (cila) — bugün main'e girenler (kopyada yeşil: EditMode 1126, PlayMode 44/44, Zenject)
 - T-081 ok tuşları · T-082/T-083 regresyon + eskimiş PlayMode testleri · T-084/085 ekonomi v2 (referanstan ölçüldü:
   `docs/analiz/2026-11-03-referans-oyun-ekonomi.md`, ADR `ADR-2026-11-03-ekonomi-v2-referans.md`) · T-086 200m/400m/60mH/400mH açık,
   botlar etkinlik başına kalibre · T-088 ayarlar v2 · T-089 emote v2 (Malik'in 9 pişmiş animasyonu, mağaza + yarış butonu/J tuşu).
-- Sürüyor: T-087 Race of the Day (her gün mesafe + günün kıyafeti, Daily PB/WR) · T-090 Practice paneli (mesafe/engel; enerji ve
-  ayakta çıkış Malik API'si bekler).
+- T-087 Race of the Day (UTC güne göre 60/100/150/200/300 m + 7 görünüşten biri, herkes aynı kıyafet, biletsiz, Daily PB/WR; botlar
+  mesafeye göre tablo) · T-090 Practice paneli (100-400 m başlangıç, engel; enerji ve ayakta çıkış Malik API'si bekler, satırlar gri).
+- Sıradaki küçük işler: Practice'te sonuç ekranını gizle (referansta yok); High Scores'ta Race of the Day listesi boş; Editor'de göz kontrolü.
 
 ## Verilen kararlar
 - Kullanıcı 03.11: "referans oyun ne ise aynısı". Ekonomi: yarış Nakit'i bitirme +10, zorluk bonusu 10 × oyuncu zorluğu, rakip bonusu
@@ -43,5 +44,14 @@ Son güncelleme: 2026-11-03 öğleden sonra · main 39163716 (push kullanıcıda
 - Yerel, git'e girmeyen: `.claude/settings*.json`, `.claude/agents/`, `CLAUDE.local.md`, `pipeline-logs/` (arşiv: eski T-077..080 dalının yaması).
 
 <!-- OTOMATIK:BASLA -->
-(tur sonunda yazılır: powershell -File scripts/tur-sonu.ps1 -DurumYaz)
+_tur-sonu.ps1 2026-11-03 12:58 - otomatik blok, elle yazilan bu blokta kaybolur._
+
+- **KAPI TEMIZ (cikis 0)**
+- Acik needs: 3 (DECISION 3)
+- Review kuyrugu: 0
+- Goz bekleyen (merged): 82 - T-087, T-090, T-089, T-088, T-085, T-086, T-084, T-083
+- in-progress: 0 / blocked: 0
+- Uyari: govde-needs 0, test 1, analytics 0 (kapsam: status in-progress/review/merged)
+- GIT: 1 calisma agaci (ana: main); ana agacta commit'siz .prefab/.unity/.asset: 0
+- KOPYALAR: 2 (kopya.ps1 -Liste -Json)
 <!-- OTOMATIK:BITIR -->
