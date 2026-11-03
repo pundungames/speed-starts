@@ -67,18 +67,11 @@ namespace SpeedStars.PlayTests
             Assert.Greater(cards.Length, 0);
             yield return Tap(RequireField<Button>(cards[cards.Length - 1], "button"), "last emote");
             Assert.IsTrue(wardrobe.gameObject.activeInHierarchy);
-            yield return new WaitForEndOfFrame();
-            Directory.CreateDirectory("Temp/WardrobeReview");
-            var shot = ScreenCapture.CaptureScreenshotAsTexture();
-            File.WriteAllBytes("Temp/WardrobeReview/emote-inline.png", shot.EncodeToPNG());
-            Object.Destroy(shot);
+            yield return Shoot("emote-inline");
             yield return Tap(RequireField<Button>(tabs.First(t => t.Tab == CostumeTab.Socks), "button"), "Socks");
             Assert.AreEqual(0, viewport.GetComponentsInChildren<EmoteCardView>().Length);
             Assert.Greater(viewport.GetComponentsInChildren<CostumeItemCardView>().Length, 0);
-            yield return new WaitForEndOfFrame();
-            shot = ScreenCapture.CaptureScreenshotAsTexture();
-            File.WriteAllBytes("Temp/WardrobeReview/socks.png", shot.EncodeToPNG());
-            Object.Destroy(shot);
+            yield return Shoot("socks");
             yield return Tap(CloseButtonOf(wardrobe), "Back");
             yield return WaitClosed(wardrobe, "wardrobe");
             Assert.AreEqual(homeResourcePosition, resourceRect.anchoredPosition, "Home resource layout must be restored.");
@@ -89,6 +82,17 @@ namespace SpeedStars.PlayTests
             yield return WaitOpen(wardrobe, "wardrobe Emote");
             Assert.Greater(viewport.GetComponentsInChildren<EmoteCardView>().Length, 0);
             Assert.IsFalse(emotes.gameObject.activeSelf);
+        }
+
+        /// <summary>Review screenshot. Batchmode never reaches end of frame, so there it only lets a frame pass; the logic asserts stay.</summary>
+        private static IEnumerator Shoot(string name)
+        {
+            if (Application.isBatchMode) { yield return null; yield break; }
+            yield return new WaitForEndOfFrame();
+            Directory.CreateDirectory("Temp/WardrobeReview");
+            var shot = ScreenCapture.CaptureScreenshotAsTexture();
+            File.WriteAllBytes("Temp/WardrobeReview/" + name + ".png", shot.EncodeToPNG());
+            Object.Destroy(shot);
         }
     }
 }

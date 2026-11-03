@@ -422,9 +422,10 @@ namespace SpeedStars.PlayTests
             Assert.AreEqual("0.00", RequireField<Text>(hud, "timeText").text);
             var follow = Object.FindObjectsOfType<MonoBehaviour>().FirstOrDefault(c => c.GetType().Name == "SideFollowCamera");
             Assert.IsNotNull(follow);
-            float lead = (float)follow.GetType().GetField("leadAhead").GetValue(follow);
-            float distance = (float)follow.GetType().GetField("distance").GetValue(follow);
-            float height = (float)follow.GetType().GetField("height").GetValue(follow);
+            // The camera sits at (distance * player scale) back and lookHeight + back * tan(pitch) up (zoom is 0 right after a snap).
+            float lead = CameraField(follow, "leadAhead");
+            float distance = CameraField(follow, "distance") * CameraField(follow, "distanceScale");
+            float height = CameraField(follow, "lookHeight") + distance * Mathf.Tan(CameraField(follow, "pitch") * Mathf.Deg2Rad);
             Vector3 expectedCamera = startPosition + body.transform.forward * lead + body.transform.right * distance + Vector3.up * height;
             Assert.Less(Vector3.Distance(expectedCamera, follow.transform.position), 0.1f, "Restart must snap the camera back immediately.");
             yield return null;
@@ -438,6 +439,14 @@ namespace SpeedStars.PlayTests
             Assert.IsTrue((bool)body.GetType().GetField("acceptInput").GetValue(body));
             yield return Tap(RequireField<Button>(hud, "exitButton"), "HUD Main Menu");
             yield return WaitForScene(HomeScene);
+        }
+
+        /// <summary>Reads a public float field of the follow camera (Assembly-CSharp type, reached by reflection).</summary>
+        private static float CameraField(Component camera, string name)
+        {
+            System.Reflection.FieldInfo field = camera.GetType().GetField(name);
+            Assert.IsNotNull(field, $"SideFollowCamera.{name} is gone; the expected camera position cannot be computed.");
+            return (float)field.GetValue(camera);
         }
 
         private IEnumerator EnterRaceWithTicket()

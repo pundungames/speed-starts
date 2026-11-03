@@ -159,7 +159,9 @@ namespace SpeedStars.PlayTests
             Assert.Less(Vector3.Dot(tail - head, _runner.transform.forward), -0.15f,
                 "Airflow must trail behind the back.");
             Assert.Greater(head.y - _runner.transform.position.y, 1f);
-            yield return new WaitForSeconds(0.4f);
+            // The strokes are brief but their length is the feedback's own tuning: wait for them to leave, with a generous cap.
+            float expireDeadline = Time.realtimeSinceStartup + 5f;
+            while (ribbon.gameObject.activeInHierarchy && Time.realtimeSinceStartup < expireDeadline) yield return null;
             Assert.IsFalse(ribbon.gameObject.activeInHierarchy, "Air strokes expire even if the runner still has speed.");
             _body.GetType().GetMethod("ResetRun").Invoke(_body, null);
             Assert.IsFalse(ribbon.gameObject.activeInHierarchy);

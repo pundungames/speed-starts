@@ -50,7 +50,14 @@ namespace SpeedStars.PlayTests
             tap(1, true);
             yield return null;
             tap(1, false);
-            yield return new WaitForEndOfFrame();
+            yield return null;
+            yield return null;
+            // Tell a rhythm/environment miss from a feedback bug: the press must be a good, efficient one before a PERFECT label is expected.
+            object contactSim = sim();
+            Assert.AreEqual("Good", contactSim.GetType().GetProperty("LastResult").GetValue(contactSim).ToString(),
+                "The second press after flight must count as Good; otherwise the PERFECT label is rightly absent.");
+            Assert.GreaterOrEqual((float)contactSim.GetType().GetProperty("LastEfficiency").GetValue(contactSim), 0.7f,
+                "A good press below the efficiency bar shows no PERFECT label.");
             Capture("contact");
             AssertLabelBehind(body.transform, "PERFECT");
             foreach (var line in UnityEngine.Object.FindObjectsOfType<LineRenderer>())
@@ -76,7 +83,7 @@ namespace SpeedStars.PlayTests
                 tap((step + 1) % 2, false);
                 yield return null;
             }
-            yield return new WaitForEndOfFrame();
+            yield return null;
             Capture("wind");
             Assert.AreEqual(3, body.GetComponentsInChildren<LineRenderer>().Count(l => l.name == "Momentum Air Stroke"));
             foreach (var line in UnityEngine.Object.FindObjectsOfType<LineRenderer>())
@@ -94,7 +101,7 @@ namespace SpeedStars.PlayTests
             tap(1, true);
             yield return null;
             tap(1, false);
-            yield return new WaitForEndOfFrame();
+            yield return null;
             Capture("late");
             AssertLabelBehind(body.transform, "LATE");
             deadline = Time.time + 2;
@@ -104,7 +111,7 @@ namespace SpeedStars.PlayTests
             tap(0, true);
             yield return null;
             tap(0, false);
-            yield return new WaitForEndOfFrame();
+            yield return null;
             Capture("recovery");
             AssertLabelBehind(body.transform, "RECOVER!");
             Assert.IsFalse(UnityEngine.Object.FindObjectsOfType<TextMesh>().Any(t => t.text == "LATE"),
@@ -123,6 +130,8 @@ namespace SpeedStars.PlayTests
         }
         static void Capture(string name)
         {
+            // Batchmode has no end-of-frame screenshot; the logic asserts around the call still run.
+            if (Application.isBatchMode) return;
             Directory.CreateDirectory("Temp/FeedbackReview");
             var camera = Camera.main;
             var previous = camera.targetTexture;

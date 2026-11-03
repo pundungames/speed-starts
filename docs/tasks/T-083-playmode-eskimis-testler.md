@@ -1,7 +1,7 @@
 ---
 id: T-083
 title: PlayMode'daki 4 kirmizi test - eskimis varsayimlar (kamera height, ruzgar suresi) ve batchmode ekran goruntusu
-status: todo
+status: review
 owner: test-agent
 depends_on: []
 owns_paths:
@@ -12,12 +12,16 @@ owns_paths:
 touches_scene: false
 branch: agent/T-083-playmode-testler
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/PlayMode/HomeRaceButtonSmokeTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/PerfectStepFeedbackTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/StepFeedbackVisualTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/WardrobeIntegrationTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -43,4 +47,8 @@ Yalniz bu 4 test dosyasi; urun koduna dokunulmaz. Unity calistirilmaz (supervizo
 - Urun kodu (SideFollowCamera, MomentumWindFeedback, PerfectStepFeedback), diger PlayMode testleri
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+1) Restart testi: beklenen kamera konumu artik distance*distanceScale ve lookHeight + back*tan(pitch) ile (SideFollowCamera public alanlari, SnapToTarget/Desired ile ayni formul).
+2) Ruzgar testi: sabit 0.4 sn yerine ribbon pasif olana kadar bekler (5 sn ust sinir).
+3) Gorsel test: WaitForEndOfFrame yok (2 kare); PERFECT oncesi LastResult==Good ve LastEfficiency>=0.7 ayri assert; Capture batchmode'da atlanir.
+4) Gardrop testi: ekran goruntusu Shoot() yardimcisina alindi, batchmode'da yalniz bir kare bekler; mantik assert'leri duruyor.
+Calistirilmadi (dogrulama supervizorde). Urun kodu degismedi.
