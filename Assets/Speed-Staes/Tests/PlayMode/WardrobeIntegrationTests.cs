@@ -65,6 +65,7 @@ namespace SpeedStars.PlayTests
             Assert.AreSame(viewport, RequireField<Transform>(emotes, "itemsContent"));
             var cards = viewport.GetComponentsInChildren<EmoteCardView>();
             Assert.Greater(cards.Length, 0);
+            yield return ScrollIntoView(cards[cards.Length - 1]);
             yield return Tap(RequireField<Button>(cards[cards.Length - 1], "button"), "last emote");
             Assert.IsTrue(wardrobe.gameObject.activeInHierarchy);
             yield return Shoot("emote-inline");

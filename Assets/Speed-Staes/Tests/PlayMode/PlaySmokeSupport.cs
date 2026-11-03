@@ -109,6 +109,37 @@ namespace SpeedStars.PlayTests
             yield return null;
         }
 
+        /// <summary>
+        /// Scrolls the ScrollRect that holds <paramref name="target"/> until the target lies fully inside its viewport, then waits
+        /// a frame: what a finger does before pressing something below the fold. Does nothing when the target is in no ScrollRect
+        /// or is already fully visible. The real-tap raycast check of <see cref="Tap"/> stays in force afterwards.
+        /// </summary>
+        public static IEnumerator ScrollIntoView(Component target)
+        {
+            Assert.IsNotNull(target, "ScrollIntoView: target is not bound.");
+            ScrollRect scroll = target.GetComponentInParent<ScrollRect>(false);
+            var targetRect = target.transform as RectTransform;
+            if (scroll == null || scroll.content == null || targetRect == null || !targetRect.IsChildOf(scroll.content)) yield break;
+
+            RectTransform viewport = scroll.viewport != null ? scroll.viewport : (RectTransform)scroll.transform;
+            Canvas.ForceUpdateCanvases();
+            Bounds bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(viewport, targetRect);
+            Rect view = viewport.rect;
+            const float eps = 0.5f;
+            bool insideX = !scroll.horizontal || (bounds.min.x >= view.xMin - eps && bounds.max.x <= view.xMax + eps);
+            bool insideY = !scroll.vertical || (bounds.min.y >= view.yMin - eps && bounds.max.y <= view.yMax + eps);
+            if (insideX && insideY) yield break;
+
+            // Centre the target in the viewport on the scrollable axes; the ScrollRect clamps at the ends of the content.
+            Vector3 delta = Vector3.zero;
+            if (!insideX) delta.x = view.center.x - bounds.center.x;
+            if (!insideY) delta.y = view.center.y - bounds.center.y;
+            scroll.velocity = Vector2.zero;
+            scroll.content.position += viewport.TransformVector(delta);
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+        }
+
         /// <summary>Waits until the button can really be pressed (open animation done, group interactable), then presses it.</summary>
         public static IEnumerator Tap(Button button, string what)
         {

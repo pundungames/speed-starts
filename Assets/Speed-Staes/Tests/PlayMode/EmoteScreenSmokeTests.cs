@@ -66,6 +66,7 @@ namespace SpeedStars.PlayTests
             EmoteCardView last = cards[cards.Count - 1];
             foreach (EmoteCardView card in new[] { first, last })
             {
+                yield return ScrollIntoView(card);
                 yield return Tap(RequireField<Button>(card, "button"), $"emote card '{card.EmoteId}'");
                 Assert.IsTrue(RequireField<Image>(card, "selectedBackground").gameObject.activeSelf, $"card '{card.EmoteId}' must show the selected frame");
                 Assert.AreNotEqual(equip.gameObject.activeSelf, purchase.gameObject.activeSelf, "exactly one of Equip / Purchase is shown");
@@ -112,6 +113,7 @@ namespace SpeedStars.PlayTests
                 if (RequireField<GameObject>(card, "lockOverlay").activeSelf) target = card;
             if (target == null) yield break; // everything owned in this save: nothing to buy
 
+            yield return ScrollIntoView(target);
             yield return Tap(RequireField<Button>(target, "button"), $"locked emote card '{target.EmoteId}'");
             Assert.IsTrue(purchase.gameObject.activeSelf, "a locked card offers the price button");
             Assert.IsFalse(equip.gameObject.activeSelf);
