@@ -1,4 +1,5 @@
 using SpeedStars.Core.Race;
+using SpeedStars.UI.Framework;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -9,7 +10,8 @@ namespace SpeedStars.UI.Race
     /// The replay's controls, in the race HUD's look (<see cref="ReplayControlsSkin"/>): top left the followed runner's race clock and speed
     /// on the HUD's telemetry panel with his name below; top right runner &lt; camera &gt; and Exit as the HUD's square buttons; along the
     /// bottom play/pause, the timeline (the HUD's energy bar, drag to seek) and the speed. Built in code on its own overlay canvas, so
-    /// no prefab or scene holds it; without a skin it falls back to plain panels. Closes itself when the replay ends.
+    /// no prefab or scene holds it; without a skin it falls back to plain panels. Kept out of the notch like the screens
+    /// (SafeAreaFitter). Closes itself when the replay ends.
     /// </summary>
     public sealed class ReplayControlsView : MonoBehaviour
     {
@@ -81,6 +83,10 @@ namespace SpeedStars.UI.Race
             _timeline.onValueChanged.AddListener(v => _replay.Seek(v * _replay.Duration));
             Button rate = MakeButton(root, "Rate", Sprite(s => s.namePanel), bottom, new Vector2(755f, 40f), new Vector2(190f, 105f), () => _replay.NextSpeed());
             _rateText = MakeText(rate.transform, "Label", 48, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(180f, 100f));
+
+            // Every control is a direct child: the screens' own fitter moves them in from under a notch / camera hole (added last,
+            // since it takes the children's authored anchors when it wakes).
+            gameObject.AddComponent<SafeAreaFitter>();
 
             _replay.WatchEnded += OnWatchEnded;
             Refresh();

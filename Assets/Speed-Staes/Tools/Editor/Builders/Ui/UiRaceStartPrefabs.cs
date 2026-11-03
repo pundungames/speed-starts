@@ -57,6 +57,9 @@ namespace SpeedStars.Tools.Builders
             Vector2 anchor = new Vector2(0.5f, 1f - config.GroupCenterFromTopShare);
 
             RectTransform backdrop = Kit.Stretch(Kit.Node(root, "BackdropRoot"));
+            // The dim must reach the screen edges behind a notch: without this the root's SafeAreaFitter takes the (graphic-less)
+            // backdrop for an edge item and squeezes it to the safe width.
+            backdrop.gameObject.AddComponent<FullBleed>();
             RectTransform dim = Kit.Stretch(Kit.Node(backdrop, "StartDimScreen"));
             Kit.Fill(dim.gameObject, config.DimColor, raycast: false);
             RectTransform visual = Kit.Node(backdrop, "StartVisualRoot");
