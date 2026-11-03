@@ -1,7 +1,7 @@
 ---
 id: T-100
 title: TMP gecisi 1/2 - American Captain SDF font asset'i + prefab/sahnelerdeki legacy Text'i YERINDE TextMeshProUGUI'ye ceviren donusturucu + builder'larin elle duzenlenmis prefab'lari ezmemesi
-status: todo
+status: review
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -24,8 +24,8 @@ needs:
   - tip: SCENE
     durum: open
     not: "Supervizor kopyada TmpMigration donusturucusunu EN SON main'in prefab'lari ve Home.unity / Race.unity uzerinde kosar (Race YENIDEN KURULMAZ, yalniz legacy Text dokumanlari degisir); git diff ile yalniz Text/Outline dokumanlarinin ve ilgili override'larin degistigi kontrol edilir."
-started:
-finished:
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -98,3 +98,8 @@ KAMERA  : yok
 - Malik'in `LateStepFeedback` ve Serhat'in `AccessoryPhotoStudio` runtime Text'leri
 
 ## Calisma notu
+1. Yapildi: saf YAML donusturucu (Tools/Editor/Migration/Yaml, kendi asmdef'i SpeedStars.Migration.Yaml) + Unity tarafi TmpMigration (Run / ImportEssentials / menu 'Tools/Speed Stars/Convert UI Text to TMP (American Captain)', Play ve kirli sahne/prefab stage'de reddeder) + UiFontPaths + builder korumasi (-forceOverwriteHandEdits yoksa var olan prefab/Home ezilmez; yeni uretilen prefab/Home hemen TMP'ye cevrilir) + testler (kendi asmdef'i SpeedStars.Tests.Migration: SpeedStars.Tests asmdef'i T-101'in).
+2. Sira (kopyada): Packages/manifest.json'a TMP 3.0.7 + TTF -> batchmode `-executeMethod SpeedStars.Tools.Migration.TmpMigration.ImportEssentials` -> ayri kosuda `-executeMethod SpeedStars.Tools.Migration.TmpMigration.Run` (T-101'in view kodu birlesmeden once degil, sonra; Run en son main'in prefab'larinda tekrar kosulabilir) -> ikinci Run 'Nothing to change' demeli. Grep: TMP_MIGRATION_OK / TMP_MIGRATION_FAILED, 'Legacy Text left' (beklenen 2 InputField = 4 Text), 'Warnings:'.
+3. Esleme tablosu LegacyTextConverter.cs basinda; FontStyle Bold/Italic -> Normal, BestFit -> auto size, line spacing (x-1)*100, dikey Truncate yalniz sarmada TMP Truncate. Outline kalinligi = mesafe/fontBoyu*10 (0.05 adimla, 0.05..0.8), preset adi 'AmericanCaptain SDF - Outline RRGGBBAA wNN' (UI/Fonts/AmericanCaptain/Presets). Gozle bakilacak: boyut/kontur gorunumu.
+4. RISK/T-101: RaceStartView.wordOutline (ThickOutline) bilesen silinince prefab'ta {fileID: 0} olur; T-101 bu alani kaldirmali ya da null korumali (kod zaten != null kontrollu, ama ThickOutline.Configure/SetColor TMP'de calismaz; kontur kalinligi/rengi artik materyal preset'inde, fade yok). Override'lardan m_FontData.m_Font/Alignment/Style vb. karsiligi olmayanlar dusurulur ve rapora 'Warnings' olarak yazilir. Race'in BuildRace yolu degismedi.
+5. Dogrulanmadi: hicbir sey derlenmedi/kosulmadi. En belirsiz yerler: TMP_FontAsset.CreateFontAsset sonrasi sub-asset kaydi (TMP'nin kendi creator mantigi izlendi), TMP dokumani alan listesi (kaynaktan dogrulandi, ForceReserialize normallestirir), nested asmdef'in Tests/EditMode altinda calismasi.

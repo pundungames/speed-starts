@@ -37,7 +37,13 @@ namespace SpeedStars.Tools.Builders
         public static void BuildHome(bool overwrite)
         {
             bool existed = FileExists(HomeScenePath);
-            if (existed && !overwrite) { Skipped(Source, HomeScenePath); return; }
+            // The user hand-edits Home (commit 4f38e016): an existing file is only rebuilt with the explicit force flag.
+            if (existed && !(overwrite && UiPrefabBuilder.ForceOverwriteHandEdits))
+            {
+                if (overwrite) Warn(Source, $"'{HomeScenePath}' exists and is hand-edited: kept. Pass -{UiPrefabBuilder.ForceFlag} to rebuild it anyway.");
+                Skipped(Source, HomeScenePath);
+                return;
+            }
             if (!FileExists(ThemeTemplateScenePath))
                 throw new InvalidOperationException($"'{ThemeTemplateScenePath}' not found; the Home scene is a copy of it.");
 
@@ -98,6 +104,8 @@ namespace SpeedStars.Tools.Builders
                 else if (!done && copied)
                     Warn(Source, $"Home build failed after the copy; '{HomeScenePath}' now holds a bare theme-scene copy. Fix the error and rebuild with overwrite.");
             }
+            // A fresh Home holds legacy Text (the loading label): convert it like the prefabs (TMP migration, T-100).
+            SpeedStars.Tools.Migration.TmpMigration.ConvertPaths(new[] { HomeScenePath });
             Log(Source, $"Wrote {HomeScenePath} (copy of {ThemeTemplateScenePath} + runner prefab + UI).");
         }
 
