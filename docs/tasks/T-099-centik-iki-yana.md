@@ -1,7 +1,7 @@
 ---
 id: T-099
 title: Guvenli alan iki yana - centik hangi kenardaysa iki kenar da ayni miktar iceri (SafeAreaMath + SafeAreaFitter)
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-051]
 owns_paths:
@@ -18,8 +18,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -50,3 +50,8 @@ Edit modda onizleme bu task'ta YOK: kullanicinin elle duzenledigi sahne/prefab'a
 - Edit modda onizleme, dikey kenarlar, yeni yerlesim; TMP/font isi (T-100, T-101)
 
 ## Calisma notu
+- SafeAreaMath.SafeAnchors: yeni opsiyonel `mirrorSides` (varsayilan false); yatay inset = max(sol, sag), tolerans ve "ekrana sigmiyor" kurali ayni, dikey etkilenmez.
+- SafeAreaFitter: `mirrorSides` SerializeField (varsayilan true, Tooltip'li); `Configure(mode, vertical, mirror = true)`. Sahne/prefab degismedi.
+- EditMode: 7 Mirror_* + MirrorOff_IsTheOldBehaviour + 2 Fitter_Mirror* test; eski testler degismedi (acik/kapali ayni sonuc: sol centik).
+- PlayMode: Home_LeftNotch_AlsoPullsRightEdgeItemsIn (ayna dikdortgene gore); eski testler ayni kaldi.
+- Calistirilmadi (merkezi dogrulama). Risk: sahnelerdeki tum fitter'lar artik aynali; Race'te sag kenar ogeleri sola centikte ice kayar (istenen).

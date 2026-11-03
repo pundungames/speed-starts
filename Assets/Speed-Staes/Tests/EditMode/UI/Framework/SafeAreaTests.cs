@@ -83,6 +83,77 @@ namespace SpeedStars.Tests.UI
             Assert.AreEqual(Vector2.one, max1);
         }
 
+        // ---- mirrorSides ----
+
+        [Test]
+        public void Mirror_NotchOnlyOnTheRight_MovesBothEdgesByTheSameInset()
+        {
+            SafeAreaMath.SafeAnchors(Screen2400x1080, new Rect(0f, 0f, 2300f, 1080f), false, 1f, out Vector2 min, out Vector2 max, true);
+            Assert.AreEqual(100f / 2400f, min.x, Tolerance);
+            Assert.AreEqual(1f - 100f / 2400f, max.x, Tolerance);
+        }
+
+        [Test]
+        public void Mirror_NotchOnlyOnTheLeft_MovesBothEdgesByTheSameInset()
+        {
+            SafeAreaMath.SafeAnchors(Screen2400x1080, new Rect(120f, 0f, 2280f, 1080f), false, 1f, out Vector2 min, out Vector2 max, true);
+            Assert.AreEqual(120f / 2400f, min.x, Tolerance);
+            Assert.AreEqual(1f - 120f / 2400f, max.x, Tolerance);
+        }
+
+        [Test]
+        public void Mirror_DifferentInsetsOnBothSides_UsesTheLarger()
+        {
+            SafeAreaMath.SafeAnchors(Screen2400x1080, new Rect(60f, 0f, 2240f, 1080f), false, 1f, out Vector2 min, out Vector2 max, true);
+            Assert.AreEqual(100f / 2400f, min.x, Tolerance);
+            Assert.AreEqual(1f - 100f / 2400f, max.x, Tolerance);
+        }
+
+        [Test]
+        public void Mirror_NoNotchOrWithinTolerance_ChangesNothing()
+        {
+            SafeAreaMath.SafeAnchors(Screen2400x1080, new Rect(0f, 0f, 2400f, 1080f), false, 1f, out Vector2 min, out Vector2 max, true);
+            Assert.AreEqual(Vector2.zero, min);
+            Assert.AreEqual(Vector2.one, max);
+
+            SafeAreaMath.SafeAnchors(Screen2400x1080, new Rect(1f, 0f, 2398f, 1080f), false, 1f, out min, out max, true);
+            Assert.AreEqual(0f, min.x);
+            Assert.AreEqual(1f, max.x);
+        }
+
+        [Test]
+        public void Mirror_SafeAreaPastTheScreen_StillMeansNoInsets()
+        {
+            SafeAreaMath.SafeAnchors(Screen2400x1080, new Rect(100f, 0f, 2600f, 1080f), false, 1f, out Vector2 min, out Vector2 max, true);
+            Assert.AreEqual(Vector2.zero, min);
+            Assert.AreEqual(Vector2.one, max);
+        }
+
+        [Test]
+        public void Mirror_LeavesTheVerticalAxisAlone()
+        {
+            var safe = new Rect(100f, 60f, 2300f, 960f);
+            SafeAreaMath.SafeAnchors(Screen2400x1080, safe, false, 1f, out Vector2 minOff, out Vector2 maxOff, true);
+            Assert.AreEqual(0f, minOff.y, Tolerance);
+            Assert.AreEqual(1f, maxOff.y, Tolerance);
+
+            SafeAreaMath.SafeAnchors(Screen2400x1080, safe, true, 1f, out Vector2 minOn, out Vector2 maxOn, true);
+            Assert.AreEqual(60f / 1080f, minOn.y, Tolerance);
+            Assert.AreEqual(1f - 60f / 1080f, maxOn.y, Tolerance, "vertical keeps its own (unmirrored) insets");
+            Assert.AreEqual(100f / 2400f, minOn.x, Tolerance);
+        }
+
+        [Test]
+        public void MirrorOff_IsTheOldBehaviour()
+        {
+            var safe = new Rect(0f, 0f, 2300f, 1080f);
+            SafeAreaMath.SafeAnchors(Screen2400x1080, safe, false, 1f, out Vector2 minDefault, out Vector2 maxDefault);
+            SafeAreaMath.SafeAnchors(Screen2400x1080, safe, false, 1f, out Vector2 minOff, out Vector2 maxOff, false);
+            Assert.AreEqual(minDefault, minOff);
+            Assert.AreEqual(maxDefault, maxOff);
+            Assert.AreEqual(0f, minOff.x, Tolerance);
+        }
+
         // ---- Remap / full-bleed detection ----
 
         [Test]
@@ -198,6 +269,27 @@ namespace SpeedStars.Tests.UI
             Assert.AreEqual(new Vector2(0f, 1f), corner.anchorMin);
             Assert.AreEqual(new Vector2(0f, 1f), corner.anchorMax);
             Assert.AreEqual(new Vector2(30f, -20f), corner.anchoredPosition);
+        }
+
+        [Test]
+        public void Fitter_MirrorsByDefault_RightNotchMovesALeftCornerIn()
+        {
+            SafeAreaFitter fitter = NewScreen(out RectTransform corner, out RectTransform background, out _);
+            fitter.SetSource(new FixedSafeAreaSource(Screen2400x1080, new Rect(0f, 0f, 2300f, 1080f)));
+
+            Assert.AreEqual(100f / 2400f, corner.anchorMin.x, Tolerance, "left corner follows the right-hand notch");
+            Assert.AreEqual(Vector2.zero, background.anchorMin, "background stays full-bleed");
+            Assert.AreEqual(Vector2.one, background.anchorMax);
+        }
+
+        [Test]
+        public void Fitter_MirrorOff_LeavesTheLeftCornerWhenTheNotchIsOnTheRight()
+        {
+            SafeAreaFitter fitter = NewScreen(out RectTransform corner, out _, out _);
+            fitter.Configure(SafeAreaMode.Children, false, false);
+            fitter.SetSource(new FixedSafeAreaSource(Screen2400x1080, new Rect(0f, 0f, 2300f, 1080f)));
+
+            Assert.AreEqual(0f, corner.anchorMin.x, Tolerance);
         }
 
         [Test]
