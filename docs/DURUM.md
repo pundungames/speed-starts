@@ -27,13 +27,12 @@ Son güncelleme: 2026-11-03 15:10 · main f8633f60 (push kullanıcıda) · workt
   günlük build Mono/ARMv7, mağaza build'i IL2CPP.
 
 ## Kullanıcıdan / başkalarından bekleyen
-- Uygulama adı + paket adı, keystore, Gizlilik/Şartlar/Destek URL'leri.
+- Uygulama adı + paket adı, keystore, Gizlilik/Şartlar/Destek URL'leri; lisans "incelenmeli"leri (kullanıcı 03.11: sonra).
 - Malik: UI üstündeki dokunma adım sayılmasın; engel teması (`docs/ENGEL-TEMAS-NOTU-malik.md`); 4×100m ve Medley;
   Practice için `RunnerSim` enerji API'si (doldur/kilitle) ve ayakta çıkış (T-090 notu); isterse `RunnerEmote.Play(clip)`;
   dev bitiş tuşu (F) replay kaydını bitirmiyor / eski yarışı oynatıyor (T-094); ayak kilidi (soru); bilgi: ReplayControlsView artık
   prefab bağlıyor (T-098, Open(prefab, replay)).
-- Lisans envanterindeki "incelenmeli"ler: kullanıcı 03.11 "sonra hallederiz" (ürün adı, UI sanatı kaynağı, Mixamo ham FBX, repo).
-- Serhat: Malik'in 4abc876a commit'i `BridgeCanalRiverside.prefab`'ını yeniden yazdı; `PastelBuildingRow` sahne açılınca bina üretiyor.
+- Serhat: 4abc876a `BridgeCanalRiverside.prefab`'ı yeniden yazdı; `PastelBuildingRow` sahne açılınca bina üretiyor.
 
 ## Gözle bakılacaklar (Editor'de Play)
 - Yarış sonu kazanç dökümü (Nakit kutusunun sağında), Nakit "+" → reklam penceresi (0/3), premium yarışta "Spend 300 → 1 hour".
