@@ -94,6 +94,11 @@ namespace SpeedStars.Installers
             Container.Bind<ITimedAccess>().To<TimedAccessService>().AsSingle();
             Container.Bind<IRaceRewardResolver>().To<RaceRewardResolver>().AsSingle();
             Container.Bind<IEntryTicketShop>().To<EntryTicketShop>().AsSingle();
+            // T-084: economy v2 - race Cash with breakdown, Timed Ticket for Cash, Cash from rewarded ads (3 a day).
+            Container.Bind<IRaceCashRewardResolver>().To<RaceCashRewardResolver>().AsSingle();
+            Container.Bind<ITimedTicketShop>().To<TimedTicketShop>().AsSingle();
+            // IRewardedAds is bound only in editor / dev builds (below), so it is looked up optionally.
+            Container.Bind<IRewardedCash>().FromMethod(c => new RewardedCashService(c.Container.TryResolve<IRewardedAds>(), c.Container.Resolve<ProgressRepository>(), c.Container.Resolve<IClock>(), c.Container.Resolve<EconomyConfig>(), c.Container.Resolve<IEconomyLedger>())).AsSingle();
             // T-033: best time per event, written once per race.
             Container.Bind(typeof(IPersonalBests), typeof(IDayBestSource)).To<SpeedStars.Meta.Records.PersonalBestService>().AsSingle();
             // T-037: local leaderboard (bots + the player's day bests); a server source can replace it behind the same interface.

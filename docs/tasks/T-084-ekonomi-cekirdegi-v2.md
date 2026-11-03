@@ -29,8 +29,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
-    not: "ProjectInstaller -> Container.Bind<IRaceCashRewardResolver>().To<RaceCashRewardResolver>().AsSingle(); Container.Bind<ITimedTicketShop>().To<TimedTicketShop>().AsSingle(); Container.Bind<IRewardedCash>().FromMethod(c => new RewardedCashService(c.Container.TryResolve<IRewardedAds>(), c.Container.Resolve<ProgressRepository>(), c.Container.Resolve<IClock>(), c.Container.Resolve<EconomyConfig>(), c.Container.Resolve<IEconomyLedger>())).AsSingle();  (RaceCashRewardResolver ctor: RaceEventCatalog, EconomyConfig, IEconomyLedger, ProgressRepository - RaceRewardResolver ile ayni kaynaklar)"
+    durum: closed
+    not: "ProjectInstaller -> Container.Bind<IRaceCashRewardResolver>().To<RaceCashRewardResolver>().AsSingle(); Container.Bind<ITimedTicketShop>().To<TimedTicketShop>().AsSingle(); Container.Bind<IRewardedCash>().FromMethod(c => new RewardedCashService(c.Container.TryResolve<IRewardedAds>(), c.Container.Resolve<ProgressRepository>(), c.Container.Resolve<IClock>(), c.Container.Resolve<EconomyConfig>(), c.Container.Resolve<IEconomyLedger>())).AsSingle();  (RaceCashRewardResolver ctor: RaceEventCatalog, EconomyConfig, IEconomyLedger, ProgressRepository - RaceRewardResolver ile ayni kaynaklar) -> ProjectInstaller (kullanici kalici onay 03.11)"
   - tip: ASSET
     durum: open
     not: "Seeder'i kopyada kos: ConfigAssetSeeder.ApplyEconomyV2() (menu: Tools/Speed Stars/Build/Apply economy v2 prices; SeedAll da cagirir). Yazar: EconomyConfig.asset entryTicketCashPrice=0, timedTicketCashPrice=300, raceFinishCash=10, raceDifficultyBonusCash=10, raceOpponentBonusCash=10, rewardedAdCash=200, rewardedAdCashDailyLimit=3; CosmeticDefinition asset'leri (Data/Config/Cosmetics) normal: price 500 (Headwear 1000); RaceEventDefinition.requiresTicket: 100m/training/race_of_the_day=false, 200m/400m/60mh/110mh/400mh/4x100m/medley=true (isPlayable dokunulmaz), currency Cash, catalog.defaultOutfit ogeleri 0; premium dokunulmaz; EmoteCatalog.asset ucretsizler 0, ucretliler sirayla 2500/2500/5000/7500. Degisen asset'ler commit'e girer."
