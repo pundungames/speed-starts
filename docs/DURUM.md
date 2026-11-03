@@ -5,7 +5,10 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-11-03 17:45 · main 0a6c5f05 (push kullanıcıda; ana ağaçta kullanıcının commit'siz TMP ayarları: 13 prefab + Home) · worktree yok (D:\Pundun\speed-starts-t093 klasörü silinebilir)
+Son güncelleme: 2026-11-03 gün sonu · main 02b5c13f (origin'den 1 önde) · checkpoint `docs/checkpoints/2026-11-03.md`
+**YARIN İLK İŞ:** T-103 (Edit modda çentik önizlemesi + Tools → Speed Stars → Notch Preview aç/kapa) dalda bekliyor: worktree
+`D:\Pundun\speed-starts-t103`, 44e78be3, DOĞRULANMADI → kopyada derleme + EditMode (`SafeAreaEditPreviewTests`, kayıt testi KANIT) +
+PlayMode `SafeAreaPlayTests`, .cs.meta'ları kopyadan al, ff → kullanıcı Home'da aç/kapa + kaydet → sahnede diff yok mu. (D:\Pundun\speed-starts-t093 klasörü git'e bağlı değil, silinebilir.)
 
 ## Faz 8 (cila) — bugün main'e girenler (son kopya koşusu yeşil: EditMode 1198, PlayMode 52 + 7 atlanan, Zenject)
 - T-081..T-090: ok tuşları, regresyon, ekonomi v2 (ADR `ADR-2026-11-03-ekonomi-v2-referans.md`), 200m/400m/60mH/400mH, ayarlar v2,
@@ -22,16 +25,13 @@ Son güncelleme: 2026-11-03 17:45 · main 0a6c5f05 (push kullanıcıda; ana ağa
   giyili öğeler eski kayıtta sahipli sayılır), emote 3×2.500 / 3×5.000 / 3×7.500, reklam +200 Nakit (günde 3), Süreli Bilet 300 Nakit,
   Adet Bileti Nakit'le satılmaz. Erişim: 100m / Race of the Day / Practice biletsiz; diğer yarışlar biletli (PDF'ten sapma: 100m biletsiz).
 - Gerçek gelir / reklam SDK'sı / IAP şimdilik YOK (oyun Çin müşterisine; kullanıcı 03.11). Eski rekorlar sıfırlanacak (iş yok).
-- TextMeshPro'ya geçiş ve font American Captain (kullanıcı 03.11, `ADR-2026-11-03-textmeshpro.md`). Kullanıcı prefab'ları ELLE düzenliyor
-  (4f38e016): mevcut UI prefab'larına / Home'a builder koşmaz; değişiklik yerinde (TUZAKLAR).
+- TMP + American Captain her yerde, bundan sonra da (kullanıcı 03.11; kurallar §9, ADR). Prefab'lar elle düzenleniyor: builder var olanı ezmez.
 - Installer bağlamaları: kalıcı onay (03.11). Teslim belgesi, telefonda APK denemesi, ana menü hızı: kullanıcı "geç" dedi.
 - Önceki: tema 0 fiyat = bedava; Sky Islands premium ama bedava; ten tonları 8; başlangıç Adet Bileti 3; gün sınırı UTC;
   günlük build Mono/ARMv7, mağaza build'i IL2CPP.
 
 ## Kullanıcıdan / başkalarından bekleyen
-- KULLANICI: `docs/CALISMA-KURALLARI.md` §0 ve §9'daki "TextMeshPro YOK / KULLANILMAZ" satırları (hook korumalı; metin 03.11 mesajında).
-- Kullanıcı 03.11: font lisansı ve Çince yedek font "şimdilik bizi ilgilendirmiyor" (bilgi: ücretsiz sürüm kişisel kullanım; TMP 3.0.7
-  cihaz fontuna düşemez). Uygulama/paket adı, keystore, URL'ler, lisans envanteri: sonra.
+- Font lisansı ve Çince yedek font: kullanıcı 03.11 "şimdilik bizi ilgilendirmiyor". Uygulama/paket adı, keystore, URL'ler: sonra.
 - Malik: UI üstündeki dokunma adım sayılmasın; engel teması (`docs/ENGEL-TEMAS-NOTU-malik.md`); 4×100m ve Medley; Practice için
   `RunnerSim` enerji API'si ve ayakta çıkış (T-090); dev bitiş tuşu (F) replay'i bozuyor (T-094); ayak kilidi (soru); bilgi: ReplayControlsView
   prefab bağlıyor (T-098); `LateStepFeedback` runtime legacy Text'i American Captain değil (TMP'ye geçirirse font tek asset'ten).
@@ -47,7 +47,7 @@ Son güncelleme: 2026-11-03 17:45 · main 0a6c5f05 (push kullanıcıda; ana ağa
 - PowerShell'de `git` bozuk (system32 gölgesi): git Bash'ten. Kancada `git commit` + "main" aynı komutta olmaz.
 
 <!-- OTOMATIK:BASLA -->
-_tur-sonu.ps1 2026-11-03 17:30 - otomatik blok, elle yazilan bu blokta kaybolur._
+_tur-sonu.ps1 2026-11-03 17:55 - otomatik blok, elle yazilan bu blokta kaybolur._
 
 - **KAPI TEMIZ (cikis 0)**
 - Acik needs: 3 (DECISION 3)
@@ -55,6 +55,6 @@ _tur-sonu.ps1 2026-11-03 17:30 - otomatik blok, elle yazilan bu blokta kaybolur.
 - Goz bekleyen (merged): 94 - T-102, T-100, T-101, T-099, T-097, T-098, T-095, T-093
 - in-progress: 0 / blocked: 0
 - Uyari: govde-needs 0, test 4, analytics 0 (kapsam: status in-progress/review/merged)
-- GIT: 1 calisma agaci (ana: main); ana agacta commit'siz .prefab/.unity/.asset: 14
+- GIT: 2 calisma agaci (ana: main); ana agacta commit'siz .prefab/.unity/.asset: 0
 - KOPYALAR: 2 (kopya.ps1 -Liste -Json)
 <!-- OTOMATIK:BITIR -->
