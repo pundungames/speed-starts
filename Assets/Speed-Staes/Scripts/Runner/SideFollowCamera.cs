@@ -8,8 +8,8 @@ namespace SpeedStars.Runner
     /// <summary>
     /// Side-on race camera: sits to the runner's right and tracks along the run axis only,
     /// so step bob and pelvis sway never shake the frame. Three things come from the race itself and touch only
-    /// the picture: each press sends the camera back, flowing, and the speed holds it there (it comes in as both fade), a good step gives one small
-    /// quick in-and-out, and a wrong step or a knocked hurdle shakes it.
+    /// the picture: each press sends the camera back, flowing, and the speed holds it there (it comes in as both fade), and a wrong
+    /// step or a knocked hurdle shakes it.
     /// </summary>
     public sealed class SideFollowCamera : MonoBehaviour
     {
@@ -42,14 +42,6 @@ namespace SpeedStars.Runner
         [Tooltip("Time to flow in (s).")]
         public float zoomInTime = 0.17f;
 
-        [Header("Good step")]
-        [Tooltip("How far a good step pulls the camera in and lets it back, as a share of the distance.")]
-        public float stepPulse = 0.02f;
-        [Tooltip("Length of the in-and-out (s).")]
-        public float stepPulseTime = 0.12f;
-        [Tooltip("A step counts as good from this push efficiency (the same bar as the perfect-step feedback).")]
-        public float stepPulseEfficiency = 0.7f;
-
         [Header("Shake")]
         [Tooltip("Shake size on a wrong step, early or late (m).")]
         public float wrongStepShake = 0.03f;
@@ -65,7 +57,6 @@ namespace SpeedStars.Runner
         RunnerBody _body;
         Vector3 _position;
         float _zoom, _zoomVelocity, _pressZoom;
-        float _pulseStart = -10f;
         float _shakeSize, _shakeTime, _shakeStart = -10f;
         float _lastHitWeight;
 
@@ -102,8 +93,7 @@ namespace SpeedStars.Runner
             if (!pressed || _body.Sim == null) return;
             _pressZoom = Mathf.Clamp01(_pressZoom + zoomPerPress);
             PressResult result = _body.Sim.LastResult;
-            if (result == PressResult.Good && _body.Sim.LastEfficiency >= stepPulseEfficiency) _pulseStart = Time.time;
-            else if (result == PressResult.Early || result == PressResult.Late) Shake(wrongStepShake, wrongStepShakeTime);
+            if (result == PressResult.Early || result == PressResult.Late) Shake(wrongStepShake, wrongStepShakeTime);
         }
 
         /// <summary>A stronger shake running now is not cut by a smaller one.</summary>
@@ -128,16 +118,16 @@ namespace SpeedStars.Runner
         {
             if (!target) return;
             _zoom = _zoomVelocity = _pressZoom = 0f;
-            _pulseStart = _shakeStart = -10f;
+            _shakeStart = -10f;
             _lastHitWeight = 0f;
-            _position = Desired(0f);
+            _position = Desired();
             transform.position = _position;
             transform.rotation = Facing();
         }
 
-        Vector3 Desired(float pulse)
+        Vector3 Desired()
         {
-            float back = distance * distanceScale * Mathf.Lerp(1f, zoomDistance, _zoom) * (1f - pulse);
+            float back = distance * distanceScale * Mathf.Lerp(1f, zoomDistance, _zoom);
             float up = lookHeight + back * Mathf.Tan(pitch * Mathf.Deg2Rad);
             return target.position + target.forward * leadAhead + target.right * back + Vector3.up * up;
         }
@@ -161,20 +151,16 @@ namespace SpeedStars.Runner
                 _lastHitWeight = sim.HitWeight;
             }
 
-            float p = (Time.time - _pulseStart) / Mathf.Max(0.01f, stepPulseTime);
-            float pulse = p < 1f ? stepPulse * Mathf.Sin(p * Mathf.PI) : 0f;
-
             float t = 1f - Mathf.Exp(-followSharpness * Time.deltaTime);
-            // Only the track direction and the zoom go through this; the pulse and the shake stay out of it so they end exactly.
-            _position = Vector3.Lerp(_position, Desired(0f), t);
-            Vector3 pulseOffset = target.right * (-distance * distanceScale * Mathf.Lerp(1f, zoomDistance, _zoom) * pulse);
+            // Only the track direction and the zoom go through this; the shake stays out of it so it ends exactly.
+            _position = Vector3.Lerp(_position, Desired(), t);
 
             Current(out float size);
             float n = Time.time * shakeRate;
             Vector3 shake = transform.right * ((Mathf.PerlinNoise(n, 0.3f) - 0.5f) * 2f * size)
                 + Vector3.up * ((Mathf.PerlinNoise(0.7f, n) - 0.5f) * 2f * size);
 
-            transform.position = _position + pulseOffset + shake;
+            transform.position = _position + shake;
             transform.rotation = Facing();
         }
     }
