@@ -36,7 +36,6 @@ Son güncelleme: 2026-11-03 17:45 · main 0a6c5f05 (push kullanıcıda; ana ağa
   `RunnerSim` enerji API'si ve ayakta çıkış (T-090); dev bitiş tuşu (F) replay'i bozuyor (T-094); ayak kilidi (soru); bilgi: ReplayControlsView
   prefab bağlıyor (T-098); `LateStepFeedback` runtime legacy Text'i American Captain değil (TMP'ye geçirirse font tek asset'ten).
 - Serhat: 4abc876a `BridgeCanalRiverside.prefab`'ı yeniden yazdı; `PastelBuildingRow` sahne açılınca bina üretiyor.
-
 ## Gözle bakılacaklar (Editor'de Play)
 - YENİ: her ekranda American Captain (boyut/taşma, BestFit → auto size), 4 kontur preset'i (kalınlık tahmini), READY/SET/GO konturu
   (`RaceStartConfig` OutlineWidth 0.2), yazılar düz (italik kalktı), Device Simulator'da çentik iki yana (yalnız Play'de).
@@ -45,7 +44,6 @@ Son güncelleme: 2026-11-03 17:45 · main 0a6c5f05 (push kullanıcıda; ana ağa
 
 ## Dikkat
 - Builder'lar artık var olanı ezmiyor (T-102); `-forceOverwriteHandEdits` bayrağını kullanma (Malik'in binaları + kullanıcının ayarları gider).
-- TMP Essentials batchmode'da `-importPackage <proje>/Library/PackageCache/com.unity.textmeshpro@3.0.7/Package Resources/TMP Essential Resources.unitypackage`.
 - PowerShell'de `git` bozuk (system32 gölgesi): git Bash'ten. Kancada `git commit` + "main" aynı komutta olmaz.
 
 <!-- OTOMATIK:BASLA -->
