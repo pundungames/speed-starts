@@ -26,6 +26,9 @@ namespace SpeedStars.Tools.Builders
         public const string DistanceOptionPath = UiPrefabPaths.Root + "/Rows/LeaderboardDistanceOption.prefab";
 
         private const float RefHeight = 937f;
+        /// <summary>EventModal tabs: 3 layout categories + the Race of the Day (DAILY), all on the window's 702 px row.</summary>
+        public const int EventTabCount = 4;
+        private const float EventTabsWidth = 702f, EventTabGap = 12f;
         private const float RefWidth = 1678f;
         private static readonly float S = UiArt.CanvasHeight / RefHeight;
 
@@ -622,9 +625,10 @@ namespace SpeedStars.Tools.Builders
             w.ModalClose = StateButton(close, "small_button_normal", "small_button_hover", "small_button_pressed", "small_button_disabled");
             UiArt.Layer(close, "Icon", Art("small_button_close"));
 
-            for (int i = 0; i < 3; i++)
+            float tabWidth = (EventTabsWidth - (EventTabCount - 1) * EventTabGap) / EventTabCount;
+            for (int i = 0; i < EventTabCount; i++)
             {
-                RectTransform tab = At(window, "Tab" + i, 29f + i * 238f, 70f, 226f, 64f);
+                RectTransform tab = At(window, "Tab" + i, 29f + i * (tabWidth + EventTabGap), 70f, tabWidth, 64f);
                 w.Tabs.Add(Choice(tab, "category_tab_normal", "category_tab_selected", "category_tab_disabled", ListSize,
                     new Vector2(0.04f, 0.08f), new Vector2(0.96f, 0.92f), TextAnchor.MiddleCenter, null));
             }
