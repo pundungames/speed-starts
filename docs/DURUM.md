@@ -5,14 +5,15 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-11-03 14:45 · main 8cac9cca (push kullanıcıda) · worktree yok (D:\Pundun\speed-starts-t093 klasörü kilitli kaldı, git'e bağlı değil; silinebilir)
+Son güncelleme: 2026-11-03 15:10 · main f8633f60 (push kullanıcıda) · worktree yok (D:\Pundun\speed-starts-t093 klasörü kilitli kaldı, git'e bağlı değil; silinebilir)
 
-## Faz 8 (cila) — bugün main'e girenler (son kopya koşusu yeşil: EditMode 1144, PlayMode 51/51, Zenject)
+## Faz 8 (cila) — bugün main'e girenler (son kopya koşusu yeşil: EditMode 1160, PlayMode 51/51, Zenject)
 - T-081..T-090: ok tuşları, regresyon, ekonomi v2 (referanstan; ADR `ADR-2026-11-03-ekonomi-v2-referans.md`), 200m/400m/60mH/400mH,
   ayarlar v2, emote v2 (Malik'in 9 animasyonu), Race of the Day, Practice paneli · e7d269f2 Malik'in 03.11 işi (Watch Replay, kamera, mobil UI).
 - T-091 Malik'in elle ayarları builder'da (Close sağ kenara sabit, replaySkin) + EventModal 4. sekme · T-092 Practice'te sonuç ekranı,
   ödül, rekor yok · T-093 High Scores'ta Race of the Day (günün mesafesi, Daily WR ile aynı botlar) · T-094 Watch Replay duman testleri
   · T-095 lisans envanteri (`reports/lisans-envanteri-2026-11-03.md`) · T-096 FPS toleransı: 30/60/120 FPS bitiş farkı %0.001.
+- T-097 ana menü kartı sola geniş (stat ikon+yazı, küçük butonlar, oyuncu adı) · T-098 Watch Replay kontrolleri prefab (onaylı).
 
 ## Verilen kararlar
 - Kullanıcı 03.11: "referans oyun ne ise aynısı". Ekonomi: yarış Nakit'i bitirme +10, zorluk bonusu 10 × oyuncu zorluğu, rakip bonusu
@@ -29,15 +30,15 @@ Son güncelleme: 2026-11-03 14:45 · main 8cac9cca (push kullanıcıda) · workt
 - Uygulama adı + paket adı, keystore, Gizlilik/Şartlar/Destek URL'leri.
 - Malik: UI üstündeki dokunma adım sayılmasın; engel teması (`docs/ENGEL-TEMAS-NOTU-malik.md`); 4×100m ve Medley;
   Practice için `RunnerSim` enerji API'si (doldur/kilitle) ve ayakta çıkış (T-090 notu); isterse `RunnerEmote.Play(clip)`;
-  dev bitiş tuşu (F) replay kaydını bitirmiyor / eski yarışı oynatıyor (T-094 BULGU 1-2); ayak kilidi ölçülmedi (soru).
-- Kullanıcı kararı: ReplayControlsView UI'ı koddan kuruyor (kural 3.1) → prefab'a çevrilsin mi; lisans envanterindeki "incelenmeli"ler
-  (ürün adı yer tutucu, UI sanatı kaynağı, Mixamo ham FBX repo'da, repo görünürlüğü).
+  dev bitiş tuşu (F) replay kaydını bitirmiyor / eski yarışı oynatıyor (T-094); ayak kilidi (soru); bilgi: ReplayControlsView artık
+  prefab bağlıyor (T-098, Open(prefab, replay)).
+- Lisans envanterindeki "incelenmeli"ler: kullanıcı 03.11 "sonra hallederiz" (ürün adı, UI sanatı kaynağı, Mixamo ham FBX, repo).
 - Serhat: Malik'in 4abc876a commit'i `BridgeCanalRiverside.prefab`'ını yeniden yazdı; `PastelBuildingRow` sahne açılınca bina üretiyor.
 
 ## Gözle bakılacaklar (Editor'de Play)
 - Yarış sonu kazanç dökümü (Nakit kutusunun sağında), Nakit "+" → reklam penceresi (0/3), premium yarışta "Spend 300 → 1 hour".
 - 200m/400m/60mH/400mH (400m'de botlar öndeyken dünya üretiliyor mu), ayarlar penceresinin yeni bölümleri, emote mağazası + yarışta J/buton.
-- Practice bitişi (sonuç ekranı yok, Restart), High Scores → DAILY sekmesi, Watch Replay, iki popup'ın Close konumu.
+- Practice bitişi, High Scores → DAILY, Watch Replay (prefab), Close konumları, ana menü kartı (sol şerit, ad, Race of the Day'de boş sol).
 - 30.10'dan beri bakılmayanlar: yarış teması, menüde karakter döndürme, botlar/sıra, READY/SET/GO, liderlik, kostüm.
 
 ## Dikkat
@@ -47,14 +48,14 @@ Son güncelleme: 2026-11-03 14:45 · main 8cac9cca (push kullanıcıda) · workt
 - Yerel, git'e girmeyen: `.claude/settings*.json`, `.claude/agents/`, `CLAUDE.local.md`, `pipeline-logs/` (arşiv: eski T-077..080 dalının yaması).
 
 <!-- OTOMATIK:BASLA -->
-_tur-sonu.ps1 2026-11-03 14:39 - otomatik blok, elle yazilan bu blokta kaybolur._
+_tur-sonu.ps1 2026-11-03 15:00 - otomatik blok, elle yazilan bu blokta kaybolur._
 
 - **KAPI TEMIZ (cikis 0)**
 - Acik needs: 3 (DECISION 3)
 - Review kuyrugu: 0
-- Goz bekleyen (merged): 88 - T-095, T-093, T-094, T-091, T-092, T-096, T-087, T-090
+- Goz bekleyen (merged): 90 - T-097, T-098, T-095, T-093, T-094, T-091, T-092, T-096
 - in-progress: 0 / blocked: 0
-- Uyari: govde-needs 0, test 1, analytics 0 (kapsam: status in-progress/review/merged)
-- GIT: 7 calisma agaci (ana: main); ana agacta commit'siz .prefab/.unity/.asset: 0
+- Uyari: govde-needs 0, test 2, analytics 0 (kapsam: status in-progress/review/merged)
+- GIT: 1 calisma agaci (ana: main); ana agacta commit'siz .prefab/.unity/.asset: 0
 - KOPYALAR: 2 (kopya.ps1 -Liste -Json)
 <!-- OTOMATIK:BITIR -->
