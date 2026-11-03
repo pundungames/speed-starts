@@ -12,7 +12,7 @@
 - Proje kökü = depo kökü `D:\Pundun\speed-starts`. **Kullanıcının Unity'si bu klasörde açık**; iş de burada, `main`'de yapılır.
 - Pipeline dosyaları: `scripts/`, `docs/`, `prompts/`, `reports/`, `agent-kit/` (kitin salt okunur kopyası).
   Log'lar `pipeline-logs/` (yerel, git'e girmez). `Library/`, `Temp/`, `Logs/`, `UserSettings/` Unity'nindir — yazma.
-- Paketler (2026-10-28): uGUI 1.0.0 (TextMeshPro YOK — kaldırıldı), Test Framework 1.1.33, Input System 1.19 (Active Input
+- Paketler (2026-10-28; TMP 03.11): uGUI 1.0.0, TextMeshPro 3.0.7 (`Assets/TextMesh Pro` = TMP Essentials), Test Framework 1.1.33, Input System 1.19 (Active Input
   Handling = Both), Animation Rigging, MCP for Unity. Eklentiler: `Assets/Plugins/Zenject` (Extenject 9.2.0: çekirdek,
   Signals, TestFramework, MemoryPoolMonitor), `Assets/Plugins/Demigiant/DOTween` (1.3.045, ücretsiz).
 
@@ -104,9 +104,12 @@ Biçim `docs/tasks/_TEMPLATE.md`; `scripts/tur-sonu.ps1` makineyle okur. Başlar
   kullanım onların alanı).
 - **Tween: DOTween** (`using DG.Tweening;`); UI animasyonu `agent-kit/05-DOTWEEN-UI-ANIMASYON.md` reçeteleri ve tek
   `UiMotionConfig` ile. Panel animasyonunu kendin uydurma.
-- **UI: uGUI + legacy `UnityEngine.UI.Text`** — TextMeshPro KULLANILMAZ (kullanıcı kararı 28.10: oyun Çin pazarına; legacy Text'in
-  dinamik fontu cihazda CJK karakterleri işletim sistemi fontundan alır). Font: `LegacyRuntime.ttf` (yerleşik) ya da dinamik bir TTF.
-  Oyuncuya görünen metin **İngilizce**. Input: Input System. UI referans çözünürlüğü 2400×1080 yatay, CanvasScaler `ScreenMatchMode.Expand` (kullanıcı kararı 30.10: ≥20:9'da yükseklik eşleşmesiyle aynı, daha dar ekranda sığacak kadar küçülür; T-034).
+- **UI: uGUI + TextMeshPro** (kullanıcı kararı 03.11, `docs/decisions/ADR-2026-11-03-textmeshpro.md`; 28.10'daki "legacy Text, TMP yok"
+  kararı kalktı). Yazı bileşeni `TMPro.TextMeshProUGUI`, alan tipi `TMP_Text`; yeni kodda legacy `UnityEngine.UI.Text` YOK (istisna: InputField
+  yazıları, `**/Dev/**`; Malik/Serhat'ın runtime Text'leri onların alanı). **Font her yerde American Captain** (kullanıcı 03.11: "bundan sonra
+  bu font devam"): TMP'de `AmericanCaptain SDF`, legacy'de `AmericanCaptain.ttf`; yolları tek yerde `UiFontPaths`, kontur = materyal preset'i.
+  Yeni ya da builder'ın ürettiği prefab `TmpMigration.ConvertPaths`'ten geçer (Tools → Speed Stars → Convert UI Text to TMP). Lisans ve Çince
+  yedek font: kullanıcı 03.11 "şimdilik bizi ilgilendirmiyor". Oyuncuya görünen metin **İngilizce**. Input: Input System. UI referans çözünürlüğü 2400×1080 yatay, CanvasScaler `ScreenMatchMode.Expand` (kullanıcı kararı 30.10: ≥20:9'da yükseklik eşleşmesiyle aynı, daha dar ekranda sığacak kadar küçülür; T-034).
 - Public alan yerine `[SerializeField] private`. Magic number yok — config asset'ine.
 - String yerine enum; olay: C# `event`/Zenject Signal (UnityEvent yalnız Inspector'dan bağlanan UI'da).
 - `using System;` + `using UnityEngine;` olan dosyada `Object`, `Random`, `Debug` niteliksiz kullanılmaz.
