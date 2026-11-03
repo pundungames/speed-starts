@@ -39,6 +39,14 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private string flagCode = string.Empty;
         [SerializeField] private string playerName = string.Empty;
         [SerializeField] private List<DayBestEntry> dayBests = new List<DayBestEntry>();
+        [SerializeField] private string adCashDayKey = string.Empty;
+        [SerializeField] private int adCashWatched;
+
+        /// <summary>UTC day key ("yyyy-MM-dd") the Cash-ad counter below belongs to. Empty = never watched. Added with economy v2, no schema bump: older saves open empty/0.</summary>
+        public string AdCashDayKey { get => adCashDayKey; set => adCashDayKey = value ?? string.Empty; }
+
+        /// <summary>Cash ads completed on <see cref="AdCashDayKey"/>.</summary>
+        public int AdCashWatched { get => adCashWatched; set => adCashWatched = value; }
 
         /// <summary>Best finished race per (event, UTC day), capped by the leaderboard config. Added with the leaderboard (T-037), no schema bump: older saves open with an empty list.</summary>
         public List<DayBestEntry> DayBests => dayBests;
@@ -157,6 +165,7 @@ namespace SpeedStars.Meta.Persistence
             if (languageCode == null) languageCode = string.Empty;
             if (flagCode == null) flagCode = string.Empty;
             if (playerName == null) playerName = string.Empty;
+            if (adCashDayKey == null) adCashDayKey = string.Empty;
             if (dayBests == null) dayBests = new List<DayBestEntry>();
             for (int i = dayBests.Count - 1; i >= 0; i--)
                 if (dayBests[i] == null) dayBests.RemoveAt(i);

@@ -31,6 +31,7 @@ namespace SpeedStars.UI.Race
         private readonly IDayBestSource _dayBests; // optional with the clock: without them the DB badge never shows
         private readonly IClock _clock;
         private readonly IRaceTraces _traces; // optional: without it Analysis shows the player alone
+        private readonly IRaceCashRewardResolver _cashRewards; // optional: without it no Cash is paid for a race
         private readonly List<DayBestRecord> _dayScratch = new List<DayBestRecord>();
 
         private RaceEventInfo _current;
@@ -48,8 +49,10 @@ namespace SpeedStars.UI.Race
         public RaceFlowLogic(IRaceSession session, IRaceEntryGate gate, IRaceSelection selection, IRaceEventLookup events,
             ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, IEntryGatePrompt prompt,
             IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null,
-            IDayBestSource dayBests = null, IClock clock = null, IRaceTraces traces = null)
+            IDayBestSource dayBests = null, IClock clock = null, IRaceTraces traces = null,
+            IRaceCashRewardResolver cashRewards = null)
         {
+            _cashRewards = cashRewards;
             _traces = traces;
             _dayBests = dayBests;
             _clock = clock;
@@ -153,10 +156,12 @@ namespace SpeedStars.UI.Race
             _resultsOpen = true;
             if (string.IsNullOrEmpty(_payoutId)) _payoutId = Guid.NewGuid().ToString("N");
             int gems = _rewards.Resolve(outcome, _payoutId); // once per race (the guard above); the resolver pays once per id too
+            RaceCashReward cash = _cashRewards != null ? _cashRewards.Resolve(outcome, _payoutId) : RaceCashReward.None; // ticketed events only; once per payout id
             ResultsData resultsData = BuildResults(title, outcome);
             _results.Present(resultsData);
             PresentAnalysis(title, outcome);
             if (_results is IGemRewardView gemView) gemView.ShowGemReward(gems); // 0 clears the line of a previous race
+            if (_results is IRaceCashRewardView cashView) cashView.ShowCashReward(cash); // empty clears the block of a previous race
             _navigator.Push(_results);
         }
 

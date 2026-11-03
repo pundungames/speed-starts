@@ -1,5 +1,6 @@
 using System;
 using SpeedStars.Core.Race;
+using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
 
 namespace SpeedStars.UI.Race
@@ -24,5 +25,14 @@ namespace SpeedStars.UI.Race
     public interface IEntryGatePrompt
     {
         void Open(RaceEventId id);
+    }
+
+    /// <summary>
+    /// Optional side of the Results screen: the Cash the race paid, split into lines. RaceFlow calls it before the screen
+    /// opens, once per race; an empty reward (free event, nothing paid) means "show no Cash block" and clears a previous race's.
+    /// </summary>
+    public interface IRaceCashRewardView
+    {
+        void ShowCashReward(RaceCashReward reward);
     }
 }

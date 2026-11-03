@@ -76,7 +76,99 @@ namespace SpeedStars.Tools.Builders
             BotRaceConfigSeed.Seed(overwrite); // T-074: opponent bots (field, difficulty, press driver, names)
             AudioConfigSeed.Seed(AudioPath, overwrite); // T-052: sound cues (placeholder WAVs), music slot, haptic numbers
             SeedAdsDev(overwrite); // T-050: fake rewarded ad (dev only)
+            ApplyEconomyV2();
             AssetDatabase.SaveAssets();
+        }
+
+        // ---- Economy v2 (T-084; docs/analiz/2026-11-03-referans-oyun-ekonomi.md section 4, user decision 03.11) ----
+        private const int EntryTicketCashPrice = 100;
+        private const int TimedTicketCashPrice = 1000;
+        private const int RaceFinishCash = 10;
+        private const int RaceDifficultyBonusCash = 10;
+        private const int RaceOpponentBonusCash = 10;   // paid in full when every opponent is passed
+        private const int RewardedAdCash = 200;
+        private const int RewardedAdCashDailyLimit = 3;
+        private const int HeadwearCashPrice = 1000;      // normal Headwear
+        private const int OtherCosmeticCashPrice = 500;  // normal Glasses, Tops, Gloves, Shorts, Leggings, Socks, Shoes
+        private static readonly int[] PaidEmotePrices = { 2500, 2500, 5000, 7500 }; // non-free emotes in list order; the last repeats
+
+        private static void WriteEconomyV2(SerializedObject economy)
+        {
+            Prop(economy, "entryTicketCashPrice").intValue = EntryTicketCashPrice;
+            Prop(economy, "timedTicketCashPrice").intValue = TimedTicketCashPrice;
+            Prop(economy, "raceFinishCash").intValue = RaceFinishCash;
+            Prop(economy, "raceDifficultyBonusCash").intValue = RaceDifficultyBonusCash;
+            Prop(economy, "raceOpponentBonusCash").intValue = RaceOpponentBonusCash;
+            Prop(economy, "rewardedAdCash").intValue = RewardedAdCash;
+            Prop(economy, "rewardedAdCashDailyLimit").intValue = RewardedAdCashDailyLimit;
+        }
+
+        /// <summary>
+        /// Writes the v2 prices into the EXISTING economy, cosmetic and emote assets (a migration, not a first fill: it
+        /// ignores the skip-existing rule on purpose and only touches the price fields, so it is safe to run again).
+        /// Cosmetics: premium items keep their Purple Gem price; the default outfit (what every Custom 1..N preset wears,
+        /// so the presets never show a locked item) stays free; every other normal item costs Cash, Headwear more.
+        /// Emotes: free ones stay free; the paid ones get the price ladder in list order.
+        /// </summary>
+        [MenuItem("Tools/Speed Stars/Build/Apply economy v2 prices")]
+        public static void ApplyEconomyV2()
+        {
+            var economy = AssetDatabase.LoadAssetAtPath<EconomyConfig>(EconomyPath);
+            if (economy != null)
+            {
+                var so = new SerializedObject(economy);
+                WriteEconomyV2(so);
+                Apply(so);
+            }
+            else Warn(Source, $"'{EconomyPath}' is missing; economy v2 numbers not written.");
+
+            var cosmetics = AssetDatabase.LoadAssetAtPath<CosmeticCatalog>(CosmeticCatalogPath);
+            if (cosmetics != null) ApplyCosmeticPrices(cosmetics);
+            else Warn(Source, $"'{CosmeticCatalogPath}' is missing; cosmetic prices not written.");
+
+            var emotes = AssetDatabase.LoadAssetAtPath<SpeedStars.Meta.Emotes.EmoteCatalog>(EmoteCatalogSeed.CatalogPath);
+            if (emotes != null) ApplyEmotePrices(emotes);
+            else Warn(Source, $"'{EmoteCatalogSeed.CatalogPath}' is missing; emote prices not written.");
+
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void ApplyCosmeticPrices(CosmeticCatalog catalog)
+        {
+            var free = new HashSet<string>();
+            foreach (CosmeticOutfitEntry entry in catalog.DefaultOutfit) free.Add(entry.CosmeticId);
+
+            int priced = 0;
+            foreach (CosmeticCategory category in System.Enum.GetValues(typeof(CosmeticCategory)))
+            {
+                foreach (CosmeticDefinition item in catalog.GetByCategory(category))
+                {
+                    if (item.IsPremium) continue; // 50 Purple Gems stays as seeded
+                    var so = new SerializedObject(item);
+                    int price = free.Contains(item.Id) ? 0 : category == CosmeticCategory.Headwear ? HeadwearCashPrice : OtherCosmeticCashPrice;
+                    Prop(so, "price").intValue = price;
+                    Prop(so, "currency").enumValueIndex = (int)CosmeticCurrency.Cash;
+                    Apply(so);
+                    if (price > 0) priced++;
+                }
+            }
+            Log(Source, $"Cosmetic prices written: {priced} normal items cost Cash; {free.Count} default-outfit items stay free.");
+        }
+
+        private static void ApplyEmotePrices(SpeedStars.Meta.Emotes.EmoteCatalog catalog)
+        {
+            var so = new SerializedObject(catalog);
+            SerializedProperty list = Prop(so, "emotes");
+            int paid = 0;
+            for (int i = 0; i < list.arraySize; i++)
+            {
+                SerializedProperty price = Rel(list.GetArrayElementAtIndex(i), "cashPrice");
+                if (price.intValue <= 0) continue; // free stays free
+                price.intValue = PaidEmotePrices[System.Math.Min(paid, PaidEmotePrices.Length - 1)];
+                paid++;
+            }
+            Apply(so);
+            Log(Source, $"Emote prices written: {paid} paid emotes.");
         }
 
         private static void SeedEconomy(bool overwrite)
@@ -98,8 +190,7 @@ namespace SpeedStars.Tools.Builders
             // the very first race waits for a regen.
             Prop(so, "startingEntryTickets").intValue = so.FindProperty("entryTicketCap").intValue;
             Prop(so, "startingTimedTickets").intValue = 0;
-            Prop(so, "entryTicketCashPrice").intValue = 0;
-            Prop(so, "timedTicketCashPrice").intValue = 0;
+            WriteEconomyV2(so);
             Prop(so, "rewardedAdEnabled").boolValue = true;
             Prop(so, "rewardedAdEntryTickets").intValue = 1;
             Apply(so);

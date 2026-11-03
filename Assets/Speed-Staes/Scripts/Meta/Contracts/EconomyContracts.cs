@@ -1,3 +1,4 @@
+using System;
 using SpeedStars.Core.Race;
 
 namespace SpeedStars.Meta.Contracts
@@ -97,5 +98,107 @@ namespace SpeedStars.Meta.Contracts
     public interface IEntryTicketShop
     {
         TicketPurchaseResult TryBuyWithCash(string transactionId);
+    }
+
+    /// <summary>
+    /// What a finished ticketed race paid in Cash, split into the lines the result screen shows. <see cref="Total"/> is
+    /// what reached the wallet; a line may be 0 (config off, no opponents passed).
+    /// </summary>
+    public readonly struct RaceCashReward
+    {
+        public RaceCashReward(int finish, int difficulty, int opponents, int passedOpponents, int totalOpponents)
+        {
+            Finish = finish;
+            Difficulty = difficulty;
+            Opponents = opponents;
+            PassedOpponents = passedOpponents;
+            TotalOpponents = totalOpponents;
+        }
+
+        public static RaceCashReward None => default;
+
+        /// <summary>Finishing the race.</summary>
+        public int Finish { get; }
+
+        /// <summary>Flat difficulty bonus.</summary>
+        public int Difficulty { get; }
+
+        /// <summary>Share for the opponents the player beat.</summary>
+        public int Opponents { get; }
+
+        /// <summary>Opponents finished behind the player.</summary>
+        public int PassedOpponents { get; }
+
+        /// <summary>All opponents of the race (the player excluded).</summary>
+        public int TotalOpponents { get; }
+
+        public int Total => Finish + Difficulty + Opponents;
+
+        public bool IsEmpty => Total <= 0;
+    }
+
+    /// <summary>Cash for a finished race of a ticketed event (economy v2). Free events pay nothing.</summary>
+    public interface IRaceCashRewardResolver
+    {
+        /// <summary>
+        /// Pays once per <paramref name="payoutId"/> and returns the breakdown for the result screen. Empty for a free
+        /// event, an unfinished or invalid outcome, an unknown event or a repeated id.
+        /// </summary>
+        RaceCashReward Resolve(RaceOutcome outcome, string payoutId);
+    }
+
+    public enum TimedTicketPurchaseResult
+    {
+        Bought,
+        /// <summary>No Cash price in config (0).</summary>
+        NotForSale,
+        NotEnough,
+        AlreadyProcessed
+    }
+
+    /// <summary>Buying one Timed Ticket (stock +1) with Cash.</summary>
+    public interface ITimedTicketShop
+    {
+        TimedTicketPurchaseResult TryBuyWithCash(string transactionId);
+    }
+
+    public enum RewardedCashOutcome
+    {
+        /// <summary>The ad was completed and the Cash was paid.</summary>
+        Granted,
+        Skipped,
+        Failed,
+        /// <summary>Today's Cash ads are used up (the ad was not even shown).</summary>
+        LimitReached,
+        /// <summary>No ad service, not ready, or config gives no Cash.</summary>
+        Unavailable
+    }
+
+    /// <summary>Watch a rewarded ad for Cash, a fixed number of times per UTC day.</summary>
+    public interface IRewardedCash
+    {
+        /// <summary>Cash one ad gives (config).</summary>
+        int Amount { get; }
+
+        /// <summary>Ads that count per day (config).</summary>
+        int DailyLimit { get; }
+
+        /// <summary>Ads left today; 0 once used up. A rolled-back device clock never gives rights back.</summary>
+        int RemainingToday { get; }
+
+        /// <summary>An ad is running; no second one starts.</summary>
+        bool IsBusy { get; }
+
+        /// <summary>The offer is open: amount and limit configured, an ad service ready, rights left, none running.</summary>
+        bool IsAvailable { get; }
+
+        /// <summary>
+        /// Starts one ad. False (nothing started, <paramref name="done"/> not called) when not available.
+        /// <paramref name="done"/> gets the outcome once; it may run before this call returns.
+        /// </summary>
+        bool TryWatch(Action<RewardedCashOutcome> done);
+
+        /// <summary>Raised after a payment (remaining count changed) and after the day rolled over.</summary>
+        event Action Changed;
     }
 }

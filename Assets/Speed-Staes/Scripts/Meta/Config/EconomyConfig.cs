@@ -52,6 +52,23 @@ namespace SpeedStars.Meta.Config
         [Tooltip("Entry Tickets one rewarded ad gives. 0 = option closed even when enabled.")]
         [SerializeField, Min(0)] private int rewardedAdEntryTickets;
 
+        [Header("Race Cash reward (ticketed events only)")]
+        [Tooltip("Cash for finishing a ticketed race. 0 = no finish payment.")]
+        [SerializeField, Min(0)] private int raceFinishCash = 10;
+
+        [Tooltip("Flat difficulty bonus Cash for finishing a ticketed race (the game has no difficulty setting, so it is a constant). 0 = off.")]
+        [SerializeField, Min(0)] private int raceDifficultyBonusCash = 10;
+
+        [Tooltip("Opponent bonus Cash if every opponent is passed: round(this x passed opponents / all opponents). 0 = off.")]
+        [SerializeField, Min(0)] private int raceOpponentBonusCash = 10;
+
+        [Header("Cash from a rewarded ad")]
+        [Tooltip("Cash one completed rewarded ad gives. 0 = option closed.")]
+        [SerializeField, Min(0)] private int rewardedAdCash = 200;
+
+        [Tooltip("How many Cash ads count per UTC day. 0 = option closed.")]
+        [SerializeField, Min(0)] private int rewardedAdCashDailyLimit = 3;
+
         [Header("Transaction log")]
         [Tooltip("How many processed transaction ids the save remembers (duplicate protection). The oldest are dropped first. Technical limit, not balance; keep it well above the number of purchases a player can repeat within one session.")]
         [SerializeField, Min(1)] private int processedTransactionCap = 200;
@@ -65,6 +82,12 @@ namespace SpeedStars.Meta.Config
         public int StartingPurpleGems => startingPurpleGems;
         public int StartingEntryTickets => startingEntryTickets;
         public int StartingTimedTickets => startingTimedTickets;
+
+        public int RaceFinishCash => raceFinishCash;
+        public int RaceDifficultyBonusCash => raceDifficultyBonusCash;
+        public int RaceOpponentBonusCash => raceOpponentBonusCash;
+        public int RewardedAdCash => rewardedAdCash;
+        public int RewardedAdCashDailyLimit => rewardedAdCashDailyLimit;
 
         public int ProcessedTransactionCap => processedTransactionCap < 1 ? 1 : processedTransactionCap;
 

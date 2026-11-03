@@ -1,7 +1,7 @@
 ---
 id: T-084
 title: Ekonomi v2 cekirdegi - yaris Nakit odulu (dokumlu), reklamla Nakit (gunde 3), Sureli Bilet Nakit'le, fiyatlar config'te
-status: todo
+status: review
 owner: systems-agent
 depends_on: []
 owns_paths:
@@ -18,12 +18,28 @@ owns_paths:
 touches_scene: false
 branch: agent/T-084-ekonomi-v2
 commits: []
-tests: []
+tests:
+  - Assets/Speed-Staes/Tests/EditMode/Meta/Economy/RaceCashRewardResolverTests.cs
+  - Assets/Speed-Staes/Tests/EditMode/Meta/Economy/RewardedCashServiceTests.cs
+  - Assets/Speed-Staes/Tests/EditMode/Meta/Economy/TimedTicketShopTests.cs
+  - Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceFlowLogicTests.cs
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: WIRING
+    durum: open
+    not: "ProjectInstaller -> Container.Bind<IRaceCashRewardResolver>().To<RaceCashRewardResolver>().AsSingle(); Container.Bind<ITimedTicketShop>().To<TimedTicketShop>().AsSingle(); Container.Bind<IRewardedCash>().FromMethod(c => new RewardedCashService(c.Container.TryResolve<IRewardedAds>(), c.Container.Resolve<ProgressRepository>(), c.Container.Resolve<IClock>(), c.Container.Resolve<EconomyConfig>(), c.Container.Resolve<IEconomyLedger>())).AsSingle();  (RaceCashRewardResolver ctor: RaceEventCatalog, EconomyConfig, IEconomyLedger, ProgressRepository - RaceRewardResolver ile ayni kaynaklar)"
+  - tip: WIRING
+    durum: open
+    not: "Scripts/UI/Race/RaceFlow.cs (owns_paths disi) -> ctor'a '[InjectOptional] IRaceCashRewardResolver cashRewards' ekle ve RaceFlowLogic'e son parametre olarak ver: new RaceFlowLogic(..., traces, cashRewards). Yoksa yarista Nakit odenmez."
+  - tip: ASSET
+    durum: open
+    not: "Seeder'i kopyada kos: ConfigAssetSeeder.ApplyEconomyV2() (menu: Tools/Speed Stars/Build/Apply economy v2 prices; SeedAll da cagirir). Yazar: EconomyConfig.asset entryTicketCashPrice=100, timedTicketCashPrice=1000, raceFinishCash=10, raceDifficultyBonusCash=10, raceOpponentBonusCash=10, rewardedAdCash=200, rewardedAdCashDailyLimit=3; CosmeticDefinition asset'leri (Data/Config/Cosmetics) normal: price 500 (Headwear 1000), currency Cash, catalog.defaultOutfit ogeleri 0; premium dokunulmaz; EmoteCatalog.asset ucretsizler 0, ucretliler sirayla 2500/2500/5000/7500. Degisen asset'ler commit'e girer."
+  - tip: DECISION
+    durum: open
+    not: "Mevcut oyuncu kaydi: normal kozmetikler fiyatsizken sahipli sayiliyordu (CosmeticService.IsOwned); fiyat gelince eski kayitta giyilen/hazir presetteki ama OwnedCosmeticIds'te olmayan oge kilitli gorunur. Dagitim oncesi mevcut oyuncu yoksa sorun degil; varsa CosmeticService'e (owns_paths disi) 'kayitli presetlerde giyilen ogeler sahipli' gecisi gerekir."
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -62,4 +78,8 @@ Once oku: docs/TUZAKLAR.md, docs/CALISMA-KURALLARI.md §6 (denge sayisi), mevcut
 - Sonuc ekrani dokum gorunumu, para magazasi penceresi, butonlar (T-085); gercek para; tema fiyatlari; Malik'in kodu
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+- Yapildi: EconomyConfig'e 5 yeni alan (yarisNakit x3, reklamNakit x2); RaceCashRewardResolver (biletli etkinlik, payout id'li), RewardedCashService (gunde N, UTC gun anahtari, PlayerProgress.adCashDayKey/adCashWatched), TimedTicketShop; RaceFlowLogic + IRaceCashRewardView seam'i; seeder ApplyEconomyV2.
+- Kayit: yalniz ek alan (sema 2 kalir, eski kayit bos/0 acilir; RewardedCashServiceTests'te eski-kayit testi) -> ADR yok. dayBoundary yok (T-055'te kaldirildi): gun = UTC, DailyGift ile ayni RewardDay.
+- Saat geri alma: ClockService zaten son gorulene sabitler; ek olarak kayitli gun anahtari bugunden ileriyse sayac bugune sayilir, hak geri gelmez.
+- Hazir kiyafet kurali: preset'ler CosmeticCatalog.defaultOutfit ile doldurulur (CosmeticService), bu yuzden defaultOutfit ogeleri 0 fiyatli; baska preset kaynagi yok. Seeder dosyasi digerlerini (Premium 50 Mor Mucevher) bozmaz.
+- Zorlandim/birakilan: kod derlenmedi/test kosulmadi (kural). EntryTicketShop 100 Nakit sadece seeder'dan; kod varsayilani fiyat alanlarinda 0 kaldi (EconomyConfigTests "yeni config kapali" testi korunsun diye). RaceFlow.cs ve CosmeticService owns_paths disi: needs'te.

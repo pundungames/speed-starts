@@ -229,6 +229,39 @@ namespace SpeedStars.Tests.UI.Race
         }
 
         [Test]
+        public void Finished_PaysTheCashOnce_WithTheSamePayoutIdAsTheGems_AndShowsTheBreakdown()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            var cash = new FakeCash { Reward = new RaceCashReward(4, 3, 2, 1, 5) };
+            new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, _prompt,
+                cashRewards: cash).Start();
+
+            RaceOutcome outcome = Outcome(Dash, 9.5);
+            _session.Finish(outcome);
+            _session.Finish(outcome); // a repeated finish of the same race
+
+            Assert.AreEqual(1, cash.PayoutIds.Count);
+            Assert.AreEqual(_rewards.Calls[0].PayoutId, cash.PayoutIds[0]);
+            Assert.AreEqual(1, _results.CashCalls);
+            Assert.AreEqual(cash.Reward.Total, _results.CashShown.Total);
+            Assert.AreEqual(cash.Reward.Opponents, _results.CashShown.Opponents);
+        }
+
+        [Test]
+        public void Finished_WithoutACashResolver_TellsTheScreenAnEmptyReward()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            Make().Start();
+
+            _session.Finish(Outcome(Dash, 9.5));
+
+            Assert.AreEqual(1, _results.CashCalls);
+            Assert.IsTrue(_results.CashShown.IsEmpty);
+        }
+
+        [Test]
         public void Finished_NoGems_TellsTheScreenZero()
         {
             _gate.Pending = Dash;
@@ -537,8 +570,29 @@ namespace SpeedStars.Tests.UI.Race
             }
         }
 
-        private sealed class FakeResults : IResultsView, IGemRewardView
+        private sealed class FakeCash : IRaceCashRewardResolver
         {
+            public readonly List<string> PayoutIds = new List<string>();
+            public RaceCashReward Reward;
+
+            public RaceCashReward Resolve(RaceOutcome outcome, string payoutId)
+            {
+                PayoutIds.Add(payoutId);
+                return Reward;
+            }
+        }
+
+        private sealed class FakeResults : IResultsView, IGemRewardView, IRaceCashRewardView
+        {
+            public RaceCashReward CashShown;
+            public int CashCalls;
+
+            public void ShowCashReward(RaceCashReward reward)
+            {
+                CashShown = reward;
+                CashCalls++;
+            }
+
             public int GemsShown = -1;
             public int GemCalls;
             public ResultsData Presented;

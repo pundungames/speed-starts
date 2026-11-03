@@ -11,6 +11,25 @@ using SpeedStars.Tests.Meta.Tickets;
 
 namespace SpeedStars.Tests.Meta.Economy
 {
+    /// <summary>Rewarded ad stand-in: answers at once with the chosen result, or holds the callback for the test to fire.</summary>
+    internal sealed class FakeRewardedAds : SpeedStars.Meta.Contracts.IRewardedAds
+    {
+        public SpeedStars.Meta.Contracts.AdResult Result = SpeedStars.Meta.Contracts.AdResult.Completed;
+        public bool Ready = true;
+        public bool Hold;
+        public int Shown;
+        public System.Action<SpeedStars.Meta.Contracts.AdResult> Pending;
+
+        public bool IsReady => Ready;
+
+        public void Show(System.Action<SpeedStars.Meta.Contracts.AdResult> done)
+        {
+            Shown++;
+            if (Hold) Pending = done;
+            else done(Result);
+        }
+    }
+
     /// <summary>
     /// Real economy services over a memory save, fake clock and configs built here. All numbers are arbitrary test
     /// inputs; tests assert relations between them, never shipped asset values.
@@ -33,6 +52,10 @@ namespace SpeedStars.Tests.Meta.Economy
         public EntryTicketService Tickets;
         public EntryTicketShop Shop;
         public RaceRewardResolver Rewards;
+        public RaceCashRewardResolver CashRewards;
+        public TimedTicketShop TimedShop;
+        public RewardedCashService CashAds;
+        public readonly FakeRewardedAds Ads = new FakeRewardedAds();
         public RaceEntryGate Gate;
 
         public EconomyTestKit(int entryTickets = 0)
@@ -62,6 +85,9 @@ namespace SpeedStars.Tests.Meta.Economy
             Tickets = new EntryTicketService(repository, Kit.Clock, Kit.Economy);
             Shop = new EntryTicketShop(Kit.Economy, Ledger, Tickets, repository);
             Rewards = new RaceRewardResolver(Events, Gems, Ledger, repository);
+            CashRewards = new RaceCashRewardResolver(Events, Kit.Economy, Ledger, repository);
+            TimedShop = new TimedTicketShop(Kit.Economy, Ledger, repository);
+            CashAds = new RewardedCashService(Ads, repository, Kit.Clock, Kit.Economy, Ledger);
             Gate = new RaceEntryGate(repository, Kit.Clock, Events, Tickets);
         }
 
@@ -73,8 +99,8 @@ namespace SpeedStars.Tests.Meta.Economy
             return reloaded;
         }
 
-        public RaceOutcome Outcome(RaceEventId id, int rank, double seconds = 12.5)
-            => new RaceOutcome(id, seconds, 100f, rank, 8);
+        public RaceOutcome Outcome(RaceEventId id, int rank, double seconds = 12.5, int runnerCount = 8)
+            => new RaceOutcome(id, seconds, 100f, rank, runnerCount);
 
         private RaceEventDefinition Event(string id, bool awardsGems, bool requiresTicket)
         {
