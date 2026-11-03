@@ -75,5 +75,54 @@ namespace SpeedStars.PlayTests
             yield return WaitClosed(wardrobe, "wardrobe");
             yield return WaitOpen(home, "HomeScreen to come back");
         }
+
+        /// <summary>
+        /// T-089: the list opens on "None" (free, equipped, no price), a real tap on a locked card shows the price button, and a real tap
+        /// on it is handled either way: bought (lock gone, Equip offered) or refused for lack of Cash (still locked, still for sale).
+        /// Which one depends on the save, so both are accepted; the card and the buttons must agree with each other.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator BaseCardIsNone_AndATapOnTheBuyButtonIsHandled()
+        {
+            HomeScreenView home = Require<HomeScreenView>();
+            UiScreen screen = RequireField<UiScreen>(home, "emoteScreen");
+            var wardrobe = RequireField<UiScreen>(home, "cosmeticsScreen") as CostumeEditorScreenView;
+            Assert.IsNotNull(wardrobe);
+
+            yield return Tap(RequireField<Button>(home, "emoteButton"), "emoteButton");
+            yield return WaitOpen(wardrobe, "wardrobe Emote tab");
+
+            Transform content = RequireField<Transform>(screen, "itemsContent");
+            var cards = new System.Collections.Generic.List<EmoteCardView>();
+            yield return WaitUntil(() =>
+            {
+                cards.Clear();
+                foreach (EmoteCardView card in content.GetComponentsInChildren<EmoteCardView>(false)) cards.Add(card);
+                return cards.Count > 1;
+            }, "emote cards to appear");
+
+            EmoteCardView none = cards[0];
+            Assert.IsFalse(RequireField<GameObject>(none, "lockOverlay").activeSelf, "None is free: never locked");
+            Assert.IsFalse(RequireField<Text>(none, "priceText").gameObject.activeSelf, "None shows no price");
+
+            Button purchase = RequireField<Button>(screen, "purchaseButton");
+            Button equip = RequireField<Button>(screen, "equipButton");
+            EmoteCardView target = null;
+            foreach (EmoteCardView card in cards)
+                if (RequireField<GameObject>(card, "lockOverlay").activeSelf) target = card;
+            if (target == null) yield break; // everything owned in this save: nothing to buy
+
+            yield return Tap(RequireField<Button>(target, "button"), $"locked emote card '{target.EmoteId}'");
+            Assert.IsTrue(purchase.gameObject.activeSelf, "a locked card offers the price button");
+            Assert.IsFalse(equip.gameObject.activeSelf);
+
+            yield return Tap(purchase, "emote purchase");
+            bool locked = RequireField<GameObject>(target, "lockOverlay").activeSelf;
+            Assert.AreEqual(locked, purchase.gameObject.activeSelf, "the card and the buttons agree (bought: Equip, refused: price button)");
+            Assert.AreEqual(!locked, equip.gameObject.activeSelf);
+
+            yield return Tap(CloseButtonOf(wardrobe), "wardrobe Back");
+            yield return WaitClosed(wardrobe, "wardrobe");
+        }
     }
 }

@@ -90,7 +90,13 @@ namespace SpeedStars.Tools.Builders
         private const int RewardedAdCashDailyLimit = 3;
         private const int HeadwearCashPrice = 1000;      // normal Headwear
         private const int OtherCosmeticCashPrice = 500;  // normal Glasses, Tops, Gloves, Shorts, Leggings, Socks, Shoes
-        private static readonly int[] PaidEmotePrices = { 2500, 2500, 5000, 7500 }; // non-free emotes in list order; the last repeats
+        // Emotes (T-089): the paid ones in list order, EmotesPerPriceTier of each price (reference tiers: 3 x 2500, 3 x 5000, 3 x 7500); more repeat the last.
+        private static readonly int[] EmotePriceTiers = { 2500, 5000, 7500 };
+        private const int EmotesPerPriceTier = 3;
+
+        /// <summary>Cash price of the n-th paid emote (0-based, list order).</summary>
+        public static int EmotePrice(int paidIndex) =>
+            EmotePriceTiers[System.Math.Min(System.Math.Max(0, paidIndex) / EmotesPerPriceTier, EmotePriceTiers.Length - 1)];
 
         private static void WriteEconomyV2(SerializedObject economy)
         {
@@ -188,7 +194,7 @@ namespace SpeedStars.Tools.Builders
             {
                 SerializedProperty price = Rel(list.GetArrayElementAtIndex(i), "cashPrice");
                 if (price.intValue <= 0) continue; // free stays free
-                price.intValue = PaidEmotePrices[System.Math.Min(paid, PaidEmotePrices.Length - 1)];
+                price.intValue = EmotePrice(paid);
                 paid++;
             }
             Apply(so);

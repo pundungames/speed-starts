@@ -4,64 +4,48 @@ using UnityEngine;
 namespace SpeedStars.Meta.Emotes
 {
     /// <summary>
-    /// Pure maths of the procedural emotes: time to bone rotation, easing and the fade weight. No scene, no bones; the menu
-    /// character (Bridge) only applies what this returns.
+    /// Pure maths of the baked emotes: the fade envelope and which two frames of a clip a time falls between. No scene, no
+    /// bones; the menu character (Bridge) only applies what this returns.
     /// </summary>
     public static class EmoteSampler
     {
-        /// <summary>Easing of a 0..1 progress (clamped).</summary>
-        public static float Ease(EmoteEase ease, float x)
+        /// <summary>Smooth-step of a 0..1 progress (clamped).</summary>
+        public static float Smooth(float x)
         {
             x = Mathf.Clamp01(x);
-            switch (ease)
-            {
-                case EmoteEase.Smooth: return x * x * (3f - 2f * x);
-                case EmoteEase.EaseOut: return 1f - (1f - x) * (1f - x);
-                case EmoteEase.EaseIn: return x * x;
-                default: return x;
-            }
+            return x * x * (3f - 2f * x);
         }
 
         /// <summary>
-        /// Rotation (euler degrees, runner space) of one bone at <paramref name="time"/>. Between two keys of the bone it
-        /// goes from the earlier to the later with the later key's ease; before the first key / after the last it holds that
-        /// key; a bone without keys is zero.
+        /// How much of the emote shows at <paramref name="time"/>: fades in over <paramref name="fadeIn"/> (starting from
+        /// <paramref name="carry"/>, the weight an emote it replaced had) and out over the last <paramref name="fadeOut"/>
+        /// seconds. 0 at and after <paramref name="length"/>.
         /// </summary>
-        public static Vector3 Evaluate(EmoteKey[] keys, EmoteBone bone, float time)
+        public static float Weight(float time, float length, float fadeIn, float fadeOut, float carry)
         {
-            if (keys == null) return Vector3.zero;
-
-            EmoteKey before = null;
-            EmoteKey after = null;
-            EmoteKey first = null;
-            foreach (EmoteKey key in keys)
-            {
-                if (key == null || key.Bone != bone) continue;
-                if (first == null || key.Time < first.Time) first = key;
-                if (key.Time <= time && (before == null || key.Time >= before.Time)) before = key;
-                if (key.Time > time && (after == null || key.Time < after.Time)) after = key;
-            }
-
-            if (first == null) return Vector3.zero;
-            if (before == null) return first.Euler;
-            if (after == null) return before.Euler;
-
-            float span = after.Time - before.Time;
-            float t = span <= 0f ? 1f : (time - before.Time) / span;
-            return Vector3.LerpUnclamped(before.Euler, after.Euler, Ease(after.Ease, t));
-        }
-
-        /// <summary>
-        /// How much of the emote shows at <paramref name="time"/>: fades in over <paramref name="blendIn"/> (starting from
-        /// <paramref name="carry"/>, the weight an emote it replaced had) and out over the last <paramref name="blendOut"/>
-        /// seconds. 0 at and after <paramref name="duration"/>.
-        /// </summary>
-        public static float Weight(float time, float duration, float blendIn, float blendOut, float carry)
-        {
-            if (time >= duration) return 0f;
-            float rise = blendIn <= 0f ? 1f : Mathf.Lerp(Mathf.Clamp01(carry), 1f, Ease(EmoteEase.Smooth, time / blendIn));
-            float fall = blendOut <= 0f ? 1f : Ease(EmoteEase.Smooth, (duration - time) / blendOut);
+            if (time >= length) return 0f;
+            float rise = fadeIn <= 0f ? 1f : Mathf.Lerp(Mathf.Clamp01(carry), 1f, Smooth(time / fadeIn));
+            float fall = fadeOut <= 0f ? 1f : Smooth((length - time) / fadeOut);
             return Math.Min(rise, fall);
+        }
+
+        /// <summary>
+        /// The two frames around <paramref name="clipTime"/> and the blend between them (0 = frame a, 1 = frame b). A time before
+        /// the start holds the first frame, after the end the last; an empty clip returns 0, 0, 0.
+        /// </summary>
+        public static void Frame(float clipTime, float frameRate, int frameCount, out int a, out int b, out float blend)
+        {
+            if (frameCount <= 0 || frameRate <= 0f)
+            {
+                a = 0;
+                b = 0;
+                blend = 0f;
+                return;
+            }
+            float position = Mathf.Clamp(clipTime * frameRate, 0f, frameCount - 1);
+            a = Math.Min((int)position, frameCount - 1);
+            b = Math.Min(a + 1, frameCount - 1);
+            blend = position - a;
         }
     }
 }

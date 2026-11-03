@@ -2,106 +2,74 @@ using System.Collections.Generic;
 using SpeedStars.Meta.Emotes;
 using SpeedStars.UI.Emotes;
 using UnityEditor;
-using UnityEngine;
 using static SpeedStars.Tools.Builders.SceneBuilderUtil;
 
 namespace SpeedStars.Tools.Builders
 {
     /// <summary>
-    /// First fill of the emote assets (T-040): Data/Config/EmoteCatalog.asset with our own six procedural emotes, and
-    /// Data/Config/EmoteScreenConfig.asset (feedback numbers: field defaults). The original game's emote list is not known,
-    /// so these are a starting set; the poses are authored by eye on the runner rig and are meant to be tuned in the
-    /// Inspector. Rotations are runner-space degrees on top of the menu stance (x right, y up, z forward): a right-side limb
-    /// goes outward / up with positive z, a left-side limb with negative z; negative x tips a bone forward or leans back.
-    /// Prices are PLACEHOLDERS (the PDF has no emotes): the first two are free, the rest cost Cash. An existing asset
-    /// belongs to the user and is never touched unless <c>overwrite</c> is asked for.
+    /// Fill of the emote assets: Data/Config/EmoteCatalog.asset (v2, T-089: "None" plus Malik's nine baked animations) and
+    /// Data/Config/EmoteScreenConfig.asset (feedback numbers: field defaults). Each entry names a <c>RunnerEmoteData</c> asset of
+    /// Animations/Baked; the display names are our own, short and generic (the files carry song and move names). The nine come in
+    /// order of length, short and plain first, long and showy last, because price follows the order: the first three cost the
+    /// first tier, the next three the second, the last three the third (<see cref="ConfigAssetSeeder.EmotePrice"/>). "None" is
+    /// free and is what a new player (and an old save naming a procedural emote of v1) has. An existing asset belongs to the
+    /// user and is only rewritten when <c>overwrite</c> is asked for; <see cref="ApplyEmoteV2"/> is that migration.
     /// </summary>
-    internal static class EmoteCatalogSeed
+    public static class EmoteCatalogSeed
     {
         private const string Source = nameof(EmoteCatalogSeed);
 
         public const string CatalogPath = ConfigAssetSeeder.Folder + "/EmoteCatalog.asset";
         public const string ScreenConfigPath = ConfigAssetSeeder.Folder + "/EmoteScreenConfig.asset";
 
-        private static readonly EmoteBone SR = EmoteBone.ShoulderR, UR = EmoteBone.UpperArmR, FR = EmoteBone.ForearmR;
-        private static readonly EmoteBone SL = EmoteBone.ShoulderL, UL = EmoteBone.UpperArmL, FL = EmoteBone.ForearmL;
-        private static readonly EmoteBone Spine = EmoteBone.Spine, Chest = EmoteBone.Chest, Head = EmoteBone.Head;
+        public const string NoneId = "none";
 
-        private sealed class EmoteSeed
+        private readonly struct EmoteSeed
         {
-            public string Id, Name;
-            public int Price;
-            public float Duration, BlendIn, BlendOut;
-            public readonly List<(float t, EmoteBone bone, Vector3 e, EmoteEase ease)> Keys = new List<(float, EmoteBone, Vector3, EmoteEase)>();
+            public readonly string Id, Name, Clip;
 
-            public EmoteSeed Key(float t, EmoteBone bone, float x, float y, float z, EmoteEase ease = EmoteEase.Smooth)
+            public EmoteSeed(string id, string name, string clip)
             {
-                Keys.Add((t, bone, new Vector3(x, y, z), ease));
-                return this;
+                Id = id;
+                Name = name;
+                Clip = clip;
             }
         }
 
-        private static List<EmoteSeed> Seeds()
+        // Clip = name of the RunnerEmoteData asset. Lengths at 30 fps, from the frame counts: about 1.6, 4.5, 4.9, 5.4, 7.1, 8.5,
+        // 10.2, 16.8 and 21.7 seconds.
+        private static readonly EmoteSeed[] Seeds =
         {
-            return new List<EmoteSeed>
-            {
-                // Wave: right arm up, forearm swings from side to side.
-                new EmoteSeed { Id = "wave", Name = "Wave", Price = 0, Duration = 2.4f, BlendIn = 0.25f, BlendOut = 0.4f }
-                    .Key(0f, UR, 0, 0, 0).Key(0.5f, UR, 0, 0, 135).Key(2.0f, UR, 0, 0, 135).Key(2.4f, UR, 0, 0, 0)
-                    .Key(0f, FR, 0, 0, 0).Key(0.5f, FR, 0, 0, 15)
-                    .Key(0.8f, FR, 0, 0, 45, EmoteEase.Smooth).Key(1.1f, FR, 0, 0, -10).Key(1.4f, FR, 0, 0, 45)
-                    .Key(1.7f, FR, 0, 0, -10).Key(2.0f, FR, 0, 0, 15).Key(2.4f, FR, 0, 0, 0)
-                    .Key(0f, Head, 0, 0, 0).Key(0.6f, Head, 0, -12, 4).Key(2.0f, Head, 0, -12, 4).Key(2.4f, Head, 0, 0, 0)
-                    .Key(0f, SR, 0, 0, 0).Key(0.5f, SR, 0, 0, 8),
+            new EmoteSeed(NoneId, "None", string.Empty),
+            new EmoteSeed("hip_wave", "Hip Wave", "Wave Hip Hop Dance"),
+            new EmoteSeed("taunt", "Taunt", "Taunt"),
+            new EmoteSeed("silly_dance", "Silly Dance", "Silly Dancing"),
+            new EmoteSeed("surprise", "Surprise", "Surprised"),
+            new EmoteSeed("hip_hop", "Hip Hop", "Hip Hop Dancing"),
+            new EmoteSeed("air_guitar", "Air Guitar", "Guitar Playing"),
+            new EmoteSeed("shuffle", "Shuffle", "Shuffling"),
+            new EmoteSeed("horse_trot", "Horse Trot", "Gangnam Style"),
+            new EmoteSeed("cart_dance", "Cart Dance", "Shopping Cart Dance"),
+        };
 
-                // Hands Up: both arms overhead, a small pump.
-                new EmoteSeed { Id = "hands_up", Name = "Hands Up", Price = 0, Duration = 2.2f, BlendIn = 0.2f, BlendOut = 0.4f }
-                    .Key(0f, UR, 0, 0, 0).Key(0.45f, UR, 0, 0, 165).Key(0.9f, UR, 0, 0, 150).Key(1.3f, UR, 0, 0, 170)
-                    .Key(1.7f, UR, 0, 0, 150).Key(2.2f, UR, 0, 0, 0)
-                    .Key(0f, UL, 0, 0, 0).Key(0.45f, UL, 0, 0, -165).Key(0.9f, UL, 0, 0, -150).Key(1.3f, UL, 0, 0, -170)
-                    .Key(1.7f, UL, 0, 0, -150).Key(2.2f, UL, 0, 0, 0)
-                    .Key(0f, SR, 0, 0, 0).Key(0.45f, SR, 0, 0, 10).Key(0f, SL, 0, 0, 0).Key(0.45f, SL, 0, 0, -10)
-                    .Key(0f, Head, 0, 0, 0).Key(0.5f, Head, -16, 0, 0).Key(1.8f, Head, -16, 0, 0).Key(2.2f, Head, 0, 0, 0)
-                    .Key(0f, Chest, 0, 0, 0).Key(0.5f, Chest, -8, 0, 0).Key(1.8f, Chest, -8, 0, 0).Key(2.2f, Chest, 0, 0, 0),
+        /// <summary>The ids in list order (for tests and tools).</summary>
+        public static IReadOnlyList<string> Ids()
+        {
+            var ids = new List<string>(Seeds.Length);
+            foreach (EmoteSeed seed in Seeds) ids.Add(seed.Id);
+            return ids;
+        }
 
-                // Flex: both arms out, forearms up, the muscles pulse.
-                new EmoteSeed { Id = "flex", Name = "Flex", Price = 200, Duration = 2.4f, BlendIn = 0.3f, BlendOut = 0.4f }
-                    .Key(0f, UR, 0, 0, 0).Key(0.5f, UR, 0, 0, 85).Key(2.0f, UR, 0, 0, 85).Key(2.4f, UR, 0, 0, 0)
-                    .Key(0f, UL, 0, 0, 0).Key(0.5f, UL, 0, 0, -85).Key(2.0f, UL, 0, 0, -85).Key(2.4f, UL, 0, 0, 0)
-                    .Key(0f, FR, 0, 0, 0).Key(0.6f, FR, 0, 0, 110).Key(0.95f, FR, 0, 0, 125).Key(1.3f, FR, 0, 0, 105)
-                    .Key(1.65f, FR, 0, 0, 125).Key(2.0f, FR, 0, 0, 110).Key(2.4f, FR, 0, 0, 0)
-                    .Key(0f, FL, 0, 0, 0).Key(0.6f, FL, 0, 0, -110).Key(0.95f, FL, 0, 0, -125).Key(1.3f, FL, 0, 0, -105)
-                    .Key(1.65f, FL, 0, 0, -125).Key(2.0f, FL, 0, 0, -110).Key(2.4f, FL, 0, 0, 0)
-                    .Key(0f, Chest, 0, 0, 0).Key(0.6f, Chest, 6, 0, 0).Key(2.0f, Chest, 6, 0, 0).Key(2.4f, Chest, 0, 0, 0)
-                    .Key(0f, Head, 0, 0, 0).Key(0.6f, Head, 4, 0, 0).Key(2.0f, Head, 4, 0, 0).Key(2.4f, Head, 0, 0, 0),
-
-                // Number One: right arm straight up and pumping, left hand on the hip.
-                new EmoteSeed { Id = "number_one", Name = "Number One", Price = 300, Duration = 2.2f, BlendIn = 0.25f, BlendOut = 0.4f }
-                    .Key(0f, UR, 0, 0, 0).Key(0.45f, UR, 0, 0, 165).Key(0.8f, UR, 0, 0, 150).Key(1.15f, UR, 0, 0, 168)
-                    .Key(1.5f, UR, 0, 0, 150).Key(1.85f, UR, 0, 0, 165).Key(2.2f, UR, 0, 0, 0)
-                    .Key(0f, UL, 0, 0, 0).Key(0.45f, UL, 0, 0, -28).Key(1.85f, UL, 0, 0, -28).Key(2.2f, UL, 0, 0, 0)
-                    .Key(0f, FL, 0, 0, 0).Key(0.45f, FL, 0, 0, 85).Key(1.85f, FL, 0, 0, 85).Key(2.2f, FL, 0, 0, 0)
-                    .Key(0f, Head, 0, 0, 0).Key(0.5f, Head, -10, 10, 0).Key(1.85f, Head, -10, 10, 0).Key(2.2f, Head, 0, 0, 0)
-                    .Key(0f, Spine, 0, 0, 0).Key(0.5f, Spine, 0, 8, 0).Key(1.85f, Spine, 0, 8, 0).Key(2.2f, Spine, 0, 0, 0),
-
-                // Shrug: shoulders up, forearms out with open hands, head tilts.
-                new EmoteSeed { Id = "shrug", Name = "Shrug", Price = 400, Duration = 1.9f, BlendIn = 0.25f, BlendOut = 0.4f }
-                    .Key(0f, SR, 0, 0, 0).Key(0.45f, SR, 0, 0, 14).Key(1.4f, SR, 0, 0, 14).Key(1.9f, SR, 0, 0, 0)
-                    .Key(0f, SL, 0, 0, 0).Key(0.45f, SL, 0, 0, -14).Key(1.4f, SL, 0, 0, -14).Key(1.9f, SL, 0, 0, 0)
-                    .Key(0f, UR, 0, 0, 0).Key(0.45f, UR, 0, 0, 28).Key(1.4f, UR, 0, 0, 28).Key(1.9f, UR, 0, 0, 0)
-                    .Key(0f, UL, 0, 0, 0).Key(0.45f, UL, 0, 0, -28).Key(1.4f, UL, 0, 0, -28).Key(1.9f, UL, 0, 0, 0)
-                    .Key(0f, FR, 0, 0, 0).Key(0.45f, FR, -35, 0, 50).Key(1.4f, FR, -35, 0, 50).Key(1.9f, FR, 0, 0, 0)
-                    .Key(0f, FL, 0, 0, 0).Key(0.45f, FL, -35, 0, -50).Key(1.4f, FL, -35, 0, -50).Key(1.9f, FL, 0, 0, 0)
-                    .Key(0f, Head, 0, 0, 0).Key(0.45f, Head, 0, 0, 12).Key(1.4f, Head, 0, 0, 12).Key(1.9f, Head, 0, 0, 0),
-
-                // Salute: right hand to the brow, chin up, held.
-                new EmoteSeed { Id = "salute", Name = "Salute", Price = 500, Duration = 2.0f, BlendIn = 0.3f, BlendOut = 0.4f }
-                    .Key(0f, UR, 0, 0, 0).Key(0.5f, UR, -25, 0, 100).Key(1.6f, UR, -25, 0, 100).Key(2.0f, UR, 0, 0, 0)
-                    .Key(0f, FR, 0, 0, 0).Key(0.5f, FR, 0, 0, 125).Key(1.6f, FR, 0, 0, 125).Key(2.0f, FR, 0, 0, 0)
-                    .Key(0f, SR, 0, 0, 0).Key(0.5f, SR, 0, 0, 6)
-                    .Key(0f, Head, 0, 0, 0).Key(0.5f, Head, -8, 0, 0).Key(1.6f, Head, -8, 0, 0).Key(2.0f, Head, 0, 0, 0)
-                    .Key(0f, Chest, 0, 0, 0).Key(0.5f, Chest, -4, 0, 0).Key(1.6f, Chest, -4, 0, 0).Key(2.0f, Chest, 0, 0, 0),
-            };
+        /// <summary>
+        /// Rewrites the existing emote catalog with the v2 set (None + nine baked animations, the price tiers). Parameterless so
+        /// the supervisor can run it with -executeMethod; safe to run again.
+        /// </summary>
+        [MenuItem("Tools/Speed Stars/Build/Apply emote v2 (None + 9 baked animations)")]
+        public static void ApplyEmoteV2()
+        {
+            EnsureFolder(ConfigAssetSeeder.Folder);
+            Seed(overwrite: true);
+            AssetDatabase.SaveAssets();
         }
 
         public static EmoteCatalog Seed(bool overwrite)
@@ -109,35 +77,23 @@ namespace SpeedStars.Tools.Builders
             var catalog = CreateOrReset<EmoteCatalog>(CatalogPath, overwrite);
             if (catalog == null) { Skipped(Source, CatalogPath); return AssetDatabase.LoadAssetAtPath<EmoteCatalog>(CatalogPath); }
 
-            List<EmoteSeed> seeds = Seeds();
             var so = new SerializedObject(catalog);
             SerializedProperty list = Prop(so, "emotes");
-            list.arraySize = seeds.Count;
-            for (int i = 0; i < seeds.Count; i++)
+            list.arraySize = Seeds.Length;
+            int paid = 0;
+            for (int i = 0; i < Seeds.Length; i++)
             {
-                EmoteSeed seed = seeds[i];
+                EmoteSeed seed = Seeds[i];
                 SerializedProperty entry = list.GetArrayElementAtIndex(i);
                 Rel(entry, "emoteId").stringValue = seed.Id;
                 Rel(entry, "displayName").stringValue = seed.Name;
-                Rel(entry, "cashPrice").intValue = seed.Price; // placeholder: the PDF has no emotes
-                Rel(entry, "duration").floatValue = seed.Duration;
-                Rel(entry, "blendIn").floatValue = seed.BlendIn;
-                Rel(entry, "blendOut").floatValue = seed.BlendOut;
-
-                SerializedProperty keys = Rel(entry, "keys");
-                keys.arraySize = seed.Keys.Count;
-                for (int k = 0; k < seed.Keys.Count; k++)
-                {
-                    SerializedProperty key = keys.GetArrayElementAtIndex(k);
-                    Rel(key, "time").floatValue = seed.Keys[k].t;
-                    Rel(key, "bone").enumValueIndex = (int)seed.Keys[k].bone;
-                    Rel(key, "euler").vector3Value = seed.Keys[k].e;
-                    Rel(key, "ease").enumValueIndex = (int)seed.Keys[k].ease;
-                }
+                Rel(entry, "clipName").stringValue = seed.Clip;
+                bool isNone = seed.Clip.Length == 0;
+                Rel(entry, "cashPrice").intValue = isNone ? 0 : ConfigAssetSeeder.EmotePrice(paid++);
             }
-            Prop(so, "defaultEmoteId").stringValue = seeds[0].Id;
+            Prop(so, "defaultEmoteId").stringValue = NoneId;
             Apply(so);
-            Log(Source, $"Seeded {CatalogPath} with {seeds.Count} emotes (placeholder prices).");
+            Log(Source, $"Seeded {CatalogPath}: None + {paid} baked emotes.");
             return catalog;
         }
 

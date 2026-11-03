@@ -52,6 +52,56 @@ namespace SpeedStars.Meta.Contracts
     }
 
     /// <summary>
+    /// The player's race emote switches (T-088 holds them in the settings; this is the seam the emote code reads, so it never
+    /// depends on the settings). The default implementation says yes to everything until an adapter over the settings is bound.
+    /// </summary>
+    public interface IEmoteRaceOptions
+    {
+        /// <summary>The emote button is on the race HUD.</summary>
+        bool ShowEmoteButton { get; }
+
+        /// <summary>The player's runner plays the equipped emote by itself when the race is finished.</summary>
+        bool AutoEmoteSelf { get; }
+
+        /// <summary>The opponents play an emote when they cross the line.</summary>
+        bool AutoEmoteCompetitors { get; }
+
+        /// <summary>Raised after any of the switches changed.</summary>
+        event Action Changed;
+    }
+
+    /// <summary>All three switches on; never changes.</summary>
+    public sealed class DefaultEmoteRaceOptions : IEmoteRaceOptions
+    {
+        public bool ShowEmoteButton => true;
+        public bool AutoEmoteSelf => true;
+        public bool AutoEmoteCompetitors => true;
+        public event Action Changed { add { } remove { } }
+    }
+
+    /// <summary>
+    /// What the race HUD's emote button asks of the race scene (implemented in Bridge over the runner's emote player). The HUD
+    /// only shows the button, asks <see cref="RequestEmote"/> and listens; it never sees runner code.
+    /// </summary>
+    public interface IRaceEmoteControl
+    {
+        /// <summary>The equipped emote has an animation (it is not None).</summary>
+        bool HasEmote { get; }
+
+        /// <summary>Play is accepted right now: an animation is equipped, the race has left the start, and the last one is over.</summary>
+        bool CanEmote { get; }
+
+        /// <summary>Display name of the equipped emote; empty for None.</summary>
+        string EmoteName { get; }
+
+        /// <summary>Raised when HasEmote, CanEmote or the name may have changed.</summary>
+        event Action Changed;
+
+        /// <summary>Plays the equipped emote on the player's runner. False when it was not accepted.</summary>
+        bool RequestEmote();
+    }
+
+    /// <summary>
     /// What the menu character plays right now. The emote screen asks, the character (Bridge) listens; a locked emote can be
     /// previewed too.
     /// </summary>

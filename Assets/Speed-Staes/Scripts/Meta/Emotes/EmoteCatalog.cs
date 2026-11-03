@@ -7,8 +7,9 @@ using UnityEngine;
 namespace SpeedStars.Meta.Emotes
 {
     /// <summary>
-    /// Every emote of the menu character with its price and its procedural key frames, and which one a new player has
-    /// equipped. Code never lists emotes: adding one means adding an entry here.
+    /// Every emote with its price and the name of its baked animation (v2, T-089), and which one a new player has
+    /// equipped. The first free entry is the None emote (no animation), so an old save that names an emote that is gone
+    /// falls back to None. Code never lists emotes: adding one means adding an entry here.
     /// </summary>
     [CreateAssetMenu(menuName = "Speed Stars/Config/Emote Catalog", fileName = "EmoteCatalog")]
     public sealed class EmoteCatalog : ScriptableObject

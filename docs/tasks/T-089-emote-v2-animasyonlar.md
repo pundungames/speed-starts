@@ -1,7 +1,7 @@
 ---
 id: T-089
 title: Emote v2 - prosedurel 6 emote yerine Malik'in pisirdigi 9 animasyon (menu onizleme + yarista emote butonu/tusu + otomatik emote)
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-084]
 owns_paths:
@@ -21,12 +21,29 @@ owns_paths:
 touches_scene: false
 branch: agent/T-089-emote-v2
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmotePlaybackTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmoteCatalogMigrationTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/RaceEmoteRulesTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmotePriceLadderTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/EmoteScreenSmokeTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "Data/Config/EmoteCatalog.asset must be rewritten to the v2 set (None + 9 baked clips, prices 3 x 2500 / 3 x 5000 / 3 x 7500): run SpeedStars.Tools.Builders.EmoteCatalogSeed.ApplyEmoteV2 (parameterless, also menu 'Tools/Speed Stars/Build/Apply emote v2'). Until then the old asset has no clipName: every emote acts as None. ConfigAssetSeeder.ApplyEconomyV2 keeps the same ladder (ConfigAssetSeeder.EmotePrice)."
+  - tip: SCENE
+    durum: open
+    not: "Race HUD prefab needs the Emote button: run SpeedStars.Tools.Builders.UiRaceHudPrefabs.PatchRaceHudPrefab (parameterless; adds RaceHud/Emote + Emote/Name and binds RaceHudView.emoteButton/emoteNameText). Also add ONE line to UiV2Prefabs.RaceHud after UiViewBinder.BindRaceHud(root): UiRaceHudPrefabs.AddEmoteButton(root); so a full UI rebuild (EconomyUiRebuild) keeps the button. Race scene: add SpeedStars.Bridge.RaceEmotes to the PLAYER runner root (as SceneCosmetics does for RaceRunnerOutfit), field bots <- the scene's RaceBots; playerEmote stays empty (found on the runner)."
+  - tip: WIRING
+    durum: open
+    not: "RaceSceneInstaller -> [SerializeField] private RaceEmotes raceEmotes; in InstallSceneBindings: if (raceEmotes != null) Container.Bind<IRaceEmoteControl>().FromInstance(raceEmotes).AsSingle(); (usings SpeedStars.Bridge, SpeedStars.Meta.Contracts); scene field raceEmotes <- the component above. RaceHudView injects IRaceEmoteControl optionally: without it the button stays hidden."
+  - tip: WIRING
+    durum: open
+    not: "ProjectInstaller (or RaceSceneInstaller) -> Container.Bind<IEmoteRaceOptions>().To<DefaultEmoteRaceOptions>().AsSingle(); (all three switches true). After T-088 is merged, replace DefaultEmoteRaceOptions by an adapter over IPlayerSettings (ShowEmoteButton / AutoEmoteSelf / AutoEmoteCompetitors + Changed). RaceEmotes and RaceHudView already fall back to the default when nothing is bound."
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -72,4 +89,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+- Yapildi: katalog v2 (EmoteDefinition = id/ad/fiyat/clipName; prosedurel anahtar kareler silindi), "None" + 9 pisirilmis klip; MenuEmotePlayer klibi RunnerEmote.clips'ten ada gore bulup dongu onizleme oynatir; RaceEmotes (Bridge) secili klibi oyuncunun RunnerEmote'una verir (tus + HUD butonu + bitis otomatigi + botlar cizgiyi gecince); RaceHudView butonu; seed + fiyat merdiveni; testler.
+- Siralama/fiyat (uzunluga gore, kisa-sade -> uzun-gosterisli): Hip Wave 1.6s, Taunt 4.5s, Silly Dance 4.9s (2.500) | Surprise 5.4s, Hip Hop 7.1s, Air Guitar 8.5s (5.000) | Shuffle 10.2s, Horse Trot 16.8s, Cart Dance 21.7s (7.500); None ucretsiz. Eski id (wave, flex...) katalogda yok -> None.
+- Zorluk: RunnerEmote "siradaki klibi" oynatir, adla secemiyor; Malik'in koduna dokunmadan clips dizisine yalniz secili klibi koyuyoruz (GO'dan once bos: tus da calismaz). OnGUI adi dosya adini (sarki adi) gosterdigi icin showName kapatildi, HUD gorunen adi gosterir.
+- Bot otomatik emote'u RaceBots'a yazmadan: RunnerRoots + RunnerBody.Sim.Distance okunur (karar gerekmedi). Oyuncu bitisi sonraki karede oynatilir (RunReset ayni karede RunnerEmote'u durdurur).
+- Birakilan: ASSET/SCENE/WIRING (needs); Unity calistirilmadi, hicbir test kosulmadi; yeni .cs dosyalarinin .meta'si Unity'den gelecek.
