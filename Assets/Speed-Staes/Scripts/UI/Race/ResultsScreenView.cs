@@ -96,8 +96,8 @@ namespace SpeedStars.UI.Race
         [Tooltip("Nav/WatchReplay: hides this screen and plays the race back; the screen returns when the replay ends. Disabled while there is no recorded race.")]
         [SerializeField] private Button watchReplayButton;
 
-        [Tooltip("Look of the replay controls Watch Replay opens (race HUD art). Empty = plain panels.")]
-        [SerializeField] private ReplayControlsSkin replaySkin;
+        [Tooltip("ReplayControls prefab (UI/Widgets) Watch Replay opens over the replay. Empty = Watch Replay stays disabled.")]
+        [SerializeField] private ReplayControlsView replayControlsPrefab;
 
         [Tooltip("Nav/HighScores: opens the leaderboard screen (disabled while that screen is not assigned).")]
         [SerializeField] private Button highScoresButton;
@@ -249,7 +249,7 @@ namespace SpeedStars.UI.Race
         /// <summary>The recording closes a frame after the finish (and the screen may already be open), so the button follows it.</summary>
         private void Update()
         {
-            if (watchReplayButton != null) watchReplayButton.interactable = _replay != null && _replay.CanWatch && !_replay.IsWatching;
+            if (watchReplayButton != null) watchReplayButton.interactable = replayControlsPrefab != null && _replay != null && _replay.CanWatch && !_replay.IsWatching;
         }
 
         public void Present(ResultsData data)
@@ -505,10 +505,10 @@ namespace SpeedStars.UI.Race
         /// <summary>Out of the way while the race plays back; back when it ends (played through or left).</summary>
         private void OnWatchReplayClicked()
         {
-            if (_replay == null || !_replay.Watch()) return;
+            if (_replay == null || replayControlsPrefab == null || !_replay.Watch()) return;
             _replay.WatchEnded -= OnReplayEnded;
             _replay.WatchEnded += OnReplayEnded;
-            ReplayControlsView.Open(_replay, replaySkin, cashText != null ? cashText.font : null); // closes itself when the replay ends
+            ReplayControlsView.Open(replayControlsPrefab, _replay); // closes itself when the replay ends
             Hide();
         }
 
