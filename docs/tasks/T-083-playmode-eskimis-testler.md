@@ -1,7 +1,7 @@
 ---
 id: T-083
 title: PlayMode'daki 4 kirmizi test - eskimis varsayimlar (kamera height, ruzgar suresi) ve batchmode ekran goruntusu
-status: review
+status: merged
 owner: test-agent
 depends_on: []
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/WardrobeIntegrationTests.cs"
 touches_scene: false
 branch: agent/T-083-playmode-testler
-commits: []
+commits: [d6176558]
 tests:
   - "Assets/Speed-Staes/Tests/PlayMode/HomeRaceButtonSmokeTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/PerfectStepFeedbackTests.cs"
