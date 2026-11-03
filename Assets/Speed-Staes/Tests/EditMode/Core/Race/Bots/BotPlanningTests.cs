@@ -92,6 +92,21 @@ namespace SpeedStars.Tests.RaceBots
         }
 
         [Test]
+        public void SlowerStyle_GetsHigherSkill_ForTheSameTarget()
+        {
+            Set("raceRandomRatio", 0f);
+            Set("styles", new System.Collections.Generic.List<BotStyle> { new BotStyle("Plain", 1f, 1f, 1f, 1f, 1f, 1f, 1f) });
+            var plain = Plan(_config, 3, 20f);
+            Set("styles", new System.Collections.Generic.List<BotStyle> { new BotStyle("Slow", 1f, 1.3f, 1.5f, 1f, 1f, 1f, 1f, 1.2f, 1.2f) });
+            var slow = Plan(_config, 3, 20f);
+            for (int i = 0; i < plain.Count; i++)
+            {
+                Assert.AreEqual(plain[i].TargetSeconds, slow[i].TargetSeconds);
+                Assert.Greater(slow[i].Skill, plain[i].Skill);
+            }
+        }
+
+        [Test]
         public void MissingPlayerTime_UsesFallback()
         {
             Set("raceRandomRatio", 0f);
@@ -103,6 +118,7 @@ namespace SpeedStars.Tests.RaceBots
         [Test]
         public void FasterTarget_MeansHigherSkill_AndBetterDriver()
         {
+            Set("styles", new System.Collections.Generic.List<BotStyle>()); // a style moves the skill by its own time factor (next test)
             var plans = Plan(_config, 9, 20f); // fastest first
             for (int i = 1; i < plans.Count; i++)
             {
