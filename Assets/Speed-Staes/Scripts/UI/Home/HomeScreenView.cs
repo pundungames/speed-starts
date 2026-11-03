@@ -75,6 +75,13 @@ namespace SpeedStars.UI.Home
         [Tooltip("CharacterCard/HeightField/Label.")]
         [SerializeField] private Text heightText;
 
+        [Header("Racer of the day")]
+        [Tooltip("CharacterCard/RacerOfTheDay: the 'Racer of the day' label, shown only while Race of the Day is the selected event. Optional.")]
+        [SerializeField] private GameObject racerOfTheDayRoot;
+
+        [Tooltip("Card parts hidden while Race of the Day is selected: the preset name and arrows, Edit racer, Emote and the stat bars (the day's racer cannot be changed).")]
+        [SerializeField] private GameObject[] hiddenForRacerOfTheDay = new GameObject[0];
+
         [Header("Targets")]
         [Tooltip("Event select screen view (scene object, starts inactive).")]
         [SerializeField] private EventSelectScreenView eventSelectScreen;
@@ -113,6 +120,17 @@ namespace SpeedStars.UI.Home
         private Sprite _soundOnSprite;
         private IDailyGift _dailyGift;
         private ISevenDayRewards _sevenDay;
+        private IRaceOfTheDay _raceOfTheDay;
+        private ICosmeticPreview _preview;
+        private bool _dailyOutfitShown;
+
+        /// <summary>Optional so a scene without Race of the Day still opens; the card then never changes.</summary>
+        [Inject]
+        public void ConstructHomeDaily([InjectOptional] IRaceOfTheDay raceOfTheDay, [InjectOptional] ICosmeticPreview preview)
+        {
+            _raceOfTheDay = raceOfTheDay;
+            _preview = preview;
+        }
 
         [Inject]
         public void ConstructHome(ScreenNavigator navigator, IRaceSelection selection, RaceEventCatalog catalog, IWallet wallet, HomeEntryFlow entryFlow)
@@ -237,8 +255,35 @@ namespace SpeedStars.UI.Home
             }
         }
 
+        /// <summary>
+        /// Race of the Day selected: the card shows "Racer of the day" with the day's outfit on the character, and Edit racer, Emote and the
+        /// preset arrows are hidden. Any other event: the player's own card and outfit (the preview is released).
+        /// </summary>
+        private void RefreshRacerOfTheDay()
+        {
+            if (_raceOfTheDay == null) return;
+            bool daily = _raceOfTheDay.IsRaceOfTheDay(_selection.Selected);
+            if (racerOfTheDayRoot != null) racerOfTheDayRoot.SetActive(daily);
+            if (hiddenForRacerOfTheDay != null)
+                foreach (GameObject part in hiddenForRacerOfTheDay)
+                    if (part != null) part.SetActive(!daily);
+
+            switch (RacerCardRules.Decide(daily, _dailyOutfitShown))
+            {
+                case RacerCardAction.ShowDailyOutfit:
+                    if (_preview != null) _preview.Show(_raceOfTheDay.Today.Outfit);
+                    _dailyOutfitShown = _preview != null;
+                    break;
+                case RacerCardAction.RestoreOwnOutfit:
+                    if (_preview != null) _preview.Reset();
+                    _dailyOutfitShown = false;
+                    break;
+            }
+        }
+
         private void RefreshEventName()
         {
+            RefreshRacerOfTheDay();
             if (racerNameText != null && _cosmetics == null && string.IsNullOrEmpty(racerNameText.text)) racerNameText.text = HomeTexts.DefaultRacerName;
             if (heightText != null && string.IsNullOrEmpty(heightText.text)) heightText.text = HomeTexts.RacerHeight;
             eventNameText.text = _catalog.TryGet(_selection.Selected, out RaceEventDefinition definition)

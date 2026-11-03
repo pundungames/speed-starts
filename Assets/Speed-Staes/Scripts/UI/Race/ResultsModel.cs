@@ -74,10 +74,18 @@ namespace SpeedStars.UI.Race
         public readonly string DailyBestText;
         public readonly IReadOnlyList<ResultRowData> Rows;
 
+        /// <summary>Race of the Day: the cards read Daily Personal Best / Daily World Record and the percentile card is left out.</summary>
+        public readonly bool IsDaily;
+
+        /// <summary>Title of the world card: "WORLD POSITION" normally, "DAILY WORLD RECORD" in a Race of the Day.</summary>
+        public readonly string WorldTitle;
+
         public ResultsData(string eventTitle, string cashText, string personalBestTitle, string personalBestValue,
             string personalBestEvent, bool isNewRecord, string worldPositionText, string percentileText, string dailyBestText,
-            IReadOnlyList<ResultRowData> rows)
+            IReadOnlyList<ResultRowData> rows, bool isDaily = false, string worldTitle = null)
         {
+            IsDaily = isDaily;
+            WorldTitle = worldTitle ?? ResultsTexts.WorldPosition;
             EventTitle = eventTitle ?? string.Empty;
             CashText = cashText ?? string.Empty;
             PersonalBestTitle = personalBestTitle ?? string.Empty;
@@ -95,6 +103,14 @@ namespace SpeedStars.UI.Race
     public static class ResultsTexts
     {
         public const string PersonalBest = "PERSONAL BEST";
+        public const string WorldPosition = "WORLD POSITION";
+
+        /// <summary>Race of the Day card titles (the reference game: "Daily Personal Best", "Daily World Record").</summary>
+        public const string DailyPersonalBest = "DAILY PERSONAL BEST";
+        public const string DailyWorldRecord = "DAILY WORLD RECORD";
+
+        /// <summary>Value of a daily card without a result.</summary>
+        public const string NoneYet = "None";
         public const string NewRecord = "NEW RECORD";
         public const string DefaultPlayerName = "YOU";
 
@@ -114,6 +130,31 @@ namespace SpeedStars.UI.Race
         public static string GemReward(int gems) => "+" + gems.ToString(CultureInfo.InvariantCulture) + " Purple Gems";
     }
 
+    /// <summary>What a Race of the Day adds to the results: today's own best at the day's distance and the day's fastest result.</summary>
+    public readonly struct DailyResultsInput
+    {
+        /// <summary>True only in a Race of the Day.</summary>
+        public readonly bool IsDaily;
+
+        public readonly bool HasDayBest;
+        public readonly long DayBestMilliseconds;
+
+        /// <summary>The day's world record (the field's or the player's own, whichever is faster).</summary>
+        public readonly bool HasRecord;
+        public readonly string RecordName;
+        public readonly long RecordMilliseconds;
+
+        public DailyResultsInput(bool hasDayBest, long dayBestMilliseconds, bool hasRecord, string recordName, long recordMilliseconds)
+        {
+            IsDaily = true;
+            HasDayBest = hasDayBest;
+            DayBestMilliseconds = dayBestMilliseconds;
+            HasRecord = hasRecord;
+            RecordName = recordName ?? string.Empty;
+            RecordMilliseconds = recordMilliseconds;
+        }
+    }
+
     /// <summary>What the flow knows about a finished race; <see cref="ResultsModel.Build"/> turns it into screen data.</summary>
     public readonly struct ResultsInput
     {
@@ -130,10 +171,14 @@ namespace SpeedStars.UI.Race
         /// <summary>This race is the player's best of today (see <see cref="ResultsModel.IsDayBest"/>).</summary>
         public readonly bool IsDayBest;
 
+        /// <summary>Race of the Day extras; <c>default</c> (IsDaily false) = an ordinary race.</summary>
+        public readonly DailyResultsInput Daily;
+
         public ResultsInput(string eventTitle, int playerRank, double playerSeconds, string playerName, int cash,
             bool hasPersonalBest, double personalBestSeconds, bool isNewRecord, IReadOnlyList<ResultEntry> others,
-            bool isDayBest = false)
+            bool isDayBest = false, DailyResultsInput daily = default)
         {
+            Daily = daily;
             IsDayBest = isDayBest;
             EventTitle = eventTitle ?? string.Empty;
             PlayerRank = playerRank;
@@ -159,6 +204,7 @@ namespace SpeedStars.UI.Race
         public static ResultsData Build(ResultsInput input)
         {
             bool record = input.IsNewRecord && input.HasPersonalBest;
+            if (input.Daily.IsDaily) return BuildDaily(input, record);
             string bestValue = input.HasPersonalBest ? ResultsTexts.Time(input.PersonalBestSeconds) : ResultsTexts.NoValue;
 
             return new ResultsData(
@@ -172,6 +218,55 @@ namespace SpeedStars.UI.Race
                 ResultsTexts.NoValue,
                 ResultsTexts.NoDailyBest,
                 Rows(input));
+        }
+
+        /// <summary>
+        /// Race of the Day: the first card is today's best at the day's distance ("None" without one), the second the day's world
+        /// record with its holder. NEW RECORD still means a personal best at this distance (times are stored per distance).
+        /// </summary>
+        private static ResultsData BuildDaily(ResultsInput input, bool record)
+        {
+            DailyResultsInput daily = input.Daily;
+            string best = daily.HasDayBest ? ResultsTexts.Time(daily.DayBestMilliseconds / 1000d) : ResultsTexts.NoneYet;
+            string world = daily.HasRecord ? RecordLine(daily.RecordName, daily.RecordMilliseconds) : ResultsTexts.NoneYet;
+            return new ResultsData(
+                input.EventTitle,
+                Math.Max(0, input.Cash).ToString(CultureInfo.InvariantCulture),
+                record ? ResultsTexts.NewRecord : ResultsTexts.DailyPersonalBest,
+                best,
+                input.EventTitle,
+                record,
+                world,
+                ResultsTexts.NoValue,
+                world,
+                Rows(input),
+                true,
+                ResultsTexts.DailyWorldRecord);
+        }
+
+        /// <summary>"Deniz  10.42s": holder and time of a record.</summary>
+        public static string RecordLine(string name, long milliseconds)
+        {
+            string time = ResultsTexts.Time(Math.Max(0L, milliseconds) / 1000d);
+            return string.IsNullOrWhiteSpace(name) ? time : name.Trim() + "  " + time;
+        }
+
+        /// <summary>
+        /// The day's world record: the player's own best of the day when it is strictly faster than the field's record,
+        /// otherwise the field's. False when neither exists.
+        /// </summary>
+        public static bool PickDailyRecord(bool hasField, string fieldName, long fieldMilliseconds,
+            bool hasOwn, string ownName, long ownMilliseconds, out string name, out long milliseconds)
+        {
+            if (hasOwn && (!hasField || ownMilliseconds < fieldMilliseconds))
+            {
+                name = ownName;
+                milliseconds = ownMilliseconds;
+                return true;
+            }
+            name = hasField ? fieldName : string.Empty;
+            milliseconds = hasField ? fieldMilliseconds : 0L;
+            return hasField;
         }
 
         /// <summary>

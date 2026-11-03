@@ -35,6 +35,7 @@ namespace SpeedStars.Tools.Builders
         public const string LeaderboardPath = Folder + "/LeaderboardConfig.asset";
         public const string AudioPath = Folder + "/AudioConfig.asset";
         public const string AdsDevPath = Folder + "/AdsDevConfig.asset";
+        public const string RaceOfTheDayPath = Folder + "/RaceOfTheDayConfig.asset";
 
         /// <summary>
         /// Events in display order (PDF §1.3, MD §12). Distance only where the name states it; Training, Race of the
@@ -46,7 +47,7 @@ namespace SpeedStars.Tools.Builders
         private static readonly EventSeed[] Events =
         {
             new EventSeed("training", "Antrenman Alanı", 100f, ticket: false, gems: false, playable: true),
-            new EventSeed("race_of_the_day", "Race of the Day", 0f, ticket: false, gems: false, playable: false),
+            new EventSeed("race_of_the_day", "Race of the Day", 0f, ticket: false, gems: false, playable: true), // T-087: open, free; length and outfit come from RaceOfTheDayConfig
             new EventSeed("100m", "100m", 100f, ticket: false, gems: false, playable: true),
             new EventSeed("200m", "200m", 200f, ticket: true, gems: false, playable: true),
             new EventSeed("400m", "400m", 400f, ticket: true, gems: true, playable: true),
@@ -76,8 +77,107 @@ namespace SpeedStars.Tools.Builders
             BotRaceConfigSeed.Seed(overwrite); // T-074: opponent bots (field, difficulty, press driver, names)
             AudioConfigSeed.Seed(AudioPath, overwrite); // T-052: sound cues (placeholder WAVs), music slot, haptic numbers
             SeedAdsDev(overwrite); // T-050: fake rewarded ad (dev only)
+            SeedRaceOfTheDay(overwrite); // T-087: the day's distance list and racer looks
             ApplyEconomyV2();
             AssetDatabase.SaveAssets();
+        }
+
+        // ---- Race of the Day (T-087) ----
+        // Distances: reference measurement 03.11 (60 m on 30.10, 150 m on 03.11) widened to a list; flat races only, user can edit the asset.
+        private static readonly float[] RaceOfTheDayDistances = { 60f, 100f, 150f, 200f, 300f };
+
+        private readonly struct LookSeed
+        {
+            public readonly string Label;
+            public readonly string Skin;
+            public readonly (CosmeticCategory category, string id, string hex)[] Items;
+
+            public LookSeed(string label, string skin, params (CosmeticCategory, string, string)[] items)
+            {
+                Label = label;
+                Skin = skin;
+                Items = items;
+            }
+        }
+
+        // Ready-made racers (catalog ids from Data/Config/Cosmetics; a colour is the primary channel, "" = the item's own colours).
+        private static readonly LookSeed[] RaceOfTheDayLooks =
+        {
+            new LookSeed("Blue Sprinter", "E0AC69",
+                (CosmeticCategory.Headwear, "headwear.h02", "1E88E5"), (CosmeticCategory.Tops, "tops.t01", "1E88E5"),
+                (CosmeticCategory.Shorts, "shorts.s01", "F5F5F5"), (CosmeticCategory.Leggings, "leggings.l01", "F5F5F5"),
+                (CosmeticCategory.Shoes, "shoes.sh01", "")),
+            new LookSeed("Red Flash", "8D5524",
+                (CosmeticCategory.Glasses, "glasses.g01", ""), (CosmeticCategory.Tops, "tops.t02", "E53935"),
+                (CosmeticCategory.Shorts, "shorts.s02", "212121"), (CosmeticCategory.Leggings, "leggings.l02", ""),
+                (CosmeticCategory.Shoes, "shoes.sh02", "")),
+            new LookSeed("Green Machine", "FFDFC4",
+                (CosmeticCategory.Headwear, "headwear.h03", "43A047"), (CosmeticCategory.Tops, "tops.t03", "43A047"),
+                (CosmeticCategory.Gloves, "gloves.gl01", "212121"), (CosmeticCategory.Shorts, "shorts.s03", "F5F5F5"),
+                (CosmeticCategory.Shoes, "shoes.sh03", "")),
+            new LookSeed("Golden Dash", "C68642",
+                (CosmeticCategory.Glasses, "glasses.g02", ""), (CosmeticCategory.Tops, "tops.t04", "FDD835"),
+                (CosmeticCategory.Shorts, "shorts.s04", "212121"), (CosmeticCategory.Leggings, "leggings.l03", ""),
+                (CosmeticCategory.Socks, "socks.so01", "F5F5F5"), (CosmeticCategory.Shoes, "shoes.sh04", "")),
+            new LookSeed("Purple Rain", "F1C27D",
+                (CosmeticCategory.Headwear, "headwear.h04", "8E24AA"), (CosmeticCategory.Tops, "tops.t05", "8E24AA"),
+                (CosmeticCategory.Gloves, "gloves.gl02", ""), (CosmeticCategory.Shorts, "shorts.s05", "F5F5F5"),
+                (CosmeticCategory.Shoes, "shoes.sh05", "")),
+            new LookSeed("Night Runner", "6B4226",
+                (CosmeticCategory.Glasses, "glasses.g03", ""), (CosmeticCategory.Tops, "tops.t06", "212121"),
+                (CosmeticCategory.Shorts, "shorts.s06", "212121"), (CosmeticCategory.Leggings, "leggings.l04", "FB8C00"),
+                (CosmeticCategory.Shoes, "shoes.sh06", "")),
+            new LookSeed("Orange Blaze", "A9693D",
+                (CosmeticCategory.Headwear, "headwear.h05", "FB8C00"), (CosmeticCategory.Tops, "tops.t07", "FB8C00"),
+                (CosmeticCategory.Shorts, "shorts.s07", "F5F5F5"), (CosmeticCategory.Socks, "socks.so02", ""),
+                (CosmeticCategory.Shoes, "shoes.sh07", "")),
+        };
+
+        /// <summary>
+        /// T-087, for an existing project: creates the Race of the Day config when it is missing (an existing one is never touched) and
+        /// opens the event (isPlayable written from the seed table, like <c>ApplyEconomyV2</c> does for every event). Safe to run again.
+        /// Parameterless, so a verification copy can run it with <c>-executeMethod</c>.
+        /// </summary>
+        [MenuItem("Tools/Speed Stars/Build/Race of the Day - seed config + open the event")]
+        public static void ApplyRaceOfTheDay()
+        {
+            EnsureFolder(Folder);
+            SeedRaceOfTheDay(false);
+            ApplyEventAccess();
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void SeedRaceOfTheDay(bool overwrite)
+        {
+            var asset = CreateOrReset<SpeedStars.Meta.DailyRace.RaceOfTheDayConfig>(RaceOfTheDayPath, overwrite);
+            if (asset == null) { Skipped(Source, RaceOfTheDayPath); return; }
+
+            var so = new SerializedObject(asset);
+            Prop(so, "eventId").stringValue = "race_of_the_day";
+            SerializedProperty distances = Prop(so, "distancesMeters");
+            distances.arraySize = RaceOfTheDayDistances.Length;
+            for (int i = 0; i < RaceOfTheDayDistances.Length; i++) distances.GetArrayElementAtIndex(i).floatValue = RaceOfTheDayDistances[i];
+
+            SerializedProperty looks = Prop(so, "looks");
+            looks.arraySize = RaceOfTheDayLooks.Length;
+            for (int i = 0; i < RaceOfTheDayLooks.Length; i++)
+            {
+                SerializedProperty look = looks.GetArrayElementAtIndex(i);
+                Rel(look, "label").stringValue = RaceOfTheDayLooks[i].Label;
+                Rel(look, "skinColorHex").stringValue = RaceOfTheDayLooks[i].Skin;
+                SerializedProperty items = Rel(look, "items");
+                items.arraySize = RaceOfTheDayLooks[i].Items.Length;
+                for (int j = 0; j < RaceOfTheDayLooks[i].Items.Length; j++)
+                {
+                    var item = RaceOfTheDayLooks[i].Items[j];
+                    SerializedProperty entry = items.GetArrayElementAtIndex(j);
+                    Rel(entry, "category").intValue = (int)item.category;
+                    Rel(entry, "cosmeticId").stringValue = item.id;
+                    Rel(entry, "colorHex").stringValue = item.hex;
+                }
+            }
+            Apply(so);
+            Log(Source, $"Seeded {RaceOfTheDayPath} ({RaceOfTheDayDistances.Length} distances, {RaceOfTheDayLooks.Length} looks).");
         }
 
         // ---- Economy v2 (T-084; docs/analiz/2026-11-03-referans-oyun-ekonomi.md section 4, user decision 03.11) ----
@@ -144,7 +244,7 @@ namespace SpeedStars.Tools.Builders
         /// <summary>
         /// Event access as in the reference game: 100m, Race of the Day and Practice are free and unlimited; the other events
         /// need a ticket (Timed Ticket). The flag per id comes from the seed table <c>Events</c>; an event of the catalog
-        /// that is not in the table is left as it is. requiresTicket and isPlayable are written from the table (200m, 400m, 60mH, 400mH are open; 4x100m, Medley, Race of the Day stay closed).
+        /// that is not in the table is left as it is. requiresTicket and isPlayable are written from the table (200m, 400m, 60mH, 400mH and Race of the Day are open; 4x100m, Medley stay closed).
         /// </summary>
         private static void ApplyEventAccess()
         {

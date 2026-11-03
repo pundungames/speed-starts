@@ -490,6 +490,162 @@ namespace SpeedStars.Tests.UI.Race
             return flow;
         }
 
+        // ---- Race of the Day (T-087) ----
+
+        private static readonly RaceEventId Daily = new RaceEventId("race_of_the_day");
+
+        private RaceFlowLogic MakeDaily(FakeDaily daily, FakeRecords records = null, FakeDayBests days = null, DayClock clock = null)
+        {
+            _lookup.Add(new RaceEventInfo(Daily, "Race of the Day", 0f)); // the catalog has no length for it
+            _gate.Pending = Daily;
+            _gate.HasPendingEntry = true;
+            return new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, _prompt,
+                records, null, null, days, clock, null, null, daily);
+        }
+
+        [Test]
+        public void Daily_Start_RunsTheDaysDistanceNotTheCatalogOne()
+        {
+            var daily = new FakeDaily { Distance = 150f };
+
+            MakeDaily(daily).Start();
+
+            Assert.AreEqual(Daily, _session.Requests[0].EventId);
+            Assert.AreEqual(150f, _session.Requests[0].DistanceMeters);
+        }
+
+        [Test]
+        public void Daily_RaceAgain_TakesTheDaysDistanceAgain()
+        {
+            var daily = new FakeDaily { Distance = 150f };
+            var flow = MakeDaily(daily);
+            flow.Start();
+            _session.Finish(Outcome(Daily, 9.589));
+
+            daily.Distance = 300f; // the day rolled over meanwhile
+            flow.Restart();
+
+            Assert.AreEqual(2, _session.Requests.Count);
+            Assert.AreEqual(300f, _session.Requests[1].DistanceMeters);
+        }
+
+        [Test]
+        public void Daily_OtherEvents_KeepTheirCatalogDistance()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+
+            new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, _prompt,
+                null, null, null, null, null, null, null, new FakeDaily { Distance = 150f }).Start();
+
+            Assert.AreEqual(100f, _session.Requests[0].DistanceMeters);
+        }
+
+        [Test]
+        public void Daily_WithoutTheRule_FallsBackToTheCatalogDistance()
+        {
+            _lookup.Add(new RaceEventInfo(Daily, "Race of the Day", 120f));
+            _gate.Pending = Daily;
+            _gate.HasPendingEntry = true;
+
+            Make().Start();
+
+            Assert.AreEqual(120f, _session.Requests[0].DistanceMeters);
+        }
+
+        [Test]
+        public void Daily_Finish_StoresTheTimeUnderTheDistanceId()
+        {
+            var daily = new FakeDaily { Distance = 150f };
+            var records = new FakeRecords();
+            MakeDaily(daily, records).Start();
+
+            _session.Finish(Outcome(Daily, 9.589));
+
+            Assert.AreEqual(1, records.Calls.Count);
+            Assert.AreEqual(daily.RecordIdFor(150f), records.Calls[0].Event);
+            Assert.AreNotEqual(Daily, records.Calls[0].Event, "a best must only compare races of the same length");
+        }
+
+        [Test]
+        public void Daily_Finish_ShowsTheDailyCardsAndTheDayBestBadge()
+        {
+            var daily = new FakeDaily { Distance = 150f, HasField = true, FieldName = "Deniz", FieldMilliseconds = 9000L };
+            var clock = new DayClock { Now = new System.DateTime(2026, 1, 5, 10, 0, 0, System.DateTimeKind.Utc) };
+            var days = new FakeDayBests();
+            days.Add(daily.RecordIdFor(150f), clock.Now.Date.Ticks, 9589L); // what Record stored for this race
+            MakeDaily(daily, new FakeRecords(), days, clock).Start();
+
+            _session.Finish(Outcome(Daily, 9.589));
+
+            ResultsData data = _results.Presented;
+            Assert.IsTrue(data.IsDaily);
+            Assert.AreEqual(ResultsTexts.DailyWorldRecord, data.WorldTitle);
+            Assert.AreEqual("9.58s", data.PersonalBestValue, "today's best at the day's distance");
+            Assert.AreEqual(ResultsModel.RecordLine("Deniz", 9000L), data.WorldPositionText);
+            Assert.IsTrue(data.Rows[0].ShowDayBest);
+        }
+
+        [Test]
+        public void Daily_Finish_OwnBestBeatingTheFieldBecomesTheDailyRecord()
+        {
+            var daily = new FakeDaily { Distance = 150f, HasField = true, FieldName = "Deniz", FieldMilliseconds = 9000L };
+            var clock = new DayClock { Now = new System.DateTime(2026, 1, 5, 10, 0, 0, System.DateTimeKind.Utc) };
+            var days = new FakeDayBests();
+            days.Add(daily.RecordIdFor(150f), clock.Now.Date.Ticks, 8000L);
+            MakeDaily(daily, new FakeRecords(), days, clock).Start();
+
+            _session.Finish(Outcome(Daily, 8.0));
+
+            StringAssert.StartsWith(ResultsTexts.DefaultPlayerName, _results.Presented.WorldPositionText);
+            StringAssert.Contains("8.00s", _results.Presented.WorldPositionText);
+        }
+
+        [Test]
+        public void Daily_Finish_WithoutAnyResult_ReadsNone()
+        {
+            var daily = new FakeDaily { Distance = 150f }; // no field, no stored best
+            MakeDaily(daily, new FakeRecords()).Start();
+
+            _session.Finish(Outcome(Daily, 9.589));
+
+            Assert.AreEqual(ResultsTexts.NoneYet, _results.Presented.PersonalBestValue);
+            Assert.AreEqual(ResultsTexts.NoneYet, _results.Presented.WorldPositionText);
+        }
+
+        [Test]
+        public void Finish_OfAnOrdinaryEvent_IsNotDaily()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, _prompt,
+                new FakeRecords(), null, null, null, null, null, null, new FakeDaily { Distance = 150f }).Start();
+
+            _session.Finish(Outcome(Dash, 9.589));
+
+            Assert.IsFalse(_results.Presented.IsDaily);
+            Assert.AreEqual(ResultsTexts.WorldPosition, _results.Presented.WorldTitle);
+        }
+
+        private sealed class FakeDaily : IRaceOfTheDay
+        {
+            public float Distance;
+            public bool HasField;
+            public string FieldName = string.Empty;
+            public long FieldMilliseconds;
+
+            public RaceEventId EventId => Daily;
+            public RaceOfTheDayInfo Today => new RaceOfTheDayInfo(1L, Distance, "look", CosmeticOutfit.Empty);
+            public bool IsRaceOfTheDay(RaceEventId id) => id == Daily;
+            public RaceEventId RecordIdFor(float distanceMeters) => new RaceEventId(Daily.Value + ":" + (int)distanceMeters + "m");
+
+            public bool TryGetFieldRecord(out DailyFieldRecord record)
+            {
+                record = new DailyFieldRecord(FieldName, "TR", FieldMilliseconds);
+                return HasField;
+            }
+        }
+
         private sealed class FakeSession : IRaceSession
         {
             public readonly List<RaceStartRequest> Requests = new List<RaceStartRequest>();

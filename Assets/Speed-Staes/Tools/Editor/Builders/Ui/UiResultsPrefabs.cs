@@ -157,7 +157,7 @@ namespace SpeedStars.Tools.Builders
             Text pbEvent = UiArt.Slot(pbCard, "Event", "Event", CardEventSize, PbEventMin, PbEventMax);
 
             RectTransform worldCard = Card(top, layout, "WorldPosition", "world_position", cardBounds, reveal);
-            UiArt.Slot(worldCard, "Title", "WORLD POSITION", CardTitleSize, WorldTitleMin, WorldTitleMax);
+            Text worldTitle = UiArt.Slot(worldCard, "Title", "WORLD POSITION", CardTitleSize, WorldTitleMin, WorldTitleMax);
             Text worldValue = UiArt.Slot(worldCard, "Value", "--", CardValueSize, WorldValueMin, WorldValueMax);
 
             RectTransform percentCard = Card(top, layout, "Percentile", "percentile", cardBounds, reveal);
@@ -249,6 +249,8 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "personalBestTitleText", pbTitle);
             Ref(so, "personalBestValueText", pbValue);
             Ref(so, "personalBestEventText", pbEvent);
+            Ref(so, "worldPositionTitleText", worldTitle);   // T-087: reads DAILY WORLD RECORD in a Race of the Day
+            Ref(so, "percentileCard", percentCard.gameObject); // T-087: left out in a Race of the Day
             Ref(so, "worldPositionText", worldValue);
             Ref(so, "percentileText", percentValue);
             Ref(so, "eventTitleText", eventTitle);

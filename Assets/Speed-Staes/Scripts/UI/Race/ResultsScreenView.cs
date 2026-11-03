@@ -40,8 +40,14 @@ namespace SpeedStars.UI.Race
         [Tooltip("Title colour while the card says NEW RECORD.")]
         [SerializeField] private Color newRecordColor = new Color(0.92f, 0.12f, 0.14f, 1f);
 
-        [Tooltip("WorldPosition/Value: '#rank' on the leaderboard, a dash without a record.")]
+        [Tooltip("WorldPosition/Title: 'WORLD POSITION', or 'DAILY WORLD RECORD' in a Race of the Day. Optional (the title then stays as built).")]
+        [SerializeField] private Text worldPositionTitleText;
+
+        [Tooltip("WorldPosition/Value: '#rank' on the leaderboard, a dash without a record. In a Race of the Day: the day's world record.")]
         [SerializeField] private Text worldPositionText;
+
+        [Tooltip("TopCards/Percentile: the whole card, switched off in a Race of the Day (a percentile over races of changing length means nothing). Optional.")]
+        [SerializeField] private GameObject percentileCard;
 
         [Tooltip("Percentile/Value: 'TOP n%' on the leaderboard, a dash without a record.")]
         [SerializeField] private Text percentileText;
@@ -232,10 +238,13 @@ namespace SpeedStars.UI.Race
             }
             _punchRecord = data.IsNewRecord; // the screen is not on yet: the punch plays when it opens
 
+            if (worldPositionTitleText != null) worldPositionTitleText.text = data.WorldTitle;
+            if (percentileCard != null) percentileCard.SetActive(!data.IsDaily);
+
             _presented = data;
             _hasPresented = true;
             RefreshRows(animateNew: false);
-            ShowLeaderboardCards();
+            if (!data.IsDaily) ShowLeaderboardCards(); // a Race of the Day's cards come from its own data (the leaderboard has no field for it)
         }
 
         /// <summary>WORLD POSITION / PERCENTILE / BEST OF THE DAY from the leaderboard; without data the model's dashes stay.</summary>

@@ -20,9 +20,9 @@ namespace SpeedStars.UI.Race
             ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, [InjectOptional] IEntryGatePrompt prompt,
             [InjectOptional] IPersonalBests records, [InjectOptional] IWallet wallet, [InjectOptional] IPlayerSettings settings,
             [InjectOptional] IDayBestSource dayBests, [InjectOptional] IClock clock, [InjectOptional] IRaceTraces traces,
-            [InjectOptional] IRaceCashRewardResolver cashRewards)
+            [InjectOptional] IRaceCashRewardResolver cashRewards, [InjectOptional] IRaceOfTheDay raceOfTheDay)
         {
-            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings, dayBests, clock, traces, cashRewards);
+            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings, dayBests, clock, traces, cashRewards, raceOfTheDay);
         }
 
         public void Initialize() => _logic.Start();

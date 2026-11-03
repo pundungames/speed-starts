@@ -32,6 +32,7 @@ namespace SpeedStars.UI.Race
         private readonly IClock _clock;
         private readonly IRaceTraces _traces; // optional: without it Analysis shows the player alone
         private readonly IRaceCashRewardResolver _cashRewards; // optional: without it no Cash is paid for a race
+        private readonly IRaceOfTheDay _daily; // optional: without it Race of the Day runs the catalog distance and reads like any event
         private readonly List<DayBestRecord> _dayScratch = new List<DayBestRecord>();
 
         private RaceEventInfo _current;
@@ -39,6 +40,7 @@ namespace SpeedStars.UI.Race
         private bool _started;
         private bool _resultsOpen;
         private bool _warnedFreeStart;
+        private float _currentDistance; // the length of the race being run (a Race of the Day's changes by day)
         private string _payoutId = string.Empty;
         private RaceSplitRecorder _splits; // null until a race started and the results view can take analysis data
         private SplitSeries _analysisPlayerSeries; // the finished race's data, kept to redraw as bots cross the line
@@ -50,8 +52,9 @@ namespace SpeedStars.UI.Race
             ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, IEntryGatePrompt prompt,
             IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null,
             IDayBestSource dayBests = null, IClock clock = null, IRaceTraces traces = null,
-            IRaceCashRewardResolver cashRewards = null)
+            IRaceCashRewardResolver cashRewards = null, IRaceOfTheDay raceOfTheDay = null)
         {
+            _daily = raceOfTheDay;
             _cashRewards = cashRewards;
             _traces = traces;
             _dayBests = dayBests;
@@ -121,7 +124,9 @@ namespace SpeedStars.UI.Race
             _resultsOpen = false;
             _analysisPlayerSeries = null;
             _payoutId = Guid.NewGuid().ToString("N"); // one reward id per race start: a repeated finish cannot pay twice
-            _session.RequestStart(new RaceStartRequest(info.Id, info.DistanceMeters));
+            // The Race of the Day takes its length from the day's rule (the catalog has none); everything else from the catalog.
+            _currentDistance = IsDaily(info.Id) && _daily.Today.DistanceMeters > 0f ? _daily.Today.DistanceMeters : info.DistanceMeters;
+            _session.RequestStart(new RaceStartRequest(info.Id, _currentDistance));
             return true;
         }
 
@@ -221,34 +226,57 @@ namespace SpeedStars.UI.Race
         /// </summary>
         private ResultsData BuildResults(string title, RaceOutcome outcome)
         {
+            // A Race of the Day stores its time under the event id plus the distance, so a best only ever compares equal lengths.
+            bool daily = IsDaily(outcome.EventId);
+            RaceEventId recordId = daily ? _daily.RecordIdFor(_currentDistance) : outcome.EventId;
+
             bool hasBest = false;
             bool isNewRecord = false;
             double best = 0d;
             if (_records != null)
             {
-                PersonalBestUpdate update = _records.Record(outcome.EventId, outcome.TimeSeconds, _payoutId);
+                PersonalBestUpdate update = _records.Record(recordId, outcome.TimeSeconds, _payoutId);
                 hasBest = update.HasBest;
                 isNewRecord = update.IsNewRecord;
                 best = update.BestSeconds;
             }
 
-            bool dayBest = IsTodaysBest(outcome);
+            bool hasDayBest = TryGetTodaysBest(recordId, out long dayBestMilliseconds);
+            bool dayBest = hasDayBest && ResultsModel.IsDayBest(true, dayBestMilliseconds, outcome.TimeSeconds);
+            string playerName = _settings != null ? _settings.PlayerName : string.Empty;
             return ResultsModel.Build(new ResultsInput(title, outcome.Rank, outcome.TimeSeconds,
-                _settings != null ? _settings.PlayerName : string.Empty,
+                playerName,
                 _wallet != null ? _wallet.Cash : 0,
-                hasBest, best, isNewRecord, null, dayBest));
+                hasBest, best, isNewRecord, null, dayBest,
+                daily ? BuildDailyInput(hasDayBest, dayBestMilliseconds, playerName) : default));
         }
 
-        /// <summary>After Record: today's stored best of the event equals this race (a slower run leaves a lower stored value).</summary>
-        private bool IsTodaysBest(RaceOutcome outcome)
+        private bool IsDaily(RaceEventId id) => _daily != null && _daily.IsRaceOfTheDay(id);
+
+        /// <summary>The day's world record is the field's fastest result unless the player's own best of the day beats it.</summary>
+        private DailyResultsInput BuildDailyInput(bool hasDayBest, long dayBestMilliseconds, string playerName)
         {
+            bool hasField = _daily.TryGetFieldRecord(out DailyFieldRecord field);
+            string ownName = string.IsNullOrWhiteSpace(playerName) ? ResultsTexts.DefaultPlayerName : playerName.Trim();
+            bool hasRecord = ResultsModel.PickDailyRecord(hasField, field.Name, field.ElapsedMilliseconds,
+                hasDayBest, ownName, dayBestMilliseconds, out string recordName, out long recordMilliseconds);
+            return new DailyResultsInput(hasDayBest, dayBestMilliseconds, hasRecord, recordName, recordMilliseconds);
+        }
+
+        /// <summary>After Record: today's stored best of the id (a slower run leaves a lower stored value than this race's time).</summary>
+        private bool TryGetTodaysBest(RaceEventId id, out long milliseconds)
+        {
+            milliseconds = 0L;
             if (_dayBests == null || _clock == null) return false;
             _dayScratch.Clear();
-            _dayBests.CopyDayBests(outcome.EventId, _dayScratch);
+            _dayBests.CopyDayBests(id, _dayScratch);
             long today = _clock.UtcNow.Date.Ticks;
             foreach (DayBestRecord record in _dayScratch)
-                if (record.DayUtcTicks == today)
-                    return ResultsModel.IsDayBest(true, record.ElapsedMilliseconds, outcome.TimeSeconds);
+            {
+                if (record.DayUtcTicks != today) continue;
+                milliseconds = record.ElapsedMilliseconds;
+                return true;
+            }
             return false;
         }
 

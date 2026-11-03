@@ -20,3 +20,4 @@
 ## Test kapsamasi bosluklari
 - [builder] Her RebuildAll prefab içi fileID'leri yeniden üretiyor (her build binlerce satır diff) → var olan prefab'ı yerinde güncelleyen builder ya da sabit fileID; o zamana kadar sahne + prefab'lar aynı build'den commit'lenir (28.10)
 - [emote] emote fiyatlari yer tutucu (Nakit); gercek fiyatlar karara bagli (30.10)
+- [T-087] RaceBots'un kalibrasyon profili event id ile aranir (race_of_the_day icin yok): Race of the Day botlari 100 m tablosuyla kosar (60/150/200/300 m'de olcek yok). Cozum: RaceBots'a mesafeye gore profil secimi / interpolasyon (RaceBots T-075/T-086 alani). (03.11)
