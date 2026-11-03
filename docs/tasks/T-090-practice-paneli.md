@@ -1,7 +1,7 @@
 ---
 id: T-090
 title: Practice paneli - referanstaki antrenman secenekleri (baslangic 100/200/300/400 m, engeller, enerji; ayakta cikis Malik'te)
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-086]
 owns_paths:
@@ -16,7 +16,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/PracticePanelSmokeTests.cs"
 touches_scene: false
 branch: agent/T-090-practice-paneli
-commits: []
+commits: [32858536, c95d1791]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Practice/PracticeOptionsTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Practice/PracticePanelModelTests.cs"
@@ -31,11 +31,11 @@ needs:
     durum: open
     not: "Malik: ayakta cikis (standing start) mekanigi, public bayrak/metot; arayuz IPracticeStandingStart, PracticeSession.BindStandingStart. Satir o zamana dek gri."
   - tip: SCENE
-    durum: open
-    not: "Race sahnesine yama: Tools > Speed Stars > Build > Race scene - add Practice panel (ScenePracticePanel.PatchRaceScene). Config asset (Data/Config/PracticeConfig.asset) ve UI/Widgets/PracticePanel.prefab ayni adimda uretilir; sahneyi YENIDEN KURMAZ."
+    durum: closed
+    not: "Race sahnesine yama: Tools > Speed Stars > Build > Race scene - add Practice panel (ScenePracticePanel.PatchRaceScene). Config asset (Data/Config/PracticeConfig.asset) ve UI/Widgets/PracticePanel.prefab ayni adimda uretilir; sahneyi YENIDEN KURMAZ. -> c95d1791 (kopyada 03.11)"
   - tip: ASSET
-    durum: open
-    not: "Yeni .cs dosyalarinin .meta'lari kopyada derlenip alinir (TUZAKLAR: .meta'siz commit)."
+    durum: closed
+    not: "Yeni .cs dosyalarinin .meta'lari kopyada derlenip alinir (TUZAKLAR: .meta'siz commit). -> c95d1791 (kopyada 03.11)"
 
 started: 2026-11-03
 finished: 2026-11-03
