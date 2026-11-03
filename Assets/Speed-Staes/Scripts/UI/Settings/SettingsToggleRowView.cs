@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,7 +9,7 @@ namespace SpeedStars.UI.Settings
     public sealed class SettingsToggleRowView : MonoBehaviour
     {
         [Tooltip("Row caption.")]
-        [SerializeField] private Text label;
+        [SerializeField] private TMP_Text label;
 
         [Tooltip("The switch in the row's control slot.")]
         [SerializeField] private SettingsToggleView toggle;

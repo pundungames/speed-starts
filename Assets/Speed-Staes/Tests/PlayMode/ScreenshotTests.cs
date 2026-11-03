@@ -15,6 +15,7 @@ using SpeedStars.UI.Home;
 using SpeedStars.UI.Leaderboard;
 using SpeedStars.UI.Race;
 using SpeedStars.UI.Rewards;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -221,7 +222,7 @@ namespace SpeedStars.PlayTests
 
                 RaceStartView view = Require<RaceStartView>();
                 RaceStartConfig config = RequireField<RaceStartConfig>(view, "config");
-                Text word = RequireField<Text>(view, "wordText");
+                TMP_Text word = RequireField<TMP_Text>(view, "wordText");
                 if (startSignal.StartPhase == RaceStartPhase.Ready)
                 {
                     Assert.IsTrue(word.transform.IsChildOf(view.transform) && word.gameObject.activeInHierarchy, "READY is not on screen in the first frames.");

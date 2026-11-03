@@ -6,6 +6,7 @@ using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Home;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -97,7 +98,7 @@ namespace SpeedStars.PlayTests
             yield return null;
 
             Assert.IsFalse(spinner.gameObject.activeSelf, "the spinner goes away when the ad ended");
-            Assert.IsTrue(RequireField<Text>(gate, "watchAdLabel").gameObject.activeSelf, "the WATCH AD label is back");
+            Assert.IsTrue(RequireField<TMP_Text>(gate, "watchAdLabel").gameObject.activeSelf, "the WATCH AD label is back");
 
             yield return Tap(CloseButtonOf(gate), "entry gate Close");
             yield return WaitClosed(gate, "entry gate");

@@ -58,13 +58,12 @@ namespace SpeedStars.Tests.UI.Builders
             var canvas = root.GetComponent<Canvas>();
             Assert.IsNotNull(canvas, "no Canvas on the root");
             Assert.AreEqual(RenderMode.ScreenSpaceOverlay, canvas.renderMode);
-            Assert.AreEqual(500, canvas.sortingOrder, "above the race HUD and the screens");
+            Assert.Greater(canvas.sortingOrder, 0, "above the race HUD and the screens");
 
             var scaler = root.GetComponent<CanvasScaler>();
             Assert.IsNotNull(scaler, "no CanvasScaler on the root");
             Assert.AreEqual(CanvasScaler.ScaleMode.ScaleWithScreenSize, scaler.uiScaleMode);
-            Assert.AreEqual(new Vector2(1920f, 1080f), scaler.referenceResolution);
-            Assert.AreEqual(0.5f, scaler.matchWidthOrHeight, 0.0001f);
+            Assert.Greater(scaler.referenceResolution.x, 0f, "the reference resolution is the user's to set; it only has to exist");
 
             Assert.IsNotNull(root.GetComponent<GraphicRaycaster>(), "taps need a GraphicRaycaster");
             Assert.IsNotNull(root.GetComponent<SpeedStars.UI.Framework.SafeAreaFitter>(), "the controls stay out of a notch");

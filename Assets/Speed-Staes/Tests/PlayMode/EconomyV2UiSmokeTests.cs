@@ -7,6 +7,7 @@ using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Race;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -120,9 +121,9 @@ namespace SpeedStars.PlayTests
             Assert.AreEqual(cashBefore + cash.Amount, Container.Resolve<IWallet>().Cash, "the ad paid its configured amount");
 
             // The window shows the new counter, and (once the diamond landed) the new balance.
-            Text counter = RequireField<Text>(modal, "counterText");
+            TMP_Text counter = RequireField<TMP_Text>(modal, "counterText");
             Assert.AreEqual($"{cash.DailyLimit - cash.RemainingToday}/{cash.DailyLimit}", counter.text);
-            Text balance = RequireField<Text>(modal, "balanceText");
+            TMP_Text balance = RequireField<TMP_Text>(modal, "balanceText");
             yield return WaitUntil(() => balance.text == Container.Resolve<IWallet>().Cash.ToString(), "the balance to count up to the wallet value", 10f);
 
             yield return Tap(CloseButtonOf(modal), "Cash offer window Close");
@@ -154,7 +155,7 @@ namespace SpeedStars.PlayTests
             yield return null;
 
             Assert.IsFalse(RequireField<Button>(modal, "watchAdButton").interactable, "no rights left: the button is closed");
-            Assert.IsTrue(RequireField<Text>(modal, "noteText").gameObject.activeSelf, "and a line says why");
+            Assert.IsTrue(RequireField<TMP_Text>(modal, "noteText").gameObject.activeSelf, "and a line says why");
 
             yield return Tap(CloseButtonOf(modal), "Cash offer window Close");
             yield return WaitClosed(modal, "Cash offer window");
@@ -249,9 +250,9 @@ namespace SpeedStars.PlayTests
             var paid = new RaceCashReward(3, 0, 5, 2, 4);
             results.ShowCashReward(paid);
             Assert.IsTrue(breakdown.IsShown, "a race that paid Cash shows the block");
-            Assert.AreEqual($"+{paid.Total}", RequireField<Text>(breakdown, "totalText").text);
+            Assert.AreEqual($"+{paid.Total}", RequireField<TMP_Text>(breakdown, "totalText").text);
 
-            Text[] lines = RequireField<Text[]>(breakdown, "lineTexts");
+            TMP_Text[] lines = RequireField<TMP_Text[]>(breakdown, "lineTexts");
             CanvasGroup[] groups = RequireField<CanvasGroup[]>(breakdown, "lineGroups");
             Assert.AreEqual($"Finished race +{paid.Finish}", lines[0].text);
             Assert.IsTrue(groups[0].gameObject.activeSelf);

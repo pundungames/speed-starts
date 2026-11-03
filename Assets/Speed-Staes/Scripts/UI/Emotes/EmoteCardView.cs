@@ -2,6 +2,7 @@ using System;
 using DG.Tweening;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -31,10 +32,10 @@ namespace SpeedStars.UI.Emotes
         [SerializeField] private GameObject lockOverlay;
 
         [Tooltip("Card/Name: the emote's name.")]
-        [SerializeField] private Text nameText;
+        [SerializeField] private TMP_Text nameText;
 
         [Tooltip("Card/Price: the price; shown only while the emote is locked.")]
-        [SerializeField] private Text priceText;
+        [SerializeField] private TMP_Text priceText;
 
         private Tween _punch;
         private Vector3 _baseScale = Vector3.one;

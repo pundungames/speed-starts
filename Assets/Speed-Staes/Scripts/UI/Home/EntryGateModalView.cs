@@ -7,6 +7,7 @@ using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -29,25 +30,25 @@ namespace SpeedStars.UI.Home
         [SerializeField] private RectTransform window;
 
         [Tooltip("Window/Title: RACE ENTRY on the header.")]
-        [SerializeField] private Text titleText;
+        [SerializeField] private TMP_Text titleText;
 
         [Tooltip("Window/EventName.")]
-        [SerializeField] private Text eventNameText;
+        [SerializeField] private TMP_Text eventNameText;
 
         [Tooltip("Window/TicketCount: 'Tickets 2/3' next to the ticket icon.")]
-        [SerializeField] private Text ticketCountText;
+        [SerializeField] private TMP_Text ticketCountText;
 
         [Tooltip("Window/TicketIcon: the red Entry Ticket; punched when a ticket arrives from an ad.")]
         [SerializeField] private RectTransform ticketIcon;
 
         [Tooltip("Window/Refill: 'Next ticket in mm:ss'; hidden when the inventory is full.")]
-        [SerializeField] private Text refillText;
+        [SerializeField] private TMP_Text refillText;
 
         [Tooltip("Window/Actions/UseEntryTicket: confirm button; hidden while Timed access is active, not interactable with no ticket.")]
         [SerializeField] private Button useTicketButton;
 
         [Tooltip("Window/Actions/UseEntryTicket/Label.")]
-        [SerializeField] private Text useTicketLabel;
+        [SerializeField] private TMP_Text useTicketLabel;
 
         [Tooltip("USE TICKET label colour while the button works (white on the red art).")]
         [SerializeField] private Color useTicketLabelReady = Color.white;
@@ -56,19 +57,19 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Color useTicketLabelDisabled = new Color(0.38f, 0.44f, 0.56f, 1f);
 
         [Tooltip("Window/Remaining: the refusal warning only; hidden the rest of the time (the ticket count already shows what is left).")]
-        [SerializeField] private Text remainingText;
+        [SerializeField] private TMP_Text remainingText;
 
         [Tooltip("Window/TimedTicketStatus/Label: 'Timed Ticket' or 'Timed Ticket active'.")]
-        [SerializeField] private Text timedLabel;
+        [SerializeField] private TMP_Text timedLabel;
 
         [Tooltip("Window/TimedTicketStatus/Value: Timed Ticket stock.")]
-        [SerializeField] private Text timedValue;
+        [SerializeField] private TMP_Text timedValue;
 
         [Tooltip("Window/Actions/UseTimedTicket: starts the Timed Ticket window; shown only with a ticket in stock and no window running.")]
         [SerializeField] private Button useTimedButton;
 
         [Tooltip("Window/Actions/UseTimedTicket/Label.")]
-        [SerializeField] private Text useTimedLabel;
+        [SerializeField] private TMP_Text useTimedLabel;
 
         [Tooltip("Window/TimedTicketStatus: punched when a Timed Ticket window starts.")]
         [SerializeField] private RectTransform timedStatus;
@@ -77,25 +78,25 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Button useTimedCashButton;
 
         [Tooltip("Window/Actions/UnlockWithCash/Label.")]
-        [SerializeField] private Text useTimedCashLabel;
+        [SerializeField] private TMP_Text useTimedCashLabel;
 
         [Tooltip("Window/GetTickets/Caption: 'GET TICKETS', or 'TICKETS FULL' while the inventory is full.")]
-        [SerializeField] private Text offersCaption;
+        [SerializeField] private TMP_Text offersCaption;
 
         [Tooltip("Window/GetTickets/BuyWithCash: not interactable while full, without a Cash price or without enough Cash.")]
         [SerializeField] private Button buyWithCashButton;
 
         [Tooltip("Window/GetTickets/BuyWithCash/Label: BUY WITH CASH.")]
-        [SerializeField] private Text buyWithCashLabel;
+        [SerializeField] private TMP_Text buyWithCashLabel;
 
         [Tooltip("Window/GetTickets/BuyWithCash/Price: the Cash price (empty when there is none).")]
-        [SerializeField] private Text cashPriceText;
+        [SerializeField] private TMP_Text cashPriceText;
 
         [Tooltip("Window/GetTickets/WatchAd: not interactable while the ad offer is closed (full inventory, no ad service, ad off in the config) or an ad runs.")]
         [SerializeField] private Button watchAdButton;
 
         [Tooltip("Window/GetTickets/WatchAd/Label: WATCH AD; hidden while the spinner shows.")]
-        [SerializeField] private Text watchAdLabel;
+        [SerializeField] private TMP_Text watchAdLabel;
 
         [Tooltip("Window/GetTickets/WatchAd/Spinner: turns while an ad runs; inactive otherwise.")]
         [SerializeField] private RectTransform watchAdSpinner;

@@ -1,62 +1,36 @@
 using System.Linq;
 using NUnit.Framework;
 using SpeedStars.UI.Home;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
 
 namespace SpeedStars.Tests.UI.Builders
 {
     /// <summary>
-    /// The Home character card of T-097, read back from the built HomeScreen prefab: it grew to the left only, the old parts sit in a
-    /// fixed-size Content pinned to the right edge, the store's icon strip and the player name exist and are bound. Red until the
+    /// The Home character card of T-097, read back from the built HomeScreen prefab: it grew to the left, the old parts sit in a
+    /// Content pinned to the right edge, the store's icon strip and the player name exist and are bound. Red until the
     /// builders have run once after T-097.
     /// </summary>
     public sealed class HomeCardBuilderTests
     {
         private const string HomeScreen = "Assets/Speed-Staes/UI/Screens/HomeScreen.prefab";
-        private const string Layout = "Assets/Speed-Staes/UI/Art/Home/layout.json";
-        private const float CanvasHeight = 1080f;
-        private const float MaxGrowthShare = 0.45f;
-        private const float Tolerance = 0.05f;
-
-        [System.Serializable]
-        private sealed class LayoutFile
-        {
-            public int[] reference_size;
-            public LayoutComponent[] components;
-        }
-
-        [System.Serializable]
-        private sealed class LayoutComponent
-        {
-            public string name;
-            public int[] rect;
-        }
 
         [Test]
-        public void Card_GrowsToTheLeftOnly_RightEdgeAndHeightUnchanged()
+        public void Card_GrowsToTheLeftOnly_PinnedRight_WiderThanContent()
         {
+            // Relations only: the user resizes the card by hand in the Inspector, so no pixel number is pinned here.
             RectTransform card = Find("CharacterCard");
-            LayoutFile file = JsonUtility.FromJson<LayoutFile>(System.IO.File.ReadAllText(Layout));
-            LayoutComponent spot = file.components.First(c => c.name == "character_card");
-            float scale = CanvasHeight / file.reference_size[1];
-            float oldWidth = spot.rect[2] * scale;
-
             Assert.AreEqual(1f, card.anchorMin.x, 0.0001f, "anchored to the right edge");
             Assert.AreEqual(1f, card.anchorMax.x, 0.0001f);
             Assert.AreEqual(1f, card.pivot.x, 0.0001f, "pivot on the right edge: growth goes left");
-            float expectedRight = -(file.reference_size[0] - (spot.rect[0] + spot.rect[2])) * scale;
-            Assert.AreEqual(expectedRight, card.anchoredPosition.x, Tolerance, "right edge distance to the screen edge");
-            Assert.AreEqual(spot.rect[3] * scale, card.sizeDelta.y, Tolerance, "height");
-            Assert.Greater(card.sizeDelta.x, oldWidth + 1f, "the card must be wider");
-            Assert.LessOrEqual(card.sizeDelta.x, oldWidth * (1f + MaxGrowthShare) + Tolerance, "growth capped");
 
             RectTransform content = Find("CharacterCard/Content");
-            Assert.AreEqual(1f, content.anchorMin.x, 0.0001f);
+            Assert.AreEqual(1f, content.anchorMin.x, 0.0001f, "Content pinned to the card's right edge");
             Assert.AreEqual(1f, content.anchorMax.x, 0.0001f);
             Assert.AreEqual(1f, content.pivot.x, 0.0001f);
-            Assert.AreEqual(oldWidth, content.sizeDelta.x, Tolerance, "old parts keep the old canvas width");
-            Assert.AreEqual(0f, content.sizeDelta.y, Tolerance, "full card height");
+            Assert.Greater(card.sizeDelta.x, content.sizeDelta.x, "the card is wider than the old parts it holds (it grew to the left)");
+            Assert.Greater(content.sizeDelta.x, 0f, "Content keeps a fixed width");
         }
 
         [Test]
@@ -131,9 +105,9 @@ namespace SpeedStars.Tests.UI.Builders
 
         private static void AssertText(string path, string expected)
         {
-            Component text = Find(path).GetComponent("Text");
-            Assert.IsNotNull(text, path + " has no Text");
-            Assert.AreEqual(expected, new SerializedObject(text).FindProperty("m_Text").stringValue, path);
+            var text = Find(path).GetComponent<TMP_Text>();
+            Assert.IsNotNull(text, path + " has no TMP_Text");
+            Assert.AreEqual(expected, text.text, path);
         }
     }
 }

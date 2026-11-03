@@ -10,6 +10,7 @@ using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Race;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -186,7 +187,7 @@ namespace SpeedStars.PlayTests
             string[] rowFields = { "eventTitleText", "personalBestTitleText", "personalBestValueText", "personalBestEventText",
                 "worldPositionTitleText", "worldPositionText", "dailyBestText", "cashText" };
             string rowsBefore = Snapshot(results, rowFields);
-            Assert.IsNotEmpty(Field<Text>(results, "worldPositionText").text, "the Results show the day's record row");
+            Assert.IsNotEmpty(Field<TMP_Text>(results, "worldPositionText").text, "the Results show the day's record row");
 
             IRaceReplay replay = RequireField<IRaceReplay>(results, "_replay");
             yield return Tap(RequireField<Button>(results, "watchReplayButton"), "Results Watch Replay");
@@ -369,7 +370,7 @@ namespace SpeedStars.PlayTests
             var text = new StringBuilder();
             foreach (string name in textFields)
             {
-                Text field = Field<Text>(view, name);
+                TMP_Text field = Field<TMP_Text>(view, name);
                 text.Append(name).Append('=').Append(field != null ? field.text : "<unbound>").Append('\n');
             }
             return text.ToString();

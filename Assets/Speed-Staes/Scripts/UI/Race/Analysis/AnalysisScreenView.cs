@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using SpeedStars.UI.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -23,13 +24,13 @@ namespace SpeedStars.UI.Race
 
         [Header("Texts")]
         [Tooltip("Diamond/Value: the player's Cash.")]
-        [SerializeField] private Text cashText;
+        [SerializeField] private TMP_Text cashText;
 
         [Tooltip("Rankings/Header/Title: event name.")]
-        [SerializeField] private Text eventTitleText;
+        [SerializeField] private TMP_Text eventTitleText;
 
         [Tooltip("Chart/EmptyText: shown instead of the lines when the race has nothing to draw (e.g. ended at 0 m).")]
-        [SerializeField] private Text emptyText;
+        [SerializeField] private TMP_Text emptyText;
 
         [Header("Chart")]
         [Tooltip("Chart: the art canvas (1038 x 502 art pixels); the cursor art moves inside it.")]
@@ -52,10 +53,10 @@ namespace SpeedStars.UI.Race
 
         [Header("Tick labels (fixed pool; unused ones are hidden)")]
         [Tooltip("Chart/Plot/XTicks/*: labels under the X axis (distance).")]
-        [SerializeField] private Text[] xTickLabels;
+        [SerializeField] private TMP_Text[] xTickLabels;
 
         [Tooltip("Chart/Plot/YTicks/*: labels left of the Y axis (time).")]
-        [SerializeField] private Text[] yTickLabels;
+        [SerializeField] private TMP_Text[] yTickLabels;
 
         [Header("Cursor")]
         [Tooltip("Chart/Guide: dashed vertical line, full art canvas; moves in X only.")]
@@ -68,7 +69,7 @@ namespace SpeedStars.UI.Race
         [SerializeField] private RectTransform balloonNode;
 
         [Tooltip("Chart/Balloon/Text: 'distance / time'.")]
-        [SerializeField] private Text balloonText;
+        [SerializeField] private TMP_Text balloonText;
 
         [Tooltip("Marker centre in the art as drawn (art pixels, top-left origin): where it sits before it moves.")]
         [SerializeField] private Vector2 markerArt = new Vector2(607f, 249f);
@@ -222,12 +223,12 @@ namespace SpeedStars.UI.Race
             };
         }
 
-        private void FillTicks(Text[] labels, List<double> ticks, double axisMax, bool horizontal)
+        private void FillTicks(TMP_Text[] labels, List<double> ticks, double axisMax, bool horizontal)
         {
             if (labels == null) return;
             for (int i = 0; i < labels.Length; i++)
             {
-                Text label = labels[i];
+                TMP_Text label = labels[i];
                 if (label == null) continue;
                 bool used = i < ticks.Count;
                 label.gameObject.SetActive(used);
