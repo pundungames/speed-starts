@@ -67,6 +67,23 @@ namespace SpeedStars.UI.Leaderboard
             return groups;
         }
 
+        /// <summary>
+        /// Puts the daily race into the list as its own one-option category, or refreshes its label when it is already there
+        /// (the day's distance changes at UTC midnight while the screen object lives on). The list is edited in place so a
+        /// picker holding it sees the change.
+        /// </summary>
+        public static void SetDaily(List<LeaderboardEventGroup> groups, RaceEventId id, string label)
+        {
+            var group = new LeaderboardEventGroup(LeaderboardTexts.DailyCategory, new[] { new LeaderboardEventOption(id, label) });
+            for (int i = 0; i < groups.Count; i++)
+            {
+                if (groups[i].Title != LeaderboardTexts.DailyCategory) continue;
+                groups[i] = group;
+                return;
+            }
+            groups.Add(group);
+        }
+
         public static bool Find(IReadOnlyList<LeaderboardEventGroup> groups, RaceEventId id, out int groupIndex, out LeaderboardEventOption option)
         {
             if (groups != null && !id.IsEmpty)

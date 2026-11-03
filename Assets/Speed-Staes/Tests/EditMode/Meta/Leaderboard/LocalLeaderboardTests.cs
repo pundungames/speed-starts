@@ -4,6 +4,7 @@ using NUnit.Framework;
 using SpeedStars.Core.Race;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.DailyRace;
 using SpeedStars.Meta.Leaderboard;
 using SpeedStars.Meta.Records;
 using SpeedStars.Tests.Meta.Config;
@@ -56,6 +57,8 @@ namespace SpeedStars.Tests.Meta.Leaderboard
         [TearDown]
         public void TearDown()
         {
+            _dailyBoard?.Dispose();
+            _dailyBoard = null;
             _board.Dispose();
             _kit.Dispose();
         }
@@ -508,6 +511,130 @@ namespace SpeedStars.Tests.Meta.Leaderboard
             Race(10d, 0, Sprint);
             Assert.AreEqual(1, Ask(LeaderboardPeriod.AllTime).TotalCount);
             Assert.AreEqual(0, Ask(LeaderboardPeriod.AllTime, id: NoDistance).TotalCount);
+        }
+
+        // ---- Race of the Day (T-093) ---------------------------------------------------------------------------
+
+        private static readonly float[] DailyDistances = { 60f, 100f, 150f, 200f, 300f };
+
+        private RaceOfTheDayService _daily;
+        private LocalLeaderboard _dailyBoard;
+
+        /// <summary>A board that knows the daily race, over the same clock, config and day bests as the plain one.</summary>
+        private void WithDaily()
+        {
+            WithBots(8, 0.09f, 0.1f, 0.12f, "DE", "FR");
+            _daily = new RaceOfTheDayService(_kit.Clock, "race_of_the_day", DailyDistances, new List<RaceOfTheDayLook>(), _config);
+            _dailyBoard = new LocalLeaderboard(_config, _catalog, _bests, _settings, _kit.Clock, _daily);
+        }
+
+        private LeaderboardPage AskDaily(LeaderboardPeriod period)
+        {
+            LeaderboardPage page = null;
+            string error = null;
+            _dailyBoard.Query(new LeaderboardQuery(_daily.EventId, period, null, 0, 50), p => page = p, e => error = e);
+            Assert.IsNull(error);
+            Assert.IsNotNull(page);
+            return page;
+        }
+
+        [Test]
+        public void RaceOfTheDay_ListsTheDaysBotField_AndItsFirstRowIsTheDailyWorldRecord()
+        {
+            WithDaily();
+            LeaderboardPage page = AskDaily(LeaderboardPeriod.AllTime);
+
+            Assert.Greater(page.Rows.Count, 0, "the daily list is not empty");
+            Assert.IsTrue(_daily.TryGetFieldRecord(out DailyFieldRecord record));
+            Assert.AreEqual(record.ElapsedMilliseconds, page.Rows[0].ElapsedMilliseconds, "the list's best is the result screen's Daily World Record");
+            for (int i = 1; i < page.Rows.Count; i++)
+                Assert.GreaterOrEqual(page.Rows[i].ElapsedMilliseconds, page.Rows[i - 1].ElapsedMilliseconds);
+        }
+
+        [Test]
+        public void RaceOfTheDay_BotTimesScaleWithTheDaysDistance()
+        {
+            WithDaily();
+            float distance = _daily.Today.DistanceMeters;
+            LeaderboardPage page = AskDaily(LeaderboardPeriod.AllTime);
+
+            double secondsPerMeter = page.Rows[0].ElapsedMilliseconds / 1000d / distance;
+            Assert.GreaterOrEqual(secondsPerMeter, _config.BestSecondsPerMeter - 0.001d);
+            Assert.LessOrEqual(secondsPerMeter, _config.WorstSecondsPerMeter + 0.001d);
+        }
+
+        [Test]
+        public void RaceOfTheDay_ShowsThePlayersTimeOfTodaysDistanceOnly()
+        {
+            WithDaily();
+            float distance = _daily.Today.DistanceMeters;
+            _bests.Record(_daily.RecordIdFor(distance), 500d, "mine");
+            _bests.Record(_daily.EventId, 1d, "bare");                       // the bare event id is not where times are stored
+            _bests.Record(_daily.RecordIdFor(distance + 1000f), 2d, "other"); // another distance's record is another list
+
+            LeaderboardPage page = AskDaily(LeaderboardPeriod.AllTime);
+
+            int own = 0;
+            foreach (LeaderboardRow row in page.Rows)
+            {
+                if (!row.IsLocalPlayer) continue;
+                own++;
+                Assert.AreEqual(500000L, row.ElapsedMilliseconds);
+            }
+            Assert.AreEqual(1, own);
+            Assert.IsNotNull(page.OwnEntry);
+        }
+
+        [Test]
+        public void RaceOfTheDay_PeriodFilterWorksOnTheDistanceRecord()
+        {
+            WithDaily();
+            _bests.Record(_daily.RecordIdFor(_daily.Today.DistanceMeters), 500d, "mine");
+
+            foreach (LeaderboardPeriod period in new[] { LeaderboardPeriod.Today, LeaderboardPeriod.ThisWeek, LeaderboardPeriod.ThisMonth, LeaderboardPeriod.AllTime })
+                Assert.IsNotNull(AskDaily(period).OwnEntry, period.ToString());
+        }
+
+        [Test]
+        public void RaceOfTheDay_NextDayMovesTheListToThatDaysDistanceAndField()
+        {
+            WithDaily();
+            RaceOfTheDayInfo first = _daily.Today;
+            _bests.Record(_daily.RecordIdFor(first.DistanceMeters), 500d, "mine");
+            Assert.IsNotNull(AskDaily(LeaderboardPeriod.AllTime).OwnEntry);
+
+            // Walk forward until the distance changes (the rule never repeats a distance on neighbouring days).
+            int days = 0;
+            while (_daily.Today.DistanceMeters == first.DistanceMeters && days < 10)
+            {
+                _kit.Clock.UtcNow = _kit.Clock.UtcNow.AddDays(1);
+                days++;
+            }
+            Assert.AreNotEqual(first.DistanceMeters, _daily.Today.DistanceMeters);
+
+            LeaderboardPage page = AskDaily(LeaderboardPeriod.AllTime);
+            Assert.IsNull(page.OwnEntry, "yesterday's distance record does not carry over");
+            Assert.IsTrue(_daily.TryGetFieldRecord(out DailyFieldRecord record));
+            Assert.AreEqual(record.ElapsedMilliseconds, page.Rows[0].ElapsedMilliseconds);
+        }
+
+        [Test]
+        public void RaceOfTheDay_WithoutTheService_TheBoardKeepsItsPlainBehaviour()
+        {
+            WithDaily();
+            // The plain board has no daily service and the catalog has no such event, so the id is just an unknown event.
+            LeaderboardPage page = null;
+            _board.Query(new LeaderboardQuery(_daily.EventId, LeaderboardPeriod.AllTime, null, 0, 50), p => page = p, e => { });
+            Assert.IsNotNull(page);
+            Assert.AreEqual(0, page.Rows.Count);
+
+            // Other events are untouched by the daily board.
+            LeaderboardPage plain = Ask(LeaderboardPeriod.AllTime);
+            LeaderboardPage viaDaily = null;
+            _dailyBoard.Query(new LeaderboardQuery(Sprint, LeaderboardPeriod.AllTime, null, 0, 50), p => viaDaily = p, e => { });
+            Assert.AreEqual(plain.Rows.Count, viaDaily.Rows.Count);
+            for (int i = 0; i < plain.Rows.Count; i++)
+                Assert.AreEqual(plain.Rows[i].ElapsedMilliseconds, viaDaily.Rows[i].ElapsedMilliseconds);
         }
     }
 }

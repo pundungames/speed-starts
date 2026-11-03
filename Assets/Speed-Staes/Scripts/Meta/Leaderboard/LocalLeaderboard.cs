@@ -22,10 +22,12 @@ namespace SpeedStars.Meta.Leaderboard
         private readonly IDayBestSource _dayBests;
         private readonly IPlayerSettings _settings;
         private readonly IClock _clock;
+        private readonly IRaceOfTheDay _daily; // optional: without it Race of the Day reads like any other event
         private readonly Dictionary<string, List<BotResult>> _botCache = new Dictionary<string, List<BotResult>>();
 
-        public LocalLeaderboard(LeaderboardConfig config, RaceEventCatalog catalog, IDayBestSource dayBests, IPlayerSettings settings, IClock clock)
+        public LocalLeaderboard(LeaderboardConfig config, RaceEventCatalog catalog, IDayBestSource dayBests, IPlayerSettings settings, IClock clock, IRaceOfTheDay raceOfTheDay = null)
         {
+            _daily = raceOfTheDay;
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _dayBests = dayBests ?? throw new ArgumentNullException(nameof(dayBests));
@@ -104,13 +106,14 @@ namespace SpeedStars.Meta.Leaderboard
         }
 
         /// <summary>The filtered ranking, best first. One entry per player: each bot has a single result, the player's is their best in the window.</summary>
-        private List<Entry> Rank(RaceEventId eventId, LeaderboardPeriod period, string country, DateTime now, out DateTime periodStart)
+        private List<Entry> Rank(RaceEventId requested, LeaderboardPeriod period, string country, DateTime now, out DateTime periodStart)
         {
+            Source source = Resolve(requested);
             periodStart = PeriodStart(period, now);
             long startTicks = period == LeaderboardPeriod.AllTime ? 0L : periodStart.Ticks;
             var entries = new List<Entry>();
 
-            foreach (BotResult bot in BotsOf(eventId))
+            foreach (BotResult bot in BotsOf(source))
             {
                 long achieved = now.Ticks - bot.AgeSeconds * TimeSpan.TicksPerSecond;
                 if (achieved < startTicks) continue;
@@ -118,7 +121,7 @@ namespace SpeedStars.Meta.Leaderboard
                 entries.Add(new Entry(bot.EntryId, bot.Name, bot.CountryCode, bot.ElapsedMilliseconds, achieved, false));
             }
 
-            if (TryGetOwnBest(eventId, startTicks, out DayBestRecord own))
+            if (TryGetOwnBest(source.RecordId, startTicks, out DayBestRecord own))
             {
                 string flag = _settings.FlagCode ?? string.Empty;
                 if (country == null || SameCountry(flag, country))
@@ -147,12 +150,27 @@ namespace SpeedStars.Meta.Leaderboard
             return found;
         }
 
-        private List<BotResult> BotsOf(RaceEventId eventId)
+        /// <summary>
+        /// Where an event's rows come from. Race of the Day keeps its times under the distance record id and its bots come from
+        /// the day's field (the one the result screen's Daily World Record is drawn from); every other event is its own source.
+        /// </summary>
+        private Source Resolve(RaceEventId eventId)
         {
-            if (_botCache.TryGetValue(eventId.Value, out List<BotResult> cached)) return cached;
+            if (_daily != null && _daily.IsRaceOfTheDay(eventId))
+            {
+                RaceOfTheDayInfo today = _daily.Today;
+                if (today.DistanceMeters > 0f)
+                    return new Source(_daily.RecordIdFor(today.DistanceMeters), DailyBotField.FieldId(eventId.Value, today.DayKey), today.DistanceMeters);
+            }
             float distance = _catalog.TryGet(eventId, out RaceEventDefinition definition) ? definition.DistanceMeters : 0f;
-            List<BotResult> bots = BotField.Generate(_config, eventId, distance);
-            _botCache[eventId.Value] = bots;
+            return new Source(eventId, eventId, distance);
+        }
+
+        private List<BotResult> BotsOf(Source source)
+        {
+            if (_botCache.TryGetValue(source.BotFieldId.Value, out List<BotResult> cached)) return cached;
+            List<BotResult> bots = BotField.Generate(_config, source.BotFieldId, source.DistanceMeters);
+            _botCache[source.BotFieldId.Value] = bots;
             return bots;
         }
 
@@ -204,6 +222,20 @@ namespace SpeedStars.Meta.Leaderboard
         private static bool SameCountry(string a, string normalizedB) => string.Equals(NormalizeCountry(a), normalizedB, StringComparison.Ordinal);
 
         private void OnDayBestChanged() => Changed?.Invoke();
+
+        private readonly struct Source
+        {
+            public readonly RaceEventId RecordId;
+            public readonly RaceEventId BotFieldId;
+            public readonly float DistanceMeters;
+
+            public Source(RaceEventId recordId, RaceEventId botFieldId, float distanceMeters)
+            {
+                RecordId = recordId;
+                BotFieldId = botFieldId;
+                DistanceMeters = distanceMeters;
+            }
+        }
 
         private readonly struct Entry
         {

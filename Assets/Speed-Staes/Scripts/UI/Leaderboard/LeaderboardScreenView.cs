@@ -203,6 +203,7 @@ namespace SpeedStars.UI.Leaderboard
         private IPlayerSettings _settings;
         private IRaceSelection _selection;
         private RaceEventCatalog _catalog;
+        private IRaceOfTheDay _daily;
         private LeaderboardFlagLibrary _flagLibrary;
         private LeaderboardEventPicker _picker;
         private List<LeaderboardEventGroup> _groups = new List<LeaderboardEventGroup>();
@@ -224,8 +225,10 @@ namespace SpeedStars.UI.Leaderboard
         /// <summary>Optional so a scene missing one of them still opens (the table then shows the error state / no countries).</summary>
         [Inject]
         public void ConstructLeaderboardExtras([InjectOptional] ILeaderboard leaderboard, [InjectOptional] IPlayerSettings settings,
-            [InjectOptional] IRaceSelection selection, [InjectOptional] RaceEventCatalog catalog)
+            [InjectOptional] IRaceSelection selection, [InjectOptional] RaceEventCatalog catalog,
+            [InjectOptional] IRaceOfTheDay raceOfTheDay)
         {
+            _daily = raceOfTheDay;
             _leaderboard = leaderboard;
             _settings = settings;
             _selection = selection;
@@ -271,6 +274,7 @@ namespace SpeedStars.UI.Leaderboard
             EnsureReady();
             if (_wallet != null) _wallet.Changed += RefreshCash;
             RefreshCash();
+            RefreshDailyOption();
             RaceEventId start = LeaderboardEventGroups.Resolve(_groups, _selection != null ? _selection.Selected : default);
             _presenter.Open(start); // every opening starts from the defaults
         }
@@ -359,6 +363,14 @@ namespace SpeedStars.UI.Leaderboard
                 Debug.LogWarning($"{name}: the layout has {layout.Count} categories but only {categoryTabs.Length} tabs; the extra ones are not shown.", this);
 
             _groups = LeaderboardEventGroups.Build(layout, LabelOfRace);
+        }
+
+        /// <summary>The daily race is a category of its own whose label carries today's distance; refreshed at each opening.</summary>
+        private void RefreshDailyOption()
+        {
+            if (_daily == null) return;
+            LeaderboardEventGroups.SetDaily(_groups, _daily.EventId, LeaderboardTexts.DailyEvent(_daily.Today.DistanceMeters));
+            for (int i = 0; i < categoryTabs.Length; i++) BindCategoryTab(i);
         }
 
         /// <summary>Button label of a race that exists and can be played; null otherwise (it is not offered).</summary>
