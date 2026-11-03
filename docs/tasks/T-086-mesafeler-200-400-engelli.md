@@ -1,7 +1,7 @@
 ---
 id: T-086
 title: Diger mesafeler - 200m, 400m, 60mH, 400mH oynanir (botlar mesafeye gore kalibre, engeller etkinlik verisinden); 4x100m ve Medley Malik'te
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: []
 owns_paths:
@@ -15,7 +15,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/**"
 touches_scene: false
 branch: agent/T-086-mesafeler
-commits: []
+commits: [aab94d62, 702b6fdd, 4eef70a2]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/BotEventProfileTests.cs"
 analytics:

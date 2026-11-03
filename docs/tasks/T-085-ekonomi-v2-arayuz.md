@@ -1,7 +1,7 @@
 ---
 id: T-085
 title: Ekonomi v2 arayuzu - sonuc ekraninda kazanc dokumu, Nakit "+" -> reklamla Nakit penceresi, premium etkinlikte "300 Nakit -> 1 saat"
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-084]
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: false
 branch: agent/T-085-ekonomi-arayuz
-commits: []
+commits: [f9cd8c7b, e77bf75d, 0b3dc5c9]
 tests:
   - Assets/Speed-Staes/Tests/EditMode/UI/Race/CashBreakdownModelTests.cs
   - Assets/Speed-Staes/Tests/EditMode/UI/Home/CashOfferModelTests.cs
@@ -21,8 +21,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "Kopyada, Unity batchmode, TEK komut: -executeMethod SpeedStars.Tools.Builders.EconomyUiRebuild.Run (= UiPrefabBuilder.BuildAll(true) -> SceneBuilder.BuildHome(true) -> SceneBuilder.BuildRace(true); config seeder CALISMAZ, Faz1 overwrite KULLANILMAZ). Basari isareti log'da ECONOMY_UI_REBUILD_OK. Uretilenler: ResourceBar (Cash/Plus), ResultsScreen (CashBreakdown + CashFlight), EntryGateModal (UnlockWithCash; Race sahnesi AYNI prefab'i kullanir), yeni CashOfferModal (UiPrefabPaths.CashOfferModal, HomePopups'ta, Home popup katmaninda inaktif), SceneWiring ResourceBarView.cashOfferModal'i her kurulumda baglar. Yeni .cs dosyalarinin .meta'lari kopyada uretilir, geri alinip commit'lenir."
+    durum: closed
+    not: "Kopyada, Unity batchmode, TEK komut: -executeMethod SpeedStars.Tools.Builders.EconomyUiRebuild.Run (= UiPrefabBuilder.BuildAll(true) -> SceneBuilder.BuildHome(true) -> SceneBuilder.BuildRace(true); config seeder CALISMAZ, Faz1 overwrite KULLANILMAZ). Basari isareti log'da ECONOMY_UI_REBUILD_OK. Uretilenler: ResourceBar (Cash/Plus), ResultsScreen (CashBreakdown + CashFlight), EntryGateModal (UnlockWithCash; Race sahnesi AYNI prefab'i kullanir), yeni CashOfferModal (UiPrefabPaths.CashOfferModal, HomePopups'ta, Home popup katmaninda inaktif), SceneWiring ResourceBarView.cashOfferModal'i her kurulumda baglar. Yeni .cs dosyalarinin .meta'lari kopyada uretilir, geri alinip commit'lenir. -> 0b3dc5c9 (BuildAll + BuildHome kopyada; Race yeniden kurulmadi: prefab referanslari korunuyor, binalar kaybolmasin)"
   - tip: WIRING
     durum: closed
     not: "ITimedTicketShop, IRewardedCash, IRaceCashRewardResolver -> ddc09df2"
