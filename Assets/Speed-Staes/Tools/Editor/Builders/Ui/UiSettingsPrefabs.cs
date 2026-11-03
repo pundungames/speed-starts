@@ -664,7 +664,7 @@ namespace SpeedStars.Tools.Builders
 
         /// <summary>
         /// Puts the settings v2 sections into the EXISTING popup prefab and leaves everything else (the designer's own edits too) as it is.
-        /// Run with <see cref="SettingsV2Rebuild.Run"/>; replaces an earlier ExtraSections node.
+        /// Run with <see cref="SettingsV2Rebuild.Run"/>; an earlier ExtraSections node is kept as it is (add if missing, T-102).
         /// </summary>
         internal static void AddExtraSectionsToPrefab()
         {
@@ -676,16 +676,20 @@ namespace SpeedStars.Tools.Builders
                 GameObject rowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(UiPrefabPaths.SettingsRow);
                 RectTransform[] rects = root.GetComponentsInChildren<RectTransform>(true);
                 RectTransform content = (RectTransform)rects.First(t => t.name == "MusicRow").parent;
-                RectTransform old = rects.FirstOrDefault(t => t.name == "ExtraSections");
-                if (old != null) UnityEngine.Object.DestroyImmediate(old.gameObject);
+                if (rects.Any(t => t.name == "ExtraSections"))
+                {
+                    UnityEngine.Debug.Log($"UiSettingsPrefabs: '{UiPrefabPaths.SettingsPopup}' already has ExtraSections; left as it is.");
+                    return;
+                }
                 AddExtraSections(rowPrefab, content, so, root.scene);
                 OrderRows(content);
                 so.ApplyModifiedPropertiesWithoutUndo();
-                PrefabUtility.SaveAsPrefabAsset(root, UiPrefabPaths.SettingsPopup);
+                HandEditGuard.SavePatchedPrefab(root, UiPrefabPaths.SettingsPopup);
             }
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
+                HandEditGuard.ConvertPending();
             }
         }
 
@@ -703,7 +707,7 @@ namespace SpeedStars.Tools.Builders
             return band;
         }
 
-        /// <summary>Puts a fresh Camera row into the existing popup prefab, leaving the rest of it as it is.</summary>
+        /// <summary>Puts a Camera row into the existing popup prefab when it has none; an existing row and the rest are left as they are (T-102).</summary>
         internal static void AddCameraRowToPrefab()
         {
             GameObject root = PrefabUtility.LoadPrefabContents(UiPrefabPaths.SettingsPopup);
@@ -714,15 +718,19 @@ namespace SpeedStars.Tools.Builders
                 GameObject rowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(UiPrefabPaths.SettingsRow);
                 RectTransform[] rects = root.GetComponentsInChildren<RectTransform>(true);
                 RectTransform musicRow = rects.First(t => t.name == "MusicRow");
-                RectTransform oldRow = rects.FirstOrDefault(t => t.name == "CameraRow");
-                if (oldRow != null) UnityEngine.Object.DestroyImmediate(oldRow.gameObject);
+                if (rects.Any(t => t.name == "CameraRow"))
+                {
+                    UnityEngine.Debug.Log($"UiSettingsPrefabs: '{UiPrefabPaths.SettingsPopup}' already has CameraRow; left as it is.");
+                    return;
+                }
                 AddCameraRow(rowPrefab, musicRow, so, root.scene);
                 so.ApplyModifiedPropertiesWithoutUndo();
-                PrefabUtility.SaveAsPrefabAsset(root, UiPrefabPaths.SettingsPopup);
+                HandEditGuard.SavePatchedPrefab(root, UiPrefabPaths.SettingsPopup);
             }
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
+                HandEditGuard.ConvertPending();
             }
         }
 
@@ -971,7 +979,7 @@ namespace SpeedStars.Tools.Builders
     /// <summary>
     /// T-088: puts the settings v2 sections into the existing SettingsPopup prefab only (no other prefab, scene or config asset is
     /// touched, the designer's edits stay). Parameterless for <c>-executeMethod SpeedStars.Tools.Builders.SettingsV2Rebuild.Run</c>;
-    /// writes the marker below on success. Safe to run twice (the ExtraSections node is replaced).
+    /// writes the marker below on success. Safe to run twice (an existing ExtraSections node is kept).
     /// </summary>
     public static class SettingsV2Rebuild
     {

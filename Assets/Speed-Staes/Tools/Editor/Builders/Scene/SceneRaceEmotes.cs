@@ -37,8 +37,7 @@ namespace SpeedStars.Tools.Builders
 
                 Scene scene = EditorSceneManager.OpenScene(SceneBuilder.RaceScenePath, OpenSceneMode.Single);
                 Add(scene);
-                if (!EditorSceneManager.SaveScene(scene, SceneBuilder.RaceScenePath))
-                    throw new InvalidOperationException($"Could not save scene '{SceneBuilder.RaceScenePath}'.");
+                HandEditGuard.SaveScene(scene, SceneBuilder.RaceScenePath);
                 Debug.Log(OkMarker);
             }
             catch (Exception e)
@@ -50,6 +49,7 @@ namespace SpeedStars.Tools.Builders
             finally
             {
                 Restore(before);
+                HandEditGuard.ConvertPending(); // after the restore: the converter edits the scene file as text
             }
         }
 

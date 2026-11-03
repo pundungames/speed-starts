@@ -46,10 +46,22 @@ namespace SpeedStars.PlayTests
 
         public static void AssertInside(RectTransform rect, FixedSafeAreaSource source, string what)
         {
+            AssertInside(rect, source.SafeArea, what);
+        }
+
+        public static void AssertInside(RectTransform rect, Rect safe, string what)
+        {
             Assert.IsNotNull(rect, $"{what}: not bound.");
             XRange(rect, out float xMin, out float xMax);
-            Assert.GreaterOrEqual(xMin, source.SafeArea.xMin - EdgeTolerancePx, $"{what} reaches into the notch (left edge {xMin}px).");
-            Assert.LessOrEqual(xMax, source.SafeArea.xMax + EdgeTolerancePx, $"{what} reaches past the safe area (right edge {xMax}px).");
+            Assert.GreaterOrEqual(xMin, safe.xMin - EdgeTolerancePx, $"{what} reaches into the notch (left edge {xMin}px).");
+            Assert.LessOrEqual(xMax, safe.xMax + EdgeTolerancePx, $"{what} reaches past the safe area (right edge {xMax}px).");
+        }
+
+        /// <summary>The safe rectangle with the larger side inset on both edges (what a mirroring fitter keeps items in).</summary>
+        public static Rect Mirrored(Rect safe, Vector2 screen)
+        {
+            float inset = Mathf.Max(safe.xMin, screen.x - safe.xMax);
+            return new Rect(inset, safe.y, screen.x - 2f * inset, safe.height);
         }
 
         /// <summary>Backgrounds and dims (stretched, drawing) must still cover the whole screen, notch included.</summary>
@@ -121,6 +133,25 @@ namespace SpeedStars.PlayTests
             }
 
             Assert.Greater(SafeAreaTestSupport.AssertBleedsStayFull(fitters, notch), 0, "No full-screen dim/background found to check.");
+        }
+
+        [UnityTest]
+        public IEnumerator Home_LeftNotch_AlsoPullsRightEdgeItemsIn()
+        {
+            yield return LoadScene(HomeScene);
+            FixedSafeAreaSource notch = SafeAreaTestSupport.LeftNotch();
+            SafeAreaTestSupport.Install(notch);
+            yield return SafeAreaTestSupport.Settle();
+
+            Rect mirrored = SafeAreaTestSupport.Mirrored(notch.SafeArea, notch.ScreenSize);
+            HomeScreenView home = Require<HomeScreenView>();
+            ResourceBarView bar = Require<ResourceBarView>();
+            SafeAreaTestSupport.AssertInside((RectTransform)bar.transform, mirrored, "Resource bar");
+            foreach (string field in new[] { "playButton", "settingsButton", "soundButton", "environmentButton", "highScoresButton", "sevenDayButton", "editRacerButton" })
+            {
+                Button button = Field<Button>(home, field);
+                if (button != null) SafeAreaTestSupport.AssertInside((RectTransform)button.transform, mirrored, "Home " + field);
+            }
         }
 
         [UnityTest]

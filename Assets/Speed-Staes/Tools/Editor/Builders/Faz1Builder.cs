@@ -8,7 +8,8 @@ namespace SpeedStars.Tools.Builders
     /// One entry point for the Faz 1 content: config assets, UI prefabs, ProjectContext, Home/Race scenes, Build Settings.
     /// Runs from the menu or in batchmode (-executeMethod SpeedStars.Tools.Builders.Faz1Builder.BuildAll) in a
     /// verification copy, so the user's open editor is never touched. Every step skips what already exists unless
-    /// "overwrite" is asked for: assets the user edited by hand are never replaced silently.
+    /// "overwrite" is asked for, and UI prefabs / Home / Race are replaced only with the force flag as well
+    /// (HandEditGuard): assets the user edited by hand are never replaced silently.
     /// </summary>
     public static class Faz1Builder
     {
@@ -17,7 +18,7 @@ namespace SpeedStars.Tools.Builders
         [MenuItem("Tools/Speed Stars/Build/Faz 1 - all (skip existing)")]
         public static void BuildAll() => Run(false);
 
-        [MenuItem("Tools/Speed Stars/Build/Faz 1 - all (overwrite)")]
+        [MenuItem("Tools/Speed Stars/Build/Faz 1 - all (overwrite configs, keeps existing UI prefabs and scenes)")]
         public static void RebuildAll() => Run(true);
 
         private static void Run(bool overwrite)

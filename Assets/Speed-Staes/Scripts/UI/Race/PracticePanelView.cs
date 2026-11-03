@@ -1,4 +1,5 @@
 using SpeedStars.Meta.Practice;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -27,14 +28,14 @@ namespace SpeedStars.UI.Race
 
         [Tooltip("The Start dropdown button; its label shows the chosen distance.")]
         [SerializeField] private Button distanceButton;
-        [SerializeField] private Text distanceLabel;
+        [SerializeField] private TMP_Text distanceLabel;
 
         [Tooltip("The open dropdown list; closed until the Start button is pressed.")]
         [SerializeField] private GameObject distanceList;
 
         [Tooltip("One button per dropdown entry, in order. Entries beyond the configured distances are hidden.")]
         [SerializeField] private Button[] distanceOptions = new Button[0];
-        [SerializeField] private Text[] distanceOptionLabels = new Text[0];
+        [SerializeField] private TMP_Text[] distanceOptionLabels = new TMP_Text[0];
 
         [Tooltip("Reset energy button.")]
         [SerializeField] private Button resetEnergyButton;

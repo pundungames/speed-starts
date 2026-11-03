@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -27,7 +28,7 @@ namespace SpeedStars.UI.Costume
         [SerializeField] private GameObject selectedIcon;
 
         [Tooltip("Tab name text (Face, Head, ...). Optional.")]
-        [SerializeField] private Text label;
+        [SerializeField] private TMP_Text label;
 
         [Tooltip("Label colour on the normal (cream) background.")]
         [SerializeField] private Color normalLabelColor = new Color(0.04f, 0.12f, 0.36f, 1f);

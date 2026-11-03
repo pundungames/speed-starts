@@ -30,6 +30,9 @@ namespace SpeedStars.UI.Framework
         [SerializeField, Tooltip("Also keep the top/bottom edges inside the safe area (the game is landscape, so normally off).")]
         private bool includeVertical;
 
+        [SerializeField, Tooltip("Move both left and right edges in by the larger of the two insets, so a notch on one side gives a balanced layout (and flipping the phone does not shift it).")]
+        private bool mirrorSides = true;
+
         [SerializeField, Min(0f), Tooltip("Insets this small (px) count as none, so a notch-less phone keeps the authored layout.")]
         private float tolerancePx = 1f;
 
@@ -60,8 +63,9 @@ namespace SpeedStars.UI.Framework
         }
 
         /// <summary>Seam for code that builds the component (scene builder) without going through the serialized fields.</summary>
-        public void Configure(SafeAreaMode newMode, bool vertical)
+        public void Configure(SafeAreaMode newMode, bool vertical, bool mirror = true)
         {
+            mirrorSides = mirror;
             mode = newMode;
             includeVertical = vertical;
             _collected = false;
@@ -88,7 +92,7 @@ namespace SpeedStars.UI.Framework
             if (_hasApplied && screen == _lastScreen && safe == _lastSafe) return false;
 
             Collect();
-            SafeAreaMath.SafeAnchors(screen, safe, includeVertical, tolerancePx, out Vector2 safeMin, out Vector2 safeMax);
+            SafeAreaMath.SafeAnchors(screen, safe, includeVertical, tolerancePx, out Vector2 safeMin, out Vector2 safeMax, mirrorSides);
             for (int i = 0; i < _entries.Count; i++) Write(_entries[i], safeMin, safeMax);
 
             _hasApplied = true;

@@ -2,6 +2,7 @@ using System;
 using SpeedStars.Core.Services;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -18,22 +19,22 @@ namespace SpeedStars.UI.Home
     public sealed class ResourceBarView : MonoBehaviour
     {
         [Tooltip("PurpleGem/Value.")]
-        [SerializeField] private Text purpleGemText;
+        [SerializeField] private TMP_Text purpleGemText;
 
         [Tooltip("EntryTicket/Value: 'count/cap'.")]
-        [SerializeField] private Text entryTicketText;
+        [SerializeField] private TMP_Text entryTicketText;
 
         [Tooltip("TicketTimer (whole chip): hidden when the tickets are full.")]
         [SerializeField] private GameObject entryTimerRoot;
 
         [Tooltip("TicketTimer/Value: time to the next ticket.")]
-        [SerializeField] private Text entryTimerText;
+        [SerializeField] private TMP_Text entryTimerText;
 
         [Tooltip("TimedTicket/Value: unused Timed Tickets, or the time left while the window runs.")]
-        [SerializeField] private Text timedTicketText;
+        [SerializeField] private TMP_Text timedTicketText;
 
         [Tooltip("Cash/Value.")]
-        [SerializeField] private Text cashText;
+        [SerializeField] private TMP_Text cashText;
 
         [Tooltip("Cash/Plus: opens the Cash offer window (watch an ad for Cash). Not interactable while no window is bound. May stay empty (old prefab).")]
         [SerializeField] private Button cashPlusButton;

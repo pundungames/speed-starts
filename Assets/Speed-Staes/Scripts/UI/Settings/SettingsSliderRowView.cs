@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,7 +23,7 @@ namespace SpeedStars.UI.Settings
     public sealed class SettingsSliderRowView : MonoBehaviour
     {
         [Tooltip("Row caption.")]
-        [SerializeField] private Text label;
+        [SerializeField] private TMP_Text label;
 
         [Tooltip("The slider in the row's control slot.")]
         [SerializeField] private Slider slider;

@@ -1,6 +1,7 @@
 using SpeedStars.Core.Audio;
 using SpeedStars.Core.Race;
 using SpeedStars.UI.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -38,11 +39,8 @@ namespace SpeedStars.UI.Race
         [Tooltip("Group/TextRoot: the word's box (700x200); slide, squash and shake act on it.")]
         [SerializeField] private RectTransform textRoot;
 
-        [Tooltip("Group/TextRoot/Word: the READY / SET / GO! text (legacy Text, Kanit Black Italic).")]
-        [SerializeField] private Text wordText;
-
-        [Tooltip("The ThickOutline on the Word: thickness and directions come from the config, its colour follows the word's alpha.")]
-        [SerializeField] private ThickOutline wordOutline;
+        [Tooltip("Group/TextRoot/Word: the READY / SET / GO! text (TextMeshPro; its outline is set on the TMP material).")]
+        [SerializeField] private TMP_Text wordText;
 
         [Tooltip("impact_01..03: the lines under READY when it lands.")]
         [SerializeField] private Image[] impactImages;
@@ -107,16 +105,17 @@ namespace SpeedStars.UI.Race
         }
 
         /// <summary>
-        /// Outline size from the config and the three words' glyphs asked from the dynamic font now, so the very first frame of READY
-        /// is drawn with its letters instead of waiting a frame for the font atlas.
+        /// Outline width and colour from the config (set on the word's own TMP material instance, never on the shared preset) and the
+        /// three words' glyphs asked from the font asset now, so the very first frame of READY is drawn with its letters.
         /// </summary>
         private void PrepareWord()
         {
             if (wordText == null) return;
-            if (wordOutline != null)
-                wordOutline.Configure(config.OutlineThicknessRatio * wordText.fontSize, config.OutlineColor, config.OutlineDirections);
-            if (wordText.font != null)
-                wordText.font.RequestCharactersInTexture(ReadyWord + SetWord + GoWord, wordText.fontSize, wordText.fontStyle);
+            wordText.fontMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline); // fontMaterial is this word's instance
+            wordText.outlineWidth = config.OutlineWidth;
+            wordText.outlineColor = config.OutlineColor;
+            if (wordText.font != null && wordText.font.atlasPopulationMode == AtlasPopulationMode.Dynamic)
+                wordText.font.TryAddCharacters(ReadyWord + SetWord + GoWord);
         }
 
         private void Unsubscribe()
@@ -211,12 +210,12 @@ namespace SpeedStars.UI.Race
             Color fill = _phase == RaceStartPhase.Go ? config.GoColor : config.ReadySetColor;
             fill.a *= pose.TextAlpha;
             wordText.color = fill;
-            // The outline fades faster than the word: stacked copies would otherwise outlast the fill as a dark blot.
+            // The TMP outline is one pass under the fill (no stacked copies), so it fades with the word's own alpha.
             Color outline = config.OutlineColor;
-            outline.a *= ThickOutline.FadedCopyAlpha(pose.TextAlpha, config.OutlineFadePower, config.OutlineDirections);
+            outline.a *= pose.TextAlpha;
             // Navy words on cream need no outline (the approved art has none); stacked navy copies would only fatten the letters.
             if (_phase != RaceStartPhase.Go && !config.ReadySetOutline) outline.a = 0f;
-            wordOutline.SetColor(outline);
+            wordText.outlineColor = outline;
 
             SetAlpha(impactImages, pose.ImpactAlpha);
             SetAlpha(tensionImages, pose.TensionAlpha);

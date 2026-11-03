@@ -11,12 +11,25 @@ namespace SpeedStars.Tools.Builders
     /// in the game, so the "UI is never built at runtime" rule holds: views bind these prefabs with [SerializeField]).
     /// Order matters: widgets first, because screens nest them (RedDot in Home). Objects are built in a preview scene, so the open scene is never left with leftovers.
     /// overwrite == false: an existing prefab is kept as it is (the user may have edited it) and reused for nesting.
-    /// overwrite == true: rebuilt and saved to the same path, which keeps its GUID and therefore every reference to it.
+    /// overwrite == true: rebuilt and saved to the same path, which keeps its GUID and therefore every reference to it
+    /// - but only with the explicit force flag (<see cref="ForceFlag"/>): the user hand-edits these prefabs (commit 4f38e016), so
+    /// without it an existing prefab is kept even when overwrite is true. New prefabs are converted to TextMeshPro right after the build (T-100).
     /// </summary>
     public static class UiPrefabBuilder
     {
+        /// <summary>Command-line flag (without the dash) that lets overwrite rebuild hand-edited prefabs / Home.unity.</summary>
+        public const string ForceFlag = HandEditGuard.ForceFlag;
+
+        public static bool ForceOverwriteHandEdits => HandEditGuard.ForceOverwriteHandEdits;
+
         public static void BuildAll(bool overwrite)
         {
+            if (overwrite && !ForceOverwriteHandEdits)
+            {
+                UnityEngine.Debug.LogWarning($"UiPrefabBuilder: overwrite requested, but existing prefabs are hand-edited and are kept (missing ones are built). Pass -{ForceFlag} to rebuild them.");
+                overwrite = false;
+            }
+
             UiArt.ImportAll(); // sprite settings first: prefabs load the art as Sprites
             UiBuildKit.Begin();
             UnityEngine.SceneManagement.Scene scene = EditorSceneManager.NewPreviewScene();
@@ -52,6 +65,9 @@ namespace SpeedStars.Tools.Builders
                 EditorSceneManager.ClosePreviewScene(scene);
             }
 
+            // Freshly built prefabs carry legacy Text: convert them in place (existing, already converted ones are untouched).
+            HandEditGuard.ConvertPending();
+
             UnityEngine.Debug.Log($"UI_PREFABS_OK built={run.Built} kept={run.Kept} (overwrite={overwrite})");
         }
 
@@ -69,6 +85,7 @@ namespace SpeedStars.Tools.Builders
 
             public int Built { get; private set; }
             public int Kept { get; private set; }
+            public System.Collections.Generic.List<string> BuiltPaths { get; } = new System.Collections.Generic.List<string>();
 
             /// <summary>
             /// Builds the prefab at <paramref name="path"/> (root named after the file, stretched; <paramref name="fill"/>
@@ -90,9 +107,10 @@ namespace SpeedStars.Tools.Builders
                 try
                 {
                     fill(root);
-                    GameObject saved = PrefabUtility.SaveAsPrefabAsset(root.gameObject, path, out bool success);
-                    if (!success || saved == null) throw new InvalidOperationException($"UiPrefabBuilder: could not save '{path}'.");
+                    GameObject saved = HandEditGuard.SaveNewPrefab(root.gameObject, path);
+                    if (saved == null) { Kept++; return LoadExisting(path); }
                     Built++;
+                    BuiltPaths.Add(path);
                     return saved;
                 }
                 finally

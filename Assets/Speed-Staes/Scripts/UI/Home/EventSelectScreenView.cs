@@ -4,6 +4,7 @@ using SpeedStars.Core.Race;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -23,7 +24,7 @@ namespace SpeedStars.UI.Home
         [SerializeField] private EventSelectLayout layout;
 
         [Tooltip("Heading/Label: 'SELECT EVENT' text over the heading plate.")]
-        [SerializeField] private Text headingText;
+        [SerializeField] private TMP_Text headingText;
 
         [Tooltip("The category cards, in the same order as the layout asset's categories.")]
         [SerializeField] private EventCategoryCardView[] cards = new EventCategoryCardView[0];
@@ -32,7 +33,7 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Button raceOfTheDayButton;
 
         [Tooltip("RaceOfTheDay/Label.")]
-        [SerializeField] private Text raceOfTheDayLabel;
+        [SerializeField] private TMP_Text raceOfTheDayLabel;
 
         [Tooltip("RaceOfTheDay outline: switched on while this button is the selection.")]
         [SerializeField] private Outline raceOfTheDayMark;
@@ -41,7 +42,7 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Button practiceButton;
 
         [Tooltip("Practice/Label.")]
-        [SerializeField] private Text practiceLabel;
+        [SerializeField] private TMP_Text practiceLabel;
 
         [Tooltip("Practice outline: switched on while this button is the selection.")]
         [SerializeField] private Outline practiceMark;
@@ -50,7 +51,7 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Button continueButton;
 
         [Tooltip("Continue/Label.")]
-        [SerializeField] private Text continueLabel;
+        [SerializeField] private TMP_Text continueLabel;
 
         [Tooltip("Continue/Dimmed: grey layer over the button, shown while the selected race cannot be entered.")]
         [SerializeField] private GameObject continueDimmed;

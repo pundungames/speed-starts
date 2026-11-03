@@ -29,7 +29,8 @@ namespace SpeedStars.Tools.Builders
         public const string PrefabPath = "Assets/Resources/" + ProjectContext.ProjectContextResourcePath + ".prefab";
 
         /// <summary>
-        /// Rewrites the ProjectContext prefab (overwrite) from the config assets that exist. Parameterless, so a verification copy can run
+        /// Rewrites the ProjectContext prefab (overwrite) from the config assets that exist. Documented exception to HandEditGuard (T-102):
+        /// the composition root is generated from config references only and is never hand-edited, so it writes its prefab directly. Parameterless, so a verification copy can run
         /// <c>-executeMethod SpeedStars.Tools.Builders.ProjectContextBuilder.Rebuild</c> (T-087: the Race of the Day config reference).
         /// </summary>
         [MenuItem("Tools/Speed Stars/Build/ProjectContext prefab (overwrite, config references)")]

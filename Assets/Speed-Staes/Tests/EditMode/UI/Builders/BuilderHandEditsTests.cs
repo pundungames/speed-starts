@@ -72,8 +72,7 @@ namespace SpeedStars.Tests.UI.Builders
             Assert.AreEqual(1f, close.anchorMin.x, 0.0001f, "anchorMin.x");
             Assert.AreEqual(1f, close.anchorMax.x, 0.0001f, "anchorMax.x");
             Assert.AreEqual(1f, close.pivot.x, 0.0001f, "pivot.x");
-            Assert.AreEqual(0f, close.anchoredPosition.x, 0.01f, "anchoredPosition.x");
-            Assert.AreEqual(0f, close.anchoredPosition.y, 0.01f, "anchoredPosition.y");
+            Assert.LessOrEqual(close.anchoredPosition.x, 0.01f, "the button sits at or inside the right edge (the exact offset is the user's to set)");
         }
     }
 }

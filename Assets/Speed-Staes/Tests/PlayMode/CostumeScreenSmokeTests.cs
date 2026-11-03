@@ -5,6 +5,7 @@ using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Costume;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -128,7 +129,7 @@ namespace SpeedStars.PlayTests
 
             int lastIndex = cosmetics.PresetCount - 1;
             yield return WaitUntil(() => cosmetics.SelectedPreset == lastIndex, "the last preset to be chosen");
-            Assert.AreEqual(cosmetics.GetPresetName(lastIndex), RequireField<Text>(dropdown, "barLabel").text);
+            Assert.AreEqual(cosmetics.GetPresetName(lastIndex), RequireField<TMP_Text>(dropdown, "barLabel").text);
             Assert.IsFalse(RequireField<GameObject>(dropdown, "list").activeSelf, "the list closes after a choice");
 
             yield return Tap(CloseButtonOf(screen), "cosmeticsScreen Back");
