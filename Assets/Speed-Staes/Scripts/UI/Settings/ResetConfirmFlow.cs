@@ -5,7 +5,11 @@ namespace SpeedStars.UI.Settings
     {
         None,
         PersonalBests,
-        AllProgress
+        AllProgress,
+        /// <summary>The record time and day bests of the one event the player picked.</summary>
+        OnePersonalBest,
+        /// <summary>Every racer preset back to the default outfit.</summary>
+        CustomRacers
     }
 
     /// <summary>Which question of a reset the confirmation window is asking.</summary>
@@ -17,7 +21,7 @@ namespace SpeedStars.UI.Settings
     }
 
     /// <summary>
-    /// The confirmation steps of a reset (no UI, no game state). Personal bests: one question. All progress: two questions
+    /// The confirmation steps of a reset (no UI, no game state). Every reset but all progress: one question. All progress: two questions
     /// ("Are you sure?", then "This cannot be undone"); only the answer to the last one runs the reset. Cancel at any
     /// step ends it with nothing done.
     /// </summary>
@@ -30,7 +34,7 @@ namespace SpeedStars.UI.Settings
         public bool IsOpen => Step != ResetStep.Closed;
 
         /// <summary>True when confirming now runs the reset (the question on screen is the last one).</summary>
-        public bool IsFinalStep => IsOpen && (Kind == ResetKind.PersonalBests || Step == ResetStep.Second);
+        public bool IsFinalStep => IsOpen && (Kind != ResetKind.AllProgress || Step == ResetStep.Second);
 
         /// <summary>Opens the first question of a reset. <see cref="ResetKind.None"/> opens nothing.</summary>
         public void Begin(ResetKind kind)

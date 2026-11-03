@@ -30,6 +30,19 @@ namespace SpeedStars.Meta.Settings
         public float CameraDistanceMin => _config.MinCameraDistance;
         public float CameraDistanceMax => _config.MaxCameraDistance;
 
+        public CompetitorType CompetitorType => Resolve(Progress.TimeTrialChoice, _config.DefaultTimeTrial) ? CompetitorType.TimeTrial : CompetitorType.Bots;
+        public float CompetitorDifficulty => SettingsRules.UnitOrFallback(Progress.CompetitorDifficulty, _config.DefaultCompetitorDifficulty);
+        public float CompetitorSkillRange => SettingsRules.UnitOrFallback(Progress.CompetitorSkillRange, _config.DefaultCompetitorSkillRange);
+        public bool HasCompetitorTuning => Progress.CompetitorDifficulty >= 0f || Progress.CompetitorSkillRange >= 0f;
+        public int LanePreference => SettingsRules.ClampLane(Progress.LanePreference, _config.LaneChoiceCount);
+        public int LaneChoiceCount => _config.LaneChoiceCount;
+        public float HurdleSensitivity => SettingsRules.UnitOrFallback(Progress.HurdleSensitivity, _config.DefaultHurdleSensitivity);
+        public float SwipeUpDistance => SettingsRules.SwipeDistance(HurdleSensitivity, _config.SwipeDistanceAtFullSensitivity, _config.SwipeDistanceAtZeroSensitivity);
+        public bool ParticleEffects => Resolve(Progress.ParticleChoice, _config.DefaultParticleEffects);
+        public bool ShowEmoteButton => Resolve(Progress.EmoteButtonChoice, _config.DefaultShowEmoteButton);
+        public bool AutoEmoteSelf => Resolve(Progress.AutoEmoteSelfChoice, _config.DefaultAutoEmoteSelf);
+        public bool AutoEmoteCompetitors => Resolve(Progress.AutoEmoteCompetitorsChoice, _config.DefaultAutoEmoteCompetitors);
+
         public string LanguageCode
         {
             get
@@ -73,6 +86,73 @@ namespace SpeedStars.Meta.Settings
             float clamped = Mathf.Clamp(value, _config.MinCameraDistance, _config.MaxCameraDistance);
             if (Mathf.Approximately(CameraDistance, clamped)) return;
             Progress.CameraDistance = clamped;
+            Commit();
+        }
+
+        public void SetCompetitorType(CompetitorType type)
+        {
+            if (CompetitorType == type) return;
+            Progress.TimeTrialChoice = ToChoice(type == CompetitorType.TimeTrial);
+            Commit();
+        }
+
+        public void SetCompetitorDifficulty(float value)
+        {
+            float clamped = Mathf.Clamp01(value);
+            if (Progress.CompetitorDifficulty >= 0f && Mathf.Approximately(Progress.CompetitorDifficulty, clamped)) return;
+            Progress.CompetitorDifficulty = clamped;
+            Commit();
+        }
+
+        public void SetCompetitorSkillRange(float value)
+        {
+            float clamped = Mathf.Clamp01(value);
+            if (Progress.CompetitorSkillRange >= 0f && Mathf.Approximately(Progress.CompetitorSkillRange, clamped)) return;
+            Progress.CompetitorSkillRange = clamped;
+            Commit();
+        }
+
+        public void SetLanePreference(int lane)
+        {
+            int clamped = SettingsRules.ClampLane(lane, _config.LaneChoiceCount);
+            if (LanePreference == clamped) return;
+            Progress.LanePreference = clamped;
+            Commit();
+        }
+
+        public void SetHurdleSensitivity(float value)
+        {
+            float clamped = Mathf.Clamp01(value);
+            if (Progress.HurdleSensitivity >= 0f && Mathf.Approximately(Progress.HurdleSensitivity, clamped)) return;
+            Progress.HurdleSensitivity = clamped;
+            Commit();
+        }
+
+        public void SetParticleEffects(bool on)
+        {
+            if (ParticleEffects == on) return;
+            Progress.ParticleChoice = ToChoice(on);
+            Commit();
+        }
+
+        public void SetShowEmoteButton(bool on)
+        {
+            if (ShowEmoteButton == on) return;
+            Progress.EmoteButtonChoice = ToChoice(on);
+            Commit();
+        }
+
+        public void SetAutoEmoteSelf(bool on)
+        {
+            if (AutoEmoteSelf == on) return;
+            Progress.AutoEmoteSelfChoice = ToChoice(on);
+            Commit();
+        }
+
+        public void SetAutoEmoteCompetitors(bool on)
+        {
+            if (AutoEmoteCompetitors == on) return;
+            Progress.AutoEmoteCompetitorsChoice = ToChoice(on);
             Commit();
         }
 

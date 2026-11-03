@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
+using SpeedStars.Core.Race;
+using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Settings;
 using SpeedStars.UI.Flow;
@@ -152,6 +154,10 @@ namespace SpeedStars.UI.Settings
         [Tooltip("PopupLayer/ConfirmDialog: the yes/no window of the resets. Starts inactive.")]
         [SerializeField] private ConfirmDialogView confirmDialog;
 
+        [Header("Settings v2 sections")]
+        [Tooltip("ExtraSections node: the Competitors, Gameplay, Visuals, Emote and Reset options rows. Empty = the window has none of them.")]
+        [SerializeField] private SettingsExtraSectionsView extraSections;
+
         [Header("Refusal shake")]
         [Tooltip("Seconds the name field shakes after a refused name.")]
         [Min(0f)]
@@ -181,12 +187,17 @@ namespace SpeedStars.UI.Settings
         private IProgressReset _reset;
         private SceneFlow _sceneFlow;
         private readonly ResetConfirmFlow _confirm = new ResetConfirmFlow();
+        private RaceEventCatalog _events;
+        private RaceEventId _pendingEvent;
+        private string _pendingEventName = string.Empty;
 
         [Inject]
         public void ConstructSettings(IPlayerSettings settings, UiMotionConfig motion, IInstantiator instantiator,
             [InjectOptional] ScreenNavigator navigator, [InjectOptional] SettingsConfig config,
-            [InjectOptional] IProgressReset reset, [InjectOptional] SceneFlow sceneFlow)
+            [InjectOptional] IProgressReset reset, [InjectOptional] SceneFlow sceneFlow,
+            [InjectOptional] RaceEventCatalog events)
         {
+            _events = events;
             _config = config;
             _reset = reset;
             _sceneFlow = sceneFlow;
@@ -232,6 +243,7 @@ namespace SpeedStars.UI.Settings
             KillShake();
             KillCloseDelay();
             _confirm.Cancel();
+            UnbindExtra();
             if (confirmDialog != null) confirmDialog.Hide();
             if (languageWindow != null) languageWindow.SetActive(false); // null while the scene is being destroyed
             if (flagWindow != null) flagWindow.SetActive(false);
@@ -338,6 +350,28 @@ namespace SpeedStars.UI.Settings
             bool canReset = _reset != null;
             resetBestsRow.Bind(SettingsTexts.ResetPersonalBests, () => BeginReset(ResetKind.PersonalBests), canReset);
             resetAllRow.Bind(SettingsTexts.ResetAllProgress, () => BeginReset(ResetKind.AllProgress), canReset);
+
+            UnbindExtra();
+            if (extraSections == null) return;
+            extraSections.Bind(_settings, _events, canReset);
+            extraSections.ClearRacersRequested += OnClearRacersRequested;
+            extraSections.ResetBestRequested += OnResetBestRequested;
+        }
+
+        private void UnbindExtra()
+        {
+            if (extraSections == null) return;
+            extraSections.ClearRacersRequested -= OnClearRacersRequested;
+            extraSections.ResetBestRequested -= OnResetBestRequested;
+        }
+
+        private void OnClearRacersRequested() => BeginReset(ResetKind.CustomRacers);
+
+        private void OnResetBestRequested(RaceEventId eventId, string eventName)
+        {
+            _pendingEvent = eventId;
+            _pendingEventName = eventName ?? string.Empty;
+            BeginReset(ResetKind.OnePersonalBest);
         }
 
         private void BindLink(SettingsActionRowView row, string caption, SettingsLink link)
@@ -368,7 +402,7 @@ namespace SpeedStars.UI.Settings
 
             bool final = _confirm.IsFinalStep;
             confirmDialog.Show(SettingsTexts.ConfirmTitle(_confirm.Kind, _confirm.Step),
-                SettingsTexts.ConfirmBody(_confirm.Kind, _confirm.Step),
+                SettingsTexts.ConfirmBody(_confirm.Kind, _confirm.Step, _pendingEventName),
                 SettingsTexts.ConfirmButton(final), final, OnConfirmYes, EndConfirm);
         }
 
@@ -387,6 +421,19 @@ namespace SpeedStars.UI.Settings
             if (run == ResetKind.PersonalBests)
             {
                 _reset.ResetPersonalBests();
+                return;
+            }
+
+            if (run == ResetKind.OnePersonalBest)
+            {
+                _reset.ResetPersonalBest(_pendingEvent);
+                return;
+            }
+
+            if (run == ResetKind.CustomRacers)
+            {
+                _reset.ClearCustomRacers();
+                if (_sceneFlow != null) _sceneFlow.GoTo(GameScene.Home); // the menu character and the preset cards show the old outfits: load Home again
                 return;
             }
 

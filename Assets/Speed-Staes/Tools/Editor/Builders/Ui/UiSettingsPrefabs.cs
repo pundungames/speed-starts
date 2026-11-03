@@ -348,6 +348,8 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "doneLabel", doneLabel);
             Ref(so, "musicToggle", toggle);
             AddCameraRow(rowPrefab, musicRow, so, scene);
+            AddExtraSections(rowPrefab, content, so, scene);
+            OrderRows(content);
             Ref(so, "languageButton", languageButton);
             Ref(so, "languageValueText", languageValue);
             Ref(so, "languageArrow", languageArrow);
@@ -490,8 +492,17 @@ namespace SpeedStars.Tools.Builders
             RectTransform row = Row(rowPrefab, musicRow.parent, "CameraRow", "row_camera_icon", SettingsTexts.CameraDistance, scene);
             row.SetSiblingIndex(musicRow.GetSiblingIndex() + 1);
 
+            Slider slider = BuildSlider(Slot(row), "CameraDistanceSlider");
+
+            Ref(so, "cameraDistanceLabel", row.Find("Label").GetComponent<Text>());
+            Ref(so, "cameraDistanceSlider", slider);
+        }
+
+        /// <summary>A thin line with a small round handle filling a row's control slot (the whole slot takes the finger).</summary>
+        private static Slider BuildSlider(RectTransform slot, string name)
+        {
             float inset = P(CameraHandleSize * 0.5f);
-            RectTransform node = Kit.Stretch(Kit.Node(Slot(row), "CameraDistanceSlider"));
+            RectTransform node = Kit.Stretch(Kit.Node(slot, name));
             Image hit = node.gameObject.AddComponent<Image>(); // the line is thin: the whole slot takes the finger
             hit.color = Color.clear;
 
@@ -516,9 +527,166 @@ namespace SpeedStars.Tools.Builders
             slider.direction = Slider.Direction.LeftToRight;
             fill.sizeDelta = Vector2.zero;
             handle.sizeDelta = new Vector2(P(CameraHandleSize), 0f);
+            return slider;
+        }
 
-            Ref(so, "cameraDistanceLabel", row.Find("Label").GetComponent<Text>());
-            Ref(so, "cameraDistanceSlider", slider);
+        // ---------------------------------------------------------------- settings v2 sections (T-088)
+
+        private const float HeadingSize = 44f, HeadingHeight = 72f;
+
+        /// <summary>
+        /// The ExtraSections node under the scrolling content: Competitors, Gameplay, Visuals, Emote headings with their rows and the
+        /// new Reset options rows, all bound to a <see cref="SettingsExtraSectionsView"/> that the popup view reaches.
+        /// </summary>
+        private static void AddExtraSections(GameObject rowPrefab, RectTransform content, SerializedObject popupSo,
+            UnityEngine.SceneManagement.Scene scene)
+        {
+            RectTransform extra = Kit.Node(content, "ExtraSections");
+            VerticalLayoutGroup layout = extra.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = P(RowSpacing);
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            var view = extra.gameObject.AddComponent<SettingsExtraSectionsView>();
+
+            Heading(extra, "CompetitorsHeading", SettingsTexts.SectionCompetitors);
+            SettingsChoiceRowView competitorType = ChoiceRow(rowPrefab, extra, "CompetitorTypeRow", "row_player_icon", SettingsTexts.CompetitorType, scene);
+            SettingsSliderRowView difficulty = SliderRow(rowPrefab, extra, "DifficultyRow", "row_player_icon", SettingsTexts.Difficulty, scene);
+            SettingsSliderRowView skillRange = SliderRow(rowPrefab, extra, "SkillRangeRow", "row_player_icon", SettingsTexts.SkillRange, scene);
+
+            Heading(extra, "GameplayHeading", SettingsTexts.SectionGameplay);
+            SettingsChoiceRowView lane = ChoiceRow(rowPrefab, extra, "LaneRow", "row_flag_icon", SettingsTexts.LanePreference, scene);
+            SettingsSliderRowView hurdle = SliderRow(rowPrefab, extra, "HurdleRow", "row_flag_icon", SettingsTexts.HurdleSensitivity, scene);
+
+            Heading(extra, "VisualsHeading", SettingsTexts.SectionVisuals);
+            SettingsToggleRowView particles = ToggleRow(rowPrefab, extra, "ParticlesRow", "row_camera_icon", SettingsTexts.ParticleEffects, scene);
+
+            Heading(extra, "EmoteHeading", SettingsTexts.SectionEmote);
+            SettingsToggleRowView showEmote = ToggleRow(rowPrefab, extra, "ShowEmoteRow", "row_music_icon", SettingsTexts.ShowEmoteButton, scene);
+            SettingsToggleRowView autoSelf = ToggleRow(rowPrefab, extra, "AutoEmoteSelfRow", "row_music_icon", SettingsTexts.EmoteMyself, scene);
+            SettingsToggleRowView autoCompetitors = ToggleRow(rowPrefab, extra, "AutoEmoteCompetitorsRow", "row_music_icon", SettingsTexts.EmoteCompetitors, scene);
+
+            Heading(extra, "ResetHeading", SettingsTexts.SectionResetOptions);
+            SettingsActionRowView clearRacers = ActionRow(rowPrefab, extra, "ClearRacersRow", "row_player_icon", SettingsTexts.ClearCustomRacers, scene);
+            SettingsChoiceRowView resetEvent = ChoiceRow(rowPrefab, extra, "ResetEventRow", "row_player_icon", SettingsTexts.PersonalBestOf, scene);
+            SettingsActionRowView resetBest = ActionRow(rowPrefab, extra, "ResetBestRow", "row_player_icon", SettingsTexts.ResetAPersonalBest, scene);
+
+            var so = new SerializedObject(view);
+            Ref(so, "competitorTypeRow", competitorType);
+            Ref(so, "difficultyRow", difficulty);
+            Ref(so, "skillRangeRow", skillRange);
+            Ref(so, "laneRow", lane);
+            Ref(so, "hurdleRow", hurdle);
+            Ref(so, "particlesRow", particles);
+            Ref(so, "showEmoteRow", showEmote);
+            Ref(so, "autoSelfRow", autoSelf);
+            Ref(so, "autoCompetitorsRow", autoCompetitors);
+            Ref(so, "clearRacersRow", clearRacers);
+            Ref(so, "resetEventRow", resetEvent);
+            Ref(so, "resetBestRow", resetBest);
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            Ref(popupSo, "extraSections", view);
+        }
+
+        /// <summary>The order of the window's rows: the new sections after the name, the reset rows before the links.</summary>
+        private static void OrderRows(RectTransform content)
+        {
+            string[] order =
+            {
+                "MusicRow", "CameraRow", "LanguageRow", "FlagRow", "NameRow", "ExtraSections",
+                "ResetBestsRow", "ResetAllRow", "PrivacyRow", "TermsRow", "SupportRow"
+            };
+            int next = 0;
+            foreach (string name in order)
+            {
+                Transform row = content.Find(name);
+                if (row != null) row.SetSiblingIndex(next++);
+            }
+        }
+
+        /// <summary>A blue section title (the reference's underlined headings).</summary>
+        private static void Heading(RectTransform parent, string name, string caption)
+        {
+            Text text = Kit.Label(parent, name, caption, P(HeadingSize), Kit.BlueText, TextAnchor.MiddleLeft);
+            text.fontStyle = FontStyle.Bold;
+            Kit.PreferredHeight(text.gameObject, P(HeadingHeight));
+        }
+
+        private static SettingsSliderRowView SliderRow(GameObject rowPrefab, Transform parent, string name, string iconFile, string caption,
+            UnityEngine.SceneManagement.Scene scene)
+        {
+            RectTransform row = Row(rowPrefab, parent, name, iconFile, caption, scene);
+            Slider slider = BuildSlider(Slot(row), name + "Slider");
+            var view = slider.gameObject.AddComponent<SettingsSliderRowView>();
+            var so = new SerializedObject(view);
+            Ref(so, "label", row.Find("Label").GetComponent<Text>());
+            Ref(so, "slider", slider);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return view;
+        }
+
+        private static SettingsToggleRowView ToggleRow(GameObject rowPrefab, Transform parent, string name, string iconFile, string caption,
+            UnityEngine.SceneManagement.Scene scene)
+        {
+            RectTransform row = Row(rowPrefab, parent, name, iconFile, caption, scene);
+            SettingsToggleView toggle = BuildToggle(Slot(row), name + "Toggle");
+            var view = toggle.gameObject.AddComponent<SettingsToggleRowView>();
+            var so = new SerializedObject(view);
+            Ref(so, "label", row.Find("Label").GetComponent<Text>());
+            Ref(so, "toggle", toggle);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return view;
+        }
+
+        /// <summary>A row whose field shows the current option; a tap moves to the next one.</summary>
+        private static SettingsChoiceRowView ChoiceRow(GameObject rowPrefab, Transform parent, string name, string iconFile, string caption,
+            UnityEngine.SceneManagement.Scene scene)
+        {
+            RectTransform row = Row(rowPrefab, parent, name, iconFile, caption, scene);
+            RectTransform field = Kit.Node(Slot(row), name + "Field");
+            Kit.Anchor(field, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, V(SlotWidth, FieldHeight));
+            Image background = Sliced(field.gameObject, Art("field_normal"), raycast: true);
+            Button button = Clickable(field.gameObject, background);
+            Text value = Label(field, "Value", "Option", FieldTextSize, TextAnchor.MiddleCenter);
+            Kit.Margin(value, P(16f), 0f, P(16f), 0f);
+
+            var view = field.gameObject.AddComponent<SettingsChoiceRowView>();
+            var so = new SerializedObject(view);
+            Ref(so, "label", row.Find("Label").GetComponent<Text>());
+            Ref(so, "button", button);
+            Ref(so, "valueText", value);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return view;
+        }
+
+        /// <summary>
+        /// Puts the settings v2 sections into the EXISTING popup prefab and leaves everything else (the designer's own edits too) as it is.
+        /// Run with <see cref="SettingsV2Rebuild.Run"/>; replaces an earlier ExtraSections node.
+        /// </summary>
+        internal static void AddExtraSectionsToPrefab()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(UiPrefabPaths.SettingsPopup);
+            try
+            {
+                SettingsPopupView view = root.GetComponentInChildren<SettingsPopupView>(true);
+                var so = new SerializedObject(view);
+                GameObject rowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(UiPrefabPaths.SettingsRow);
+                RectTransform[] rects = root.GetComponentsInChildren<RectTransform>(true);
+                RectTransform content = (RectTransform)rects.First(t => t.name == "MusicRow").parent;
+                RectTransform old = rects.FirstOrDefault(t => t.name == "ExtraSections");
+                if (old != null) UnityEngine.Object.DestroyImmediate(old.gameObject);
+                AddExtraSections(rowPrefab, content, so, root.scene);
+                OrderRows(content);
+                so.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, UiPrefabPaths.SettingsPopup);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         private const float CameraLineHeight = 6f;
@@ -560,9 +728,9 @@ namespace SpeedStars.Tools.Builders
 
         // ---------------------------------------------------------------- controls
 
-        private static SettingsToggleView BuildToggle(RectTransform slot)
+        private static SettingsToggleView BuildToggle(RectTransform slot, string name = "MusicToggle")
         {
-            RectTransform node = Kit.Node(slot, "MusicToggle");
+            RectTransform node = Kit.Node(slot, name);
             Kit.Anchor(node, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), Vector2.zero, V(ToggleWidth, ToggleHeight));
             var view = node.gameObject.AddComponent<SettingsToggleView>();
 
@@ -794,6 +962,38 @@ namespace SpeedStars.Tools.Builders
             if (value == null)
                 throw new InvalidOperationException($"UiSettingsPrefabs: {so.targetObject.GetType().Name}.{field}: nothing to assign.");
             property.objectReferenceValue = value;
+        }
+    }
+}
+
+namespace SpeedStars.Tools.Builders
+{
+    /// <summary>
+    /// T-088: puts the settings v2 sections into the existing SettingsPopup prefab only (no other prefab, scene or config asset is
+    /// touched, the designer's edits stay). Parameterless for <c>-executeMethod SpeedStars.Tools.Builders.SettingsV2Rebuild.Run</c>;
+    /// writes the marker below on success. Safe to run twice (the ExtraSections node is replaced).
+    /// </summary>
+    public static class SettingsV2Rebuild
+    {
+        public const string OkMarker = "SETTINGS_V2_REBUILD_OK";
+
+        [UnityEditor.MenuItem("Tools/Speed Stars/Build/Settings v2 - add sections to the Settings popup prefab")]
+        public static void Run()
+        {
+            try
+            {
+                UiSettingsPrefabs.EnsureArt();
+                UiSettingsPrefabs.AddExtraSectionsToPrefab();
+                UnityEditor.AssetDatabase.SaveAssets();
+                UnityEditor.AssetDatabase.Refresh();
+                UnityEngine.Debug.Log(OkMarker);
+            }
+            catch (System.Exception e)
+            {
+                UnityEngine.Debug.LogError("SETTINGS_V2_REBUILD_FAILED: " + e);
+                if (UnityEngine.Application.isBatchMode) UnityEditor.EditorApplication.Exit(1);
+                throw;
+            }
         }
     }
 }

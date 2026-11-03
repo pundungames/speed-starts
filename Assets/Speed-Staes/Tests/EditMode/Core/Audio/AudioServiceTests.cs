@@ -26,6 +26,28 @@ namespace SpeedStars.Tests.Audio
             public float CameraDistance => 1f;
             public float CameraDistanceMin => 1f;
             public float CameraDistanceMax => 1f;
+            // T-088 settings v2 members (not used by this test).
+            public CompetitorType CompetitorType => CompetitorType.Bots;
+            public float CompetitorDifficulty => 0.5f;
+            public float CompetitorSkillRange => 0.5f;
+            public bool HasCompetitorTuning => false;
+            public int LanePreference => 0;
+            public int LaneChoiceCount => 1;
+            public float HurdleSensitivity => 0.5f;
+            public float SwipeUpDistance => 0.06f;
+            public bool ParticleEffects => true;
+            public void SetCompetitorType(CompetitorType type) { }
+            public void SetCompetitorDifficulty(float value) { }
+            public void SetCompetitorSkillRange(float value) { }
+            public void SetLanePreference(int lane) { }
+            public void SetHurdleSensitivity(float value) { }
+            public void SetParticleEffects(bool on) { }
+            public bool ShowEmoteButton => true;
+            public bool AutoEmoteSelf => false;
+            public bool AutoEmoteCompetitors => false;
+            public void SetShowEmoteButton(bool on) { }
+            public void SetAutoEmoteSelf(bool on) { }
+            public void SetAutoEmoteCompetitors(bool on) { }
             public void SetCameraDistance(float value) { }
             public string LanguageCode => "en";
             public string FlagCode => "TR";

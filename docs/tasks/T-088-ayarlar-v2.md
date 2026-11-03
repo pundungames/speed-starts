@@ -1,7 +1,7 @@
 ---
 id: T-088
 title: Ayarlar v2 - referanstaki bolumler (Competitors, Gameplay, Visuals, Emote, Reset options) bizim sistemlere bagli olanlar
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-084, T-086]
 owns_paths:
@@ -22,12 +22,25 @@ owns_paths:
 touches_scene: false
 branch: agent/T-088-ayarlar-v2
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Settings/SettingsV2Tests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/BotSettingsOverrideTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Economy/RaceCashRewardResolverTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Settings/ResetConfirmFlowTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "SettingsPopup prefab'ina yeni bolumleri ekle (tasarimcinin elle duzenlemelerine dokunmadan, yalniz ExtraSections dugumu + siralama): kopyada Unity batchmode, TEK komut: -executeMethod SpeedStars.Tools.Builders.SettingsV2Rebuild.Run (UiSettingsPrefabs.cs icinde; basari isareti log'da SETTINGS_V2_REBUILD_OK; baska prefab/sahne/config yazmaz). Uretir: SettingsPopupView.extraSections -> ExtraSections (SettingsExtraSectionsView: Competitors/Gameplay/Visuals/Emote/Reset options satirlari). Sonra prefab'da extraSections ve satir alanlarinin fileID: 0 olmadigini grep ile dogrula. Yeni .cs dosyalarinin .meta'lari kopyada uretilir, geri alinip commit'lenir (SettingsRules, BotLanes, SettingsRunnerAdapter, SettingsExtraSectionsView, SettingsChoiceRowView, SettingsSliderRowView, SettingsToggleRowView, iki yeni test dosyasi)."
+  - tip: DECISION
+    durum: open
+    not: "Time trial'da rakip yok (RunnerCount 1). RaceRewardResolver (Assets/Speed-Staes/Scripts/Meta/Economy/RaceRewardResolver.cs, bu task'in yolu degil) Mor Elmas'i yalniz rank'a ve awardsPurpleGems'e bakarak verir: gem ceren bir etkinlikte Time trial secen oyuncu rank 1 ile elmas kazanir. Cash tarafi (RaceCashRewardResolver) rakipsizde zaten 0. Karar: RaceRewardResolver'a rakipsiz kosuda (RunnerCount < 2) 0 koşulu eklensin mi (onerilen: evet)."
+  - tip: DECISION
+    durum: open
+    not: "Zorluk bonusu artik round(config bonusu x oyuncu zorlugu): varsayilan zorluk 0.5 oldugu icin yeni oyuncuya bugunku sabit bonusun yarisi odenir (gorev metni bunu istiyor). Bugunku tam bonusu korumak istenirse SettingsConfig.defaultCompetitorDifficulty 1 yapilmaz (bot sahasini da degistirir); ayri 'bonus carpani' alani gerekir."
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -62,4 +75,8 @@ Bot zorlugu ayari BotFieldPlanner'a disaridan girer (config + oyuncu degeri); 10
 - Ghost / global oyuncular / arkadaslar; Screen stretch, Classic animations, Cadence meter, Tip notifications; emote davranisi (T-089)
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+1. Eklendi (hepsi kayitli, eski kayit acilir, varsayilan config'te): Competitor type (Bots/Time trial), Difficulty, Skill range, Lane preference (Auto, 1..N), Hurdle input sensitivity, Particle effects, Show emote button, Emote myself/competitors, Clear custom racers, Reset a personal best (etkinlik secimli); satirlar tek bir ExtraSections dugumunde, builder'da.
+2. Baglandi: bot sahasi BotFieldPlanner.Plan(difficulty, skillRange) (yalniz oyuncu dokunduysa; dokunmadiysa BotRaceConfig kendi degeri), Time trial RaceBots.HasOpponents, serit RaceBots.StartPositionOf + BotLanes (oyuncu sahnedeki yerinde, botlar diger seritleri doldurur: kamera tarafina gecen bot oyuncuyu kapatabilir), zorluk bonusu RaceCashRewardResolver (ctor'a istege bagli IPlayerSettings), hurdle + particle SettingsRunnerAdapter (RaceBots otomatik ekler, sahne degisikligi yok).
+3. Eklenmedi: Race my ghost / Global players / Friends (ghost yok), Screen stretch, Classic animations, Cadence meter, Tip notifications (bizde karsiligi yok), Delete account (Restart all progress ile ayni). Emote davranisi T-089'un; burada yalniz IPlayerSettings.ShowEmoteButton/AutoEmoteSelf/AutoEmoteCompetitors + satirlar (auto varsayilanlari kapali: bugun otomatik emote yok).
+4. Zorlandigim: IPlayerSettings buyudugu icin iki test sahtesi (AudioServiceTests, LocalLeaderboardTests) kapsam disi yollarda minimal guncellendi; T-089 ayni yeri ekleyecek, birlestirmede cakisma olabilir. Zenject/Unity/test kosulmadi.
+5. Birakilan: SCENE (SettingsV2Rebuild.Run) ve iki DECISION (time trial elmasi, zorluk bonusu carpani) needs'te; WIRING gerekmedi (IPlayerSettings zaten bagli, resolver ctor'u istege bagli parametre).

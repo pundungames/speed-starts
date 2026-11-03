@@ -19,7 +19,10 @@ namespace SpeedStars.Core.Race.Bots
         /// The event's measured table and fallback (T-086), or null = the config's 100 m table and fallback (the old way, bit for bit).
         /// The reference time then has to be in the table's own length (see <see cref="BotEventSetup.ReferenceSeconds"/>).
         /// </param>
-        public static IReadOnlyList<BotPlan> Plan(BotRaceConfig config, float? playerReferenceSeconds, Random random, BotEventProfile profile = null)
+        /// <param name="difficulty">The player's own difficulty (settings window), 0..1; null = the config's.</param>
+        /// <param name="skillRange">The player's own skill range (settings window), 0..1; null = the config's.</param>
+        public static IReadOnlyList<BotPlan> Plan(BotRaceConfig config, float? playerReferenceSeconds, Random random, BotEventProfile profile = null,
+            float? difficulty = null, float? skillRange = null)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (random == null) throw new ArgumentNullException(nameof(random));
@@ -33,8 +36,8 @@ namespace SpeedStars.Core.Race.Bots
                 ? playerReferenceSeconds.Value
                 : BotEventSetup.Fallback(config, profile);
             IReadOnlyList<BotCalibrationPoint> table = BotEventSetup.Table(config, profile);
-            float center = reference * Lerp(config.EasyMultiplier, config.HardMultiplier, config.Difficulty);
-            float spread = Lerp(config.NarrowSpread, config.WideSpread, config.SkillRange);
+            float center = reference * Lerp(config.EasyMultiplier, config.HardMultiplier, Clamp01(difficulty ?? config.Difficulty));
+            float spread = Lerp(config.NarrowSpread, config.WideSpread, Clamp01(skillRange ?? config.SkillRange));
             center *= RaceMultiplier(config, (float)random.NextDouble());
 
             var targets = new float[count];

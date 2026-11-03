@@ -25,6 +25,18 @@ namespace SpeedStars.Meta.Settings
             Changed?.Invoke();
         }
 
+        public void ResetPersonalBest(SpeedStars.Core.Race.RaceEventId eventId)
+        {
+            _repository.ResetPersonalBest(eventId);
+            Changed?.Invoke();
+        }
+
+        public void ClearCustomRacers()
+        {
+            _repository.ClearCustomRacers();
+            Changed?.Invoke();
+        }
+
         public void ResetAll()
         {
             _repository.ResetAll();

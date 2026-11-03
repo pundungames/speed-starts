@@ -123,7 +123,7 @@ namespace SpeedStars.Meta.Persistence
 
         /// <summary>
         /// Back to a brand-new player: starting balances, nothing owned, no records. The player's own settings (music, sound
-        /// effects, language, flag, name) and the clock guard (last seen UTC) are kept. Saves at once. A save that was being
+        /// effects, camera, language, flag, name, competitors, lane, hurdle sensitivity, particles, emote switches) and the clock guard (last seen UTC) are kept. Saves at once. A save that was being
         /// protected (newer schema, unreadable) is replaced: the player asked for it.
         /// </summary>
         public void ResetAll()
@@ -136,8 +136,40 @@ namespace SpeedStars.Meta.Persistence
             fresh.LanguageCode = old.LanguageCode;
             fresh.FlagCode = old.FlagCode;
             fresh.PlayerName = old.PlayerName;
+            fresh.TimeTrialChoice = old.TimeTrialChoice;
+            fresh.CompetitorDifficulty = old.CompetitorDifficulty;
+            fresh.CompetitorSkillRange = old.CompetitorSkillRange;
+            fresh.LanePreference = old.LanePreference;
+            fresh.HurdleSensitivity = old.HurdleSensitivity;
+            fresh.ParticleChoice = old.ParticleChoice;
+            fresh.EmoteButtonChoice = old.EmoteButtonChoice;
+            fresh.AutoEmoteSelfChoice = old.AutoEmoteSelfChoice;
+            fresh.AutoEmoteCompetitorsChoice = old.AutoEmoteCompetitorsChoice;
             fresh.LastSeenUtcTicks = old.LastSeenUtcTicks;
             Current = fresh;
+            Reclaim();
+            Save();
+        }
+
+        /// <summary>Deletes the record time and the day bests of one event. Saves at once; a protected save is replaced like in the other resets.</summary>
+        public void ResetPersonalBest(SpeedStars.Core.Race.RaceEventId eventId)
+        {
+            PlayerProgress progress = RequireCurrent();
+            progress.BestTimes.RemoveAll(entry => entry.EventId.Equals(eventId));
+            progress.DayBests.RemoveAll(entry => entry.EventId.Equals(eventId));
+            Reclaim();
+            Save();
+        }
+
+        /// <summary>
+        /// Empties the racer presets and selects the first. The cosmetic service refills the missing presets with the default
+        /// outfit the next time it is used; owned items are not touched. Saves at once.
+        /// </summary>
+        public void ClearCustomRacers()
+        {
+            PlayerProgress progress = RequireCurrent();
+            progress.CosmeticPresets.Clear();
+            progress.SelectedPresetIndex = 0;
             Reclaim();
             Save();
         }

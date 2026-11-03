@@ -70,6 +70,43 @@ namespace SpeedStars.Meta.Settings
         [Tooltip("Name of a new player.")]
         [SerializeField] private string defaultPlayerName;
 
+        [Header("Competitors (race bots)")]
+        [Tooltip("Time trial (no opponents) for a new player. Off = races against bots.")]
+        [SerializeField] private bool defaultTimeTrial;
+
+        [Tooltip("Difficulty slider position shown until the player moves it. Keep equal to the bot config's Difficulty: the race uses the bot config's own value until the player touches the slider.")]
+        [SerializeField, Range(0f, 1f)] private float defaultCompetitorDifficulty = 0.5f;
+
+        [Tooltip("Skill range slider position shown until the player moves it. Keep equal to the bot config's Skill Range.")]
+        [SerializeField, Range(0f, 1f)] private float defaultCompetitorSkillRange = 0.5f;
+
+        [Header("Gameplay")]
+        [Tooltip("Lane choices in the picker (plus Auto). Set to the bot count + 1: the player's lane among the bots.")]
+        [SerializeField, Min(1)] private int laneChoiceCount = 6;
+
+        [Tooltip("Hurdle input sensitivity of a new player, 0..1. The default must give the swipe length the runner input starts with.")]
+        [SerializeField, Range(0f, 1f)] private float defaultHurdleSensitivity = 0.5f;
+
+        [Tooltip("Swipe-up length (share of the screen height) at full sensitivity. A shorter swipe counts as a jump.")]
+        [SerializeField, Min(0.005f)] private float swipeDistanceAtFullSensitivity = 0.03f;
+
+        [Tooltip("Swipe-up length (share of the screen height) at zero sensitivity.")]
+        [SerializeField, Min(0.005f)] private float swipeDistanceAtZeroSensitivity = 0.09f;
+
+        [Header("Visuals")]
+        [Tooltip("Particle effects (step feedback, premium sparkles and shoe trails) for a new player.")]
+        [SerializeField] private bool defaultParticleEffects = true;
+
+        [Header("Emote")]
+        [Tooltip("Emote button on the race screen for a new player.")]
+        [SerializeField] private bool defaultShowEmoteButton = true;
+
+        [Tooltip("The player's own character emotes by itself, for a new player.")]
+        [SerializeField] private bool defaultAutoEmoteSelf;
+
+        [Tooltip("The competitors emote by themselves, for a new player.")]
+        [SerializeField] private bool defaultAutoEmoteCompetitors;
+
         [Header("Player name rules")]
         [Tooltip("Fewest characters a name may have after trimming.")]
         [SerializeField, Min(1)] private int nameMinLength = 1;
@@ -99,6 +136,17 @@ namespace SpeedStars.Meta.Settings
         public float MinCameraDistance => minCameraDistance;
         public float MaxCameraDistance => maxCameraDistance;
         public bool DefaultSfxOn => defaultSfxOn;
+        public bool DefaultTimeTrial => defaultTimeTrial;
+        public float DefaultCompetitorDifficulty => defaultCompetitorDifficulty;
+        public float DefaultCompetitorSkillRange => defaultCompetitorSkillRange;
+        public int LaneChoiceCount => Mathf.Max(1, laneChoiceCount);
+        public float DefaultHurdleSensitivity => defaultHurdleSensitivity;
+        public float SwipeDistanceAtFullSensitivity => swipeDistanceAtFullSensitivity;
+        public float SwipeDistanceAtZeroSensitivity => Mathf.Max(swipeDistanceAtFullSensitivity, swipeDistanceAtZeroSensitivity);
+        public bool DefaultParticleEffects => defaultParticleEffects;
+        public bool DefaultShowEmoteButton => defaultShowEmoteButton;
+        public bool DefaultAutoEmoteSelf => defaultAutoEmoteSelf;
+        public bool DefaultAutoEmoteCompetitors => defaultAutoEmoteCompetitors;
         public string DefaultPlayerName => defaultPlayerName ?? string.Empty;
         public int NameMinLength => Mathf.Max(1, nameMinLength);
         public int NameMaxLength => Mathf.Max(NameMinLength, nameMaxLength);

@@ -55,6 +55,50 @@ namespace SpeedStars.Tests.UI.Settings
         }
 
         [Test]
+        public void TheNewResets_NeedOneYes_AndRunWhatWasAsked()
+        {
+            foreach (ResetKind kind in new[] { ResetKind.OnePersonalBest, ResetKind.CustomRacers })
+            {
+                var flow = new ResetConfirmFlow();
+                flow.Begin(kind);
+
+                Assert.IsTrue(flow.IsFinalStep, kind.ToString());
+                Assert.AreEqual(kind, flow.Confirm());
+                Assert.IsFalse(flow.IsOpen);
+            }
+        }
+
+        [Test]
+        public void TheNewQuestions_HaveWords_AndTheBodyNamesTheEvent()
+        {
+            foreach (ResetKind kind in new[] { ResetKind.OnePersonalBest, ResetKind.CustomRacers })
+            {
+                Assert.IsNotEmpty(SettingsTexts.ConfirmTitle(kind, ResetStep.First));
+                Assert.IsNotEmpty(SettingsTexts.ConfirmBody(kind, ResetStep.First, "Test Event"));
+            }
+            StringAssert.Contains("Test Event", SettingsTexts.ConfirmBody(ResetKind.OnePersonalBest, ResetStep.First, "Test Event"));
+        }
+
+        [Test]
+        public void LaneOptions_AreAutoThenOneToCount()
+        {
+            string[] options = SettingsTexts.LaneOptions(4);
+
+            Assert.AreEqual(5, options.Length);
+            Assert.AreEqual(SettingsTexts.LaneAuto, options[0]);
+            Assert.AreEqual("1", options[1]);
+            Assert.AreEqual("4", options[4]);
+        }
+
+        [Test]
+        public void SliderSnap_RoundsToTheStep_AndStaysInsideTheRange()
+        {
+            Assert.AreEqual(0.5f, SliderSnap.Snap(0.52f, 0.1f, 0f, 1f), 1e-5f);
+            Assert.AreEqual(1f, SliderSnap.Snap(3f, 0.1f, 0f, 1f), 1e-5f);
+            Assert.AreEqual(0f, SliderSnap.Snap(-3f, 0.1f, 0f, 1f), 1e-5f);
+        }
+
+        [Test]
         public void BeginNone_OpensNothing()
         {
             var flow = new ResetConfirmFlow();

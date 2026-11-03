@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SpeedStars.Core.Race;
 using UnityEngine;
 
 namespace SpeedStars.Meta.Contracts
@@ -37,6 +38,19 @@ namespace SpeedStars.Meta.Contracts
         void ResetPersonalBests();
 
         void ResetAll();
+
+        /// <summary>Deletes the record time and the day bests of one event; every other event keeps its records.</summary>
+        void ResetPersonalBest(RaceEventId eventId);
+
+        /// <summary>Every racer preset (Custom 1..N) goes back to the default outfit; the owned items stay.</summary>
+        void ClearCustomRacers();
+    }
+
+    /// <summary>Who the player races against (settings window, Competitors). Time trial = alone on the track, like Practice.</summary>
+    public enum CompetitorType
+    {
+        Bots,
+        TimeTrial
     }
 
     /// <summary>One language the player can pick (code + its name in its own language).</summary>
@@ -88,6 +102,41 @@ namespace SpeedStars.Meta.Contracts
         float CameraDistanceMin { get; }
         float CameraDistanceMax { get; }
 
+        // ---- Competitors (race bots)
+        /// <summary>Bots (default) or time trial: no opponents at all.</summary>
+        CompetitorType CompetitorType { get; }
+
+        /// <summary>0..1. Until the player moves the slider the race uses the bot config's own value (<see cref="HasCompetitorTuning"/> false).</summary>
+        float CompetitorDifficulty { get; }
+
+        /// <summary>0..1, how wide the bot field is spread. Same "untouched" rule as the difficulty.</summary>
+        float CompetitorSkillRange { get; }
+
+        /// <summary>True once the player set the difficulty or the skill range; false = the bot config decides.</summary>
+        bool HasCompetitorTuning { get; }
+
+        // ---- Gameplay
+        /// <summary>The lane the player runs in, counted from the camera side (1 = nearest). 0 = automatic.</summary>
+        int LanePreference { get; }
+
+        /// <summary>How many lane choices the picker offers (the field size).</summary>
+        int LaneChoiceCount { get; }
+
+        /// <summary>0..1; higher = a shorter swipe up counts as a jump.</summary>
+        float HurdleSensitivity { get; }
+
+        /// <summary>The swipe length (share of the screen height) that the sensitivity stands for.</summary>
+        float SwipeUpDistance { get; }
+
+        // ---- Visuals
+        /// <summary>Step feedback streaks and the premium sparkle / shoe trail effects.</summary>
+        bool ParticleEffects { get; }
+
+        // ---- Emote (the behaviour is the emote feature's; these are only the saved switches)
+        bool ShowEmoteButton { get; }
+        bool AutoEmoteSelf { get; }
+        bool AutoEmoteCompetitors { get; }
+
         /// <summary>Longest name the player may type (for the input field's limit).</summary>
         int MaxNameLength { get; }
 
@@ -99,6 +148,25 @@ namespace SpeedStars.Meta.Contracts
 
         /// <summary>Kept inside the min and max.</summary>
         void SetCameraDistance(float value);
+
+        void SetCompetitorType(CompetitorType type);
+
+        /// <summary>Kept inside 0..1.</summary>
+        void SetCompetitorDifficulty(float value);
+
+        /// <summary>Kept inside 0..1.</summary>
+        void SetCompetitorSkillRange(float value);
+
+        /// <summary>Kept inside 0..LaneChoiceCount; 0 = automatic.</summary>
+        void SetLanePreference(int lane);
+
+        /// <summary>Kept inside 0..1.</summary>
+        void SetHurdleSensitivity(float value);
+
+        void SetParticleEffects(bool on);
+        void SetShowEmoteButton(bool on);
+        void SetAutoEmoteSelf(bool on);
+        void SetAutoEmoteCompetitors(bool on);
 
         /// <summary>False for a code that is not in the language list; nothing changes then.</summary>
         bool SetLanguage(string code);

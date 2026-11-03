@@ -41,6 +41,38 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private List<DayBestEntry> dayBests = new List<DayBestEntry>();
         [SerializeField] private string adCashDayKey = string.Empty;
         [SerializeField] private int adCashWatched;
+        [SerializeField] private SettingChoice timeTrialChoice;
+        [SerializeField] private float competitorDifficulty = -1f;
+        [SerializeField] private float competitorSkillRange = -1f;
+        [SerializeField] private int lanePreference;
+        [SerializeField] private float hurdleSensitivity = -1f;
+        [SerializeField] private SettingChoice particleChoice;
+        [SerializeField] private SettingChoice emoteButtonChoice;
+        [SerializeField] private SettingChoice autoEmoteSelfChoice;
+        [SerializeField] private SettingChoice autoEmoteCompetitorsChoice;
+
+        // Settings v2 (T-088), no schema bump: an older save lacks these keys and opens with the initial values above
+        // (choices = Default, sliders = -1 = never touched, lane 0 = automatic), so every setting starts at the config value.
+
+        /// <summary>Time trial (no opponents) switch; Default = never touched.</summary>
+        public SettingChoice TimeTrialChoice { get => timeTrialChoice; set => timeTrialChoice = value; }
+
+        /// <summary>Bot difficulty 0..1 the player set; negative = never touched (the bot config decides).</summary>
+        public float CompetitorDifficulty { get => competitorDifficulty; set => competitorDifficulty = value; }
+
+        /// <summary>Bot skill range 0..1 the player set; negative = never touched.</summary>
+        public float CompetitorSkillRange { get => competitorSkillRange; set => competitorSkillRange = value; }
+
+        /// <summary>Lane the player asked for (1 = nearest the camera); 0 = automatic.</summary>
+        public int LanePreference { get => lanePreference; set => lanePreference = value; }
+
+        /// <summary>Hurdle input sensitivity 0..1 the player set; negative = never touched.</summary>
+        public float HurdleSensitivity { get => hurdleSensitivity; set => hurdleSensitivity = value; }
+
+        public SettingChoice ParticleChoice { get => particleChoice; set => particleChoice = value; }
+        public SettingChoice EmoteButtonChoice { get => emoteButtonChoice; set => emoteButtonChoice = value; }
+        public SettingChoice AutoEmoteSelfChoice { get => autoEmoteSelfChoice; set => autoEmoteSelfChoice = value; }
+        public SettingChoice AutoEmoteCompetitorsChoice { get => autoEmoteCompetitorsChoice; set => autoEmoteCompetitorsChoice = value; }
 
         /// <summary>UTC day key ("yyyy-MM-dd") the Cash-ad counter below belongs to. Empty = never watched. Added with economy v2, no schema bump: older saves open empty/0.</summary>
         public string AdCashDayKey { get => adCashDayKey; set => adCashDayKey = value ?? string.Empty; }

@@ -144,6 +144,8 @@ namespace SpeedStars.Bridge
             _bests = bests;
         }
 
+        SettingsRunnerAdapter _settingsAdapter;
+
         void Awake() => Initialize();
         void OnEnable() => Initialize();
 
@@ -156,6 +158,11 @@ namespace SpeedStars.Bridge
         /// <summary>Idempotent: lane origin and the start signal. The runner copies come later (<see cref="BuildRunners"/>).</summary>
         public void Initialize()
         {
+            if (!_settingsAdapter && Application.isPlaying) // the shot tool builds in Edit mode: the scene stays untouched there
+            {
+                _settingsAdapter = GetComponent<SettingsRunnerAdapter>();
+                if (!_settingsAdapter) _settingsAdapter = gameObject.AddComponent<SettingsRunnerAdapter>();
+            }
             if (!_initialized && player)
             {
                 _basePosition = player.transform.position;
@@ -169,8 +176,18 @@ namespace SpeedStars.Bridge
             }
         }
 
-        /// <summary>World position of a runner's lane at the start line.</summary>
-        public Vector3 StartPositionOf(int runnerIndex) => _basePosition + _laneDirection * ((runnerIndex + 1) * laneSpacing);
+        /// <summary>
+        /// World position of a runner's lane at the start line. The player's lane choice shifts the bots: the player stays where the scene put it and the bots take the other lanes, so a
+        /// better lane number puts some of them on the camera side (negative offset). Automatic = the player nearest the camera.
+        /// </summary>
+        public Vector3 StartPositionOf(int runnerIndex) =>
+            _basePosition + _laneDirection * (BotLanes.BotOffset(runnerIndex, PlayerLaneSlot()) * laneSpacing);
+
+        int PlayerLaneSlot()
+        {
+            int bots = config ? Mathf.Min(Mathf.Max(config.BotCount, 0), config.Identities.Count) : 0;
+            return BotLanes.PlayerSlot(_settings != null ? _settings.LanePreference : 0, bots);
+        }
 
         /// <summary>
         /// Builds the runner copies now (Play mode does it on the first frame by itself). Public for the shot tool, which builds them
@@ -189,6 +206,7 @@ namespace SpeedStars.Bridge
                 _bots.Add(CreateRunner(i, holder.transform));
             DestroyNow(holder);
             _runnersReady = true;
+            if (_settingsAdapter) _settingsAdapter.Bind(_settings, player);
         }
 
         Bot CreateRunner(int index, Transform holder)
@@ -256,8 +274,10 @@ namespace SpeedStars.Bridge
             CachePlayerIdentity();
 
             BotEventProfile profile = CurrentProfile();
+            bool tuned = _settings != null && _settings.HasCompetitorTuning;
             IReadOnlyList<BotPlan> plans = HasOpponents()
-                ? BotFieldPlanner.Plan(config, ReferenceSeconds(profile), _random, profile)
+                ? BotFieldPlanner.Plan(config, ReferenceSeconds(profile), _random, profile,
+                    tuned ? _settings.CompetitorDifficulty : (float?)null, tuned ? _settings.CompetitorSkillRange : (float?)null)
                 : Array.Empty<BotPlan>();
             int[] lanes = ShuffledLanes(_bots.Count);
             // Without a profile the target is a 100 m equivalent while the run is the real length: the key schedule has to last for it.
@@ -286,6 +306,7 @@ namespace SpeedStars.Bridge
             for (int i = 0; i < _bots.Count; i++)
                 if (!_bots[i].Active) _bots[i].Root.SetActive(false);
 
+            if (_settingsAdapter) _settingsAdapter.Bind(_settings, player); // new outfits and feedback components exist now: hide the effects again if asked
             SetUpLanes();
             PushStandings();
         }
@@ -441,9 +462,10 @@ namespace SpeedStars.Bridge
 
         float RaceDistance => race ? race.raceDistance : 100f;
 
-        /// <summary>The current event may be run alone (Practice); an event not found keeps the opponents.</summary>
+        /// <summary>The current event may be run alone (Practice), or the player chose time trial; an event not found keeps the opponents.</summary>
         bool HasOpponents()
         {
+            if (_settings != null && _settings.CompetitorType == CompetitorType.TimeTrial) return false;
             if (_events == null || !session) return true;
             RaceEventId id = session.CurrentEventId;
             return id.IsEmpty || !_events.TryGet(id, out RaceEventDefinition definition) || definition.HasOpponents;

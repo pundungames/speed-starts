@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using SpeedStars.Core.Race;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Economy;
+using SpeedStars.Meta.Settings;
 using SpeedStars.Tests.Meta.Config;
 
 namespace SpeedStars.Tests.Meta.Economy
@@ -66,6 +68,34 @@ namespace SpeedStars.Tests.Meta.Economy
                 Assert.GreaterOrEqual(reward.Opponents, previous);
                 previous = reward.Opponents;
             }
+        }
+
+        [Test]
+        public void DifficultyBonus_IsTheConfiguredAmountTimesThePlayersDifficulty()
+        {
+            Assert.AreEqual(0, RaceCashRewardResolver.ScaledDifficultyBonus(Difficulty, 0f), "the lowest difficulty pays no bonus");
+            Assert.AreEqual(Difficulty, RaceCashRewardResolver.ScaledDifficultyBonus(Difficulty, 1f));
+            int half = RaceCashRewardResolver.ScaledDifficultyBonus(Difficulty, 0.5f);
+            Assert.Greater(half, 0);
+            Assert.Less(half, Difficulty);
+            Assert.AreEqual(Difficulty, RaceCashRewardResolver.ScaledDifficultyBonus(Difficulty, 7f), "kept inside 0..1");
+            Assert.AreEqual(0, RaceCashRewardResolver.ScaledDifficultyBonus(Difficulty, -2f));
+        }
+
+        [Test]
+        public void ThePaidDifficultyBonus_FollowsTheSettingsDifficulty()
+        {
+            var settings = new PlayerSettingsService(_k.Kit.Fixture.Create<SettingsConfig>(), _k.Kit.Repository);
+            var resolver = new RaceCashRewardResolver(_k.Events, _k.Kit.Economy, _k.Ledger, _k.Kit.Repository, settings);
+
+            settings.SetCompetitorDifficulty(0f);
+            RaceCashReward low = resolver.Resolve(_k.Outcome(EconomyTestKit.PaidEvent, 1, 12.5, Runners), "low");
+            settings.SetCompetitorDifficulty(1f);
+            RaceCashReward high = resolver.Resolve(_k.Outcome(EconomyTestKit.PaidEvent, 1, 12.5, Runners), "high");
+
+            Assert.AreEqual(0, low.Difficulty);
+            Assert.AreEqual(Difficulty, high.Difficulty);
+            Assert.AreEqual(Finish + OpponentFull, low.Total, "finish and opponent lines do not depend on the difficulty");
         }
 
         [Test]
