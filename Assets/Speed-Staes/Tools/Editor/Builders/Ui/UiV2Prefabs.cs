@@ -26,7 +26,12 @@ namespace SpeedStars.Tools.Builders
         private static readonly Vector2 RacerOfDayMin = new Vector2(0.09f, 0.74f), RacerOfDayMax = new Vector2(0.91f, 0.92f);
 
         // Parts of the character card the "Racer of the day" card hides (T-087): the day's racer cannot be changed.
-        private static readonly string[] HiddenForRacerOfTheDay = { "Select", "Previous", "Next", "PowerBar", "StaminaBar", "HeightField", "EditRacer", "Emote" };
+        // Paths are relative to CharacterCard; the new icon strip and player name go with the stat bars (T-097).
+        private static readonly string[] HiddenForRacerOfTheDay =
+        {
+            "Content/Select", "Content/Previous", "Content/Next", "Content/PowerBar", "Content/StaminaBar", "Content/HeightField",
+            "StatsStrip", "EditRacer", "Emote", "PlayerName"
+        };
 
         private const float PowerDefaultFill = 0.75f;
         private const float StaminaDefaultFill = 0.7f;
@@ -69,46 +74,166 @@ namespace SpeedStars.Tools.Builders
             BindRacerOfTheDay(root);
         }
 
+        // ---- Character card (T-097): wider to the left, unchanged parts pinned to the right edge. Sizes in reference px (layout.json space).
+
+        // The store's Stats panel (UiCostumePrefabs.Stats) art: its icons, names and bar are copied to the card's new left strip.
+        private const string StoreArt = UiCostumePrefabs.ArtFolder;
+        private const float StoreStatLabelSize = 28f;   // same as the store's Power / Stamina names
+        private const float StoreLabelGap = 0.03f;      // between icon and name, fraction of the store canvas (as the store: half on each side)
+        private const float MaxCardExtraShare = 0.45f;  // the card may grow by at most this share of its old width
+
+        // 9-slice border of the card background: ~30 px chamfered corner + ~10 px frame band, on the 491x486 canvas.
+        private const float CardBorderPx = 40f;
+
+        // Edit racer / Emote: smaller, centered as a pair; the player name sits under them.
+        private const float CardButtonScale = 0.75f;
+        private const float CardButtonGapRef = 14f;      // between the two buttons
+        private const float CardButtonsTopRef = 338f;    // from the card top, just below the Height box (ends ~326)
+        private const float PlayerNameTopRef = 438f;
+        private const float PlayerNameHeightRef = 32f;   // ends ~470, inside the frame band at the card bottom
+        private const float PlayerNameSideRef = 20f;     // the name box is this much wider than the button pair on each side
+        private const float PlayerNameSize = 30f;
+
         private static void BuildCharacterCard(RectTransform root, UiArt.Layout layout)
         {
             UiArt.LayoutComponent card = layout.Get("character_card");
+            float scale = layout.Scale;
+            float canvasW = card.rect[2];
+            float canvasH = card.rect[3];
+
+            // New strip = the store's bar offset from its panel edge, minus the card's own bar offset from the card edge: the bars
+            // stay where they were and the icon + name column gets the same room it has in the store.
+            Vector4 homePower = UiArt.AlphaBounds(UiArt.HomeArt + "/stats_power_empty.png");
+            Vector4 homeStamina = UiArt.AlphaBounds(UiArt.HomeArt + "/stats_stamina_empty.png");
+            Vector4 homeHeight = UiArt.AlphaBounds(UiArt.HomeArt + "/stats_height_field.png");
+            UiArt.ReadPngSize(StoreArt + "/stats_power_empty.png", out int storeW, out int storeH);
+            Vector4 storePower = UiArt.AlphaBounds(StoreArt + "/stats_power_empty.png");
+            float stripRef = storePower.x * storeW;
+            float extraRef = stripRef - homePower.x * canvasW;
+            if (extraRef <= 0f || extraRef > canvasW * MaxCardExtraShare)
+                throw new System.InvalidOperationException($"UiV2Prefabs: card growth {extraRef} px is outside 0..{canvasW * MaxCardExtraShare} px.");
+            float cardW = canvasW + extraRef;
+
             RectTransform cardRoot = Kit.Node(root, "CharacterCard");
-            layout.PlaceOnScreen(cardRoot, card);
+            layout.PlaceOnScreen(cardRoot, card); // anchored to the right edge with the pivot there: widening grows to the left only
+            cardRoot.sizeDelta = new Vector2(cardW * scale, canvasH * scale);
 
-            // Background catches taps over the card so they never reach the 3D scene behind it.
-            RectTransform background = Kit.Stretch(Kit.Node(cardRoot, "Background"));
-            UiArt.Paint(background.gameObject, UiArt.Home("character_card_background"), raycast: true);
+            // Background catches taps over the card so they never reach the 3D scene behind it. 9-sliced: corners and frame keep their look.
+            EnsureCardBackgroundBorder();
+            Image background = UiArt.SlicedLayer(cardRoot, "Background", UiArt.Home("character_card_background"),
+                UiArt.SlicedBorderMultiplier(canvasH, canvasH * scale), fillCenter: true);
+            background.raycastTarget = true;
 
-            RectTransform select = Kit.Stretch(Kit.Node(cardRoot, "Select"));
+            // Content: the old 491x486 art canvas, fixed size, pinned to the right edge: every part below sits where it always did.
+            RectTransform content = Kit.Place(Kit.Node(cardRoot, "Content"), new Vector2(1f, 0f), Vector2.one, new Vector2(1f, 0.5f),
+                Vector2.zero, new Vector2(canvasW * scale, 0f));
+
+            RectTransform select = Kit.Stretch(Kit.Node(content, "Select"));
             UiArt.Paint(select.gameObject, UiArt.Home("character_select_background"), raycast: false);
             UiArt.Layer(select, "Portrait", UiArt.Home("character_select_icon"));
             UiArt.Slot(select, "Name", "Custom 1", 56f, RacerNameMin, RacerNameMax, TextAnchor.MiddleLeft);
 
-            CardButton(cardRoot, "Previous", "character_previous_background", "character_previous_icon", true);
-            CardButton(cardRoot, "Next", "character_next_background", "character_next_icon", true);
+            CardButton(content, "Previous", "character_previous_background", "character_previous_icon", true);
+            CardButton(content, "Next", "character_next_background", "character_next_icon", true);
 
-            StatBar(cardRoot, "PowerBar", "stats_power_empty", "stats_power_fill", PowerDefaultFill);
-            StatBar(cardRoot, "StaminaBar", "stats_stamina_empty", "stats_stamina_fill", StaminaDefaultFill);
+            StatBar(content, "PowerBar", "stats_power_empty", "stats_power_fill", PowerDefaultFill);
+            StatBar(content, "StaminaBar", "stats_stamina_empty", "stats_stamina_fill", StaminaDefaultFill);
 
-            RectTransform height = Kit.Stretch(Kit.Node(cardRoot, "HeightField"));
+            RectTransform height = Kit.Stretch(Kit.Node(content, "HeightField"));
             UiArt.Paint(height.gameObject, UiArt.Home("stats_height_field"), raycast: false);
             UiArt.Slot(height, "Label", "Height: 5'9", 44f, HeightMin, HeightMax);
 
-            CardButton(cardRoot, "EditRacer", "edit_racer_background", "edit_racer_icon", true);
-            CardButton(cardRoot, "Emote", "emote_background", "emote_icon", true);
-
             // Race of the Day (T-087): the label that stands in for the name pill, arrows and buttons while that event is selected.
-            RectTransform racerOfDay = Kit.Stretch(Kit.Node(cardRoot, "RacerOfTheDay"));
+            RectTransform racerOfDay = Kit.Stretch(Kit.Node(content, "RacerOfTheDay"));
             UiArt.Slot(racerOfDay, "Label", "Racer of the day", 56f, RacerOfDayMin, RacerOfDayMax, TextAnchor.MiddleCenter);
             racerOfDay.gameObject.SetActive(false); // the view switches it on
+
+            BuildStatsStrip(cardRoot, cardW, canvasH, stripRef, storeW, storeH, homePower, homeStamina, homeHeight);
+
+            // Edit racer / Emote: 75% size, pair centered on the whole card with an equal gap; same art, same Button.
+            Vector4 edit = CardButtonBounds("edit_racer_background", "edit_racer_icon");
+            Vector4 emote = CardButtonBounds("emote_background", "emote_icon");
+            float editW = (edit.z - edit.x) * canvasW * CardButtonScale;
+            float emoteW = (emote.z - emote.x) * canvasW * CardButtonScale;
+            float buttonH = Mathf.Max(edit.w - edit.y, emote.w - emote.y) * canvasH * CardButtonScale;
+            float top = 1f - CardButtonsTopRef / canvasH;
+            float bottom = top - buttonH / canvasH;
+            float gapHalf = CardButtonGapRef * 0.5f / cardW;
+            CardButton(cardRoot, "EditRacer", "edit_racer_background", "edit_racer_icon", true,
+                new Vector2(0.5f - gapHalf - editW / cardW, bottom), new Vector2(0.5f - gapHalf, top));
+            CardButton(cardRoot, "Emote", "emote_background", "emote_icon", true,
+                new Vector2(0.5f + gapHalf, bottom), new Vector2(0.5f + gapHalf + emoteW / cardW, top));
+
+            // Player name under the pair: navy, one line, best-fit shrinks a long name. The view overwrites the placeholder.
+            float half = (editW + emoteW + CardButtonGapRef) * 0.5f + PlayerNameSideRef;
+            float nameTop = 1f - PlayerNameTopRef / canvasH;
+            UiArt.Slot(cardRoot, "PlayerName", SpeedStars.UI.Home.HomeTexts.DefaultPlayerName, PlayerNameSize,
+                new Vector2(0.5f - half / cardW, nameTop - PlayerNameHeightRef / canvasH), new Vector2(0.5f + half / cardW, nameTop));
+        }
+
+        /// <summary>
+        /// Copy of the store Stats panel's left part: a power / stamina icon with its name and the height icon, each on the card's own
+        /// bar row (the bars and the Height box stay in Content; no second bar). Icons keep the store's size; the height row has no name.
+        /// </summary>
+        private static void BuildStatsStrip(RectTransform cardRoot, float cardW, float canvasH, float stripRef, int storeW, int storeH,
+            Vector4 powerRow, Vector4 staminaRow, Vector4 heightRow)
+        {
+            RectTransform strip = Kit.Span(Kit.Node(cardRoot, "StatsStrip"), Vector2.zero, new Vector2(stripRef / cardW, 1f));
+
+            StripIcon(strip, "PowerIcon", "stats_power_icon", powerRow, stripRef, canvasH, storeW, storeH);
+            StripIcon(strip, "StaminaIcon", "stats_stamina_icon", staminaRow, stripRef, canvasH, storeW, storeH);
+            StripIcon(strip, "HeightIcon", "stats_height_icon", heightRow, stripRef, canvasH, storeW, storeH);
+
+            StripLabel(strip, "PowerLabel", SpeedStars.UI.Costume.CostumeTexts.Power, "stats_power_icon", powerRow, stripRef, storeW);
+            StripLabel(strip, "StaminaLabel", SpeedStars.UI.Costume.CostumeTexts.Stamina, "stats_stamina_icon", staminaRow, stripRef, storeW);
+        }
+
+        /// <summary>The icon's visible part (store art bounds) centered on the row; the whole store canvas is drawn around it.</summary>
+        private static void StripIcon(RectTransform strip, string name, string art, Vector4 row, float stripRef, float canvasH, int storeW, int storeH)
+        {
+            string path = StoreArt + "/" + art + ".png";
+            Vector4 b = UiArt.AlphaBounds(path);
+            float centerY = (row.y + row.w) * 0.5f;
+            float halfH = (b.w - b.y) * storeH / canvasH * 0.5f;
+            RectTransform node = Kit.Span(Kit.Node(strip, name),
+                new Vector2(b.x * storeW / stripRef, centerY - halfH), new Vector2(b.z * storeW / stripRef, centerY + halfH));
+            UiArt.CanvasLayer(node, "Image", AssetDatabase.LoadAssetAtPath<Sprite>(path), b);
+        }
+
+        /// <summary>Name between the row icon and the bar, in the row's own height band (as the store's StatLabel).</summary>
+        private static void StripLabel(RectTransform strip, string name, string text, string iconArt, Vector4 row, float stripRef, int storeW)
+        {
+            Vector4 icon = UiArt.AlphaBounds(StoreArt + "/" + iconArt + ".png");
+            float gapRef = StoreLabelGap * 0.5f * storeW;
+            UiArt.Slot(strip, name, text, StoreStatLabelSize, new Vector2((icon.z * storeW + gapRef) / stripRef, row.y),
+                new Vector2((stripRef - gapRef) / stripRef, row.w), TextAnchor.MiddleLeft);
+        }
+
+        private static Vector4 CardButtonBounds(string background, string icon)
+        {
+            Vector4 b = UiArt.AlphaBounds(UiArt.HomeArt + "/" + background + ".png");
+            Vector4 i = UiArt.AlphaBounds(UiArt.HomeArt + "/" + icon + ".png");
+            return new Vector4(Mathf.Min(b.x, i.x), Mathf.Min(b.y, i.y), Mathf.Max(b.z, i.z), Mathf.Max(b.w, i.w));
+        }
+
+        /// <summary>Gives the card background its 9-slice border on import (the sprite had none); changes only that .meta, once.</summary>
+        private static void EnsureCardBackgroundBorder()
+        {
+            string path = UiArt.HomeArt + "/character_card_background.png";
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) throw new System.InvalidOperationException($"UiV2Prefabs: '{path}' has no TextureImporter.");
+            var border = new Vector4(CardBorderPx, CardBorderPx, CardBorderPx, CardBorderPx);
+            if (importer.spriteBorder == border) return;
+            importer.spriteBorder = border;
+            importer.SaveAndReimport();
         }
 
         /// <summary>The "Racer of the day" label and the card parts HomeScreenView hides while Race of the Day is selected.</summary>
         private static void BindRacerOfTheDay(RectTransform root)
         {
             var view = new SerializedObject(root.GetComponent<SpeedStars.UI.Home.HomeScreenView>());
-            Transform label = root.Find("CharacterCard/RacerOfTheDay");
-            if (label == null) throw new System.InvalidOperationException("UiV2Prefabs: HomeScreen has no CharacterCard/RacerOfTheDay.");
+            Transform label = root.Find("CharacterCard/Content/RacerOfTheDay");
+            if (label == null) throw new System.InvalidOperationException("UiV2Prefabs: HomeScreen has no CharacterCard/Content/RacerOfTheDay.");
             view.FindProperty("racerOfTheDayRoot").objectReferenceValue = label.gameObject;
 
             SerializedProperty hidden = view.FindProperty("hiddenForRacerOfTheDay");
@@ -138,13 +263,15 @@ namespace SpeedStars.Tools.Builders
         /// buttons never overlap the whole card; art layers are drawn on the full canvas from there and never catch taps.
         /// An invisible hit Image on the node catches them; the background Image is the tint target (disabled look).
         /// </summary>
-        private static void CardButton(Transform card, string name, string background, string icon, bool interactable)
+        private static void CardButton(Transform card, string name, string background, string icon, bool interactable,
+            Vector2? nodeMin = null, Vector2? nodeMax = null)
         {
             Vector4 b = UiArt.AlphaBounds(UiArt.HomeArt + "/" + background + ".png");
             Vector4 i = UiArt.AlphaBounds(UiArt.HomeArt + "/" + icon + ".png");
             var bounds = new Vector4(Mathf.Min(b.x, i.x), Mathf.Min(b.y, i.y), Mathf.Max(b.z, i.z), Mathf.Max(b.w, i.w));
 
-            RectTransform node = Kit.Span(Kit.Node(card, name), new Vector2(bounds.x, bounds.y), new Vector2(bounds.z, bounds.w));
+            // A given placement moves/resizes the node; the art layers still map the whole canvas onto it (CanvasLayer), so they follow.
+            RectTransform node = Kit.Span(Kit.Node(card, name), nodeMin ?? new Vector2(bounds.x, bounds.y), nodeMax ?? new Vector2(bounds.z, bounds.w));
             Image hit = node.gameObject.AddComponent<Image>();
             hit.color = new Color(1f, 1f, 1f, 0f);
             hit.raycastTarget = true;

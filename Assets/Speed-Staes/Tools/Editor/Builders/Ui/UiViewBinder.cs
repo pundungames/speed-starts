@@ -33,14 +33,16 @@ namespace SpeedStars.Tools.Builders
             b.Set("eventSelectButton", b.Child<Button>("RaceSelect"));
             b.Set("eventNameText", b.Child<Text>("RaceSelect/Label"));
             b.Set("playButton", b.Child<Button>("Play"));
-            b.Set("racerNameText", b.Child<Text>("CharacterCard/Select/Name"));
-            b.Set("previousRacerButton", b.Child<Button>("CharacterCard/Previous"));
-            b.Set("nextRacerButton", b.Child<Button>("CharacterCard/Next"));
-            b.Set("powerFill", b.Child<Image>("CharacterCard/PowerBar/Fill"));
-            b.Set("staminaFill", b.Child<Image>("CharacterCard/StaminaBar/Fill"));
-            b.Set("heightText", b.Child<Text>("CharacterCard/HeightField/Label"));
+            // The unchanged card parts sit in CharacterCard/Content (fixed 491x486 art canvas pinned to the right edge, T-097).
+            b.Set("racerNameText", b.Child<Text>("CharacterCard/Content/Select/Name"));
+            b.Set("previousRacerButton", b.Child<Button>("CharacterCard/Content/Previous"));
+            b.Set("nextRacerButton", b.Child<Button>("CharacterCard/Content/Next"));
+            b.Set("powerFill", b.Child<Image>("CharacterCard/Content/PowerBar/Fill"));
+            b.Set("staminaFill", b.Child<Image>("CharacterCard/Content/StaminaBar/Fill"));
+            b.Set("heightText", b.Child<Text>("CharacterCard/Content/HeightField/Label"));
             b.Set("editRacerButton", b.Child<Button>("CharacterCard/EditRacer"));
             b.Set("emoteButton", b.Child<Button>("CharacterCard/Emote"));
+            b.Set("playerNameText", b.Child<Text>("CharacterCard/PlayerName"));
             b.Apply();
         }
 

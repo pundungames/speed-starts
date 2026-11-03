@@ -24,5 +24,14 @@ namespace SpeedStars.UI.Home
             if (dailySelected) return RacerCardAction.ShowDailyOutfit;
             return dailyOutfitShown ? RacerCardAction.RestoreOwnOutfit : RacerCardAction.None;
         }
+
+        /// <summary>
+        /// The player's name as the card shows it under the Edit racer / Emote buttons: trimmed; no name yet (null, empty, blank) = an
+        /// empty line, so nothing is drawn. Settings already validate the name; this only guards the line against stray spaces.
+        /// </summary>
+        public static string PlayerNameLine(string playerName)
+        {
+            return string.IsNullOrWhiteSpace(playerName) ? string.Empty : playerName.Trim();
+        }
     }
 }

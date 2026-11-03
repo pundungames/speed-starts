@@ -24,6 +24,7 @@ namespace SpeedStars.UI.Home
         public const string EntryGateTitle = "RACE ENTRY";
         public const string NotEnoughCashWarning = "Not enough Cash";
         public const string DefaultRacerName = "Custom 1";
+        public const string DefaultPlayerName = "Player";
         public const string RacerHeight = "Height: 5'9\"";
 
         /// <summary>"2/3": amount held over the cap (resource bar and entry gate).</summary>

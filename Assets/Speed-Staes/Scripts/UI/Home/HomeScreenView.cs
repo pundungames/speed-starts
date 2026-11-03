@@ -75,11 +75,14 @@ namespace SpeedStars.UI.Home
         [Tooltip("CharacterCard/HeightField/Label.")]
         [SerializeField] private Text heightText;
 
+        [Tooltip("CharacterCard/PlayerName: the player's name from Settings, under the Edit racer and Emote buttons; empty when no name is set. Optional.")]
+        [SerializeField] private Text playerNameText;
+
         [Header("Racer of the day")]
         [Tooltip("CharacterCard/RacerOfTheDay: the 'Racer of the day' label, shown only while Race of the Day is the selected event. Optional.")]
         [SerializeField] private GameObject racerOfTheDayRoot;
 
-        [Tooltip("Card parts hidden while Race of the Day is selected: the preset name and arrows, Edit racer, Emote and the stat bars (the day's racer cannot be changed).")]
+        [Tooltip("Card parts hidden while Race of the Day is selected: the preset name and arrows, Edit racer, Emote, the player name, the stat bars and their icon strip (the day's racer cannot be changed).")]
         [SerializeField] private GameObject[] hiddenForRacerOfTheDay = new GameObject[0];
 
         [Header("Targets")]
@@ -210,10 +213,12 @@ namespace SpeedStars.UI.Home
             EnsureSelection();
             _selection.Changed += RefreshEventName;
             if (_settings != null) _settings.Changed += RefreshSound;
+            if (_settings != null) _settings.Changed += RefreshPlayerName;
             if (_cosmetics != null) _cosmetics.Changed += RefreshPresets;
             if (_sevenDay != null) _sevenDay.Changed += RefreshSevenDayDot;
             RefreshEventName();
             RefreshSound();
+            RefreshPlayerName();
             RefreshPresets();
             RefreshSevenDayDot();
         }
@@ -222,6 +227,7 @@ namespace SpeedStars.UI.Home
         {
             _selection.Changed -= RefreshEventName;
             if (_settings != null) _settings.Changed -= RefreshSound;
+            if (_settings != null) _settings.Changed -= RefreshPlayerName;
             if (_cosmetics != null) _cosmetics.Changed -= RefreshPresets;
             if (_sevenDay != null) _sevenDay.Changed -= RefreshSevenDayDot;
             base.OnDisable();
@@ -315,6 +321,13 @@ namespace SpeedStars.UI.Home
         private void RefreshSevenDayDot()
         {
             if (_sevenDay != null && sevenDayRedDot != null) sevenDayRedDot.SetActive(_sevenDay.HasClaimable);
+        }
+
+        /// <summary>The Settings "Player Name" shows under the card buttons; it changes through the settings Changed event.</summary>
+        private void RefreshPlayerName()
+        {
+            if (_settings == null || playerNameText == null) return;
+            playerNameText.text = RacerCardRules.PlayerNameLine(_settings.PlayerName);
         }
 
         private void RefreshSound()

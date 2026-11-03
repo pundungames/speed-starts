@@ -1,7 +1,7 @@
 ---
 id: T-097
 title: Ana menu karakter karti - sola genisler, mağazadaki Power / Stamina / boy ikon + yazilari solda; Edit racer / Emote kucuk, altinda oyuncu adi
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-087]
 owns_paths:
@@ -15,12 +15,20 @@ owns_paths:
 touches_scene: false
 branch: agent/T-097-karakter-karti
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Home/PlayerNameLineTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/HomeCardBuilderTests.cs (reads built HomeScreen; red until the builders run)"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Supervisor re-generates UI prefabs + Home on the verify copy: UiV2Prefabs.Home -> BuildCharacterCard (+BuildStatsStrip, CardButton placement, EnsureCardBackgroundBorder), UiViewBinder.BindHome (new paths CharacterCard/Content/..., playerNameText). Race is NOT rebuilt."
+  - tip: ASSET
+    durum: open
+    not: "Assets/Speed-Staes/UI/Art/Home/character_card_background.png.meta changes (spriteBorder 40,40,40,40) when the builder runs; HomeScreen.prefab and the new test .cs.meta files come from Unity."
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -64,3 +72,8 @@ KAMERA  : yok
 - Power / Stamina degerlerinin anlami (bugun sabit dolum), kostum ekrani, Race sahnesi
 
 ## Calisma notu
+1. Width: card grows by 106 ref px (491 -> 597, +21.6%, 566 -> 688 canvas units), derived at build time = store bar offset (144) minus card bar offset (38); right edge, height (486) unchanged; cap 45%.
+2. Overlap check: left of the card at y 196..682 (ref) nothing sits (Race select/Play y>=774, resource column x<285, top buttons y<=156); the new left edge is x=1041, so no conflict. Race of the Day: Content label stays on the old canvas (the strip is hidden, left part is empty).
+3. Old parts moved under CharacterCard/Content (fixed 491x486 canvas pinned right); binder + hidden list paths updated. Background is 9-sliced (border 40 px, set via TextureImporter in the builder, .meta changes).
+4. Edit racer / Emote 75%, gap 14 ref px, centered on the card; PlayerName under them (IPlayerSettings.PlayerName, refreshed on IPlayerSettings.Changed, already injected). No installer change, no WIRING.
+5. Not run: builder, Unity, tests. HomeCardBuilderTests is red until the builders ran once. Icon size/label font copied from the store (28); icons are not scaled to the taller card bar rows.
