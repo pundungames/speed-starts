@@ -1,7 +1,7 @@
 ---
 id: T-081
 title: Ok tuslariyla kosu - sol ok sol ayak, sag ok sag ayak (yarista ve Practice'te; N/M ve dokunma aynen kalir)
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: []
 owns_paths:
@@ -11,15 +11,15 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Input/**"
 touches_scene: false
 branch: agent/T-081-ok-tuslari
-commits: []
+commits: [af498c62, adcb82e0, 364ad7c0]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Input/RunnerTapTranslatorTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
-    not: "ArrowKeyRunnerInput -> RaceSceneInstaller.InstallBindings (Container.BindInterfacesTo<ArrowKeyRunnerInput>().AsSingle().WithArguments(raceSession).NonLazy(); constructor takes the RaceSessionAdapter; IResultsView satirindan sonra) - kompozisyon koku kancasi supervizoru de engelliyor, kullanici onayi bekleniyor (03.11)"
+    durum: closed
+    not: "ArrowKeyRunnerInput -> RaceSceneInstaller.InstallBindings (Container.BindInterfacesTo<ArrowKeyRunnerInput>().AsSingle().WithArguments(raceSession).NonLazy(); constructor takes the RaceSessionAdapter; IResultsView satirindan sonra) - kompozisyon koku kancasi supervizoru de engelliyor, kullanici onayi bekleniyor (03.11) -> adcb82e0 (kullanici onayladi 03.11; kopyada derleme + EditMode 941 + Zenject OK)"
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:

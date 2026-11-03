@@ -1,7 +1,7 @@
 ---
 id: T-082
 title: Faz 8 regresyon eki - Malik'in 02.11 degisiklikleri (kamera ayari kaydi, bilet penceresi, Practice/110mH bileti, Stats'ta botlar, bot cekilisi)
-status: review
+status: merged
 owner: test-agent
 depends_on: [T-053]
 owns_paths:
@@ -10,7 +10,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/**"
 touches_scene: false
 branch: agent/T-082-regresyon-ek
-commits: []
+commits: [eab50362, 78465eb4, 364ad7c0]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Regression/CameraDistanceSettingRegressionTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Regression/EventEntryRulesRegressionTests.cs"
