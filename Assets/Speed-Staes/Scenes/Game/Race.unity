@@ -6410,6 +6410,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 177233082680704457, guid: 54d22243e85ebaf439f364ee895034bb, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7868829318101808437}
+    - targetCorrespondingSourceObject: {fileID: 177233082680704457, guid: 54d22243e85ebaf439f364ee895034bb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7868829318101808438}
   m_SourcePrefab: {fileID: 100100000, guid: 54d22243e85ebaf439f364ee895034bb, type: 3}
 --- !u!1 &3371690135973036318 stripped
 GameObject:
@@ -6474,6 +6477,21 @@ MonoBehaviour:
   playerEmote: {fileID: 0}
   bots: {fileID: 1429518843}
   showClipName: 0
+--- !u!114 &7868829318101808438
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3371690135973036318}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 903aa40900950aa49b404ea890d40489, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  session: {fileID: 1845115163}
+  bots: {fileID: 1429518843}
+  playerApplier: {fileID: 7868829318101808436}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
