@@ -1,7 +1,7 @@
 ---
 id: T-102
 title: Builder'lar elle duzenlenmis prefab/sahneyi asla ezmez - butun kaydetmeler tek korumali yoldan, yamalar yalniz eksigi ekler, cikti TMP
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-100]
 owns_paths:
@@ -10,15 +10,15 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/BuilderGuardTests.cs"
 touches_scene: false
 branch: agent/T-102-builder-korumasi
-commits: []
+commits: [10084469, 0cf95ff5]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/BuilderGuardTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "Supervizor kopyada butun builder giris noktalarini (EconomyUiRebuild.Run, Faz1 overwrite, patch menuleri) kosar; sonra UI prefab'lari + Home.unity + Race.unity icin git diff BOS olmali."
+    durum: closed
+    not: "Supervizor kopyada butun builder giris noktalarini (EconomyUiRebuild.Run, Faz1 overwrite, patch menuleri) kosar; sonra UI prefab'lari + Home.unity + Race.unity icin git diff BOS olmali. -> kopyada 03.11: 10 giris noktasi kostu, 36 dosyada fark 0"
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:
@@ -61,3 +61,4 @@ CALISTIRMA (supervizor kopyada butun builder'lari kosup diff'in bos oldugunu kon
 - Menu basliklari: Faz1 "(overwrite configs, keeps existing UI prefabs and scenes)", EconomyUiRebuild "(keeps existing, no configs)". Test: `BuilderGuardTests` (metin taramasi + Decide'in reflection ile tablosu). Yeni `.cs.meta` yazmadim: Unity uretir, supervizor commit'e katsin.
 - Calistirilmadi (Unity/test yok). Supervizor kopyada kossun (-batchmode -quit -executeMethod): SpeedStars.Tools.Builders.EconomyUiRebuild.Run | Faz1Builder.BuildAll | Faz1Builder.RebuildAll | UiRaceHudPrefabs.PatchRaceHudPrefab | SettingsV2Rebuild.Run | UiPracticePrefabs.Build | ScenePracticePanel.PatchRaceScene | SceneRaceEmotes.PatchRaceScene | SceneCosmetics.PatchRaceOfTheDay | SceneCosmetics.RebuildRaceOfTheDayUi | ProjectContextBuilder.Rebuild (istisna; diff beklenir yoksa bos) — sonra UI prefab'lari/Home/Race'te `git diff` bos olmali. Yama sahne kayitlari Race'i yeniden serilestirir; bos olmazsa burada bak.
 - Not: AddExtraSections/AddCameraRow legacy Text uretir; kayittan sonra ConvertPending TMP'ye cevirir. Ikinci kosuda yama dugumu bulup kaydetmeden doner.
+- Supervizor 03.11: kopyada EditMode 1207/1207; EconomyUiRebuild.Run, Faz1 BuildAll/RebuildAll, RaceHud/Settings/Practice yamalari, Race yamalari, RotD UI -> UI prefab'lari + Home + Race degismedi (36/36 ayni).
