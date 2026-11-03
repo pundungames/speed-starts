@@ -15,6 +15,9 @@ namespace SpeedStars.UI.Leaderboard
         public const string NoCountries = "NO COUNTRIES FOUND";
         public const string NoEvents = "NO EVENTS AVAILABLE";
 
+        /// <summary>Category tab of the daily race (it has a single option, the day's race).</summary>
+        public const string DailyCategory = "DAILY";
+
         public const string ColumnRank = "RANK";
         public const string ColumnPlayer = "PLAYER";
         public const string ColumnTime = "TIME";
@@ -38,6 +41,12 @@ namespace SpeedStars.UI.Leaderboard
 
         /// <summary>Between the category and the distance in the event filter ("SPRINTS · 100m").</summary>
         public const string EventSeparator = " \u00B7 ";
+
+        /// <summary>"Race of the Day 150m"; just "Race of the Day" while the day has no distance.</summary>
+        public static string DailyEvent(float distanceMeters) =>
+            distanceMeters > 0f
+                ? "Race of the Day " + ((int)System.Math.Round(distanceMeters)).ToString(System.Globalization.CultureInfo.InvariantCulture) + "m"
+                : "Race of the Day";
 
         public static string Period(LeaderboardPeriod period)
         {
