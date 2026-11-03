@@ -29,6 +29,17 @@ namespace SpeedStars.Tests.UI.Builders
         }
 
         [Test]
+        public void HighScores_EventModalHasFourBoundTabs()
+        {
+            var view = Load(HighScores).GetComponentInChildren<SpeedStars.UI.Leaderboard.LeaderboardScreenView>(true);
+            Assert.IsNotNull(view, "LeaderboardScreenView missing");
+            var tabs = new SerializedObject(view).FindProperty("categoryTabs");
+            Assert.AreEqual(4, tabs.arraySize, "3 layout categories + DAILY");
+            for (int i = 0; i < tabs.arraySize; i++)
+                Assert.IsNotNull(tabs.GetArrayElementAtIndex(i).objectReferenceValue, "categoryTabs[" + i + "] is empty");
+        }
+
+        [Test]
         public void ResultsScreenView_HasReplaySkinBound()
         {
             GameObject root = Load(Results);

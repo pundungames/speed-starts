@@ -56,3 +56,4 @@ Diger Close butonlarina, yerlesime, renge DOKUNMA. Builder'i calistirma (merkezi
 3. BuilderHandEditsTests uretilmis prefab'lari AssetDatabase ile okur; builder calisana kadar KIRMIZI (prefab'lar henuz eski).
 4. Malik'in sahne override'inda size.x 64.5/92.2 vardi (elle buyutme); gorev "boyut ayni" dedigi icin boyuta dokunmadim.
 5. Builder/Unity/test calistirilmadi; derleme dogrulamasi supervizorde.
+6. EventModal tabs 3 -> 4 (EventTabCount; DAILY of T-093), width (702-3*12)/4 each; test checks categoryTabs length 4, all bound.
