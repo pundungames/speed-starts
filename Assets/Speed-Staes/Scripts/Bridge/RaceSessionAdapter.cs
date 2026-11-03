@@ -83,6 +83,9 @@ namespace SpeedStars.Bridge
             }
         }
 
+        /// <summary>The player's runner body (read-only): extra input sources such as the arrow keys feed its RunnerInput. Null before setup.</summary>
+        public RunnerBody PlayerBody => body ? body : (race ? race.body : null);
+
         public RaceStartPhase StartPhase => _sequence != null ? _sequence.Phase : RaceStartPhase.Idle;
 
         /// <summary>The event of the current race (empty before the first RequestStart). The opponents scale to the player's best of it.</summary>

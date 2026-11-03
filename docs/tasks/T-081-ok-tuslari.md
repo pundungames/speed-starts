@@ -1,7 +1,7 @@
 ---
 id: T-081
 title: Ok tuslariyla kosu - sol ok sol ayak, sag ok sag ayak (yarista ve Practice'te; N/M ve dokunma aynen kalir)
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: []
 owns_paths:
@@ -12,12 +12,16 @@ owns_paths:
 touches_scene: false
 branch: agent/T-081-ok-tuslari
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Input/RunnerTapTranslatorTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: WIRING
+    durum: open
+    not: "ArrowKeyRunnerInput -> RaceSceneInstaller.InstallBindings (Container.BindInterfacesTo<ArrowKeyRunnerInput>().AsSingle().WithArguments(raceSession); constructor takes the RaceSessionAdapter)"
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -47,4 +51,8 @@ Once oku: `docs/TUZAKLAR.md` (ozellikle asmdef'li test assembly'si Assembly-CSha
 - Home sahnesi, ayarlar, tus atama ekrani; sahne/prefab dosyalari
 
 ## Calisma notu
-(Agent doldurur: ne yapti, nerede zorlandi, ne birakti - 5 satir)
+- Yeni: Core/Runtime/Race/Input/RunnerTapTranslator.cs (kapi + zaman donusumu, saf), Bridge/ArrowKeyRunnerInput.cs (Zenject IInitializable+IDisposable, InputAction leftArrow/rightArrow).
+- RaceSessionAdapter'a salt okunur `PlayerBody` eklendi; baska davranis degismedi. Ok olaylari `body.input.Inject(leg, pressed, gameTime)` ile girer, botlar etkilenmez.
+- Namespace `SpeedStars.Core.Race` (klasor Input ama ad alani Input degil: UnityEngine.Input golgelenmesin).
+- Not: RunnerBody.Update zaten acceptInput kapaliyken basislari atiyor; kapi burada ikinci kez, task geregi.
+- Birakilan: installer baglamasi (WIRING open); Unity/test kosulmadi; .meta'lar supervizorde uretilecek.
