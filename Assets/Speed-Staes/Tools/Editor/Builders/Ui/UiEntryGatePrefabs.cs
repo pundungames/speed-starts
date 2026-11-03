@@ -23,7 +23,7 @@ namespace SpeedStars.Tools.Builders
 
         // layout.json reference screen height: art pixels are drawn at canvas height / this (same scale as the daily gift popup).
         private const float ReferenceHeight = 937f;
-        private static readonly Vector2 WindowCanvas = new Vector2(620f, 700f);
+        private static readonly Vector2 WindowCanvas = new Vector2(620f, 780f); // 80 taller than before: the "Spend Cash" button joins the Actions stack
         private static readonly Vector2 GetTicketsCanvas = new Vector2(540f, 104f);
         private static readonly Vector2 TimedCanvas = new Vector2(500f, 66f);
         private static float Scale => UiArt.CanvasHeight / ReferenceHeight;
@@ -37,6 +37,7 @@ namespace SpeedStars.Tools.Builders
         // Share of the ticket picture's visible height cut off at the bottom: the little navy tab under the red ticket.
         private const float TicketTabCrop = 0.10f;
         private const float ActionGap = 14f;
+        private const float ActionsHeight = 250f; // Use Ticket 82 + Use Timed 66 + Spend Cash 66 + two gaps, with room
         private const float TimedLabelSize = 36f;
         private const float TimedValueSize = 40f;
         private const float PrimaryLabelSize = 42f;
@@ -79,7 +80,7 @@ namespace SpeedStars.Tools.Builders
 
             // The action buttons stack in a centred group: the hidden ones (ticket button while Timed access runs, Use Timed
             // Ticket without stock) take no room, so the window never shows a hole.
-            RectTransform actions = Box(window, "Actions", WindowCanvas, 0f, 372f, WindowCanvas.x, 170f);
+            RectTransform actions = Box(window, "Actions", WindowCanvas, 0f, 372f, WindowCanvas.x, ActionsHeight);
             var stack = actions.gameObject.AddComponent<VerticalLayoutGroup>();
             stack.childAlignment = TextAnchor.MiddleCenter;
             stack.spacing = ActionGap * Scale;
@@ -95,7 +96,13 @@ namespace SpeedStars.Tools.Builders
             Caption(useTimed, new Vector2(280f, 66f), "Label", "USE TIMED TICKET", SecondaryLabelSize, 16f, 9f, 248f, 48f, UiArt.Navy);
             useTimed.gameObject.SetActive(false);
 
-            RectTransform offers = Box(window, "GetTickets", WindowCanvas, 40f, 566f, GetTicketsCanvas.x, GetTicketsCanvas.y);
+            // Premium events (economy v2): spend the Timed Ticket price and start its window in one tap. The view writes the label
+            // ("SPEND 300 - UNLOCK 1 HOUR": price and length come from the economy config) and shows it only without a running window.
+            RectTransform unlock = SecondaryButton(actions, "UnlockWithCash", 440f, 66f);
+            Caption(unlock, new Vector2(440f, 66f), "Label", "SPEND 300 - UNLOCK 1 HOUR", SecondaryLabelSize, 16f, 9f, 408f, 48f, UiArt.Navy);
+            unlock.gameObject.SetActive(false);
+
+            RectTransform offers = Box(window, "GetTickets", WindowCanvas, 40f, 646f, GetTicketsCanvas.x, GetTicketsCanvas.y);
             Caption(offers, GetTicketsCanvas, "Caption", "GET TICKETS", CaptionSize, 0f, 0f, 540f, 36f, UiArt.Navy);
 
             // Both offer buttons: same label style, centred on the button's height. The cash price sits at the right end.

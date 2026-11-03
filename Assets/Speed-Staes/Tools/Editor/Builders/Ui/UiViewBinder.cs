@@ -60,6 +60,8 @@ namespace SpeedStars.Tools.Builders
             b.Set("timedValue", b.Child<Text>("Window/TimedTicketStatus/Value"));
             b.Set("useTimedButton", b.Child<Button>("Window/Actions/UseTimedTicket"));
             b.Set("useTimedLabel", b.Child<Text>("Window/Actions/UseTimedTicket/Label"));
+            b.Set("useTimedCashButton", b.Child<Button>("Window/Actions/UnlockWithCash"));
+            b.Set("useTimedCashLabel", b.Child<Text>("Window/Actions/UnlockWithCash/Label"));
             b.Set("timedStatus", b.Child<RectTransform>("Window/TimedTicketStatus"));
             b.Set("offersCaption", b.Child<Text>("Window/GetTickets/Caption"));
             b.Set("buyWithCashButton", b.Child<Button>("Window/GetTickets/BuyWithCash"));
@@ -98,6 +100,7 @@ namespace SpeedStars.Tools.Builders
             b.Set("entryTimerText", b.Child<Text>("TicketTimer/Value"));
             b.Set("timedTicketText", b.Child<Text>("TimedTicket/Value"));
             b.Set("cashText", b.Child<Text>("Cash/Value"));
+            b.Set("cashPlusButton", b.Child<Button>("Cash/Plus")); // cashOfferModal is a scene object: SceneWiring binds it
             b.Apply();
         }
 

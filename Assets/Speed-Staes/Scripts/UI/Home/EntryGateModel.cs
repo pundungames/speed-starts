@@ -17,9 +17,17 @@ namespace SpeedStars.UI.Home
         public readonly int Cash;
         public readonly bool AdAvailable;
 
+        /// <summary>Cash price of one Timed Ticket window bought straight from the gate; 0 = not for sale.</summary>
+        public readonly int TimedCashPrice;
+
+        /// <summary>How long a Timed Ticket window runs (config); zero = the option is closed.</summary>
+        public readonly TimeSpan AccessDuration;
+
         public EntryGateState(int ticketCount, int ticketCap, bool timedAccessActive, int timedStock, TimeSpan timedRemaining,
-            int cashPrice, int cash, bool adAvailable)
+            int cashPrice, int cash, bool adAvailable, int timedCashPrice = 0, TimeSpan accessDuration = default)
         {
+            TimedCashPrice = timedCashPrice;
+            AccessDuration = accessDuration;
             TicketCount = ticketCount;
             TicketCap = ticketCap;
             TimedAccessActive = timedAccessActive;
@@ -57,9 +65,21 @@ namespace SpeedStars.UI.Home
         public readonly string CashPriceText;
         public readonly bool WatchAdInteractable;
 
+        /// <summary>"Spend 300 - unlock 1 hour" is offered: for sale, a window length configured and no window running.</summary>
+        public readonly bool ShowTimedCashButton;
+
+        /// <summary>The player has the Cash for it (a grey button otherwise).</summary>
+        public readonly bool TimedCashInteractable;
+
+        public readonly string TimedCashLabel;
+
         private EntryGateModel(string countText, string remainingText, bool showUse, bool useInteractable, bool timedActive, string timedText,
-            string timedValue, bool showTimed, bool full, string offersCaption, bool cashInteractable, string cashPriceText, bool adInteractable)
+            string timedValue, bool showTimed, bool full, string offersCaption, bool cashInteractable, string cashPriceText, bool adInteractable,
+            bool showTimedCash, bool timedCashInteractable, string timedCashLabel)
         {
+            ShowTimedCashButton = showTimedCash;
+            TimedCashInteractable = timedCashInteractable;
+            TimedCashLabel = timedCashLabel;
             TicketCountText = countText;
             RemainingText = remainingText;
             ShowUseTicketButton = showUse;
@@ -86,6 +106,7 @@ namespace SpeedStars.UI.Home
             bool full = state.TicketCap > 0 && state.TicketCount >= state.TicketCap;
             bool priced = state.CashPrice > 0;
             bool canPay = priced && state.Cash >= state.CashPrice;
+            bool timedForSale = state.TimedCashPrice > 0 && state.AccessDuration > TimeSpan.Zero && !state.TimedAccessActive;
 
             return new EntryGateModel(
                 HomeTexts.TicketCount(state.TicketCount, state.TicketCap),
@@ -100,7 +121,10 @@ namespace SpeedStars.UI.Home
                 offersCaption: full ? HomeTexts.EntryTicketsFull : HomeTexts.GetTickets,
                 cashInteractable: !full && canPay,
                 cashPriceText: priced ? state.CashPrice.ToString() : string.Empty,
-                adInteractable: !full && state.AdAvailable);
+                adInteractable: !full && state.AdAvailable,
+                showTimedCash: timedForSale,
+                timedCashInteractable: timedForSale && state.Cash >= state.TimedCashPrice,
+                timedCashLabel: timedForSale ? HomeTexts.SpendForAccess(state.TimedCashPrice, HomeTexts.AccessLength(state.AccessDuration)) : string.Empty);
         }
     }
 }

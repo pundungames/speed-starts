@@ -1,3 +1,6 @@
+using System;
+using System.Globalization;
+
 namespace SpeedStars.UI.Home
 {
     /// <summary>
@@ -19,6 +22,7 @@ namespace SpeedStars.UI.Home
         public const string EntryTicketsFull = "TICKETS FULL";
         public const string GetTickets = "GET TICKETS";
         public const string EntryGateTitle = "RACE ENTRY";
+        public const string NotEnoughCashWarning = "Not enough Cash";
         public const string DefaultRacerName = "Custom 1";
         public const string RacerHeight = "Height: 5'9\"";
 
@@ -32,6 +36,22 @@ namespace SpeedStars.UI.Home
         public static string NextTicketIn(string time) => $"Next ticket in {time}";
 
         public static string TicketsLeft(int count) => $"Left: {count}";
+
+        /// <summary>"SPEND 300 - UNLOCK 1 HOUR": the one-tap Cash purchase of a Timed Ticket window (entry gate).</summary>
+        public static string SpendForAccess(int price, string length) =>
+            "SPEND " + price.ToString(CultureInfo.InvariantCulture) + " - UNLOCK " + length;
+
+        /// <summary>"1 HOUR", "2 HOURS", "90 MIN": how long a Timed Ticket window runs.</summary>
+        public static string AccessLength(TimeSpan duration)
+        {
+            int minutes = (int)Math.Round(duration.TotalMinutes);
+            if (minutes >= 60 && minutes % 60 == 0)
+            {
+                int hours = minutes / 60;
+                return hours == 1 ? "1 HOUR" : hours.ToString(CultureInfo.InvariantCulture) + " HOURS";
+            }
+            return minutes.ToString(CultureInfo.InvariantCulture) + " MIN";
+        }
 
         /// <summary>"+3": Purple Gems won in a race (results screen).</summary>
         public static string GemReward(int gems) => $"+{gems}";

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using SpeedStars.UI.Race;
+using SpeedStars.UI.Rewards;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -38,6 +39,12 @@ namespace SpeedStars.Tools.Builders
         private const float DailyHeaderSize = 38f;
         private const float DailyRowSize = 42f;
         private const float GemSize = 40f;
+        private const float BreakdownTotalSize = 46f;
+        private const float BreakdownLineSize = 26f;
+        private const float BreakdownTotalHeight = 54f; // canvas units: the total, then three lines must fit the box beside the Cash box
+        private const float BreakdownLineHeight = 32f;
+        // Reference-pixel box of the Cash breakdown: right of the Cash box (x 43..292), left of the top cards (x 482..).
+        private static readonly int[] BreakdownRect = { 302, 49, 172, 140 };
 
         private static readonly Color White = new Color(1f, 1f, 1f, 1f);
 
@@ -125,6 +132,8 @@ namespace SpeedStars.Tools.Builders
             UiArt.Layer(diamond, "Icon", Art("diamond_icon"));
             Text cash = UiArt.Slot(diamond, "Value", "0", CashSize, CashMin, CashMax);
             reveal.Add(Reveal(diamond));
+
+            CashBreakdownView breakdown = BuildCashBreakdown(root, layout, cash, diamond);
 
             RectTransform nav = Kit.Node(root, "Nav");
             Kit.Stretch(nav);
@@ -250,6 +259,7 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "dailyBestText", dailyText);
             Ref(so, "gemRewardRoot", gem.gameObject);
             Ref(so, "gemRewardText", gemText);
+            Ref(so, "cashBreakdown", breakdown);
             Ref(so, "raceAgainButton", raceAgain);
             Ref(so, "mainMenuButton", mainMenu);
             Ref(so, "watchReplayButton", watchReplay);
@@ -258,6 +268,88 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "practiceButton", practice);
             RefArray(so, "revealItems", reveal);
             so.ApplyModifiedPropertiesWithoutUndo();
+
+            // The flying diamond goes last so it draws over every card and button. Starts inactive; the breakdown view plays it.
+            BuildCashFlight(root, breakdown);
+        }
+
+        /// <summary>
+        /// What the race paid in Cash (economy v2): "+30" and the lines under it, beside the Cash box. The container (it carries the
+        /// view) stays active; the Block child is shown only when Cash was paid. Lines are layout children, so a line that paid 0 leaves no hole.
+        /// </summary>
+        private static CashBreakdownView BuildCashBreakdown(RectTransform root, UiArt.Layout layout, Text counter, RectTransform counterBox)
+        {
+            RectTransform container = Place(root, "CashBreakdown", layout, new UiArt.LayoutComponent
+            {
+                name = "cash_breakdown", rect = BreakdownRect, pivot = new[] { 0.5f, 0.5f }
+            });
+            var view = container.gameObject.AddComponent<CashBreakdownView>();
+
+            RectTransform block = Kit.Stretch(Kit.Node(container, "Block"));
+            VerticalLayoutGroup stack = block.gameObject.AddComponent<VerticalLayoutGroup>();
+            stack.childAlignment = TextAnchor.UpperLeft;
+            stack.childControlWidth = true;
+            stack.childControlHeight = true;
+            stack.childForceExpandWidth = true;
+            stack.childForceExpandHeight = false;
+            stack.spacing = 0f;
+
+            CanvasGroup total = BreakdownRow(block, "Total", "+30", BreakdownTotalSize, BreakdownTotalHeight * layout.Scale, Kit.HighlightColor, out _);
+            var lineGroups = new CanvasGroup[CashBreakdown.LineCount];
+            var lineTexts = new Text[CashBreakdown.LineCount];
+            string[] samples = { "Finished race +10", "Difficulty bonus +10", "Rivals beaten +10" };
+            for (int i = 0; i < lineGroups.Length; i++)
+                lineGroups[i] = BreakdownRow(block, "Line" + (i + 1), samples[i], BreakdownLineSize, BreakdownLineHeight * layout.Scale, White, out lineTexts[i]);
+
+            Text totalText = total.transform.Find("Value").GetComponent<Text>();
+            block.gameObject.SetActive(false); // the view shows it only when the race paid Cash
+
+            var so = new SerializedObject(view);
+            Ref(so, "blockRoot", block.gameObject);
+            Ref(so, "totalGroup", total);
+            Ref(so, "totalText", totalText);
+            Ref(so, "counterText", counter);
+            Ref(so, "counterBox", counterBox);
+            BindArray(so, "lineGroups", lineGroups);
+            BindArray(so, "lineTexts", lineTexts);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return view;
+        }
+
+        private static CanvasGroup BreakdownRow(Transform parent, string name, string sample, float size, float height, Color color, out Text text)
+        {
+            RectTransform node = Kit.Node(parent, name);
+            var element = node.gameObject.AddComponent<LayoutElement>();
+            element.preferredHeight = height;
+            element.flexibleWidth = 1f;
+            CanvasGroup group = node.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            text = UiArt.Slot(node, "Value", sample, size, Vector2.zero, Vector2.one, TextAnchor.MiddleLeft, color);
+            Kit.Frame(text.gameObject, 3f); // light text over the scenery: navy outline keeps it readable
+            return group;
+        }
+
+        private static void BuildCashFlight(RectTransform root, CashBreakdownView breakdown)
+        {
+            RectTransform node = Kit.Node(root, "CashFlight");
+            Sprite icon = UiArt.RaceHud("cash_diamond_icon");
+            Kit.Anchor(node, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, icon.rect.size * 1.4f);
+            UiArt.Paint(node.gameObject, icon, raycast: false);
+            var flight = node.gameObject.AddComponent<CashFlightIcon>();
+            node.gameObject.SetActive(false);
+
+            var so = new SerializedObject(breakdown);
+            Ref(so, "flight", flight);
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void BindArray<T>(SerializedObject so, string field, T[] items) where T : UnityEngine.Object
+        {
+            SerializedProperty property = so.FindProperty(field);
+            if (property == null || !property.isArray)
+                throw new InvalidOperationException($"UiResultsPrefabs: {so.targetObject.GetType().Name} has no serialized array '{field}'.");
+            property.arraySize = items.Length;
+            for (int i = 0; i < items.Length; i++) property.GetArrayElementAtIndex(i).objectReferenceValue = items[i];
         }
 
         /// <summary>Flag icons (the leaderboard's art, same country list) for the runners' flags; the code entry holds the icon only.</summary>

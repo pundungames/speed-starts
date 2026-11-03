@@ -1,7 +1,7 @@
 ---
 id: T-085
 title: Ekonomi v2 arayuzu - sonuc ekraninda kazanc dokumu, Nakit "+" -> reklamla Nakit penceresi, premium etkinlikte "300 Nakit -> 1 saat"
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-084]
 owns_paths:
@@ -12,12 +12,25 @@ owns_paths:
 touches_scene: false
 branch: agent/T-085-ekonomi-arayuz
 commits: []
-tests: []
+tests:
+  - Assets/Speed-Staes/Tests/EditMode/UI/Race/CashBreakdownModelTests.cs
+  - Assets/Speed-Staes/Tests/EditMode/UI/Home/CashOfferModelTests.cs
+  - Assets/Speed-Staes/Tests/EditMode/UI/Home/TimedCashUnlockTests.cs
+  - Assets/Speed-Staes/Tests/PlayMode/EconomyV2UiSmokeTests.cs
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Prefab'lar yeniden uretilir: UiPrefabBuilder.BuildAll(overwrite: true) -> ResourceBar (yeni Cash/Plus dugmesi), ResultsScreen (CashBreakdown blogu + CashFlight, Diamond sagi), EntryGateModal (yeni Actions/UnlockWithCash dugmesi, pencere 780 art-px), YENI CashOfferModal (yol UiCashOfferPrefabs.PrefabPath = Assets/Speed-Staes/UI/Popups/CashOfferModal.prefab; metot UiCashOfferPrefabs.BuildAll). Home sahnesine CashOfferModal ornegi (popup katmani, baslangicta inaktif; UiPrefabPaths.HomePopups dizisine eklenip SceneBuilder.cs:46 ile) ve SceneWiring'de ResourceBarView.cashOfferModal <- bu ornek. Kod yeni .cs dosyalari icin .meta uretmedi (Unity kopyada uretsin, sonra al)."
+  - tip: WIRING
+    durum: open
+    not: "ProjectInstaller -> ITimedTicketShop = TimedTicketShop (AsSingle; entry gate Nakit ile 1 saat acar) ve IRewardedCash = RewardedCashService (AsSingle; Nakit + penceresi; RewardedCashService IRewardedAds'i opsiyonelsiz alir: IRewardedAds bagli degilken FromMethod + TryResolve ile ver). Ikisi de view'larda [InjectOptional]: baglanmazsa dugme kapali kalir."
+  - tip: WIRING
+    durum: open
+    not: "SceneInstaller/RaceFlow -> IRaceCashRewardResolver (T-084'un RaceFlow parametresi; ResultsScreenView IRaceCashRewardView'u uygular, RaceFlowLogic zaten ShowCashReward'i cagirir) - T-084 baglamiyorsa Race sahnesi installer'inda baglanir."
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -56,4 +69,8 @@ ZAMAN   : yok
 KAMERA  : yok
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+1. Yapildi: sonuc ekraninda Nakit dokumu (CashBreakdownView: +toplam, 3 satir, sifir satir gizli, bos blok gizli, elmas ucusu + sayac + punch), kaynak cubugu Cash "+" -> CashOfferModal (Watch ad +N, "0/3" sayaci, hak/reklam bitince gri + aciklama, basarida ucus), premium giris penceresinde "SPEND p - UNLOCK 1 HOUR" tek dokunus (TimedCashUnlock).
+2. Mantik saf siniflarda (CashBreakdown, CashOfferModel, EntryGateModel genislemesi, TimedCashUnlock) + EditMode testleri; PlayMode duman: Tests/PlayMode/EconomyV2UiSmokeTests.cs (gercek Tap; prefab/servis yoksa Ignore).
+3. Zorlandigim: Results'ta Diamond kutusunun altinda yer yok (Race Again 34 ref-px altinda) -> dokum kutusu Nakit kutusunun SAGINDA (x302..474); Cash sayaci "0/3" = kullanilan/limit (referans ekran gibi).
+4. Birakilan: prefab/sahne uretimi (needs SCENE), installer baglari (needs WIRING), yeni .cs'lerin .meta'lari (Unity uretmedi), hicbir sey calistirilmadi/derlenmedi. Yeni SerializeField'lar prefab'ta yok = null-guard'li, eski prefab bozulmaz.
+5. Risk: cok sayida yeni alan builder'a bagli; ilk BuildAll(overwrite:true) kopyada calistirilip UiBuildKit hatalari (yol/alan adi) gorulmeli.

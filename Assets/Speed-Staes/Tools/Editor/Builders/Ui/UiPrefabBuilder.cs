@@ -40,6 +40,7 @@ namespace SpeedStars.Tools.Builders
                 UiRaceStartPrefabs.BuildAll(run.Build); // T-039: READY / SET / GO! overlay (Yaris_Baslangic_UI_v1 art)
 
                 run.Build(UiPrefabPaths.EntryGateModal, UiPopupPrefabs.EntryGate);
+                UiCashOfferPrefabs.BuildAll(run.Build); // T-085: the Cash offer window (resource bar "+": watch an ad for Cash)
                 // T-043: daily gift popup, 7 day panel (+ its card prefabs) and the ticket flight widget, with the Gunluk_Odul_UI_v2 art.
                 UiRewardPrefabs.BuildAll(run.Build, scene);
                 // T-031: the settings window (its config asset, with the flag sprites, is seeded by ConfigAssetSeeder).

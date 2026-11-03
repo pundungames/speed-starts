@@ -16,6 +16,8 @@ namespace SpeedStars.Tools.Builders
     {
         // Text slots as fractions of their art canvas (min, max; y from the bottom).
         private static readonly Vector2 PillValueMin = new Vector2(0.42f, 0.05f), PillValueMax = new Vector2(0.93f, 0.95f);
+        private static readonly Vector2 CashValueMax = new Vector2(0.78f, 0.95f); // leaves room for the "+" at the right end
+        private const float PlusTapSize = 64f; // canvas units
         private static readonly Vector2 TimerValueMin = new Vector2(0.08f, 0.05f), TimerValueMax = new Vector2(0.92f, 0.95f);
         private static readonly Vector2 RaceLabelMin = new Vector2(0.36f, 0.08f), RaceLabelMax = new Vector2(0.80f, 0.92f);
         private static readonly Vector2 PlayLabelMin = new Vector2(0.30f, 0.08f), PlayLabelMax = new Vector2(0.95f, 0.92f);
@@ -168,12 +170,30 @@ namespace SpeedStars.Tools.Builders
             ResourceItem(root, layout, bounds, "EntryTicket", "entry_ticket", "entry_ticket_background", "entry_ticket_icon", "0/0");
             ResourceItem(root, layout, bounds, "TicketTimer", "ticket_timer", "ticket_timer_background", null, "00:00");
             ResourceItem(root, layout, bounds, "TimedTicket", "timed_ticket", "timed_ticket_background", "timed_ticket_icon", "0");
-            ResourceItem(root, layout, bounds, "Cash", "diamond", "diamond_background", "diamond_icon", "0");
+            RectTransform cash = ResourceItem(root, layout, bounds, "Cash", "diamond", "diamond_background", "diamond_icon", "0");
+            CashPlus(cash);
 
             UiViewBinder.BindResourceBar(root);
         }
 
-        private static void ResourceItem(Transform bar, UiArt.Layout layout, Vector4 bounds, string name, string layoutName,
+        /// <summary>
+        /// The "+" at the right end of the Cash box (opens the Cash offer window). The tap area is a transparent square larger than the
+        /// 27 px picture; the picture on it never catches taps. The value text stops before it (CashValueMax).
+        /// </summary>
+        private static void CashPlus(RectTransform cashBox)
+        {
+            RectTransform tap = Kit.Node(cashBox, "Plus");
+            var rightMiddle = new Vector2(1f, 0.5f);
+            Kit.Anchor(tap, rightMiddle, rightMiddle, new Vector2(-6f, 0f), new Vector2(PlusTapSize, PlusTapSize));
+            Image area = Kit.Fill(tap.gameObject, new Color(1f, 1f, 1f, 0f), raycast: true);
+            Sprite icon = UiArt.RaceHud("plus_icon");
+            RectTransform picture = Kit.Node(tap, "Icon");
+            Kit.Anchor(picture, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, icon.rect.size * 1.6f);
+            UiArt.Paint(picture.gameObject, icon, raycast: false);
+            UiArt.MakeButton(tap.gameObject, area, interactable: true, alphaHit: false);
+        }
+
+        private static RectTransform ResourceItem(Transform bar, UiArt.Layout layout, Vector4 bounds, string name, string layoutName,
             string background, string icon, string placeholder)
         {
             RectTransform node = Kit.Node(bar, name);
@@ -182,8 +202,10 @@ namespace SpeedStars.Tools.Builders
             if (icon != null) UiArt.Layer(node, "Icon", UiArt.Home(icon));
 
             bool timer = icon == null;
+            bool cash = name == "Cash";
             UiArt.Slot(node, "Value", placeholder, timer ? 30f : 48f, timer ? TimerValueMin : PillValueMin,
-                timer ? TimerValueMax : PillValueMax, timer ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft);
+                timer ? TimerValueMax : cash ? CashValueMax : PillValueMax, timer ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft);
+            return node;
         }
 
         // ---------------------------------------------------------------- RaceHud

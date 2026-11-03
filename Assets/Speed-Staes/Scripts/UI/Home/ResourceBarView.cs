@@ -35,6 +35,12 @@ namespace SpeedStars.UI.Home
         [Tooltip("Cash/Value.")]
         [SerializeField] private Text cashText;
 
+        [Tooltip("Cash/Plus: opens the Cash offer window (watch an ad for Cash). Not interactable while no window is bound. May stay empty (old prefab).")]
+        [SerializeField] private Button cashPlusButton;
+
+        [Tooltip("The Cash offer window (CashOfferModal prefab instance, starts inactive). Scene-bound; SceneWiring fills it.")]
+        [SerializeField] private CashOfferModalView cashOfferModal;
+
         [Tooltip("EntryTicket (the whole box): where the daily gift ticket flies to and punches. Empty = the parent of the ticket value text.")]
         [SerializeField] private RectTransform entryTicketBox;
 
@@ -101,6 +107,11 @@ namespace SpeedStars.UI.Home
         {
             if (_group == null) _group = GetComponent<CanvasGroup>();
             if (_navigator != null) _navigator.CurrentScreenChanged += OnScreenChanged;
+            if (cashPlusButton != null)
+            {
+                cashPlusButton.interactable = cashOfferModal != null;
+                cashPlusButton.onClick.AddListener(OnCashPlus);
+            }
             ApplyVisibility();
             _wallet.Changed += Redraw;
             _tickets.Changed += Redraw;
@@ -112,11 +123,17 @@ namespace SpeedStars.UI.Home
         private void OnDisable()
         {
             if (_navigator != null) _navigator.CurrentScreenChanged -= OnScreenChanged;
+            if (cashPlusButton != null) cashPlusButton.onClick.RemoveListener(OnCashPlus);
             _wallet.Changed -= Redraw;
             _tickets.Changed -= Redraw;
         }
 
         private void OnScreenChanged(IUiView top) => ApplyVisibility();
+
+        private void OnCashPlus()
+        {
+            if (cashOfferModal != null) cashOfferModal.Open();
+        }
 
         /// <summary>Shown before the first screen opens and while Home is on top; a CanvasGroup so the bar keeps ticking.</summary>
         private void ApplyVisibility()

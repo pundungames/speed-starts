@@ -18,7 +18,7 @@ namespace SpeedStars.UI.Race
     /// start disabled. The prefab holds every object; this only binds and fills them. On open the cards and panels
     /// reveal one after another (UiMotionConfig stagger) and a new record punches its card.
     /// </summary>
-    public sealed class ResultsScreenView : UiScreen, IResultsView, IGemRewardView, IAnalysisSink
+    public sealed class ResultsScreenView : UiScreen, IResultsView, IGemRewardView, IRaceCashRewardView, IAnalysisSink
     {
         [Header("Cash")]
         [Tooltip("Diamond/Value: the player's Cash.")]
@@ -75,6 +75,10 @@ namespace SpeedStars.UI.Race
 
         [Tooltip("GemReward/Label.")]
         [SerializeField] private Text gemRewardText;
+
+        [Header("Cash breakdown")]
+        [Tooltip("CashBreakdown: the '+30' total and its lines under the Cash counter (economy v2). May stay empty: then no breakdown shows.")]
+        [SerializeField] private CashBreakdownView cashBreakdown;
 
         [Header("Buttons")]
         [Tooltip("Nav/RaceAgain.")]
@@ -257,6 +261,14 @@ namespace SpeedStars.UI.Race
             _punchGems = paid;
         }
 
+        /// <summary>The Cash the race paid, split into lines under the counter. Empty (free event, solo run) hides the block.</summary>
+        public void ShowCashReward(RaceCashReward reward)
+        {
+            if (cashBreakdown == null) return;
+            cashBreakdown.Present(reward);
+            if (isActiveAndEnabled) cashBreakdown.Play(); // already open (not the usual flow): reveal at once
+        }
+
         public void NotifyDenied()
         {
             if (raceAgainButton == null || _resultsMotion == null || !isActiveAndEnabled) return;
@@ -376,6 +388,7 @@ namespace SpeedStars.UI.Race
             if (_resultsMotion == null || revealItems == null || revealItems.Length == 0)
             {
                 RestoreItems();
+                if (cashBreakdown != null) cashBreakdown.Play();
                 return;
             }
             if (_baseScales == null) CaptureScales();
@@ -409,6 +422,8 @@ namespace SpeedStars.UI.Race
                 seq.Insert(end, personalBestCard.DOPunchScale(Vector3.one * _resultsMotion.ButtonPunchScale, _resultsMotion.ButtonPunchDuration, _resultsMotion.ButtonPunchVibrato));
             if (_punchGems && gemRewardRoot != null)
                 seq.Insert(end, gemRewardRoot.transform.DOPunchScale(Vector3.one * _resultsMotion.ButtonPunchScale, _resultsMotion.ButtonPunchDuration, _resultsMotion.ButtonPunchVibrato));
+
+            if (cashBreakdown != null) seq.InsertCallback(end, cashBreakdown.Play); // the Cash lines follow the cards
 
             _punchRecord = false; // once per presented result
             _punchGems = false;

@@ -1,5 +1,6 @@
 using System;
 using DG.Tweening;
+using SpeedStars.Core.Audio;
 using SpeedStars.Core.Race;
 using SpeedStars.Core.Services;
 using SpeedStars.Meta.Config;
@@ -72,6 +73,12 @@ namespace SpeedStars.UI.Home
         [Tooltip("Window/TimedTicketStatus: punched when a Timed Ticket window starts.")]
         [SerializeField] private RectTransform timedStatus;
 
+        [Tooltip("Window/Actions/UnlockWithCash: 'Spend 300 - unlock 1 HOUR' (premium events): buys a Timed Ticket window with Cash in one tap. Shown without a running window; not interactable without the Cash. May stay empty (old prefab).")]
+        [SerializeField] private Button useTimedCashButton;
+
+        [Tooltip("Window/Actions/UnlockWithCash/Label.")]
+        [SerializeField] private Text useTimedCashLabel;
+
         [Tooltip("Window/GetTickets/Caption: 'GET TICKETS', or 'TICKETS FULL' while the inventory is full.")]
         [SerializeField] private Text offersCaption;
 
@@ -137,6 +144,10 @@ namespace SpeedStars.UI.Home
         private IEntryTicketSource _ticketSource;
         private ProgressRepository _progress;
         private EntryGateAdFlow _adFlow;
+        private ITimedTicketShop _timedShop;
+        private ISfx _sfx;
+        private IHaptics _haptics;
+        private TimedCashUnlock _timedCashUnlock;
 
         [Inject]
         public void ConstructEntryGate(IEntryTickets tickets, IWallet wallet, HomeEntryFlow entryFlow, ScreenNavigator navigator)
@@ -165,6 +176,15 @@ namespace SpeedStars.UI.Home
             _ads = ads; // null in a build without an ad service: WATCH AD stays closed
         }
 
+        /// <summary>Optional so a build before the Timed Ticket shop WIRING shows the gate without the Cash unlock button.</summary>
+        [Inject]
+        public void ConstructEntryGateTimedCash([InjectOptional] ITimedTicketShop timedShop, [InjectOptional] ISfx sfx, [InjectOptional] IHaptics haptics)
+        {
+            _timedShop = timedShop;
+            _sfx = sfx;
+            _haptics = haptics;
+        }
+
         /// <summary>Opens the modal for <paramref name="definition"/> through the navigator's popup layer.</summary>
         public void Open(RaceEventDefinition definition)
         {
@@ -183,6 +203,7 @@ namespace SpeedStars.UI.Home
             useTimedButton.onClick.AddListener(OnUseTimed);
             buyWithCashButton.onClick.AddListener(OnBuyWithCash);
             watchAdButton.onClick.AddListener(OnWatchAd);
+            if (useTimedCashButton != null) useTimedCashButton.onClick.AddListener(OnUseTimedCash);
             titleText.text = HomeTexts.EntryGateTitle;
             useTicketLabel.text = HomeTexts.UseEntryTicket;
             useTimedLabel.text = HomeTexts.UseTimedTicket;
@@ -226,6 +247,7 @@ namespace SpeedStars.UI.Home
             if (useTimedButton != null) useTimedButton.onClick.RemoveListener(OnUseTimed);
             if (buyWithCashButton != null) buyWithCashButton.onClick.RemoveListener(OnBuyWithCash);
             if (watchAdButton != null) watchAdButton.onClick.RemoveListener(OnWatchAd);
+            if (useTimedCashButton != null) useTimedCashButton.onClick.RemoveListener(OnUseTimedCash);
             base.OnDestroy();
         }
 
@@ -237,7 +259,9 @@ namespace SpeedStars.UI.Home
             TimeSpan remaining = timedActive && _wallet.TimedAccessEndsUtc.HasValue ? _wallet.TimedAccessEndsUtc.Value - _clock.UtcNow : TimeSpan.Zero;
             int cashPrice = _economy != null && _economy.TryGetEntryTicketCashPrice(out int price) ? price : 0;
             EntryGateAdFlow ad = AdFlow;
-            var state = new EntryGateState(_tickets.Count, _tickets.Cap, timedActive, _wallet.TimedTickets, remaining, cashPrice, _wallet.Cash, adAvailable: ad.IsOffered);
+            int timedCashPrice = _timedShop != null && _economy != null && _economy.TryGetTimedTicketCashPrice(out int timedPrice) ? timedPrice : 0;
+            var state = new EntryGateState(_tickets.Count, _tickets.Cap, timedActive, _wallet.TimedTickets, remaining, cashPrice, _wallet.Cash, adAvailable: ad.IsOffered,
+                timedCashPrice: timedCashPrice, accessDuration: _economy != null ? _economy.TimedAccessDuration : TimeSpan.Zero);
             EntryGateModel model = EntryGateModel.Build(state);
 
             eventNameText.text = _event.DisplayName;
@@ -246,6 +270,12 @@ namespace SpeedStars.UI.Home
             refillText.gameObject.SetActive(nextTicket.HasValue);
             if (nextTicket.HasValue) refillText.text = HomeTexts.NextTicketIn(CountdownFormatter.Format(nextTicket.Value - _clock.UtcNow));
             useTimedButton.gameObject.SetActive(model.ShowUseTimedButton);
+            if (useTimedCashButton != null)
+            {
+                useTimedCashButton.gameObject.SetActive(model.ShowTimedCashButton);
+                useTimedCashButton.interactable = model.TimedCashInteractable;
+                if (useTimedCashLabel != null) useTimedCashLabel.text = model.TimedCashLabel;
+            }
             offersCaption.text = model.OffersCaption;
             buyWithCashButton.interactable = model.BuyWithCashInteractable;
             cashPriceText.text = model.CashPriceText;
@@ -287,6 +317,31 @@ namespace SpeedStars.UI.Home
                 return;
             }
             if (result != TimedAccessResult.AlreadyActive) Shake();
+        }
+
+        /// <summary>Premium event without access: spend the Timed Ticket price and start the window in one tap.</summary>
+        private void OnUseTimedCash()
+        {
+            if (_timedCashUnlock == null) _timedCashUnlock = new TimedCashUnlock(_timedShop, _timedAccess, () => _wallet.TimedAccessActive);
+
+            TimedCashUnlockResult result = _timedCashUnlock.TryUnlock();
+            Refresh();
+            switch (result)
+            {
+                case TimedCashUnlockResult.Unlocked:
+                    _sfx?.Play(SfxId.Purchase);
+                    _haptics?.Tap();
+                    PlayPunch();
+                    break;
+                case TimedCashUnlockResult.BoughtNotStarted: // the ticket is in stock; "Use Timed Ticket" shows now
+                    _sfx?.Play(SfxId.Purchase);
+                    break;
+                case TimedCashUnlockResult.AlreadyActive:
+                    break;
+                default:
+                    Shake();
+                    break;
+            }
         }
 
         private void OnBuyWithCash()
