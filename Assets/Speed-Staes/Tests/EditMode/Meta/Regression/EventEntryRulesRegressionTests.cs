@@ -3,6 +3,7 @@ using NUnit.Framework;
 using SpeedStars.Core.Race;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.DailyRace;
 using SpeedStars.Meta.Race;
 using SpeedStars.Meta.Tickets;
 using SpeedStars.Tests.Meta.Config;
@@ -18,6 +19,7 @@ namespace SpeedStars.Tests.Meta.Regression
     public sealed class EventEntryRulesRegressionTests
     {
         private const string CatalogPath = "Assets/Speed-Staes/Data/Config/RaceEventCatalog.asset";
+        private const string DailyConfigPath = "Assets/Speed-Staes/Data/Config/RaceOfTheDayConfig.asset";
         private const int TicketsInStock = 3;
 
         private TicketTestKit _kit;
@@ -136,8 +138,18 @@ namespace SpeedStars.Tests.Meta.Regression
         public void EveryPlayableEvent_HasADistance()
         {
             Setup(0);
+            // The Race of the Day has no catalog length: its distance comes from the day's rule, so every listed distance must be real.
+            var daily = AssetDatabase.LoadAssetAtPath<RaceOfTheDayConfig>(DailyConfigPath);
             foreach (RaceEventDefinition e in Where(x => x.IsPlayable))
+            {
+                if (daily != null && e.Id.Value == daily.EventId)
+                {
+                    Assert.IsNotEmpty(daily.Distances, e.Id.Value + ": the day's rule needs at least one distance");
+                    foreach (float meters in daily.Distances) Assert.Greater(meters, 0f, e.Id.Value);
+                    continue;
+                }
                 Assert.Greater(e.DistanceMeters, 0f, e.Id.Value);
+            }
         }
 
         [Test]

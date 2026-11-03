@@ -23,6 +23,7 @@ owns_paths:
   - "Assets/Speed-Staes/Scripts/Bridge/RaceBots.cs"
   - "Assets/Speed-Staes/Scripts/Core/Runtime/Race/Bots/BotRaceConfig.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/**"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Regression/EventEntryRulesRegressionTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/RaceOfTheDay/**"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/**"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/**"
