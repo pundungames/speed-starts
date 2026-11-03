@@ -22,11 +22,11 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
-    not: "Kalibrasyon: kopyada `Unity.exe -batchmode -nographics -quit -projectPath <kopya> -executeMethod SpeedStars.Tools.Builders.BotCalibration.Run -out <klasor-disinda>/bot-cal.csv -events all -apply` kosulur; Data/Config/BotRaceConfig.asset'e eventProfiles (110mh,200m,400m,60mh,400mh) yazilir ve ayni satirlar BotRaceConfig.cs'te eventProfiles varsayilanina (<csv>.table.txt'teki new BotEventProfile(...) satirlari) kopyalanir. 100m satirlari bugunku tabloyla ayni kalmali (dogrulama: -events 100m)."
+    durum: closed
+    not: "-> def94b0a, kalibrasyon kopyada 03.11. Kalibrasyon: kopyada `Unity.exe -batchmode -nographics -quit -projectPath <kopya> -executeMethod SpeedStars.Tools.Builders.BotCalibration.Run -out <klasor-disinda>/bot-cal.csv -events all -apply` kosulur; Data/Config/BotRaceConfig.asset'e eventProfiles (110mh,200m,400m,60mh,400mh) yazilir ve ayni satirlar BotRaceConfig.cs'te eventProfiles varsayilanina (<csv>.table.txt'teki new BotEventProfile(...) satirlari) kopyalanir. 100m satirlari bugunku tabloyla ayni kalmali (dogrulama: -events 100m)."
   - tip: ASSET
-    durum: open
-    not: "Etkinlikleri acmak: Data/Config/Events/200m.asset, 400m.asset, 60mh.asset, 400mh.asset -> isPlayable 0 -> 1 (ConfigAssetSeeder.cs / T-084 ile cakisirsa seeder varsayilanini da). Bilet kurali (requiresTicket) kullanici karari, degismedi. Bot tablolari asset'e yazilmadan 200m/400m acilirsa botlar yine calisir (eski olcekleme + uzun basis takvimi) ama sureleri olculmemis olur."
+    durum: closed
+    not: "-> def94b0a, 03.11. Etkinlikleri acmak: Data/Config/Events/200m.asset, 400m.asset, 60mh.asset, 400mh.asset -> isPlayable 0 -> 1 (ConfigAssetSeeder.cs / T-084 ile cakisirsa seeder varsayilanini da). Bilet kurali (requiresTicket) kullanici karari, degismedi. Bot tablolari asset'e yazilmadan 200m/400m acilirsa botlar yine calisir (eski olcekleme + uzun basis takvimi) ama sureleri olculmemis olur."
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:

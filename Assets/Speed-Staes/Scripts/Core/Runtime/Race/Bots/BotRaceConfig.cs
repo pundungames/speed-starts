@@ -189,7 +189,79 @@ namespace SpeedStars.Core.Race.Bots
 
         [Header("Event profiles (one table per event; the table above is the 100 m base)")]
         [Tooltip("Tables measured over an event's own length and hurdles by the calibration tool. An event not listed uses the 100 m table above.")]
-        [SerializeField] private List<BotEventProfile> eventProfiles = new List<BotEventProfile>();
+        [SerializeField] private List<BotEventProfile> eventProfiles = new List<BotEventProfile>
+        {
+            new BotEventProfile("110mh", 21.44f, new[]
+            {
+                new BotCalibrationPoint(0f, 24.378f),
+                new BotCalibrationPoint(0.1f, 23.22f),
+                new BotCalibrationPoint(0.2f, 22.163f),
+                new BotCalibrationPoint(0.3f, 21.105f),
+                new BotCalibrationPoint(0.4f, 19.526f),
+                new BotCalibrationPoint(0.5f, 17.97f),
+                new BotCalibrationPoint(0.6f, 16.14f),
+                new BotCalibrationPoint(0.7f, 14.566f),
+                new BotCalibrationPoint(0.8f, 13.199f),
+                new BotCalibrationPoint(0.9f, 12.163f),
+                new BotCalibrationPoint(1f, 11.501f),
+            }),
+            new BotEventProfile("200m", 36.98f, new[]
+            {
+                new BotCalibrationPoint(0f, 42.33f),
+                new BotCalibrationPoint(0.1f, 40.185f),
+                new BotCalibrationPoint(0.2f, 38.24f),
+                new BotCalibrationPoint(0.3f, 36.403f),
+                new BotCalibrationPoint(0.4f, 34.333f),
+                new BotCalibrationPoint(0.5f, 31.428f),
+                new BotCalibrationPoint(0.6f, 28.04f),
+                new BotCalibrationPoint(0.7f, 24.586f),
+                new BotCalibrationPoint(0.8f, 21.996f),
+                new BotCalibrationPoint(0.9f, 19.961f),
+                new BotCalibrationPoint(1f, 18.792f),
+            }),
+            new BotEventProfile("400m", 71.12f, new[]
+            {
+                new BotCalibrationPoint(0f, 81.625f),
+                new BotCalibrationPoint(0.1f, 77.382f),
+                new BotCalibrationPoint(0.2f, 73.58f),
+                new BotCalibrationPoint(0.3f, 69.981f),
+                new BotCalibrationPoint(0.4f, 66.001f),
+                new BotCalibrationPoint(0.5f, 60.195f),
+                new BotCalibrationPoint(0.6f, 53.683f),
+                new BotCalibrationPoint(0.7f, 47.002f),
+                new BotCalibrationPoint(0.8f, 41.845f),
+                new BotCalibrationPoint(0.9f, 37.894f),
+                new BotCalibrationPoint(1f, 35.358f),
+            }),
+            new BotEventProfile("60mh", 13.19f, new[]
+            {
+                new BotCalibrationPoint(0f, 14.677f),
+                new BotCalibrationPoint(0.1f, 14.18f),
+                new BotCalibrationPoint(0.2f, 13.7f),
+                new BotCalibrationPoint(0.3f, 12.958f),
+                new BotCalibrationPoint(0.4f, 11.935f),
+                new BotCalibrationPoint(0.5f, 10.986f),
+                new BotCalibrationPoint(0.6f, 9.956f),
+                new BotCalibrationPoint(0.7f, 8.885f),
+                new BotCalibrationPoint(0.8f, 8.155f),
+                new BotCalibrationPoint(0.9f, 7.696f),
+                new BotCalibrationPoint(1f, 7.338f),
+            }),
+            new BotEventProfile("400mh", 70.84f, new[]
+            {
+                new BotCalibrationPoint(0f, 81.482f),
+                new BotCalibrationPoint(0.1f, 76.63f),
+                new BotCalibrationPoint(0.2f, 72.946f),
+                new BotCalibrationPoint(0.3f, 69.863f),
+                new BotCalibrationPoint(0.4f, 65.853f),
+                new BotCalibrationPoint(0.5f, 59.952f),
+                new BotCalibrationPoint(0.6f, 53.126f),
+                new BotCalibrationPoint(0.7f, 47.433f),
+                new BotCalibrationPoint(0.8f, 41.691f),
+                new BotCalibrationPoint(0.9f, 37.988f),
+                new BotCalibrationPoint(1f, 35.17f),
+            }),
+        };
 
         [Header("Names")]
         [Tooltip("Pool of opponent names and flags; a race draws without repeats. Every country code must have flag art (flag_XX.png: BE CH DE DK FI FR GB IT JP NL NO PL SE TR UA US), otherwise the grey unknown flag shows.")]

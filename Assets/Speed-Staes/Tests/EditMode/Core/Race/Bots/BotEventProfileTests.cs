@@ -67,9 +67,10 @@ namespace SpeedStars.Tests.RaceBots
         [Test]
         public void SetProfile_ReplacesTheSameEvent_AndEmptyTableCountsAsNone()
         {
+            int before = _config.EventProfiles.Count;
             _config.SetProfile(Longer(FarEvent, 2f));
             _config.SetProfile(Longer(FarEvent, 3f));
-            Assert.AreEqual(1, _config.EventProfiles.Count);
+            Assert.AreEqual(before + 1, _config.EventProfiles.Count);
             Assert.IsTrue(_config.TryGetProfile(FarEvent, out BotEventProfile p));
             Assert.AreEqual(_config.Calibration[0].seconds * 3f, p.Calibration[0].seconds, 1e-3f);
 
@@ -173,6 +174,31 @@ namespace SpeedStars.Tests.RaceBots
             // Always a mistake: a flight (0.2 s at 8 m/s = 1.6 m) early or late, far beyond the 0.02 s jitter (0.16 m).
             float clean = Timing(3, 0f);
             Assert.Greater(System.Math.Abs(Timing(3, 1f) - clean), 1f);
+        }
+
+        [Test]
+        public void CodeDefaults_MatchTheBotConfigAsset()
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<BotRaceConfig>("Assets/Speed-Staes/Data/Config/BotRaceConfig.asset");
+            Assert.NotNull(asset, "BotRaceConfig.asset");
+            AssertSameTable(_config.Calibration, asset.Calibration, "100m base");
+            Assert.AreEqual(asset.EventProfiles.Count, _config.EventProfiles.Count, "profile count");
+            foreach (BotEventProfile fromAsset in asset.EventProfiles)
+            {
+                Assert.IsTrue(_config.TryGetProfile(fromAsset.EventId, out BotEventProfile fromCode), "code default lacks " + fromAsset.EventId);
+                Assert.AreEqual(fromAsset.FallbackReferenceSeconds, fromCode.FallbackReferenceSeconds, 0.01f, fromAsset.EventId);
+                AssertSameTable(fromCode.Calibration, fromAsset.Calibration, fromAsset.EventId);
+            }
+        }
+
+        private static void AssertSameTable(IReadOnlyList<BotCalibrationPoint> code, IReadOnlyList<BotCalibrationPoint> asset, string what)
+        {
+            Assert.AreEqual(asset.Count, code.Count, what + " rows");
+            for (int i = 0; i < asset.Count; i++)
+            {
+                Assert.AreEqual(asset[i].skill, code[i].skill, 1e-4f, what);
+                Assert.AreEqual(asset[i].seconds, code[i].seconds, 0.01f, what + " skill " + asset[i].skill);
+            }
         }
 
         // ---- hurdle layouts of the event assets ----
