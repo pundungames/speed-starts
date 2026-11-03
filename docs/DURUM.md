@@ -5,7 +5,9 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-11-03 13:00 · main 9ccef4f7 (push kullanıcıda) · worktree yok
+Son güncelleme: 2026-11-03 14:30 · main 3846552d, origin'den 50 önde (push kullanıcıda) · worktree yok
+- 14:20 Malik'in 03.11 işi birleşti (e7d269f2: Watch Replay, kamera, mobil UI sığdırma, Close konumu); kopyada yeşil
+  (EditMode 1126, PlayMode 44/44, Zenject). Malik'in Close sabitlemesi + ResultsScreen `replaySkin` builder'da yok (backlog).
 
 ## Faz 8 (cila) — bugün main'e girenler (kopyada yeşil: EditMode 1126, PlayMode 44/44, Zenject)
 - T-081 ok tuşları · T-082/T-083 regresyon + eskimiş PlayMode testleri · T-084/085 ekonomi v2 (referanstan ölçüldü:
@@ -13,7 +15,9 @@ Son güncelleme: 2026-11-03 13:00 · main 9ccef4f7 (push kullanıcıda) · workt
   botlar etkinlik başına kalibre · T-088 ayarlar v2 · T-089 emote v2 (Malik'in 9 pişmiş animasyonu, mağaza + yarış butonu/J tuşu).
 - T-087 Race of the Day (UTC güne göre 60/100/150/200/300 m + 7 görünüşten biri, herkes aynı kıyafet, biletsiz, Daily PB/WR; botlar
   mesafeye göre tablo) · T-090 Practice paneli (100-400 m başlangıç, engel; enerji ve ayakta çıkış Malik API'si bekler, satırlar gri).
-- Sıradaki küçük işler: Practice'te sonuç ekranını gizle (referansta yok); High Scores'ta Race of the Day listesi boş; Editor'de göz kontrolü.
+- Sıradaki küçük işler: Malik'in elle ayarlarını builder'a taşı; Practice'te sonuç ekranını gizle (referansta yok); High Scores'ta
+  Race of the Day listesi boş; Watch Replay'e bizim akışlarda (sonuç, Practice, Race of the Day) bak; Editor'de göz kontrolü.
+- Yol haritası listesi 03.11 işlendi: 52/63 (`Downloads/..._Checklist_2026-11-03.html`); açıklar lisans, cihaz ölçümleri, FPS toleransı, Malik'in kuralları.
 
 ## Verilen kararlar
 - Kullanıcı 03.11: "referans oyun ne ise aynısı". Ekonomi: yarış Nakit'i bitirme +10, zorluk bonusu 10 × oyuncu zorluğu, rakip bonusu
