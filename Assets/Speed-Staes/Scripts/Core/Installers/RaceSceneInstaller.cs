@@ -1,5 +1,6 @@
 using SpeedStars.Bridge;
 using SpeedStars.Core.Race;
+using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Race;
 using UnityEngine;
@@ -24,6 +25,9 @@ namespace SpeedStars.Installers
         [Tooltip("Entry gate modal in this scene; it opens when Race again finds no ticket. Empty = Race again only logs a warning.")]
         [SerializeField] private EntryGateModalView entryGateModal;
 
+        [Tooltip("Race emotes on the player's runner root (Bridge): the HUD button / key plays the chosen emote; it also does the auto emotes. Empty = no emotes in the race.")]
+        [SerializeField] private RaceEmotes raceEmotes;
+
         protected override void InstallSceneBindings()
         {
             if (raceSession == null || results == null)
@@ -40,6 +44,8 @@ namespace SpeedStars.Installers
             if (raceBots != null) Container.Bind(typeof(IRaceStandings), typeof(IRaceTraces)).FromInstance(raceBots).AsSingle();
             Container.Bind<IRaceEventLookup>().To<CatalogRaceEventLookup>().AsSingle();
             if (entryGateModal != null) Container.Bind<IEntryGatePrompt>().To<RaceFlowEntryGatePrompt>().AsSingle().WithArguments(entryGateModal);
+            // T-089: the chosen emote in the race (HUD button, key, auto emote at the finish).
+            if (raceEmotes != null) Container.Bind<IRaceEmoteControl>().FromInstance(raceEmotes).AsSingle();
             Container.BindInterfacesAndSelfTo<RaceFlow>().AsSingle().NonLazy();
         }
     }
