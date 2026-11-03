@@ -58,16 +58,18 @@ namespace SpeedStars.Bridge
             get
             {
                 if (_state == RaceSessionState.Finished) return _outcome.DistanceMeters;
+                if (Relay) return bots.Relay.PlayerDistance; // the baton of the player's team
                 return body && body.Sim != null ? body.Sim.Distance : 0f;
             }
         }
 
-        public float SpeedMetersPerSecond => body && body.Sim != null ? body.Sim.Speed : 0f;
+        public float SpeedMetersPerSecond => Relay ? bots.Relay.PlayerSpeed : body && body.Sim != null ? body.Sim.Speed : 0f;
 
         public float Energy01
         {
             get
             {
+                if (Relay) return bots.Relay.PlayerEnergy01; // the runner with the baton: full again after every exchange
                 if (!body || body.Sim == null) return 0f;
                 float max = body.Sim.T.energyMax;
                 return max > 0f ? Mathf.Clamp01(body.Sim.Energy / max) : 0f;
@@ -89,6 +91,9 @@ namespace SpeedStars.Bridge
         public RunnerBody PlayerBody => body ? body : (race ? race.body : null);
 
         public RaceStartPhase StartPhase => _sequence != null ? _sequence.Phase : RaceStartPhase.Idle;
+
+        /// <summary>The current race is a relay: distance, speed and energy come from the player's team, the finish from <see cref="FinishRelay"/>.</summary>
+        bool Relay => bots && bots.RelayActive;
 
         /// <summary>The event of the current race (empty before the first RequestStart). The opponents scale to the player's best of it.</summary>
         public RaceEventId CurrentEventId => _eventId;
@@ -231,6 +236,17 @@ namespace SpeedStars.Bridge
             // After RunnerBody set acceptInput = true (it runs before raising RunReset): keep the runner still under Results.
             if (body) body.acceptInput = false;
             Finished?.Invoke(_outcome);
+        }
+
+        /// <summary>
+        /// A relay ends when the player's team brings the baton over the line (the player's own runner does not run): the outcome takes
+        /// the team's time, interpolated inside the frame by the relay.
+        /// </summary>
+        public void FinishRelay(double seconds)
+        {
+            if (_state == RaceSessionState.Finished || !Relay) return;
+            if (_state == RaceSessionState.Ready) BeginRunning();
+            Complete(seconds);
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

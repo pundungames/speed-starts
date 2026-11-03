@@ -42,6 +42,12 @@ namespace SpeedStars.Meta.Config
         [Tooltip("Distance between hurdles (m).")]
         [SerializeField, Min(0f)] private float hurdleSpacingMeters;
 
+        [Tooltip("Relay legs: the distance is split into this many equal legs, each run by another runner of the team, with a baton exchange between them. 0 = not a relay.")]
+        [SerializeField, Min(0)] private int relayLegCount;
+
+        [Tooltip("Relay only: material of the baton (a thin cylinder in the runner's hand). Empty = the default material.")]
+        [SerializeField] private Material batonMaterial;
+
         public RaceEventId Id => new RaceEventId(eventId);
         public string DisplayName => displayName ?? string.Empty;
         public float DistanceMeters => distanceMeters;
@@ -52,5 +58,8 @@ namespace SpeedStars.Meta.Config
         public int HurdleCount => hurdleCount;
         public float FirstHurdleMeters => firstHurdleMeters;
         public float HurdleSpacingMeters => hurdleSpacingMeters;
+        public int RelayLegCount => relayLegCount;
+        public bool IsRelay => relayLegCount > 1;
+        public Material BatonMaterial => batonMaterial;
     }
 }

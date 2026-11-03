@@ -141,6 +141,12 @@ namespace SpeedStars.Bridge
         public BotRaceConfig Config => config;
         public RunnerBody Player => player;
 
+        /// <summary>The relay of this scene (made on the first frame); <see cref="RaceRelay.Active"/> while the current race is a relay.</summary>
+        public RaceRelay Relay => _relay;
+        public bool RelayActive => _relay && _relay.Active;
+        internal GameObject RunnerPrefab => runnerPrefab;
+        internal RaceSessionAdapter Session => session;
+
         [Inject]
         void ConstructEvents([InjectOptional] RaceEventCatalog events) => _events = events;
 
@@ -155,6 +161,8 @@ namespace SpeedStars.Bridge
         }
 
         SettingsRunnerAdapter _settingsAdapter;
+        RaceRelay _relay;
+        Renderer[] _hiddenPlayerRenderers = Array.Empty<Renderer>();
 
         void Awake() => Initialize();
         void OnEnable() => Initialize();
@@ -172,6 +180,12 @@ namespace SpeedStars.Bridge
             {
                 _settingsAdapter = GetComponent<SettingsRunnerAdapter>();
                 if (!_settingsAdapter) _settingsAdapter = gameObject.AddComponent<SettingsRunnerAdapter>();
+            }
+            if (!_relay && Application.isPlaying)
+            {
+                _relay = GetComponent<RaceRelay>();
+                if (!_relay) _relay = gameObject.AddComponent<RaceRelay>();
+                _relay.Bind(this);
             }
             if (!_initialized && player)
             {
@@ -283,6 +297,13 @@ namespace SpeedStars.Bridge
             _model.Reset();
             CachePlayerIdentity();
 
+            if (TryGetRelay(out RaceEventDefinition relayEvent))
+            {
+                BeginRelayRound(relayEvent);
+                return;
+            }
+            if (_relay) _relay.End();
+
             BotEventProfile profile = CurrentProfile();
             bool tuned = _settings != null && _settings.HasCompetitorTuning;
             IReadOnlyList<BotPlan> plans = HasOpponents()
@@ -364,6 +385,11 @@ namespace SpeedStars.Bridge
             for (int i = 0; i < _bots.Count; i++)
                 if (_bots[i].Active && _bots[i].Body.Sim != null) _bots[i].GoSimTime = _bots[i].Body.Sim.Time;
             _racing = true;
+            if (RelayActive)
+            {
+                player.acceptInput = false; // the session opened it at GO; in a relay the player's own runner stays still (hidden)
+                _relay.StartRace();
+            }
         }
 
         void Update()
@@ -458,6 +484,12 @@ namespace SpeedStars.Bridge
         {
             float distance = RaceDistance;
             _entries.Clear();
+            if (RelayActive)
+            {
+                _relay.FillEntries(_entries); // one entry per team
+                _model.Update(_entries);
+                return;
+            }
             float playerDistance = _playerFinished ? distance : (player && player.Sim != null ? player.Sim.Distance : 0f);
             _entries.Add(new RaceEntry(_playerName, _playerFlag, true, Mathf.Min(playerDistance, distance), _playerFinished, _playerTime));
             for (int i = 0; i < _bots.Count; i++)
@@ -471,6 +503,99 @@ namespace SpeedStars.Bridge
         }
 
         float RaceDistance => race ? race.raceDistance : 100f;
+
+        /// <summary>The current event is a relay (its definition says how many legs).</summary>
+        bool TryGetRelay(out RaceEventDefinition definition)
+        {
+            definition = null;
+            if (_events == null || !session || !_relay) return false;
+            RaceEventId id = session.CurrentEventId;
+            return !id.IsEmpty && _events.TryGet(id, out definition) && definition.IsRelay;
+        }
+
+        /// <summary>
+        /// A relay at READY: the sprint bots step aside and the relay plans one team per lane. A team's runners share one plan, made
+        /// from the table and the player's best of the flat event as long as one leg (100 m for 4x100m), like a sprint field.
+        /// </summary>
+        void BeginRelayRound(RaceEventDefinition definition)
+        {
+            foreach (Bot bot in _bots)
+            {
+                bot.Active = false;
+                bot.Root.SetActive(false);
+            }
+
+            float legMeters = RaceDistance / Mathf.Max(1, definition.RelayLegCount);
+            IReadOnlyList<BotEventSetup.FlatEvent> flat = FlatEvents();
+            BotEventProfile profile = BotEventSetup.ForDistance(config, definition.Id.Value, legMeters, flat);
+            double? best = null;
+            foreach (BotEventSetup.FlatEvent e in flat)
+                if (Mathf.Approximately(e.Meters, legMeters) && _bests != null && _bests.TryGetBest(new RaceEventId(e.EventId), out double seconds))
+                    best = seconds;
+            bool tuned = _settings != null && _settings.HasCompetitorTuning;
+            int teams = HasOpponents() ? _relay.TeamCount : 1;
+            IReadOnlyList<BotPlan> plans = BotFieldPlanner.Plan(config, BotEventSetup.ReferenceSeconds(profile, best, legMeters), _random, profile,
+                tuned ? _settings.CompetitorDifficulty : (float?)null, tuned ? _settings.CompetitorSkillRange : (float?)null, teams);
+
+            _relay.BeginRound(plans, plans.Count > 0 ? _random.Next(plans.Count) : -1, _playerName, _playerFlag, definition.RelayLegCount, RaceDistance,
+                definition.BatonMaterial);
+            PushStandings();
+        }
+
+        /// <summary>World position of a relay lane at the start line: null = the player's lane, else the n-th other team among <paramref name="others"/>.</summary>
+        internal Vector3 RelayLanePosition(int? other, int others)
+        {
+            Initialize();
+            int slot = BotLanes.PlayerSlot(_settings != null ? _settings.LanePreference : 0, others);
+            int offset = other.HasValue ? BotLanes.BotOffset(other.Value, slot) : 0;
+            return _basePosition + _laneDirection * (offset * laneSpacing);
+        }
+
+        SideFollowCamera _camera;
+        RaceThemeView _theme;
+
+        /// <summary>The camera and the streaming world follow this runner (null = the player's own runner again).</summary>
+        internal void FollowRunner(Transform runner, bool snap)
+        {
+            Transform target = runner ? runner : (player ? player.transform : null);
+            if (!_camera) _camera = FindObjectOfType<SideFollowCamera>();
+            if (_camera && target && _camera.target != target)
+            {
+                _camera.target = target;
+                if (_camera.enabled)
+                {
+                    // The camera reads its runner body (press zoom, reset snap) when it is enabled.
+                    _camera.enabled = false;
+                    _camera.enabled = true;
+                }
+                if (snap) _camera.SnapToTarget();
+            }
+            if (!_theme) _theme = FindObjectOfType<RaceThemeView>();
+            if (_theme) _theme.Follow(runner);
+        }
+
+        /// <summary>In a relay the player's own runner stays on the start line, hidden; NPC runners run the player's lane.</summary>
+        internal void SetPlayerHidden(bool hidden)
+        {
+            if (!player) return;
+            if (hidden)
+            {
+                var shown = new List<Renderer>();
+                foreach (Renderer r in player.GetComponentsInChildren<Renderer>(true))
+                    if (r.enabled) { r.enabled = false; shown.Add(r); }
+                _hiddenPlayerRenderers = shown.ToArray();
+                return;
+            }
+            foreach (Renderer r in _hiddenPlayerRenderers)
+                if (r) r.enabled = true;
+            _hiddenPlayerRenderers = Array.Empty<Renderer>();
+        }
+
+        /// <summary>The player's relay team crossed the finish: the session ends the race with this time.</summary>
+        internal void RelayPlayerFinished(double seconds)
+        {
+            if (session) session.FinishRelay(seconds);
+        }
 
         /// <summary>The current event may be run alone (Practice), or the player chose time trial; an event not found keeps the opponents.</summary>
         bool HasOpponents()
@@ -520,14 +645,17 @@ namespace SpeedStars.Bridge
         }
 
         /// <summary>A random outfit and skin tone from what the cosmetic services know; without them the bot keeps the prefab's look.</summary>
-        void Dress(Bot bot)
+        void Dress(Bot bot) => DressRunner(bot.Look);
+
+        /// <summary>A random outfit and skin tone on one runner copy (a bot or a relay runner).</summary>
+        internal void DressRunner(CosmeticApplier look)
         {
-            if (_cosmetics == null || _catalog == null || bot.Look == null) return;
+            if (_cosmetics == null || _catalog == null || look == null) return;
             CosmeticOutfit outfit = _cosmetics.CreateRandomOutfit(_random);
             IReadOnlyList<string> tones = _catalog.SkinTones;
             if (tones.Count > 0) outfit = outfit.WithSkinColor(tones[_random.Next(tones.Count)]);
-            bot.Look.Initialize();
-            bot.Look.Apply(outfit, _catalog);
+            look.Initialize();
+            look.Apply(outfit, _catalog);
         }
 
         /// <summary>Which runner copy (lane) each planned bot takes this race, so the fastest bot is not always in the same lane.</summary>

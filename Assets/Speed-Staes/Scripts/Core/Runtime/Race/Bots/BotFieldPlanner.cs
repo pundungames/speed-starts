@@ -21,16 +21,17 @@ namespace SpeedStars.Core.Race.Bots
         /// </param>
         /// <param name="difficulty">The player's own difficulty (settings window), 0..1; null = the config's.</param>
         /// <param name="skillRange">The player's own skill range (settings window), 0..1; null = the config's.</param>
+        /// <param name="count">How many to plan; null = the config's bot count (a relay plans one per team).</param>
         public static IReadOnlyList<BotPlan> Plan(BotRaceConfig config, float? playerReferenceSeconds, Random random, BotEventProfile profile = null,
-            float? difficulty = null, float? skillRange = null)
+            float? difficulty = null, float? skillRange = null, int? count = null)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (random == null) throw new ArgumentNullException(nameof(random));
 
             IReadOnlyList<BotIdentity> pool = config.Identities;
-            int count = Math.Min(Math.Max(config.BotCount, 0), pool.Count);
-            var plans = new List<BotPlan>(count);
-            if (count == 0) return plans;
+            int planned = Math.Min(Math.Max(count ?? config.BotCount, 0), pool.Count);
+            var plans = new List<BotPlan>(planned);
+            if (planned == 0) return plans;
 
             float reference = playerReferenceSeconds.HasValue && playerReferenceSeconds.Value > 0f
                 ? playerReferenceSeconds.Value
@@ -40,10 +41,10 @@ namespace SpeedStars.Core.Race.Bots
             float spread = Lerp(config.NarrowSpread, config.WideSpread, Clamp01(skillRange ?? config.SkillRange));
             center *= RaceMultiplier(config, (float)random.NextDouble());
 
-            var targets = new float[count];
-            for (int i = 0; i < count; i++)
+            var targets = new float[planned];
+            for (int i = 0; i < planned; i++)
             {
-                float u = count == 1 ? 0f : (float)i / (count - 1) * 2f - 1f; // -1 fastest .. +1 slowest
+                float u = planned == 1 ? 0f : (float)i / (planned - 1) * 2f - 1f; // -1 fastest .. +1 slowest
                 float raceRandom = ((float)random.NextDouble() * 2f - 1f) * config.RaceRandomRatio;
                 targets[i] = Math.Max(center * (1f + u * spread) * (1f + raceRandom), 0.1f);
             }
@@ -52,13 +53,13 @@ namespace SpeedStars.Core.Race.Bots
             // Names: draw without repeats (partial shuffle of the pool indices).
             var order = new int[pool.Count];
             for (int i = 0; i < order.Length; i++) order[i] = i;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < planned; i++)
             {
                 int j = i + random.Next(order.Length - i);
                 (order[i], order[j]) = (order[j], order[i]);
             }
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < planned; i++)
             {
                 BotIdentity who = pool[order[i]];
                 int style = config.DrawStyle(random);
