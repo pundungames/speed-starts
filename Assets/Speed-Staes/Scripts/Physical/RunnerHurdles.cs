@@ -3,11 +3,13 @@ using UnityEngine;
 namespace SpeedStars.Physical
 {
     /// <summary>
-    /// A hurdle race on the runner's own lane: builds the hurdles and judges each one as the runner's distance
-    /// passes it, from one fact only: is the runner in the air (a jump) there. In the air it clears the hurdle
-    /// (green flash); on the ground it knocks it over (yellow flash, the sim loses speed). A jump too early or too
-    /// late is simply on the ground at the hurdle. The test scene uses the Inspector's layout; the game sets the
-    /// layout of the current event through <see cref="Configure"/>.
+    /// A hurdle race on the runner's own lane: builds the hurdles and judges each one by what is seen. Each leg
+    /// (thigh, shin, foot, toe) is read off the drawn body as it goes over the hurdle's line: any of it going through
+    /// below the top of the bar knocks the hurdle over (yellow flash, the sim loses speed); every part over it
+    /// clears it (green flash). So a jump timed right but too low still hits, and no jump hits too. The pose is
+    /// only read, never changed. Without leg bones it falls back to the sim: in the air at the line = cleared.
+    /// The test scene uses the Inspector's layout; the game sets the layout of the current event through
+    /// <see cref="Configure"/>.
     /// </summary>
     public sealed class RunnerHurdles : MonoBehaviour
     {
@@ -33,6 +35,10 @@ namespace SpeedStars.Physical
         public Color barColor = new Color(0.55f, 0.35f, 0.85f);
         [Tooltip("Colour of the frame.")]
         public Color frameColor = Color.white;
+        [Tooltip("How far a leg may dip under the top of the bar and still clear it (m). Higher = easier.")]
+        public float forgiveness = 0.15f;
+        [Tooltip("Write each hurdle's lowest leg height against the bar to the console (for tuning forgiveness).")]
+        public bool logClearance;
         [Tooltip("How long a knocked hurdle takes to lie flat (s).")]
         public float fallTime = 0.2f;
         [Tooltip("Flash the screen on each hurdle. Only for the player's lane.")]
@@ -46,6 +52,11 @@ namespace SpeedStars.Physical
 
         Transform[] _hurdles;
         float[] _fallStart;
+        float[] _barTop;                  // world height of each hurdle's top, over the middle of the lane
+        Transform[] _legChain;            // per leg: thigh, shin, foot, toe (empty without bones)
+        float[] _lastAlong;               // each point's distance past the next hurdle's line last frame (NaN = none yet)
+        float[] _lastY;
+        float _lowest;                    // the lowest any leg went through the next hurdle's line so far (world height)
         int _next;
         Color _flash;
         float _flashStart = -10f;
@@ -83,7 +94,43 @@ namespace SpeedStars.Physical
 
         void Start()
         {
+            FindLegs();
             if (_hurdles == null) Rebuild();
+        }
+
+        void FindLegs()
+        {
+            if (!body) return;
+            var chain = new Transform[8];
+            int i = 0;
+            foreach (string side in new[] { "L", "R" })
+            {
+                Transform shin = FindDeep(body.transform, "B-shin." + side);
+                chain[i++] = shin ? shin.parent : null;
+                chain[i++] = shin;
+                chain[i++] = FindDeep(body.transform, "B-foot." + side);
+                chain[i++] = FindDeep(body.transform, "B-toe." + side);
+            }
+            foreach (Transform bone in chain)
+                if (!bone) { _legChain = new Transform[0]; return; }
+            _legChain = chain;
+            _lastAlong = new float[chain.Length];
+            _lastY = new float[chain.Length];
+            ForgetLegs();
+        }
+
+        static Transform FindDeep(Transform root, string name)
+        {
+            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+                if (child.name == name) return child;
+            return null;
+        }
+
+        void ForgetLegs()
+        {
+            _lowest = float.PositiveInfinity;
+            if (_lastAlong == null) return;
+            for (int i = 0; i < _lastAlong.Length; i++) _lastAlong[i] = float.NaN;
         }
 
         /// <summary>A new layout, standing and uncounted. A count of 0 leaves the lane empty.</summary>
@@ -104,14 +151,34 @@ namespace SpeedStars.Physical
             }
             _next = 0;
             Cleared = Knocked = 0;
+            ForgetLegs();
             Vector3 start = body.transform.position - body.transform.forward * body.Sim.Distance;
             _hurdles = new Transform[count];
             _fallStart = new float[count];
+            _barTop = new float[count];
             for (int i = 0; i < count; i++)
             {
                 _hurdles[i] = Build(start + body.transform.forward * (first + spacing * i));
                 _fallStart[i] = -1f;
+                _barTop[i] = BarTop(_hurdles[i]);
             }
+        }
+
+        /// <summary>The highest part of the hurdle over the middle of the lane (the side posts do not count).</summary>
+        float BarTop(Transform hurdle)
+        {
+            Vector3 side = hurdle.right;
+            float top = hurdle.position.y + height;
+            bool found = false;
+            foreach (Renderer r in hurdle.GetComponentsInChildren<Renderer>())
+            {
+                Bounds b = r.bounds;
+                float a = Vector3.Dot(b.min - hurdle.position, side), c = Vector3.Dot(b.max - hurdle.position, side);
+                if (Mathf.Min(a, c) > 0f || Mathf.Max(a, c) < 0f) continue;
+                top = found ? Mathf.Max(top, b.max.y) : b.max.y;
+                found = true;
+            }
+            return top;
         }
 
         Transform Build(Vector3 position)
@@ -141,25 +208,23 @@ namespace SpeedStars.Physical
             go.GetComponent<Renderer>().material.color = color;
         }
 
-        void Update()
+        // After the rig has posed the body this frame: the legs are where they are drawn.
+        void LateUpdate()
         {
             if (_hurdles == null) return;
+            if (_legChain == null) FindLegs();
             var sim = body.Sim;
-            while (_next < count && sim.Distance >= first + spacing * _next)
+            if (_legChain.Length == 0)
             {
-                if (sim.JumpInAir)
+                while (_next < count && sim.Distance >= first + spacing * _next)
                 {
-                    Cleared++;
-                    Flash(clearFlash);
+                    if (sim.JumpInAir) Clear();
+                    else Knock();
                 }
-                else
-                {
-                    Knocked++;
-                    sim.HitHurdle();
-                    _fallStart[_next] = Time.time;
-                    Flash(hitFlash);
-                }
-                _next++;
+            }
+            else if (_next < count)
+            {
+                JudgeLegs();
             }
 
             for (int i = 0; i < count; i++)
@@ -168,6 +233,73 @@ namespace SpeedStars.Physical
                 float s = Mathf.Clamp01((Time.time - _fallStart[i]) / Mathf.Max(0.01f, fallTime));
                 _hurdles[i].rotation = body.transform.rotation * Quaternion.Euler(90f * s * s, 0f, 0f);
             }
+        }
+
+        /// <summary>
+        /// Each leg point's path since last frame, and each bone between two points now, is checked where it goes
+        /// through the next hurdle's line: lower than forgiveness under the bar's top is a touch. Cleared once every
+        /// point is past the line without one.
+        /// </summary>
+        void JudgeLegs()
+        {
+            Transform hurdle = _hurdles[_next];
+            Vector3 forward = body.transform.forward;
+            float top = _barTop[_next] - forgiveness;
+            bool allPast = true;
+            int n = _legChain.Length;
+            var along = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                Vector3 p = _legChain[i].position;
+                along[i] = Vector3.Dot(p - hurdle.position, forward);
+                if (along[i] < 0f) allPast = false;
+                float last = _lastAlong[i];
+                if (!float.IsNaN(last) && last < 0f && along[i] >= 0f) _lowest = Mathf.Min(_lowest, Crossing(last, _lastY[i], along[i], p.y));
+                _lastAlong[i] = along[i];
+                _lastY[i] = p.y;
+            }
+            for (int i = 0; i < n; i++)
+            {
+                if (i % 4 == 3) continue;   // the toe ends its leg's chain
+                float a = along[i], b = along[i + 1];
+                if ((a < 0f) == (b < 0f)) continue;
+                _lowest = Mathf.Min(_lowest, Crossing(a, _legChain[i].position.y, b, _legChain[i + 1].position.y));
+            }
+
+            bool touched = _lowest < top;
+            if (touched || allPast) LogClearance(touched);
+            if (touched) Knock();
+            else if (allPast) Clear();
+            else if (body.Sim.Distance > first + spacing * _next + 3f) Clear();   // the legs never reached the line (teleport, reset)
+        }
+
+        void LogClearance(bool touched)
+        {
+            if (!logClearance) return;
+            Debug.Log($"[Hurdles] {name} #{_next + 1}: lowest leg {(_lowest - _barTop[_next]) * 100f:+0;-0} cm against the bar top " +
+                      $"(forgiveness {forgiveness * 100f:0} cm) -> {(touched ? "knocked" : "cleared")}");
+        }
+
+        /// <summary>Height where a line from (along a, height ya) to (along b, height yb) meets along 0.</summary>
+        static float Crossing(float a, float ya, float b, float yb) =>
+            Mathf.Approximately(a, b) ? Mathf.Min(ya, yb) : Mathf.Lerp(ya, yb, -a / (b - a));
+
+        void Clear()
+        {
+            Cleared++;
+            Flash(clearFlash);
+            _next++;
+            ForgetLegs();
+        }
+
+        void Knock()
+        {
+            Knocked++;
+            body.Sim.HitHurdle();
+            _fallStart[_next] = Time.time;
+            Flash(hitFlash);
+            _next++;
+            ForgetLegs();
         }
 
         void Flash(Color color)
@@ -182,6 +314,7 @@ namespace SpeedStars.Physical
             _next = 0;
             Cleared = Knocked = 0;
             _flashStart = -10f;
+            ForgetLegs();
             if (_hurdles == null) return;
             for (int i = 0; i < count; i++)
             {
