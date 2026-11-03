@@ -31,6 +31,10 @@ namespace SpeedStars.Physical
         {
             if (!body) body = FindObjectOfType<RunnerBody>();
             PlaceFinishLine();
+            // Watch Replay comes with every race (test scene and Race scene alike), without a scene change.
+            if (!GetComponent<RaceRecorder>()) gameObject.AddComponent<RaceRecorder>().race = this;
+            if (!GetComponent<ReplayCamera>()) gameObject.AddComponent<ReplayCamera>();
+            if (!GetComponent<RacePlayback>()) gameObject.AddComponent<RacePlayback>();
         }
 
         /// <summary>The runner stands on the start line here; the length may have changed with the event.</summary>

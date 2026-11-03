@@ -19,6 +19,10 @@ namespace SpeedStars.UI.Framework
             anchorMin = Vector2.zero;
             anchorMax = Vector2.one;
             if (screenSize.x <= 0f || screenSize.y <= 0f) return;
+            // A device's safe area always lies inside its screen. One that runs past it was measured on another screen: in the
+            // editor, Screen.width/height can come from the Game view while Screen.safeArea comes from the Device Simulator, and
+            // clamping that mix squeezed everything by a fraction of the wrong width. No insets then, rather than wrong ones.
+            if (safe.xMax > screenSize.x + tolerancePx || safe.yMax > screenSize.y + tolerancePx) return;
 
             AxisAnchors(screenSize.x, safe.xMin, safe.xMax, tolerancePx, out anchorMin.x, out anchorMax.x);
             if (includeVertical) AxisAnchors(screenSize.y, safe.yMin, safe.yMax, tolerancePx, out anchorMin.y, out anchorMax.y);

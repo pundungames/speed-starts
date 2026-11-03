@@ -99,6 +99,12 @@ namespace SpeedStars.UI.Costume
         [Tooltip("Where the bars start and end on the stats art, as fractions of its width (read off the art by the builder). x = start, y = end.")]
         [SerializeField] private Vector2 statBarSpan = new Vector2(0f, 1f);
 
+        [Tooltip("Largest scale the wardrobe (right panel, the Emote tab too) is drawn at, from the screen's top-right corner. On a short screen it shrinks below this so the panel never runs off the bottom.")]
+        [SerializeField] private float wardrobeMaxScale = 1.2f;
+
+        [Tooltip("Room kept between the bottom of the wardrobe panel and the bottom of the screen (canvas units).")]
+        [SerializeField] private float wardrobeBottomMargin = 16f;
+
         private ICosmeticService _service;
         private CosmeticCatalog _catalog;
         private ICosmeticPreview _preview;
@@ -128,7 +134,7 @@ namespace SpeedStars.UI.Costume
                 wardrobe.anchorMax = Vector2.one;
                 wardrobe.offsetMin = wardrobe.offsetMax = Vector2.zero;
                 wardrobe.anchoredPosition = Vector2.zero;
-                wardrobe.localScale = new Vector3(1.2f, 1.2f, 1f);
+                FitWardrobeScale();
             }
             var panel = transform.Find("Wardrobe/Panel") as RectTransform;
             if (!panel || tabs.Length == 0) return;
@@ -144,6 +150,25 @@ namespace SpeedStars.UI.Costume
                 rect.localScale = Vector3.one;
             }
         }
+        /// <summary>
+        /// The wardrobe grows from the top-right corner up to wardrobeMaxScale, but only as far as the screen's height allows: the panel
+        /// hangs from that corner, so its bottom edge is its top offset plus its height, times the scale. A long phone (19.5:9) has less
+        /// canvas height than the 1.2 that was fixed here, and the tabs ran off the bottom.
+        /// </summary>
+        private void FitWardrobeScale()
+        {
+            var wardrobe = transform.Find("Wardrobe") as RectTransform;
+            var panel = transform.Find("Wardrobe/Panel") as RectTransform;
+            if (!wardrobe || !panel) return;
+            float available = ((RectTransform)transform).rect.height - wardrobeBottomMargin;
+            float needed = -panel.anchoredPosition.y + panel.rect.height;
+            float scale = available > 0f && needed > 0f ? Mathf.Min(wardrobeMaxScale, available / needed) : wardrobeMaxScale;
+            wardrobe.localScale = new Vector3(scale, scale, 1f);
+        }
+
+        /// <summary>Safe area, rotation or a resized window: the height the wardrobe may take changed.</summary>
+        private void OnRectTransformDimensionsChange() => FitWardrobeScale();
+
         private readonly List<CostumeItemCardView> _cards = new List<CostumeItemCardView>();
         private readonly List<CostumeSkinSwatchView> _swatches = new List<CostumeSkinSwatchView>();
         private readonly List<string> _presetNames = new List<string>();
@@ -185,6 +210,7 @@ namespace SpeedStars.UI.Costume
         protected override void OnEnable()
         {
             base.OnEnable();
+            FitWardrobeScale(); // the screen has its final (safe area) size only once it is on
             if (_model == null) return;
 
             _service.Changed += RefreshAll;

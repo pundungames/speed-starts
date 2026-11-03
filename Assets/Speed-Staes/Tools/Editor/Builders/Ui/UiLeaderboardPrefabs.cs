@@ -533,6 +533,9 @@ namespace SpeedStars.Tools.Builders
         private static LeaderboardPopupPanel PopupRoot(RectTransform screen, string name, string dimArtPath, out RectTransform catcher)
         {
             RectTransform root = Kit.Stretch(Kit.Node(screen, name));
+            // The catcher (dim) must reach the screen edges behind a notch: without this the screen's SafeAreaFitter takes the
+            // (graphic-less) popup root for an edge item and squeezes it, dim and all, to the safe width.
+            root.gameObject.AddComponent<SpeedStars.UI.Framework.FullBleed>();
             var panel = root.gameObject.AddComponent<LeaderboardPopupPanel>();
             catcher = Kit.Stretch(Kit.Node(root, "Catcher"));
             Image image = dimArtPath != null ? UiArt.PaintDim(catcher.gameObject, dimArtPath) : Kit.Fill(catcher.gameObject, Clear, raycast: true);

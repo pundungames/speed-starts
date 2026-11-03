@@ -14,8 +14,8 @@ namespace SpeedStars.UI.Race
     /// <summary>
     /// Post-race results screen (Oyun_Bitis_UI_v1): Cash, the Personal Best / World Position / Percentile cards, the
     /// results table (one row prefab under a content parent), the Best of the day panel and the left button column.
-    /// Race Again, Main Menu and Stats (opens the Analysis screen) work; Watch Replay, High Scores and Practice have no feature behind them yet and
-    /// start disabled. The prefab holds every object; this only binds and fills them. On open the cards and panels
+    /// Race Again, Main Menu, Stats (opens the Analysis screen) and Watch Replay (once the race is recorded) work; Practice has no feature
+    /// behind it yet and starts disabled. The prefab holds every object; this only binds and fills them. On open the cards and panels
     /// reveal one after another (UiMotionConfig stagger) and a new record punches its card.
     /// </summary>
     public sealed class ResultsScreenView : UiScreen, IResultsView, IGemRewardView, IRaceCashRewardView, IAnalysisSink
@@ -93,8 +93,11 @@ namespace SpeedStars.UI.Race
         [Tooltip("Nav/MainMenu.")]
         [SerializeField] private Button mainMenuButton;
 
-        [Tooltip("Nav/WatchReplay: disabled, there is no replay system yet.")]
+        [Tooltip("Nav/WatchReplay: hides this screen and plays the race back; the screen returns when the replay ends. Disabled while there is no recorded race.")]
         [SerializeField] private Button watchReplayButton;
+
+        [Tooltip("Look of the replay controls Watch Replay opens (race HUD art). Empty = plain panels.")]
+        [SerializeField] private ReplayControlsSkin replaySkin;
 
         [Tooltip("Nav/HighScores: opens the leaderboard screen (disabled while that screen is not assigned).")]
         [SerializeField] private Button highScoresButton;
@@ -122,6 +125,7 @@ namespace SpeedStars.UI.Race
         private IRaceSelection _resultsSelection;
         private readonly List<ResultsTableRowView> _rows = new List<ResultsTableRowView>();
         private IRaceStandings _standings;
+        private IRaceReplay _replay;
         private LeaderboardFlagLibrary _flagLibrary;
         private ResultsData _presented;
         private bool _hasPresented;
@@ -158,6 +162,22 @@ namespace SpeedStars.UI.Race
             _standings = standings;
         }
 
+        /// <summary>Optional: without a replay the Watch Replay button stays off.</summary>
+        [Inject]
+        public void InjectReplay([InjectOptional] IRaceReplay replay)
+        {
+            if (replay != null) UseReplay(replay);
+        }
+
+        /// <summary>
+        /// Seam for the race's replay. Today the Bridge's RaceSessionAdapter hands it over at its Start (NEEDS_WIRING: RaceSceneInstaller →
+        /// bind IRaceReplay to RaceReplayAdapter, then InjectReplay does it and the adapter's call can go).
+        /// </summary>
+        public void UseReplay(IRaceReplay replay)
+        {
+            _replay = replay;
+        }
+
         public float SplitStepMeters => analysisScreen != null ? analysisScreen.SplitStepMeters : 0f;
 
         public float FinishToleranceMeters => analysisScreen != null ? analysisScreen.FinishToleranceMeters : 0f;
@@ -173,7 +193,11 @@ namespace SpeedStars.UI.Race
             if (personalBestTitleText != null) _normalTitleColor = personalBestTitleText.color;
             CaptureScales();
 
-            if (watchReplayButton != null) watchReplayButton.interactable = false;
+            if (watchReplayButton != null)
+            {
+                watchReplayButton.interactable = false; // Update opens it once the race is recorded
+                watchReplayButton.onClick.AddListener(OnWatchReplayClicked);
+            }
             if (highScoresButton != null)
             {
                 highScoresButton.interactable = highScoresScreen != null;
@@ -218,6 +242,14 @@ namespace SpeedStars.UI.Race
             if (raceAgainButton != null) raceAgainButton.onClick.RemoveListener(OnRaceAgainClicked);
             if (mainMenuButton != null) mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
             if (statsButton != null) statsButton.onClick.RemoveListener(OnStatsClicked);
+            if (watchReplayButton != null) watchReplayButton.onClick.RemoveListener(OnWatchReplayClicked);
+            if (_replay != null) _replay.WatchEnded -= OnReplayEnded;
+        }
+
+        /// <summary>The recording closes a frame after the finish (and the screen may already be open), so the button follows it.</summary>
+        private void Update()
+        {
+            if (watchReplayButton != null) watchReplayButton.interactable = _replay != null && _replay.CanWatch && !_replay.IsWatching;
         }
 
         public void Present(ResultsData data)
@@ -468,6 +500,22 @@ namespace SpeedStars.UI.Race
         private void OnStatsClicked()
         {
             if (analysisScreen != null && _resultsNavigator != null) _resultsNavigator.Push(analysisScreen); // Back on the Analysis screen returns here
+        }
+
+        /// <summary>Out of the way while the race plays back; back when it ends (played through or left).</summary>
+        private void OnWatchReplayClicked()
+        {
+            if (_replay == null || !_replay.Watch()) return;
+            _replay.WatchEnded -= OnReplayEnded;
+            _replay.WatchEnded += OnReplayEnded;
+            ReplayControlsView.Open(_replay, replaySkin, cashText != null ? cashText.font : null); // closes itself when the replay ends
+            Hide();
+        }
+
+        private void OnReplayEnded()
+        {
+            _replay.WatchEnded -= OnReplayEnded;
+            Show();
         }
 
         private void KillDenied()

@@ -100,6 +100,13 @@ namespace SpeedStars.Bridge
         void Awake() => Initialize();
         void OnEnable() => Initialize();
 
+        /// <summary>Watch Replay: hands the Results screen the race's replay (until RaceSceneInstaller binds IRaceReplay itself).</summary>
+        void Start()
+        {
+            var results = FindObjectOfType<SpeedStars.UI.Race.ResultsScreenView>(true);
+            if (results) results.UseReplay(new RaceReplayAdapter());
+        }
+
         void OnDisable()
         {
             _sequence?.Cancel(); // scene change / disable: no countdown survives, views drop their state
