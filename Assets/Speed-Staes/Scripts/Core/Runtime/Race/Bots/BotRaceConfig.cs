@@ -367,6 +367,95 @@ namespace SpeedStars.Core.Race.Bots
         public static BotEventProfile Find(BotRaceConfig config, string eventId)
             => config != null && config.TryGetProfile(eventId, out BotEventProfile profile) ? profile : null;
 
+        /// <summary>A flat (hurdle-free) event with opponents and its length, the anchors of <see cref="ForDistance"/>.</summary>
+        public readonly struct FlatEvent
+        {
+            public readonly string EventId;
+            public readonly float Meters;
+
+            public FlatEvent(string eventId, float meters)
+            {
+                EventId = eventId ?? string.Empty;
+                Meters = meters;
+            }
+        }
+
+        /// <summary>
+        /// The profile for a race: the event's own when it has one (today's selection, unchanged). An event without one (Race of the Day, whose
+        /// length changes by day) is chosen by the run's LENGTH: a flat event of the same length gives its table (the 100 m one is the base
+        /// table, so null); otherwise the table is interpolated by distance between the two nearest flat tables, and scaled by the ratio
+        /// to the nearest one outside their range. Null = the base 100 m table applies.
+        /// </summary>
+        public static BotEventProfile ForDistance(BotRaceConfig config, string eventId, float raceMeters, IReadOnlyList<FlatEvent> flatEvents)
+        {
+            BotEventProfile own = Find(config, eventId);
+            if (own != null || config == null || raceMeters <= 0f || config.Calibration.Count == 0) return own;
+
+            // Anchors by length: the base table (100 m, profile null) and every flat event that has a measured profile.
+            var anchors = new List<Anchor> { new Anchor(BaseTableMeters, null, config.Calibration, config.FallbackReferenceSeconds) };
+            if (flatEvents != null)
+            {
+                foreach (FlatEvent flat in flatEvents)
+                {
+                    if (flat.Meters <= 0f || Math.Abs(flat.Meters - BaseTableMeters) < SameLengthTolerance) continue;
+                    BotEventProfile profile = Find(config, flat.EventId);
+                    if (profile == null) continue;
+                    anchors.Add(new Anchor(flat.Meters, profile, profile.Calibration, Fallback(config, profile)));
+                }
+            }
+            anchors.Sort((a, b) => a.Meters.CompareTo(b.Meters));
+
+            foreach (Anchor anchor in anchors)
+                if (Math.Abs(anchor.Meters - raceMeters) < SameLengthTolerance) return anchor.Profile;
+
+            if (raceMeters < anchors[0].Meters) return Scaled(eventId, anchors[0], raceMeters);
+            if (raceMeters > anchors[anchors.Count - 1].Meters) return Scaled(eventId, anchors[anchors.Count - 1], raceMeters);
+
+            for (int i = 1; i < anchors.Count; i++)
+            {
+                if (raceMeters > anchors[i].Meters) continue;
+                Anchor lo = anchors[i - 1], hi = anchors[i];
+                float t = (raceMeters - lo.Meters) / (hi.Meters - lo.Meters);
+                var rows = new List<BotCalibrationPoint>(lo.Table.Count);
+                foreach (BotCalibrationPoint row in lo.Table)
+                {
+                    float loSeconds = row.seconds;
+                    float hiSeconds = BotSkillCurve.SecondsForSkill(hi.Table, row.skill);
+                    rows.Add(new BotCalibrationPoint(row.skill, loSeconds + (hiSeconds - loSeconds) * t));
+                }
+                return new BotEventProfile(eventId, lo.Fallback + (hi.Fallback - lo.Fallback) * t, rows);
+            }
+            return own;
+        }
+
+        /// <summary>Lengths within this many metres count as the same race length.</summary>
+        public const float SameLengthTolerance = 0.5f;
+
+        private readonly struct Anchor
+        {
+            public readonly float Meters;
+            public readonly BotEventProfile Profile;
+            public readonly IReadOnlyList<BotCalibrationPoint> Table;
+            public readonly float Fallback;
+
+            public Anchor(float meters, BotEventProfile profile, IReadOnlyList<BotCalibrationPoint> table, float fallback)
+            {
+                Meters = meters;
+                Profile = profile;
+                Table = table;
+                Fallback = fallback;
+            }
+        }
+
+        /// <summary>Outside the measured lengths: the nearest table's times scaled by the length ratio.</summary>
+        private static BotEventProfile Scaled(string eventId, Anchor near, float raceMeters)
+        {
+            float ratio = raceMeters / near.Meters;
+            var rows = new List<BotCalibrationPoint>(near.Table.Count);
+            foreach (BotCalibrationPoint row in near.Table) rows.Add(new BotCalibrationPoint(row.skill, row.seconds * ratio));
+            return new BotEventProfile(eventId, near.Fallback * ratio, rows);
+        }
+
         /// <summary>The table the planner inverts for this event.</summary>
         public static IReadOnlyList<BotCalibrationPoint> Table(BotRaceConfig config, BotEventProfile profile)
             => profile != null && profile.Calibration.Count > 0 ? profile.Calibration : config.Calibration;

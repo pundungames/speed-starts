@@ -146,6 +146,7 @@ namespace SpeedStars.Tools.Builders
                 SceneWiring.WireRace(scene);
                 SceneRaceBots.Add(scene);              // T-075: opponents + rank (needs the adapter WireRace made)
                 SceneRaceEmotes.Add(scene);            // T-089: race emotes on the player's runner (needs the bots and the installer)
+                SceneCosmetics.AddRaceOfTheDay(scene); // T-087: the day's outfit on everybody (needs the adapter and the bots)
                 SceneRaceHurdles.Add(scene);           // the current event's hurdles (needs the adapter too)
                 Save(scene, RaceScenePath);
                 done = true;

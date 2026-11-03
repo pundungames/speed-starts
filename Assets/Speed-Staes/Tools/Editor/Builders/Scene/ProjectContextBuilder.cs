@@ -2,6 +2,7 @@ using System;
 using SpeedStars.Core.Audio;
 using SpeedStars.Installers;
 using SpeedStars.Meta.Config;
+using SpeedStars.Meta.DailyRace;
 using SpeedStars.Meta.Emotes;
 using SpeedStars.Meta.Leaderboard;
 using SpeedStars.Meta.Settings;
@@ -27,6 +28,13 @@ namespace SpeedStars.Tools.Builders
 
         public const string PrefabPath = "Assets/Resources/" + ProjectContext.ProjectContextResourcePath + ".prefab";
 
+        /// <summary>
+        /// Rewrites the ProjectContext prefab (overwrite) from the config assets that exist. Parameterless, so a verification copy can run
+        /// <c>-executeMethod SpeedStars.Tools.Builders.ProjectContextBuilder.Rebuild</c> (T-087: the Race of the Day config reference).
+        /// </summary>
+        [MenuItem("Tools/Speed Stars/Build/ProjectContext prefab (overwrite, config references)")]
+        public static void Rebuild() => Build(true);
+
         public static void Build(bool overwrite)
         {
             if (FileExists(PrefabPath) && !overwrite) { Skipped(Source, PrefabPath); return; }
@@ -44,6 +52,7 @@ namespace SpeedStars.Tools.Builders
             var emotes = LoadRequired<EmoteCatalog>(EmoteCatalogSeed.CatalogPath, seeder);
             var audio = LoadRequired<AudioConfig>(ConfigAssetSeeder.AudioPath, seeder);
             var adsDev = LoadRequired<SpeedStars.Meta.Ads.AdsDevConfig>(ConfigAssetSeeder.AdsDevPath, seeder);
+            var raceOfTheDay = LoadRequired<RaceOfTheDayConfig>(ConfigAssetSeeder.RaceOfTheDayPath, seeder);
 
             EnsureParentFolder(PrefabPath);
             var preview = EditorSceneManager.NewPreviewScene();
@@ -65,6 +74,7 @@ namespace SpeedStars.Tools.Builders
                 Prop(installerSo, "leaderboard").objectReferenceValue = leaderboard;
                 Prop(installerSo, "emotes").objectReferenceValue = emotes;
                 Prop(installerSo, "adsDev").objectReferenceValue = adsDev;
+                Prop(installerSo, "raceOfTheDay").objectReferenceValue = raceOfTheDay; // T-087
                 // T-052: the installer field arrives with the WIRING step; until then the reference is skipped instead of failing the build.
                 SerializedProperty audioSlot = installerSo.FindProperty("audio");
                 if (audioSlot != null) audioSlot.objectReferenceValue = audio;

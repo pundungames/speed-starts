@@ -476,7 +476,20 @@ namespace SpeedStars.Bridge
         {
             if (!config || !session) return null;
             RaceEventId id = session.CurrentEventId;
-            return id.IsEmpty ? null : BotEventSetup.Find(config, id.Value);
+            if (id.IsEmpty) return null;
+            // An event without a table of its own (Race of the Day, whose length changes by day) takes the table of the run's length.
+            return BotEventSetup.ForDistance(config, id.Value, RaceDistance, FlatEvents());
+        }
+
+        /// <summary>The flat events with opponents and their lengths: the anchors for choosing a table by distance.</summary>
+        IReadOnlyList<BotEventSetup.FlatEvent> FlatEvents()
+        {
+            var flat = new List<BotEventSetup.FlatEvent>();
+            if (_events == null) return flat;
+            foreach (RaceEventDefinition definition in _events.GetEvents())
+                if (definition.HurdleCount == 0 && definition.HasOpponents && definition.DistanceMeters > 0f)
+                    flat.Add(new BotEventSetup.FlatEvent(definition.Id.Value, definition.DistanceMeters));
+            return flat;
         }
 
         /// <summary>The player's best time of the current event (the difficulty is relative to it); null = none yet, the fallback.</summary>

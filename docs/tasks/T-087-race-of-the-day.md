@@ -18,6 +18,11 @@ owns_paths:
   - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiV2Prefabs.cs"
   - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/ConfigAssetSeeder.cs"
   - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/SceneCosmetics.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/ProjectContextBuilder.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/SceneBuilder.cs"
+  - "Assets/Speed-Staes/Scripts/Bridge/RaceBots.cs"
+  - "Assets/Speed-Staes/Scripts/Core/Runtime/Race/Bots/BotRaceConfig.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/**"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/RaceOfTheDay/**"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/**"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/**"
@@ -31,6 +36,7 @@ tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceFlowLogicTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/ResultsModelDailyTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/RacerCardRulesTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/BotDistanceProfileTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
@@ -44,8 +50,8 @@ needs:
     durum: open
     not: "Run SpeedStars.Tools.Builders.SceneCosmetics.RebuildRaceOfTheDayUi (parameterless, -executeMethod, logs RACE_OF_THE_DAY_UI_OK): UiPrefabBuilder.BuildAll(true) (HomeScreen: CharacterCard/RacerOfTheDay label + HomeScreenView.racerOfTheDayRoot/hiddenForRacerOfTheDay; ResultsScreen: worldPositionTitleText + percentileCard) + SceneBuilder.BuildHome(true) + PatchRaceOfTheDay (opens the SAVED Race scene without rebuilding it, adds RaceOfTheDayOutfit next to RaceRunnerOutfit wired to RaceSessionAdapter and RaceBots, saves; logs RACE_OF_THE_DAY_PATCH_OK). Race is not rebuilt (docs/TUZAKLAR.md, buildings): check afterwards that the Race scene's ResultsScreen instance still points into the new prefab (m_CorrespondingSourceObject fileIDs, as T-085)."
   - tip: SCENE
-    durum: open
-    not: "SceneBuilder.BuildRace (not in this task's paths) should call SceneCosmetics.AddRaceOfTheDay(scene) right after SceneRaceEmotes.Add(scene), so a future full Race rebuild keeps the outfit component; the patch above covers the saved scene meanwhile."
+    durum: closed
+    not: "DONE in the follow-up: SceneBuilder.BuildRace now calls SceneCosmetics.AddRaceOfTheDay (was: should call SceneCosmetics.AddRaceOfTheDay(scene) right after SceneRaceEmotes.Add(scene), so a future full Race rebuild keeps the outfit component)."
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:
@@ -89,4 +95,4 @@ KAMERA  : yok
 2. Karar: sureler mesafeli kayit id'siyle ("race_of_the_day:150m") saklanir; boylece PB / DB / NEW RECORD yalniz ayni mesafeyi kiyaslar ve botlarin referans suresi (RaceBots, event id'den PB okur) farkli mesafe suresiyle bozulmaz.
 3. Zorlandim: Daily World Record icin LocalLeaderboard mesafesi 0 olan olayda bot uretmiyor (dosyasi bu task'in disinda); gunun alani Meta icinde BotField ile (gun + mesafe tohumlu) uretiliyor, oyuncu daha hizliysa rekor onun.
 4. Biraktim (needs): ProjectInstaller baglama + ProjectContextBuilder alani, seeder/ApplyRaceOfTheDay, SceneCosmetics.RebuildRaceOfTheDayUi, BuildRace'e tek satir. Unity/test calistirilmadi.
-5. Risk: RaceBots race_of_the_day icin kalibrasyon profili bulamaz (profil event id ile aranir) -> botlar 100 m tablosuyla kosar; 300 m'de botlar gercekci olmayabilir. _backlog.md satiri eklendi.
+5. Takip: ProjectContextBuilder raceOfTheDay alani (+ parametresiz Rebuild), BuildRace'te AddRaceOfTheDay, bot tablosu mesafeye gore (BotEventSetup.ForDistance, RaceBots.CurrentProfile); eski bot riski kapandi. ProjectInstaller alani/baglama supervizorde (WIRING acik).
