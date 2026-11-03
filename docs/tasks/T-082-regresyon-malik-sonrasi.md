@@ -1,7 +1,7 @@
 ---
 id: T-082
 title: Faz 8 regresyon eki - Malik'in 02.11 degisiklikleri (kamera ayari kaydi, bilet penceresi, Practice/110mH bileti, Stats'ta botlar, bot cekilisi)
-status: todo
+status: review
 owner: test-agent
 depends_on: [T-053]
 owns_paths:
@@ -11,12 +11,16 @@ owns_paths:
 touches_scene: false
 branch: agent/T-082-regresyon-ek
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Regression/CameraDistanceSettingRegressionTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Regression/EventEntryRulesRegressionTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceFlowRegressionTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/BotRaceDrawTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -48,4 +52,8 @@ Senaryolar (en az):
 - Cevrimdisi: oyunda ag kodu yok (Scripts altinda UnityWebRequest/HttpClient yok) - test gerekmez
 
 ## Calisma notu
-(Agent doldurur: ne yapti, nerede zorlandi, ne birakti - 5 satir)
+1. Dort yeni test dosyasi (kamera ayari kaydi/sifirlama, etkinlik giris kurallari, yaris akisi bilet+bot analizi, bot yaris cekilisi); urun kodu ve denge sayisi yok.
+2. Senaryo 2'nin sahte kapili hali RaceFlowLogicTests'te zaten vardi; gercek RaceEntryGate + bilet servisiyle (bilet harcanmaz, pencere acilir, yaris baslamaz) yeni dosyada eklendi.
+3. Senaryo 3 sevk edilen RaceEventCatalog.asset'ten (AssetDatabase) kural olarak okunur; etkinlik adi yok. RaceBots.HasOpponents (Assembly-CSharp) test assembly'sinden erisilemez, yalniz katalog bayragi kilitlendi.
+4. Hicbir test Ignore edilmedi; Unity calistirilmadi (derleme/kosu kopyada beklenir). Yeni .cs'lerin .meta'si supervizorde.
+5. Dikkat: trace degisiminde yeniden cizim yalniz Results acikken calisir; Analysis ekrani Results'tan once acilirsa bot zamani gelmez (test kilitlemedi, davranis kodda boyle).
