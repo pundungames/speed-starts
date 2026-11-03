@@ -12,9 +12,11 @@ namespace SpeedStars.UI.Framework
         /// Anchors (0..1 of the screen) of the safe rectangle. Insets of at most <paramref name="tolerancePx"/> count as none,
         /// so rounding noise of a notch-less phone leaves the layout exactly as authored. The vertical axis only changes
         /// when <paramref name="includeVertical"/> is set (the game is landscape-only; the notch sits on a side edge).
+        /// With <paramref name="mirrorSides"/> both horizontal edges move in by the larger of the two insets, so a notch on
+        /// one side (and a phone turned the other way up) gives the same, balanced layout. Vertical is never mirrored.
         /// </summary>
         public static void SafeAnchors(Vector2 screenSize, Rect safe, bool includeVertical, float tolerancePx,
-            out Vector2 anchorMin, out Vector2 anchorMax)
+            out Vector2 anchorMin, out Vector2 anchorMax, bool mirrorSides = false)
         {
             anchorMin = Vector2.zero;
             anchorMax = Vector2.one;
@@ -24,11 +26,11 @@ namespace SpeedStars.UI.Framework
             // clamping that mix squeezed everything by a fraction of the wrong width. No insets then, rather than wrong ones.
             if (safe.xMax > screenSize.x + tolerancePx || safe.yMax > screenSize.y + tolerancePx) return;
 
-            AxisAnchors(screenSize.x, safe.xMin, safe.xMax, tolerancePx, out anchorMin.x, out anchorMax.x);
-            if (includeVertical) AxisAnchors(screenSize.y, safe.yMin, safe.yMax, tolerancePx, out anchorMin.y, out anchorMax.y);
+            AxisAnchors(screenSize.x, safe.xMin, safe.xMax, tolerancePx, mirrorSides, out anchorMin.x, out anchorMax.x);
+            if (includeVertical) AxisAnchors(screenSize.y, safe.yMin, safe.yMax, tolerancePx, false, out anchorMin.y, out anchorMax.y);
         }
 
-        private static void AxisAnchors(float length, float safeMin, float safeMax, float tolerancePx, out float min, out float max)
+        private static void AxisAnchors(float length, float safeMin, float safeMax, float tolerancePx, bool mirror, out float min, out float max)
         {
             float lo = Mathf.Clamp(safeMin, 0f, length);
             float hi = Mathf.Clamp(safeMax, 0f, length);
@@ -38,6 +40,7 @@ namespace SpeedStars.UI.Framework
 
             float loInset = lo;
             float hiInset = length - hi;
+            if (mirror) loInset = hiInset = Mathf.Max(loInset, hiInset);
             if (loInset > tolerancePx) min = loInset / length;
             if (hiInset > tolerancePx) max = 1f - hiInset / length;
         }
