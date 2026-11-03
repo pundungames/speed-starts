@@ -180,6 +180,58 @@ namespace SpeedStars.Tests.RaceBots
             Assert.Greater(moved, 0);
         }
 
+        private static BotPlan QuirkyPlan(BotQuirks quirks)
+            => new BotPlan("A", "TR", 15f, 0.8f, reactionSeconds: 0.3f, pressPeriodSeconds: 0.32f, holdSeconds: 0.1f,
+                jitterSeconds: 0f, mistakeChance: 0f, mistakeShiftRatio: 0.5f, quirks: quirks);
+
+        [Test]
+        public void Schedule_WrongFoot_PressesTheSameFootTwice()
+        {
+            var plan = QuirkyPlan(new BotQuirks(0.3f, 0f, 0f, 0, 0, 1f, 0, 1f, 0f, null));
+            var presses = new BotPressSchedule(plan, new System.Random(5), 20.0).Events.Where(e => e.IsPress).ToList();
+            int repeats = 0;
+            for (int i = 1; i < presses.Count; i++) if (presses[i].Leg == presses[i - 1].Leg) repeats++;
+            Assert.Greater(repeats, 0);
+        }
+
+        [Test]
+        public void Schedule_Rush_FastPressesThenSlowerOnes_OrderKept()
+        {
+            var plan = QuirkyPlan(new BotQuirks(0f, 0.2f, 0f, 3, 5, 0.45f, 3, 1.2f, 0f, null));
+            var ev = new BotPressSchedule(plan, new System.Random(9), 20.0).Events;
+            for (int i = 1; i < ev.Count; i++) Assert.Greater(ev[i].Time, ev[i - 1].Time);
+            var presses = ev.Where(e => e.IsPress).ToList();
+            bool fast = false, slow = false;
+            for (int i = 1; i < presses.Count; i++)
+            {
+                double gap = presses[i].Time - presses[i - 1].Time;
+                if (gap < 0.32 * 0.6) fast = true;
+                if (gap > 0.32 * 1.1) slow = true;
+            }
+            Assert.IsTrue(fast && slow);
+        }
+
+        [Test]
+        public void Schedule_Stumble_PausesThenGoesOn()
+        {
+            var plan = QuirkyPlan(new BotQuirks(0f, 0f, 0.2f, 0, 0, 1f, 2, 1f, 0f, null));
+            var ev = new BotPressSchedule(plan, new System.Random(4), 20.0).Events;
+            for (int i = 1; i < ev.Count; i++) Assert.Greater(ev[i].Time, ev[i - 1].Time);
+            var presses = ev.Where(e => e.IsPress).ToList();
+            bool paused = false;
+            for (int i = 1; i < presses.Count; i++) if (presses[i].Time - presses[i - 1].Time > 0.32 * 1.45) paused = true;
+            Assert.IsTrue(paused);
+            Assert.Greater(presses[presses.Count - 1].Time, 18.0);
+        }
+
+        [Test]
+        public void Schedule_Styles_DrawnByWeight()
+        {
+            var styles = new[] { new BotStyle("Never", 0f, 1f, 1f, 1f, 1f, 1f, 1f), new BotStyle("Always", 1f, 1f, 1f, 1f, 1f, 1f, 1f) };
+            var plan = QuirkyPlan(new BotQuirks(0f, 0f, 0f, 0, 0, 1f, 0, 1f, 0f, styles));
+            for (int seed = 0; seed < 10; seed++) Assert.AreEqual("Always", new BotPressSchedule(plan, new System.Random(seed), 5.0).StyleName);
+        }
+
         [Test]
         public void Schedule_SameSeed_SameEvents()
         {

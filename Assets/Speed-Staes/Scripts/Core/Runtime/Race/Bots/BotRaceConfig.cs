@@ -4,6 +4,51 @@ using UnityEngine;
 
 namespace SpeedStars.Core.Race.Bots
 {
+    /// <summary>
+    /// One way a bot can run; each bot draws one per race, by weight. Scales on the bot's own numbers: an early presser taps faster
+    /// than the step wants, a late one waits too long, an erratic one slips a lot. Its time factors keep it on its target time.
+    /// </summary>
+    [Serializable]
+    public struct BotStyle
+    {
+        [Tooltip("Name, only for reading the list.")]
+        public string name;
+        [Tooltip("How often this style is drawn, against the others.")]
+        [Min(0f)] public float weight;
+        [Tooltip("Press period x this (below 1 = taps faster, above = slower).")]
+        [Range(0.5f, 1.6f)] public float periodScale;
+        [Tooltip("Key hold x this (short taps or long pushes).")]
+        [Range(0.3f, 2f)] public float holdScale;
+        [Tooltip("Tempo wander x this (0 = metronome).")]
+        [Range(0f, 4f)] public float driftScale;
+        [Tooltip("Wrong foot chance x this.")]
+        [Range(0f, 4f)] public float wrongFootScale;
+        [Tooltip("Rush chance x this.")]
+        [Range(0f, 4f)] public float rushScale;
+        [Tooltip("Stumble chance x this.")]
+        [Range(0f, 4f)] public float stumbleScale;
+        [Tooltip("Measured by the calibration tool: this style's 100 m time / the plain table's, for the worst bot. The planner " +
+                 "aims a styled bot at the time that this turns into its target.")]
+        [Min(0.1f)] public float timeFactorWorst;
+        [Tooltip("Measured by the calibration tool: the same for the best bot.")]
+        [Min(0.1f)] public float timeFactorBest;
+
+        public BotStyle(string name, float weight, float periodScale, float holdScale, float driftScale, float wrongFootScale,
+            float rushScale, float stumbleScale, float timeFactorWorst = 1f, float timeFactorBest = 1f)
+        {
+            this.timeFactorWorst = timeFactorWorst;
+            this.timeFactorBest = timeFactorBest;
+            this.name = name;
+            this.weight = weight;
+            this.periodScale = periodScale;
+            this.holdScale = holdScale;
+            this.driftScale = driftScale;
+            this.wrongFootScale = wrongFootScale;
+            this.rushScale = rushScale;
+            this.stumbleScale = stumbleScale;
+        }
+    }
+
     /// <summary>One calibration row: a bot of this skill runs about this 100 m time (filled by the calibration tool).</summary>
     [Serializable]
     public struct BotCalibrationPoint
@@ -170,6 +215,66 @@ namespace SpeedStars.Core.Race.Bots
         [Range(0f, 0.9f)]
         [SerializeField] private float mistakeShiftRatio = 0.5f;
 
+        [Header("Liveliness (best skill .. worst skill): habits that keep a bot from running like a metronome")]
+        [Tooltip("Chance per press that the best bot presses the same foot twice (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float wrongFootBestChance = 0.01f;
+
+        [Tooltip("Chance per press that the worst bot presses the same foot twice (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float wrongFootWorstChance = 0.05f;
+
+        [Tooltip("Chance per press that the best bot starts a rush: too many presses, the head tips forward, then it recovers (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float rushBestChance = 0.015f;
+
+        [Tooltip("Chance per press that the worst bot starts a rush (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float rushWorstChance = 0.05f;
+
+        [Tooltip("Fewest presses in one rush.")]
+        [Min(1)]
+        [SerializeField] private int rushPressesMin = 3;
+
+        [Tooltip("Most presses in one rush.")]
+        [Min(1)]
+        [SerializeField] private int rushPressesMax = 6;
+
+        [Tooltip("Press period during a rush, as a share of the bot's own (0.45 = about twice as fast).")]
+        [Range(0.2f, 1f)]
+        [SerializeField] private float rushPeriodRatio = 0.45f;
+
+        [Tooltip("Chance per press that the best bot stumbles: a few presses all over the place, a pause, then it recovers (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float stumbleBestChance = 0.004f;
+
+        [Tooltip("Chance per press that the worst bot stumbles (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float stumbleWorstChance = 0.02f;
+
+        [Tooltip("Slower presses after a rush or a stumble while the bot finds its rhythm again.")]
+        [Min(0)]
+        [SerializeField] private int recoverPresses = 3;
+
+        [Tooltip("Press period while recovering, as a share of the bot's own (above 1 = slower).")]
+        [Range(1f, 2f)]
+        [SerializeField] private float recoverPeriodRatio = 1.2f;
+
+        [Tooltip("The tempo moves between faster and slower stretches, up to this share of the press period either way, before " +
+                 "the style scales it (0 = metronome).")]
+        [Range(0f, 0.3f)]
+        [SerializeField] private float tempoDrift = 0.08f;
+
+        [Tooltip("Each bot draws one of these per race, by weight: its own tempo, hold, wander and slips. After changing them, run " +
+                 "the bot calibration again (it measures each style's time factors).")]
+        [SerializeField] private List<BotStyle> styles = new List<BotStyle>
+        {
+            new BotStyle("On time", 0.3f, 1f, 1f, 0.3f, 0.3f, 0.3f, 0f),
+            new BotStyle("Early", 0.25f, 0.75f, 0.6f, 1f, 1f, 1.5f, 0.5f),
+            new BotStyle("Late", 0.25f, 1.3f, 1.5f, 0.8f, 0.6f, 0.5f, 0.6f),
+            new BotStyle("Erratic", 0.2f, 1f, 1f, 2.5f, 2.5f, 2f, 3f),
+        };
+
         [Header("Calibration (skill -> expected 100 m time)")]
         [Tooltip("Skill to expected time rows, skill ascending, seconds falling. Measured against the runner sim by the calibration tool.")]
         [SerializeField] private List<BotCalibrationPoint> calibration = new List<BotCalibrationPoint>
@@ -309,6 +414,56 @@ namespace SpeedStars.Core.Race.Bots
         public float MistakeBestChance => mistakeBestChance;
         public float MistakeWorstChance => mistakeWorstChance;
         public float MistakeShiftRatio => mistakeShiftRatio;
+
+        public IReadOnlyList<BotStyle> Styles => styles;
+
+        /// <summary>A style index drawn by weight; -1 when there are none.</summary>
+        public int DrawStyle(System.Random random)
+        {
+            float total = 0f;
+            for (int i = 0; i < styles.Count; i++) total += Mathf.Max(0f, styles[i].weight);
+            if (total <= 0f) return -1;
+            double draw = random.NextDouble() * total;
+            for (int i = 0; i < styles.Count; i++)
+            {
+                draw -= Mathf.Max(0f, styles[i].weight);
+                if (draw < 0.0) return i;
+            }
+            return styles.Count - 1;
+        }
+
+        /// <summary>A style's time / the plain table's time for a bot of this skill (1 for no style).</summary>
+        public float StyleTimeFactor(int style, float skill)
+        {
+            if (style < 0 || style >= styles.Count) return 1f;
+            float f = Mathf.Lerp(styles[style].timeFactorWorst, styles[style].timeFactorBest, Mathf.Clamp01(skill));
+            return f > 0.1f ? f : 1f;
+        }
+
+        /// <summary>Writes a style's measured time factors (calibration tool).</summary>
+        public void SetStyleTimeFactors(int style, float worst, float best)
+        {
+            BotStyle s = styles[style];
+            s.timeFactorWorst = worst;
+            s.timeFactorBest = best;
+            styles[style] = s;
+        }
+
+        /// <summary>
+        /// The habits of a bot of this skill (0 = worst, 1 = best) in one style (-1 = plain, no style: what the calibration table is
+        /// measured with). Used by the planner and the calibration tool alike.
+        /// </summary>
+        public BotQuirks QuirksFor(float skill, int style = -1)
+        {
+            float s = skill < 0f ? 0f : (skill > 1f ? 1f : skill);
+            return new BotQuirks(
+                wrongFootChance: wrongFootWorstChance + (wrongFootBestChance - wrongFootWorstChance) * s,
+                rushChance: rushWorstChance + (rushBestChance - rushWorstChance) * s,
+                stumbleChance: stumbleWorstChance + (stumbleBestChance - stumbleWorstChance) * s,
+                rushPressesMin: rushPressesMin, rushPressesMax: rushPressesMax, rushPeriodRatio: rushPeriodRatio,
+                recoverPresses: recoverPresses, recoverPeriodRatio: recoverPeriodRatio, tempoDrift: tempoDrift,
+                styles: style >= 0 && style < styles.Count ? new[] { styles[style] } : null);
+        }
         public IReadOnlyList<BotCalibrationPoint> Calibration => calibration;
         public IReadOnlyList<BotEventProfile> EventProfiles => eventProfiles;
         public IReadOnlyList<BotIdentity> Identities => identities;

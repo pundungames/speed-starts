@@ -147,11 +147,17 @@ namespace SpeedStars.Tools.Builders
                 results.Add(Measure(config, tuning, ev, seeds, step, Math.Max(horizonArg, ev.Distance * HorizonSecondsPerMeter), csv));
             }
 
+            Measured plainBase = results.Find(r => r.Case.IsBase);
+            var factors = plainBase != null ? MeasureStyles(config, tuning, plainBase, seeds, step, Math.Max(horizonArg, plainBase.Case.Distance * HorizonSecondsPerMeter)) : null;
+
             // The fallback reference keeps the 100 m relation: the skill the 100 m fallback time stands for, read off the event's own table.
             IReadOnlyList<BotCalibrationPoint> baseTable = results.Find(r => r.Case.IsBase)?.Table ?? config.Calibration;
             float fallbackSkill = BotSkillCurve.SkillForSeconds(baseTable, config.FallbackReferenceSeconds);
 
             string tableText = TableText(results, fallbackSkill);
+            if (factors != null)
+                for (int i = 0; i < factors.Count; i++)
+                    tableText += $"\n// style {config.Styles[i].name}: time factor worst {factors[i].x:0.000}, best {factors[i].y:0.000}";
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outPath)) ?? ".");
             File.WriteAllText(outPath, csv.ToString(), new UTF8Encoding(false));
             File.WriteAllText(outPath + ".table.txt", tableText, new UTF8Encoding(false));
@@ -163,6 +169,8 @@ namespace SpeedStars.Tools.Builders
                 if (m.Case.IsBase) config.SetCalibration(m.Table);
                 else config.SetProfile(new BotEventProfile(m.Case.Id, FallbackFor(m.Table, fallbackSkill), m.Table));
             }
+            if (factors != null)
+                for (int i = 0; i < factors.Count; i++) config.SetStyleTimeFactors(i, factors[i].x, factors[i].y);
             EditorUtility.SetDirty(config);
             AssetDatabase.SaveAssets();
             UnityEngine.Debug.Log($"[{Source}] Tables written into '{configPath}' ({results.Count} events).");
@@ -214,6 +222,43 @@ namespace SpeedStars.Tools.Builders
             m.Raw = points;
             m.Table = MakeStrictlyFalling(points);
             return m;
+        }
+
+        private const float StyleFactorBand = 0.3f; // skills up to this (worst) and from 1 minus this (best) give the two factors
+
+        /// <summary>
+        /// Each style's time over the base event against the plain table, at the worst and the best end (x = worst, y = best): a mean of
+        /// the ratio over the rows at that end. The same seeds as the plain rows, so the ratio is the style's own.
+        /// </summary>
+        private static List<Vector2> MeasureStyles(BotRaceConfig config, RunnerTuning tuning, Measured plain, int seeds, float step, double horizon)
+        {
+            var factors = new List<Vector2>();
+            int rows = Mathf.RoundToInt(1f / step);
+            for (int style = 0; style < config.Styles.Count; style++)
+            {
+                double worst = 0.0, best = 0.0;
+                int worstRows = 0, bestRows = 0;
+                for (int row = 0; row <= rows; row++)
+                {
+                    float skill = Mathf.Clamp01(row * step);
+                    bool atWorst = skill <= StyleFactorBand, atBest = skill >= 1f - StyleFactorBand;
+                    if (!atWorst && !atBest) continue;
+                    BotPlan plan = BotSimDriver.PlanForSkill(config, skill, style);
+                    double sum = 0.0;
+                    for (int seed = 0; seed < seeds; seed++)
+                    {
+                        var schedule = new BotPressSchedule(plan, new System.Random(unchecked(row * 7919 + seed * 104729 + 17)), horizon);
+                        BotSimDriver.Result r = BotSimDriver.Run(tuning, schedule, plain.Case.Distance, horizon);
+                        sum += r.Finished ? r.SecondsFromGo : horizon;
+                    }
+                    double ratio = sum / seeds / Math.Max(0.01, plain.Raw[row].seconds);
+                    if (atWorst) { worst += ratio; worstRows++; }
+                    if (atBest) { best += ratio; bestRows++; }
+                }
+                factors.Add(new Vector2((float)(worst / Math.Max(1, worstRows)), (float)(best / Math.Max(1, bestRows))));
+                UnityEngine.Debug.Log($"[{Source}] STYLE {config.Styles[style].name}: time factor worst {factors[style].x:0.000}, best {factors[style].y:0.000}");
+            }
+            return factors;
         }
 
         /// <summary>The event ids of an <c>-events</c> argument ("all" or a comma list, default all).</summary>
@@ -376,7 +421,7 @@ namespace SpeedStars.Tools.Builders
         /// A plan for a given skill, the way BotFieldPlanner derives the driver numbers from the skill (same lerps, kept in step by hand:
         /// if BotFieldPlanner.Plan changes how it maps skill to reaction / period / hold / jitter / mistakes, change it here too).
         /// </summary>
-        public static BotPlan PlanForSkill(BotRaceConfig c, float skill)
+        public static BotPlan PlanForSkill(BotRaceConfig c, float skill, int style = -1)
         {
             float s = Mathf.Clamp01(skill);
             return new BotPlan("calibration", string.Empty, BotSkillCurve.SecondsForSkill(c.Calibration, s), s,
@@ -385,7 +430,8 @@ namespace SpeedStars.Tools.Builders
                 holdSeconds: Mathf.Lerp(c.HoldWorstSeconds, c.HoldBestSeconds, s),
                 jitterSeconds: Mathf.Lerp(c.JitterWorstMs, c.JitterBestMs, s) * 0.001f,
                 mistakeChance: Mathf.Lerp(c.MistakeWorstChance, c.MistakeBestChance, s),
-                mistakeShiftRatio: c.MistakeShiftRatio);
+                mistakeShiftRatio: c.MistakeShiftRatio,
+                quirks: c.QuirksFor(s, style));
         }
 
         /// <summary>Runs the schedule until the distance is reached (time interpolated inside the step) or the horizon ends.</summary>
