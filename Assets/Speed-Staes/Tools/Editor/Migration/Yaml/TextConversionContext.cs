@@ -48,6 +48,7 @@ namespace SpeedStars.Tools.Migration
         public int OutlinesRemoved;
         public int OverridesTranslated;
         public int OverridesDropped;
+        public int ProxiesSwitched;
         public int DanglingRefsCleared;
         public readonly List<string> Warnings = new List<string>();
 

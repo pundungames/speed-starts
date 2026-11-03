@@ -35,6 +35,7 @@ namespace SpeedStars.Tools.Migration
             @"r: (?<r>[-+0-9.eE]+), g: (?<g>[-+0-9.eE]+), b: (?<b>[-+0-9.eE]+), a: (?<a>[-+0-9.eE]+)", RegexOptions.Compiled);
         private static readonly Regex VectorPattern = new Regex(@"x: (?<x>[-+0-9.eE]+), y: (?<y>[-+0-9.eE]+)", RegexOptions.Compiled);
         private static readonly Regex TargetPattern = new Regex(@"target: \{fileID: (-?\d+), guid: ([0-9a-fA-F]{32})", RegexOptions.Compiled);
+        private static readonly Regex SourcePattern = new Regex(@"^\{fileID: (-?\d+), guid: ([0-9a-fA-F]{32})", RegexOptions.Compiled);
         private static readonly Regex PlainRefPattern = new Regex(@"^(\s*)([A-Za-z_][A-Za-z0-9_]*): \{fileID: (-?\d+)\}\s*$", RegexOptions.Compiled);
         private static readonly Regex ComponentPattern = new Regex(@"^  - component: \{fileID: (-?\d+)\}\s*$", RegexOptions.Compiled);
 
@@ -113,6 +114,9 @@ namespace SpeedStars.Tools.Migration
 
             foreach (UnityYamlDoc doc in file.Docs)
                 if (doc.ClassId == 1001 && !doc.Removed) changed |= TranslateOverrides(doc, ctx, res);
+
+            foreach (UnityYamlDoc doc in file.Docs)
+                if (doc.Stripped && doc.ClassId == 114) changed |= SwitchProxyScript(doc, ctx, res);
 
             res.Changed = changed;
             res.Text = changed ? file.Write() : yaml;
@@ -390,6 +394,23 @@ namespace SpeedStars.Tools.Migration
         }
 
         // ---------------------------------------------------------------- nested prefab overrides
+
+        /// <summary>
+        /// A stripped proxy of a nested Text (in the parent prefab/scene) carries its own m_Script. When its source became TMP the proxy
+        /// must too, or a TMP_Text field pointing at it is nulled and Unity deletes the proxy on reserialize. Only m_Script changes.
+        /// </summary>
+        private static bool SwitchProxyScript(UnityYamlDoc doc, TextConversionContext ctx, ConversionResult res)
+        {
+            if (doc.ScriptGuid() != MigrationGuids.LegacyText) return false;
+            Match source = SourcePattern.Match(doc.Get("m_CorrespondingSourceObject") ?? string.Empty);
+            if (!source.Success || !ctx.TextTargets.Contains(source.Groups[2].Value + ":" + source.Groups[1].Value)) return false;
+
+            int i = doc.Lines.FindIndex(l => l.StartsWith("  m_Script:", StringComparison.Ordinal));
+            doc.Lines[i] = $"  m_Script: {{fileID: 11500000, guid: {MigrationGuids.TextMeshProUgui}, type: 3}}";
+            res.ProxiesSwitched++;
+            return true;
+        }
+
 
         private static bool TranslateOverrides(UnityYamlDoc doc, TextConversionContext ctx, ConversionResult res)
         {
