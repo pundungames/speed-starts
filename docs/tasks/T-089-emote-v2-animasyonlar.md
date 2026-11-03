@@ -15,6 +15,9 @@ owns_paths:
   - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/ConfigAssetSeeder.cs"
   - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiEmotePrefabs.cs"
   - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiRaceHudPrefabs.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/SceneRaceEmotes.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/SceneBuilder.cs"
+  - "Assets/Speed-Staes/Tools/Editor/Builders/Ui/UiV2Prefabs.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/**"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Emotes/**"
   - "Assets/Speed-Staes/Tests/PlayMode/EmoteScreenSmokeTests.cs"
@@ -26,22 +29,23 @@ tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmoteCatalogMigrationTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/RaceEmoteRulesTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmotePriceLadderTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/PlayerSettingsEmoteOptionsTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/EmoteScreenSmokeTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
     durum: open
-    not: "Data/Config/EmoteCatalog.asset must be rewritten to the v2 set (None + 9 baked clips, prices 3 x 2500 / 3 x 5000 / 3 x 7500): run SpeedStars.Tools.Builders.EmoteCatalogSeed.ApplyEmoteV2 (parameterless, also menu 'Tools/Speed Stars/Build/Apply emote v2'). Until then the old asset has no clipName: every emote acts as None. ConfigAssetSeeder.ApplyEconomyV2 keeps the same ladder (ConfigAssetSeeder.EmotePrice)."
+    not: "Run in a verification copy, in this order: 1) SpeedStars.Tools.Builders.EmoteCatalogSeed.ApplyEmoteV2 (rewrites Data/Config/EmoteCatalog.asset: None + 9 baked clips, 3 x 2500 / 3 x 5000 / 3 x 7500; until then the old asset has no clipName and every emote acts as None)."
   - tip: SCENE
     durum: open
-    not: "Race HUD prefab needs the Emote button: run SpeedStars.Tools.Builders.UiRaceHudPrefabs.PatchRaceHudPrefab (parameterless; adds RaceHud/Emote + Emote/Name and binds RaceHudView.emoteButton/emoteNameText). Also add ONE line to UiV2Prefabs.RaceHud after UiViewBinder.BindRaceHud(root): UiRaceHudPrefabs.AddEmoteButton(root); so a full UI rebuild (EconomyUiRebuild) keeps the button. Race scene: add SpeedStars.Bridge.RaceEmotes to the PLAYER runner root (as SceneCosmetics does for RaceRunnerOutfit), field bots <- the scene's RaceBots; playerEmote stays empty (found on the runner)."
+    not: "Continue in the same copy: 2) SpeedStars.Tools.Builders.UiRaceHudPrefabs.PatchRaceHudPrefab (adds RaceHud/Emote + Emote/Name, binds RaceHudView.emoteButton/emoteNameText); 3) SpeedStars.Tools.Builders.SceneRaceEmotes.PatchRaceScene (opens Scenes/Game/Race.unity WITHOUT rebuilding it: RaceEmotes on the runner root that carries RaceRunnerOutfit, bots <- RaceBots, RaceSceneInstaller.raceEmotes set, saved; logs RACE_EMOTES_PATCH_OK, Exit(1) on error in batchmode). UiV2Prefabs.RaceHud and SceneBuilder.BuildRace call the same steps now, so a future full rebuild keeps them."
+  - tip: WIRING
+    durum: closed
+    not: "RaceSceneInstaller raceEmotes field + IRaceEmoteControl binding (done by the supervisor, 7f5e3e2f)."
   - tip: WIRING
     durum: open
-    not: "RaceSceneInstaller -> [SerializeField] private RaceEmotes raceEmotes; in InstallSceneBindings: if (raceEmotes != null) Container.Bind<IRaceEmoteControl>().FromInstance(raceEmotes).AsSingle(); (usings SpeedStars.Bridge, SpeedStars.Meta.Contracts); scene field raceEmotes <- the component above. RaceHudView injects IRaceEmoteControl optionally: without it the button stays hidden."
-  - tip: WIRING
-    durum: open
-    not: "ProjectInstaller (or RaceSceneInstaller) -> Container.Bind<IEmoteRaceOptions>().To<DefaultEmoteRaceOptions>().AsSingle(); (all three switches true). After T-088 is merged, replace DefaultEmoteRaceOptions by an adapter over IPlayerSettings (ShowEmoteButton / AutoEmoteSelf / AutoEmoteCompetitors + Changed). RaceEmotes and RaceHudView already fall back to the default when nothing is bound."
+    not: "ProjectInstaller -> Container.Bind<IEmoteRaceOptions>().To<PlayerSettingsEmoteOptions>().AsSingle(); (using SpeedStars.Meta.Emotes; ctor takes IPlayerSettings, already bound) INSTEAD of DefaultEmoteRaceOptions. Without a binding RaceEmotes / RaceHudView fall back to the all-on default."
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:

@@ -287,6 +287,7 @@ namespace SpeedStars.Tools.Builders
             SquareButton(root, "Exit", "exit_icon", -186f);
 
             UiViewBinder.BindRaceHud(root);
+            UiRaceHudPrefabs.AddEmoteButton(root); // T-089: Emote button + name label, bound on the view
             BindPlace(root, place.gameObject, placeLabel);
         }
 

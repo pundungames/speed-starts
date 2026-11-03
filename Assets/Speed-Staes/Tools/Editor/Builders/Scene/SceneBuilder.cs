@@ -145,6 +145,7 @@ namespace SpeedStars.Tools.Builders
                 SceneUiLayout.CreateSceneContext<RaceSceneInstaller>(scene, SceneUiLayout.RootScreenOf(raceHud, UiPrefabPaths.RaceHud));
                 SceneWiring.WireRace(scene);
                 SceneRaceBots.Add(scene);              // T-075: opponents + rank (needs the adapter WireRace made)
+                SceneRaceEmotes.Add(scene);            // T-089: race emotes on the player's runner (needs the bots and the installer)
                 SceneRaceHurdles.Add(scene);           // the current event's hurdles (needs the adapter too)
                 Save(scene, RaceScenePath);
                 done = true;
