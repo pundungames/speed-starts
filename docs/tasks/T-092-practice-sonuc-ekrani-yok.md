@@ -1,7 +1,7 @@
 ---
 id: T-092
 title: Practice'te bitiste sonuc ekrani acilmaz (referans) - HUD'da Exit / Restart kalir, odul ve rekor yok
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-090]
 owns_paths:
@@ -12,7 +12,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/PracticePanelSmokeTests.cs"
 touches_scene: false
 branch: agent/T-092-practice-sonuc-yok
-commits: []
+commits: [34aec9d2, 68022b57]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceFlowPracticeTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/PracticePanelSmokeTests.cs"
@@ -20,11 +20,11 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
-    not: "Yeni Tests/EditMode/UI/Race/RaceFlowPracticeTests.cs icin .meta kopyada derlenip alinir (hook .meta yazdirmaz)."
+    durum: closed
+    not: "Yeni Tests/EditMode/UI/Race/RaceFlowPracticeTests.cs icin .meta kopyada derlenip alinir (hook .meta yazdirmaz). -> 68022b57"
   - tip: DECISION
-    durum: open
-    not: "Practice ayrimi RaceFlow'da RaceEventCatalog'dan (HasOpponents=false) okunur; ayri bir RaceEventInfo.IsPractice alani gerekirse RaceEventLookup.cs (owns disi) degisir - simdilik gerekmedi."
+    durum: closed
+    not: "Gerekmedi (supervizor 03.11): HasOpponents=false yeterli. Practice ayrimi RaceFlow'da RaceEventCatalog'dan (HasOpponents=false) okunur; ayri bir RaceEventInfo.IsPractice alani gerekirse RaceEventLookup.cs (owns disi) degisir - simdilik gerekmedi."
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:

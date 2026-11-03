@@ -1,14 +1,14 @@
 ---
 id: T-094
 title: Watch Replay bizim akislarda - PlayMode duman testi (100m, Race of the Day, Race Again sonrasi), bulgular rapor
-status: review
+status: merged
 owner: test-agent
 depends_on: [T-092]
 owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/WatchReplaySmokeTests.cs"
 touches_scene: false
 branch: agent/T-094-watch-replay-duman
-commits: []
+commits: [632595af, 68022b57]
 tests:
   - "Assets/Speed-Staes/Tests/PlayMode/WatchReplaySmokeTests.cs"
 analytics:
@@ -48,3 +48,4 @@ Not: ReplayControlsView UI'i runtime'da kuruyor (bizim kural 3.1'e aykiri, Malik
 - Practice testi T-092 sonrasi davranisi dogrular; T-092 main'de degilken KIRMIZI beklenir (RaceFlowLogic.cs:170 Results'i push ediyor).
 - BULGU: Scripts/Bridge/RaceSessionAdapter.cs:238-243 - DevForceFinish oturumu Complete() ile bitirir ama RaceController kosuyu bitirmez (Current Running kalir, LastRaceTime degismez); RaceRecorder.cs:30 HasRace false kalir, Watch Replay dugmesi gri: dev tusuyla (F) acilan Results'ta replay denenemez.
 - BULGU: Scripts/Physical/RaceRecorder.cs:30 - HasRace `Last != null`: ilk yaristan sonra Last hep dolu; sonraki yarista dev bitisle Results acilirsa Watch Replay ESKI yarisi oynatir (Race Again sonrasi). Ayrica ReplayControlsView hala runtime'da kuruluyor (bilinen, kapsam disi).
+- Supervizor 03.11: kopyada 4 test yesil (PlayMode 51/51). BULGU 1-2 (dev bitis tusu F replay'i gormuyor / eski yarisi oynatir) yalniz gelistirici yolunda; Malik listesine (DURUM) tasindi.

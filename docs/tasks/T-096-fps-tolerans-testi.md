@@ -1,14 +1,14 @@
 ---
 id: T-096
 title: FPS toleransi testi - ayni girdi 30 / 60 / 120 FPS'te ayni yaris sonucunu verir mi (olcum + PlayMode testi)
-status: review
+status: merged
 owner: test-agent
 depends_on: []
 owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/FrameRateToleranceTests.cs"
 touches_scene: false
 branch: agent/T-096-fps-tolerans
-commits: []
+commits: [55dd9bff, 68022b57]
 tests:
   - "Assets/Speed-Staes/Tests/PlayMode/FrameRateToleranceTests.cs"
 analytics:
@@ -46,3 +46,4 @@ bagli olabilecek yeri (dosya:satir, ornegin Update'te deltaTime ile entegrasyon)
 3. Olcum: 6. sn mesafe+hiz (kareler arasi dogrusal duzeltmeli) ve 100 m bitis suresi (dogrusal interpolasyon); tolerans %1 (referansa gore 60 FPS). Bitis yalniz ikisi de bitirdiyse karsilastirilir, biri bitirip digeri bitirmediyse kirmizi.
 4. FPS'e bagli olabilecek yerler: RunnerBody.cs:62,80 (Sim karenin sonuna kadar ilerletilir; kalan dt RunnerSim.cs:309-317'de 1/240 alt adimlarla biter, son parca kare uzunluguna gore degisir -> Euler entegrasyonu kucuk fark); RunnerBody.cs:68 (zaman damgasi `min(tap, now)`: olay kare icine gec ulasirsa basis o kareye kayar; gercek girdide ctx.time ile RunnerInput.cs:136-141 Enqueue yas hesabi ayni kareden gelir); RunnerSim.cs:437/447 (StepHead Time ile surekli ama h degisken); Sim disinda Time.deltaTime kullananlar yalniz gorsel/geri bildirim (PoseDriver:952, *StepFeedback) ve RaceRecorder.cs:104 (bitis sonrasi sure toplami). FixedUpdate yok.
 5. Okunmadi/kapsam disi: RaceController bitis kontrolu (kare kuantali olabilir), cihaz FPS'i. Beklenti: Sim sabit alt adim + kesin zaman damgasi oldugu icin fark kucuk olmali; kirmizi cikarsa sebep yukaridaki ilk madde olabilir, Malik'e iletilir.
+- Supervizor 03.11 olcum: ritim 0.32 sn -> bitis 17.5027 / 17.5028 / 17.5028 sn (30/60/120 FPS), 6. sn 29.635 m, 5.664 m/s - fark %0.001. Sik basma takvimi 6. sn'de 2.89 m ve hiz 0 verdi (kosucu durmus: takvim gercek sik basmayi temsil etmiyor, FPS farki yine %0.1); takvim duzeltmesi backlog.

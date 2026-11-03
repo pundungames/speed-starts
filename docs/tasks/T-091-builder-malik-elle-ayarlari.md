@@ -1,7 +1,7 @@
 ---
 id: T-091
 title: Builder'a Malik'in 03.11 elle ayarlari - EventModal ve 7 gun Close sag kenara sabit, ResultsScreen replaySkin
-status: review
+status: merged
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -11,15 +11,15 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/**"
 touches_scene: false
 branch: agent/T-091-builder-malik-ayarlari
-commits: []
+commits: [35b04bfc, f9743163, 68022b57]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/BuilderHandEditsTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "Supervizor kopyada sirayla: UiPrefabBuilder.BuildAll(true), sonra SceneBuilder.BuildHome(true). Race YENIDEN KURULMAZ; Race'in prefab fileID'leri yeni prefab'larda duruyor mu bakilir. Sonra BuilderHandEditsTests yesile doner (builder calisana kadar kirmizi)."
+    durum: closed
+    not: "Supervizor kopyada sirayla: UiPrefabBuilder.BuildAll(true), sonra SceneBuilder.BuildHome(true). Race YENIDEN KURULMAZ; Race'in prefab fileID'leri yeni prefab'larda duruyor mu bakilir. Sonra BuilderHandEditsTests yesile doner (builder calisana kadar kirmizi). -> 68022b57 (kopyada 03.11: EconomyUiRebuild.Run, kopyanin Race'i kayitli haline donduruldu; kayitli Race'in 26 prefab referansi duruyor; BuilderHandEditsTests yesil)"
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:

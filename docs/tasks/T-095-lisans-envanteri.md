@@ -1,14 +1,14 @@
 ---
 id: T-095
 title: Lisans envanteri - build'e giren ucuncu taraf varliklar (font, UI sanati, model, animasyon, ses, eklenti), kaynak ve risk
-status: review
+status: merged
 owner: denetci-agent
 depends_on: []
 owns_paths:
   - "reports/lisans-envanteri-2026-11-03.md"
 touches_scene: false
 branch:
-commits: []
+commits: [95ed2d40]
 tests:
   - "gerekmiyor: rapor, kod yok"
 analytics:

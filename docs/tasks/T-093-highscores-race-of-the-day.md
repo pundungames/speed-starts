@@ -1,7 +1,7 @@
 ---
 id: T-093
 title: High Scores'ta Race of the Day listesi bos - gunun mesafesinin kayitlari + gunun bot alani (sonuc ekranindaki Daily WR ile ayni)
-status: review
+status: merged
 owner: systems-agent
 depends_on: [T-087]
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Leaderboard/**"
 touches_scene: false
 branch: agent/T-093-highscores-race-of-the-day
-commits: []
+commits: [0c8be28f, f9743163, 68022b57]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Leaderboard/LocalLeaderboardTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Leaderboard/LeaderboardDailyOptionTests.cs"
@@ -19,11 +19,11 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "HighScoresScreen prefab: Race of the Day appears in the event filter as a 4th category (title DAILY, one option). LeaderboardScreenView.categoryTabs needs a 4th LeaderboardChoiceView tab, otherwise the option is only reached when the screen opens with the daily race selected (no tab to switch to it)."
+    durum: closed
+    not: "-> f9743163 (T-091: EventModal 4 sekme) + 68022b57 (kopyada rebuild). HighScoresScreen prefab: Race of the Day appears in the event filter as a 4th category (title DAILY, one option). LeaderboardScreenView.categoryTabs needs a 4th LeaderboardChoiceView tab, otherwise the option is only reached when the screen opens with the daily race selected (no tab to switch to it)."
   - tip: DECISION
-    durum: open
-    not: "Optional, Malik's area: RaceOfTheDayService.TryBuildField builds the field id by hand (eventId + ':' + DayKey). Leaderboard now has DailyBotField.FieldId(eventId, dayKey) with the same format; switching the service to it removes the duplicated format. Tests (list first row == TryGetFieldRecord) catch any drift meanwhile."
+    durum: closed
+    not: "Backlog'a tasindi (supervizor 03.11; Meta/RaceOfTheDay bizim alan, Malik'in degil). RaceOfTheDayService.TryBuildField builds the field id by hand (eventId + ':' + DayKey). Leaderboard now has DailyBotField.FieldId(eventId, dayKey) with the same format; switching the service to it removes the duplicated format. Tests (list first row == TryGetFieldRecord) catch any drift meanwhile."
   - tip: WIRING
     durum: closed
     not: "none needed: LocalLeaderboard takes IRaceOfTheDay as an optional constructor parameter (default null); Zenject resolves it because ProjectInstaller already binds IRaceOfTheDay. Not verified in a container run (verification is central)."
