@@ -5,6 +5,7 @@ using SpeedStars.Meta.Clock;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Cosmetics;
+using SpeedStars.Meta.DailyRace;
 using SpeedStars.Meta.Economy;
 using SpeedStars.Meta.Emotes;
 using SpeedStars.Meta.Leaderboard;
@@ -49,6 +50,8 @@ namespace SpeedStars.Installers
         [SerializeField] private AudioConfig audio;
         [Tooltip("Fake rewarded ad (T-050, editor / development builds only): wait and result.")]
         [SerializeField] private SpeedStars.Meta.Ads.AdsDevConfig adsDev;
+        [Tooltip("Race of the Day (T-087): the distance list and the racer looks the day rule picks from.")]
+        [SerializeField] private RaceOfTheDayConfig raceOfTheDay;
 
         [Header("Scenes")]
         [SerializeField] private SceneFlowScenes scenes = new SceneFlowScenes();
@@ -77,6 +80,7 @@ namespace SpeedStars.Installers
             BindConfig(leaderboard);
             BindConfig(emotes);
             BindConfig(audio);
+            BindConfig(raceOfTheDay);
 
             Container.Bind<ISaveStore>().FromMethod(_ => FileSaveStore.CreateDefault()).AsSingle();
             Container.Bind<ProgressRepository>().FromMethod(CreateProgress).AsSingle();
@@ -105,6 +109,8 @@ namespace SpeedStars.Installers
             Container.Bind(typeof(ILeaderboard), typeof(System.IDisposable)).To<LocalLeaderboard>().AsSingle();
             // T-040: emote ownership/equip (Cash via the ledger) and the preview the menu character plays.
             Container.Bind<IEmoteService>().To<EmoteService>().AsSingle();
+            // T-087: the day's distance and racer look (UTC day), and the daily record field.
+            Container.Bind<IRaceOfTheDay>().FromMethod(c => RaceOfTheDayService.Create(c.Container.Resolve<IClock>(), c.Container.Resolve<RaceOfTheDayConfig>(), c.Container.Resolve<LeaderboardConfig>())).AsSingle();
             // T-089: the race emote switches (button, auto emote) come from the player settings (T-088).
             Container.Bind<IEmoteRaceOptions>().To<PlayerSettingsEmoteOptions>().AsSingle();
             Container.Bind<IEmotePreview>().To<EmotePreview>().AsSingle();
