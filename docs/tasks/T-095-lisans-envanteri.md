@@ -1,7 +1,7 @@
 ---
 id: T-095
 title: Lisans envanteri - build'e giren ucuncu taraf varliklar (font, UI sanati, model, animasyon, ses, eklenti), kaynak ve risk
-status: todo
+status: review
 owner: denetci-agent
 depends_on: []
 owns_paths:
@@ -14,8 +14,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -40,3 +40,8 @@ UI sanati (docs/eksik-ui, docs/gdd/referans-ekranlar build'e girmiyorsa "girmiyo
 - Varlik degistirme/silme, hukuki gorus
 
 ## Calisma notu
+- Python betigi (scratchpad) ile Home+Race+Resources kokunden guid->meta bagimlilik taramasi: 2899 dosya build'e giriyor, 2882 girmiyor.
+- Rapor: reports/lisans-envanteri-2026-11-03.md (ozet + build'e giren tablo + girmeyenler + acik sorular). Hicbir asset/kod degismedi, git calistirilmadi.
+- Bulgular: urun adi yer tutucu (speed-starts/DefaultCompany); UI sanati (543 PNG) ve tema modelleri icin kaynak kaniti yok; Mixamo ham FBX repo'da; GUI PRO/CasualFantasy Assets'te hic yok.
+- Sinir: yalniz guid baglari izlendi; PNG icerigi tek tek gorsel incelenmedi (gomulu logo kontrolu yapilmadi).
+- Bagli kalan: repo gorunurlugu, UI sanati uretici/lisansi, Serhat/Malik kaynak sorulari (rapor "Acik sorular").
