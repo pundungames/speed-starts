@@ -1,7 +1,7 @@
 ---
 id: T-086
 title: Diger mesafeler - 200m, 400m, 60mH, 400mH oynanir (botlar mesafeye gore kalibre, engeller etkinlik verisinden); 4x100m ve Medley Malik'te
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: []
 owns_paths:
@@ -16,12 +16,19 @@ owns_paths:
 touches_scene: false
 branch: agent/T-086-mesafeler
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/BotEventProfileTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "Kalibrasyon: kopyada `Unity.exe -batchmode -nographics -quit -projectPath <kopya> -executeMethod SpeedStars.Tools.Builders.BotCalibration.Run -out <klasor-disinda>/bot-cal.csv -events all -apply` kosulur; Data/Config/BotRaceConfig.asset'e eventProfiles (110mh,200m,400m,60mh,400mh) yazilir ve ayni satirlar BotRaceConfig.cs'te eventProfiles varsayilanina (<csv>.table.txt'teki new BotEventProfile(...) satirlari) kopyalanir. 100m satirlari bugunku tabloyla ayni kalmali (dogrulama: -events 100m)."
+  - tip: ASSET
+    durum: open
+    not: "Etkinlikleri acmak: Data/Config/Events/200m.asset, 400m.asset, 60mh.asset, 400mh.asset -> isPlayable 0 -> 1 (ConfigAssetSeeder.cs / T-084 ile cakisirsa seeder varsayilanini da). Bilet kurali (requiresTicket) kullanici karari, degismedi. Bot tablolari asset'e yazilmadan 200m/400m acilirsa botlar yine calisir (eski olcekleme + uzun basis takvimi) ama sureleri olculmemis olur."
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -56,4 +63,8 @@ Malik'in dosyalari (`Scripts/Physical/**`, `Scripts/Runner/RunnerInput.cs`, `Sid
 - 4x100m, Medley (Malik); HUD pist ilerleme halkasi; bilet kurali karari (kullanici); ekonomi (T-084)
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+1. Bot tablosu artik etkinlik basina: `BotRaceConfig.eventProfiles` (BotEventProfile: eventId, fallbackReferenceSeconds, calibration). 100m ve profili olmayan etkinlik eski tabloyla/olceklemeyle ayni (test); `BotEventSetup` secimi, `BotFieldPlanner.Plan(..., profile)` tabloyu uygular.
+2. Ziplama kurali saf `BotJumpDriver`a cikti; RaceBots ve kalibrasyon ayni `RaceBots.WantsJump`i kullanir. `BotCalibration` her etkinligi kendi mesafesi + engelleri + ziplamasiyla olcer (-events, -apply: 100m tabana, digerleri profile).
+3. 400m enerji: RunnerSim yalniz basis basina 0.25 harcar (kosarken yenilenme yok, tutmada 2/sn); ritim 0.32 sn'de 400 m ~125-200 basis = 31-51 enerji, en hizli bot (0.24 sn, ~40 sn) ~42, en yavas bot (0.55 sn, ~91 sn) ~41; lowEnergy 25'e inmez -> yetiyor. Arac enerji sayisini da olcer (table.txt basligi).
+4. Engel yerlesimi dogru: 60mH son engel 50.28 (cizgi 60), 110mH 95.98 (110), 400mH 360 (400); cizgiyle cakisma yok (varlik testi). Seam ve builder degismedi (SceneRaceHurdles/RaceHurdles/RaceSessionAdapter dokunulmadi).
+5. Bıraktığım: kalibrasyonu ben kosmadim (Unity yasak); tablolar yazilana kadar yeni mesafelerde botlar eski olcekleme ile calisir. Yeni dosya: BotEventProfileTests.cs (.meta kopyada uretilmeli). Dunya parcasi bot onde giderse uretilmis mi dogrulanmadi (Serhat'in uretimi, 400m'de bakilmali).

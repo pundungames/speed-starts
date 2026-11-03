@@ -9,7 +9,7 @@ namespace SpeedStars.Core.Race.Bots
         public readonly string Name;
         /// <summary>ISO 3166-1 alpha-2, empty = no flag.</summary>
         public readonly string CountryCode;
-        /// <summary>The 100 m time this bot is meant to finish in (seconds), this race.</summary>
+        /// <summary>The time this bot is meant to finish in (seconds), this race: over the event's own length with a measured profile, else a 100 m equivalent.</summary>
         public readonly float TargetSeconds;
         /// <summary>0..1, derived from <see cref="TargetSeconds"/> through the calibration table.</summary>
         public readonly float Skill;

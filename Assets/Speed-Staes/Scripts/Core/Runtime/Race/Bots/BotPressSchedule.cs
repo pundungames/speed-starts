@@ -17,6 +17,47 @@ namespace SpeedStars.Core.Race.Bots
     }
 
     /// <summary>
+    /// When a bot asks for its hurdle jump (T-086). Pure, shared by the race (RaceBots) and the calibration tool, so the measured times
+    /// include the same jumps. The jump is asked so that the middle of the flight lands over the next hurdle, from the speed now; each
+    /// hurdle gets one timing error: the plan's jitter, or with the mistake chance a whole flight early or late, which knocks the hurdle.
+    /// </summary>
+    public sealed class BotJumpDriver
+    {
+        private const float Asked = float.MaxValue; // this hurdle's jump is already on its way
+
+        private readonly Random _random;
+        private int _planned = -1;
+        private float _error;
+
+        public BotJumpDriver(Random random) => _random = random ?? throw new ArgumentNullException(nameof(random));
+
+        /// <summary>A new race: no hurdle planned yet.</summary>
+        public void Reset()
+        {
+            _planned = -1;
+            _error = 0f;
+        }
+
+        /// <summary>True = ask for the jump now. Call every frame while a hurdle is ahead; <paramref name="hurdleIndex"/> tells hurdles apart.</summary>
+        public bool ShouldJump(int hurdleIndex, float hurdleMeters, float distance, float speed, bool inJump,
+            float windupSeconds, float airSeconds, float jitterSeconds, float mistakeChance)
+        {
+            if (_planned < hurdleIndex)
+            {
+                _planned = hurdleIndex;
+                float sign = _random.Next(2) == 0 ? -1f : 1f;
+                _error = sign * (_random.NextDouble() < mistakeChance ? airSeconds : (float)_random.NextDouble() * jitterSeconds);
+            }
+            else if (_error == Asked) return false;
+
+            if (inJump || speed <= 0.1f) return false;
+            if ((hurdleMeters - distance) / speed > windupSeconds + airSeconds * 0.5f + _error) return false;
+            _error = Asked;
+            return true;
+        }
+    }
+
+    /// <summary>
     /// A bot's whole key timeline: the legs press in turn every press period, each key is held for the hold time. The first press waits
     /// at least the reaction time; every press moves by a bounded jitter, and now and then (mistake chance) by a larger early or late
     /// shift. Times never go backwards: a press never starts before the previous release. Pure; the same plan and seed give the same events.

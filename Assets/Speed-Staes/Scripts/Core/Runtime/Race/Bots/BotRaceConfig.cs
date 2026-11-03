@@ -16,6 +16,40 @@ namespace SpeedStars.Core.Race.Bots
         public BotCalibrationPoint(float skill, float seconds) { this.skill = skill; this.seconds = seconds; }
     }
 
+    /// <summary>
+    /// The bots' calibration of one race event (T-086): the skill to time table measured over that event's own length (and its hurdles,
+    /// with the bots' jumps), plus the reference time used when the player has no result yet. The 100 m table stays in
+    /// <see cref="BotRaceConfig"/> itself; an event without a profile here keeps the old way (the 100 m table, the player's time scaled).
+    /// </summary>
+    [Serializable]
+    public sealed class BotEventProfile
+    {
+        [Tooltip("Race event id this table was measured for (\"400mh\"). Written by the calibration tool.")]
+        [SerializeField] private string eventId = string.Empty;
+
+        [Tooltip("Reference time (seconds) of this event when the player has no result yet. 0 = the config's own fallback.")]
+        [Min(0f)]
+        [SerializeField] private float fallbackReferenceSeconds;
+
+        [Tooltip("Skill to expected time rows over this event's length, skill ascending, seconds falling.")]
+        [SerializeField] private List<BotCalibrationPoint> calibration = new List<BotCalibrationPoint>();
+
+        public BotEventProfile() { }
+
+        public BotEventProfile(string eventId, float fallbackReferenceSeconds, IEnumerable<BotCalibrationPoint> calibration)
+        {
+            this.eventId = eventId ?? string.Empty;
+            this.fallbackReferenceSeconds = fallbackReferenceSeconds;
+            this.calibration = new List<BotCalibrationPoint>(calibration ?? Array.Empty<BotCalibrationPoint>());
+            this.calibration.Sort((a, b) => a.skill.CompareTo(b.skill));
+        }
+
+        public string EventId => eventId ?? string.Empty;
+        /// <summary>0 = none: the config's own fallback applies.</summary>
+        public float FallbackReferenceSeconds => fallbackReferenceSeconds;
+        public IReadOnlyList<BotCalibrationPoint> Calibration => calibration;
+    }
+
     /// <summary>A made-up opponent name with an ISO country code. Not taken from any other game.</summary>
     [Serializable]
     public struct BotIdentity
@@ -153,6 +187,10 @@ namespace SpeedStars.Core.Race.Bots
             new BotCalibrationPoint(1f, 10.50756f),
         };
 
+        [Header("Event profiles (one table per event; the table above is the 100 m base)")]
+        [Tooltip("Tables measured over an event's own length and hurdles by the calibration tool. An event not listed uses the 100 m table above.")]
+        [SerializeField] private List<BotEventProfile> eventProfiles = new List<BotEventProfile>();
+
         [Header("Names")]
         [Tooltip("Pool of opponent names and flags; a race draws without repeats. Every country code must have flag art (flag_XX.png: BE CH DE DK FI FR GB IT JP NL NO PL SE TR UA US), otherwise the grey unknown flag shows.")]
         [SerializeField] private List<BotIdentity> identities = new List<BotIdentity>
@@ -200,6 +238,7 @@ namespace SpeedStars.Core.Race.Bots
         public float MistakeWorstChance => mistakeWorstChance;
         public float MistakeShiftRatio => mistakeShiftRatio;
         public IReadOnlyList<BotCalibrationPoint> Calibration => calibration;
+        public IReadOnlyList<BotEventProfile> EventProfiles => eventProfiles;
         public IReadOnlyList<BotIdentity> Identities => identities;
 
         /// <summary>Replaces the calibration table (used by the calibration tool). Rows are sorted by skill.</summary>
@@ -209,11 +248,71 @@ namespace SpeedStars.Core.Race.Bots
             calibration.Sort((a, b) => a.skill.CompareTo(b.skill));
         }
 
+        /// <summary>The measured profile of an event; false when it has none (or an empty table): the 100 m table applies.</summary>
+        public bool TryGetProfile(string eventId, out BotEventProfile profile)
+        {
+            profile = null;
+            if (string.IsNullOrEmpty(eventId) || eventProfiles == null) return false;
+            foreach (BotEventProfile candidate in eventProfiles)
+            {
+                if (candidate == null || candidate.Calibration.Count == 0) continue;
+                if (!string.Equals(candidate.EventId, eventId, StringComparison.Ordinal)) continue;
+                profile = candidate;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>Adds the profile, or replaces the one of the same event (used by the calibration tool).</summary>
+        public void SetProfile(BotEventProfile profile)
+        {
+            if (profile == null) throw new ArgumentNullException(nameof(profile));
+            if (eventProfiles == null) eventProfiles = new List<BotEventProfile>();
+            for (int i = 0; i < eventProfiles.Count; i++)
+            {
+                if (eventProfiles[i] == null || !string.Equals(eventProfiles[i].EventId, profile.EventId, StringComparison.Ordinal)) continue;
+                eventProfiles[i] = profile;
+                return;
+            }
+            eventProfiles.Add(profile);
+        }
+
         /// <summary>Difficulty and skill range are the two settings the player may change.</summary>
         public void SetDifficulty(float newDifficulty, float newSkillRange)
         {
             difficulty = Mathf.Clamp01(newDifficulty);
             skillRange = Mathf.Clamp01(newSkillRange);
+        }
+    }
+
+    /// <summary>Which table and reference time a race of an event uses. Pure, so the choice can be tested.</summary>
+    public static class BotEventSetup
+    {
+        /// <summary>The length the config's own (base) table was measured over (m).</summary>
+        public const float BaseTableMeters = 100f;
+
+        /// <summary>The event's profile, or null (no config, no id, or no measured table): the base table applies.</summary>
+        public static BotEventProfile Find(BotRaceConfig config, string eventId)
+            => config != null && config.TryGetProfile(eventId, out BotEventProfile profile) ? profile : null;
+
+        /// <summary>The table the planner inverts for this event.</summary>
+        public static IReadOnlyList<BotCalibrationPoint> Table(BotRaceConfig config, BotEventProfile profile)
+            => profile != null && profile.Calibration.Count > 0 ? profile.Calibration : config.Calibration;
+
+        /// <summary>The reference time when the player has no result.</summary>
+        public static float Fallback(BotRaceConfig config, BotEventProfile profile)
+            => profile != null && profile.FallbackReferenceSeconds > 0f ? profile.FallbackReferenceSeconds : config.FallbackReferenceSeconds;
+
+        /// <summary>
+        /// The player's best time as the planner's reference. With a profile the table has the event's own length, so the time is used as
+        /// it is; without one it is scaled to the 100 m table (good near 100 m). Null = no usable result.
+        /// </summary>
+        public static float? ReferenceSeconds(BotEventProfile profile, double? bestSeconds, float raceMeters)
+        {
+            if (!bestSeconds.HasValue || bestSeconds.Value <= 0.0) return null;
+            float best = (float)bestSeconds.Value;
+            if (profile != null) return best;
+            return raceMeters > 0f ? best * BaseTableMeters / raceMeters : best;
         }
     }
 

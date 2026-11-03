@@ -72,8 +72,7 @@ namespace SpeedStars.Bridge
             public double PrevSimTime;
             public float PrevDistance;
             public RunnerHurdles Hurdles;
-            public int PlannedHurdle;
-            public float JumpError;
+            public BotJumpDriver Jumper;
         }
 
         readonly List<Bot> _bots = new List<Bot>();
@@ -97,8 +96,6 @@ namespace SpeedStars.Bridge
         bool _playerFinished;
         double _playerTime;
         const float TraceStepMeters = 0.25f; // a chart point per this many metres at most
-        const float CalibrationMeters = 100f; // the config's time-to-driver table was measured over this length
-        const float JumpAsked = float.MaxValue; // this hurdle's jump is already on its way
 
         string _playerName = string.Empty;
         string _playerFlag = string.Empty;
@@ -219,6 +216,7 @@ namespace SpeedStars.Bridge
             root.transform.SetParent(transform, true);
             _roots.Add(root.transform);
             bot.Hurdles = CreateLane(bot, index);
+            bot.Jumper = new BotJumpDriver(_random);
             return bot;
         }
 
@@ -257,8 +255,13 @@ namespace SpeedStars.Bridge
             _model.Reset();
             CachePlayerIdentity();
 
-            IReadOnlyList<BotPlan> plans = HasOpponents() ? BotFieldPlanner.Plan(config, ReferenceSeconds(), _random) : Array.Empty<BotPlan>();
+            BotEventProfile profile = CurrentProfile();
+            IReadOnlyList<BotPlan> plans = HasOpponents()
+                ? BotFieldPlanner.Plan(config, ReferenceSeconds(profile), _random, profile)
+                : Array.Empty<BotPlan>();
             int[] lanes = ShuffledLanes(_bots.Count);
+            // Without a profile the target is a 100 m equivalent while the run is the real length: the key schedule has to last for it.
+            float lengthFactor = profile != null ? 1f : Mathf.Max(1f, RaceDistance / BotEventSetup.BaseTableMeters);
             for (int i = 0; i < _bots.Count; i++) _bots[i].Active = false;
 
             for (int i = 0; i < plans.Count && i < _bots.Count; i++)
@@ -266,7 +269,7 @@ namespace SpeedStars.Bridge
                 Bot bot = _bots[lanes[i]];
                 BotPlan plan = plans[i];
                 bot.Plan = plan;
-                bot.Schedule = new BotPressSchedule(plan, _random, plan.TargetSeconds * scheduleHorizonFactor + scheduleHorizonPadding);
+                bot.Schedule = new BotPressSchedule(plan, _random, plan.TargetSeconds * scheduleHorizonFactor * lengthFactor + scheduleHorizonPadding);
                 bot.Next = 0;
                 bot.Started = false;
                 bot.Finished = false;
@@ -299,33 +302,28 @@ namespace SpeedStars.Bridge
             {
                 Bot bot = _bots[i];
                 bot.Hurdles.Configure(bot.Active ? count : 0, first, spacing);
-                bot.PlannedHurdle = -1;
+                bot.Jumper.Reset();
             }
         }
 
-        /// <summary>
-        /// Asks for the jump that puts the middle of the bot's flight over the next hurdle, from its speed now. Each hurdle gets one
-        /// timing error: the plan's jitter, or with its mistake chance a whole flight early or late, which knocks the hurdle.
-        /// </summary>
+        /// <summary>Asks for the jump that puts the middle of the bot's flight over the next hurdle (the rule is <see cref="BotJumpDriver"/>).</summary>
         void DriveJump(Bot bot)
         {
             RunnerSim sim = bot.Body.Sim;
             if (sim == null || !bot.Hurdles.TryGetNext(out float hurdle, out int index)) return;
+            if (WantsJump(sim, bot.Jumper, bot.Plan, hurdle, index)) bot.Input.InjectJump();
+        }
+
+        /// <summary>
+        /// The bot's jump decision from a runner sim's state: the flight and wind-up times come from the sim's own tuning at the current
+        /// speed. Public and static so the calibration tool measures the bots with exactly this rule.
+        /// </summary>
+        public static bool WantsJump(RunnerSim sim, BotJumpDriver jumper, BotPlan plan, float hurdleMeters, int hurdleIndex)
+        {
             float speed01 = sim.Speed / sim.T.maxSpeed;
             float air = Mathf.Lerp(sim.T.jumpTime.x, sim.T.jumpTime.y, speed01);
-            if (bot.PlannedHurdle < index)
-            {
-                bot.PlannedHurdle = index;
-                float sign = _random.Next(2) == 0 ? -1f : 1f;
-                bot.JumpError = sign * (_random.NextDouble() < bot.Plan.MistakeChance ? air : (float)_random.NextDouble() * bot.Plan.JitterSeconds);
-            }
-            else if (bot.JumpError == JumpAsked) return;
-
-            if (sim.InJump || sim.Speed <= 0.1f) return;
             float windup = Mathf.Lerp(sim.T.jumpWindup.x, sim.T.jumpWindup.y, speed01);
-            if ((hurdle - sim.Distance) / sim.Speed > windup + air * 0.5f + bot.JumpError) return;
-            bot.Input.InjectJump();
-            bot.JumpError = JumpAsked;
+            return jumper.ShouldJump(hurdleIndex, hurdleMeters, sim.Distance, sim.Speed, sim.InJump, windup, air, plan.JitterSeconds, plan.MistakeChance);
         }
 
         void StartRace()
@@ -443,7 +441,6 @@ namespace SpeedStars.Bridge
 
         float RaceDistance => race ? race.raceDistance : 100f;
 
-        /// <summary>The player's best time of the current event (the difficulty is relative to it); null = none yet, the config's fallback.</summary>
         /// <summary>The current event may be run alone (Practice); an event not found keeps the opponents.</summary>
         bool HasOpponents()
         {
@@ -452,13 +449,22 @@ namespace SpeedStars.Bridge
             return id.IsEmpty || !_events.TryGet(id, out RaceEventDefinition definition) || definition.HasOpponents;
         }
 
-        float? ReferenceSeconds()
+        /// <summary>The measured bot table of the current event (T-086); null = the 100 m table with scaling, as before.</summary>
+        BotEventProfile CurrentProfile()
+        {
+            if (!config || !session) return null;
+            RaceEventId id = session.CurrentEventId;
+            return id.IsEmpty ? null : BotEventSetup.Find(config, id.Value);
+        }
+
+        /// <summary>The player's best time of the current event (the difficulty is relative to it); null = none yet, the fallback.</summary>
+        float? ReferenceSeconds(BotEventProfile profile)
         {
             if (_bests == null || !session) return null;
             RaceEventId id = session.CurrentEventId;
             if (id.IsEmpty) return null;
-            // A rough scale to the table's length, good near 100 m; a much longer event needs its own measurement.
-            return _bests.TryGetBest(id, out double seconds) && seconds > 0.0 ? (float)seconds * CalibrationMeters / RaceDistance : (float?)null;
+            double? best = _bests.TryGetBest(id, out double seconds) ? seconds : (double?)null;
+            return BotEventSetup.ReferenceSeconds(profile, best, RaceDistance);
         }
 
         void CachePlayerIdentity()

@@ -15,7 +15,11 @@ namespace SpeedStars.Core.Race.Bots
         /// Fastest target first. <paramref name="playerReferenceSeconds"/> null or not positive = use the config's fallback.
         /// The count is the config's bot count, capped by the name pool.
         /// </summary>
-        public static IReadOnlyList<BotPlan> Plan(BotRaceConfig config, float? playerReferenceSeconds, Random random)
+        /// <param name="profile">
+        /// The event's measured table and fallback (T-086), or null = the config's 100 m table and fallback (the old way, bit for bit).
+        /// The reference time then has to be in the table's own length (see <see cref="BotEventSetup.ReferenceSeconds"/>).
+        /// </param>
+        public static IReadOnlyList<BotPlan> Plan(BotRaceConfig config, float? playerReferenceSeconds, Random random, BotEventProfile profile = null)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (random == null) throw new ArgumentNullException(nameof(random));
@@ -27,7 +31,8 @@ namespace SpeedStars.Core.Race.Bots
 
             float reference = playerReferenceSeconds.HasValue && playerReferenceSeconds.Value > 0f
                 ? playerReferenceSeconds.Value
-                : config.FallbackReferenceSeconds;
+                : BotEventSetup.Fallback(config, profile);
+            IReadOnlyList<BotCalibrationPoint> table = BotEventSetup.Table(config, profile);
             float center = reference * Lerp(config.EasyMultiplier, config.HardMultiplier, config.Difficulty);
             float spread = Lerp(config.NarrowSpread, config.WideSpread, config.SkillRange);
             center *= RaceMultiplier(config, (float)random.NextDouble());
@@ -53,7 +58,7 @@ namespace SpeedStars.Core.Race.Bots
             for (int i = 0; i < count; i++)
             {
                 BotIdentity who = pool[order[i]];
-                float skill = Clamp01(BotSkillCurve.SkillForSeconds(config.Calibration, targets[i]));
+                float skill = Clamp01(BotSkillCurve.SkillForSeconds(table, targets[i]));
                 plans.Add(new BotPlan(
                     who.name, who.countryCode, targets[i], skill,
                     reactionSeconds: Lerp(config.ReactionWorstSeconds, config.ReactionBestSeconds, skill),
