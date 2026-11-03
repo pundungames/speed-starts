@@ -131,6 +131,16 @@ namespace SpeedStars.Bridge
 
         /// <summary>The bots' runner roots in lane order (empty until the runners are built). For the shot tool.</summary>
         public IReadOnlyList<Transform> RunnerRoots => _roots;
+
+        /// <summary>The name shown for this runner (the player's or a bot's); null if it is not in this race.</summary>
+        public string NameOf(RunnerBody body)
+        {
+            if (!body) return null;
+            if (body == player) return _playerName;
+            for (int i = 0; i < _bots.Count; i++)
+                if (_bots[i].Body == body) return _bots[i].Plan != null ? _bots[i].Plan.Name : _bots[i].Root.name;
+            return null;
+        }
         public BotRaceConfig Config => config;
         public RunnerBody Player => player;
 
