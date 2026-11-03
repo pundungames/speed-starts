@@ -52,6 +52,7 @@ namespace SpeedStars.Tools.Builders
             also.arraySize = 2;
             also.GetArrayElementAtIndex(0).objectReferenceValue = themeSelect;
             also.GetArrayElementAtIndex(1).objectReferenceValue = emoteScreen;
+            Prop(barSo, "cashOfferModal").objectReferenceValue = RequireOne<CashOfferModalView>(scene, "Cash offer window (CashOfferModal prefab instance)"); // T-085: the Cash "+"
             Apply(barSo);
             WireDailyGift(scene, homeView, resourceBar); // T-043
             var costume = RequireOne<SpeedStars.UI.Costume.CostumeEditorScreenView>(scene, "Costume editor screen (CosmeticsScreen prefab instance)");

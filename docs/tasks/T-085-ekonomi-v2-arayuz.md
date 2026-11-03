@@ -22,13 +22,10 @@ analytics:
 needs:
   - tip: SCENE
     durum: open
-    not: "Prefab'lar yeniden uretilir: UiPrefabBuilder.BuildAll(overwrite: true) -> ResourceBar (yeni Cash/Plus dugmesi), ResultsScreen (CashBreakdown blogu + CashFlight, Diamond sagi), EntryGateModal (yeni Actions/UnlockWithCash dugmesi, pencere 780 art-px), YENI CashOfferModal (yol UiCashOfferPrefabs.PrefabPath = Assets/Speed-Staes/UI/Popups/CashOfferModal.prefab; metot UiCashOfferPrefabs.BuildAll). Home sahnesine CashOfferModal ornegi (popup katmani, baslangicta inaktif; UiPrefabPaths.HomePopups dizisine eklenip SceneBuilder.cs:46 ile) ve SceneWiring'de ResourceBarView.cashOfferModal <- bu ornek. Kod yeni .cs dosyalari icin .meta uretmedi (Unity kopyada uretsin, sonra al)."
+    not: "Kopyada, Unity batchmode, TEK komut: -executeMethod SpeedStars.Tools.Builders.EconomyUiRebuild.Run (= UiPrefabBuilder.BuildAll(true) -> SceneBuilder.BuildHome(true) -> SceneBuilder.BuildRace(true); config seeder CALISMAZ, Faz1 overwrite KULLANILMAZ). Basari isareti log'da ECONOMY_UI_REBUILD_OK. Uretilenler: ResourceBar (Cash/Plus), ResultsScreen (CashBreakdown + CashFlight), EntryGateModal (UnlockWithCash; Race sahnesi AYNI prefab'i kullanir), yeni CashOfferModal (UiPrefabPaths.CashOfferModal, HomePopups'ta, Home popup katmaninda inaktif), SceneWiring ResourceBarView.cashOfferModal'i her kurulumda baglar. Yeni .cs dosyalarinin .meta'lari kopyada uretilir, geri alinip commit'lenir."
   - tip: WIRING
-    durum: open
-    not: "ProjectInstaller -> ITimedTicketShop = TimedTicketShop (AsSingle; entry gate Nakit ile 1 saat acar) ve IRewardedCash = RewardedCashService (AsSingle; Nakit + penceresi; RewardedCashService IRewardedAds'i opsiyonelsiz alir: IRewardedAds bagli degilken FromMethod + TryResolve ile ver). Ikisi de view'larda [InjectOptional]: baglanmazsa dugme kapali kalir."
-  - tip: WIRING
-    durum: open
-    not: "SceneInstaller/RaceFlow -> IRaceCashRewardResolver (T-084'un RaceFlow parametresi; ResultsScreenView IRaceCashRewardView'u uygular, RaceFlowLogic zaten ShowCashReward'i cagirir) - T-084 baglamiyorsa Race sahnesi installer'inda baglanir."
+    durum: closed
+    not: "ITimedTicketShop, IRewardedCash, IRaceCashRewardResolver -> ddc09df2"
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:

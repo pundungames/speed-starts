@@ -22,6 +22,7 @@ namespace SpeedStars.Tools.Builders
         public const string DailyGiftPopup = Root + "/Popups/DailyGiftPopup.prefab";
         public const string SevenDayCheckInPanel = Root + "/Popups/SevenDayCheckInPanel.prefab";
         public const string SettingsPopup = Root + "/Popups/SettingsPopup.prefab";
+        public const string CashOfferModal = Root + "/Popups/CashOfferModal.prefab"; // T-085
 
         public const string ResourceBar = Root + "/Widgets/ResourceBar.prefab";
         public const string RedDot = Root + "/Widgets/RedDot.prefab";
@@ -36,6 +37,6 @@ namespace SpeedStars.Tools.Builders
         public static readonly string[] HomeScreens = { HomeScreen, EventSelectScreen, ThemeSelectScreen, CosmeticsScreen, HighScoresScreen, EmoteScreen };
 
         /// <summary>Home scene popups under "Canvas Popups".</summary>
-        public static readonly string[] HomePopups = { EntryGateModal, DailyGiftPopup, SevenDayCheckInPanel, SettingsPopup };
+        public static readonly string[] HomePopups = { EntryGateModal, DailyGiftPopup, SevenDayCheckInPanel, SettingsPopup, CashOfferModal };
     }
 }

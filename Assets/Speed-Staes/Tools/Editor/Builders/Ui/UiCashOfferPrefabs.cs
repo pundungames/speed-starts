@@ -17,7 +17,7 @@ namespace SpeedStars.Tools.Builders
     /// </summary>
     internal static class UiCashOfferPrefabs
     {
-        public const string PrefabPath = UiPrefabPaths.Root + "/Popups/CashOfferModal.prefab";
+        public const string PrefabPath = UiPrefabPaths.CashOfferModal;
 
         private const string Source = nameof(UiCashOfferPrefabs);
         private const string ArtFolder = UiArt.ArtRoot + "/Rewards";
