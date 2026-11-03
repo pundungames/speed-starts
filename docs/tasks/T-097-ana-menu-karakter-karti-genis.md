@@ -1,7 +1,7 @@
 ---
 id: T-097
 title: Ana menu karakter karti - sola genisler, mağazadaki Power / Stamina / boy ikon + yazilari solda; Edit racer / Emote kucuk, altinda oyuncu adi
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-087]
 owns_paths:
@@ -14,7 +14,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/HomeCardBuilderTests.cs"
 touches_scene: false
 branch: agent/T-097-karakter-karti
-commits: []
+commits: [0553820e, 6f7cd3e3]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/PlayerNameLineTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/HomeCardBuilderTests.cs (reads built HomeScreen; red until the builders run)"
@@ -22,11 +22,11 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
+    durum: closed
     not: "Supervisor re-generates UI prefabs + Home on the verify copy: UiV2Prefabs.Home -> BuildCharacterCard (+BuildStatsStrip, CardButton placement, EnsureCardBackgroundBorder), UiViewBinder.BindHome (new paths CharacterCard/Content/..., playerNameText). Race is NOT rebuilt."
   - tip: ASSET
-    durum: open
-    not: "Assets/Speed-Staes/UI/Art/Home/character_card_background.png.meta changes (spriteBorder 40,40,40,40) when the builder runs; HomeScreen.prefab and the new test .cs.meta files come from Unity."
+    durum: closed
+    not: "Assets/Speed-Staes/UI/Art/Home/character_card_background.png.meta changes (spriteBorder 40,40,40,40) when the builder runs; HomeScreen.prefab and the new test .cs.meta files come from Unity. -> 6f7cd3e3 (kopyada 03.11; Race kayitli halinde, 26 referans duruyor)"
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:
@@ -77,3 +77,4 @@ KAMERA  : yok
 3. Old parts moved under CharacterCard/Content (fixed 491x486 canvas pinned right); binder + hidden list paths updated. Background is 9-sliced (border 40 px, set via TextureImporter in the builder, .meta changes).
 4. Edit racer / Emote 75%, gap 14 ref px, centered on the card; PlayerName under them (IPlayerSettings.PlayerName, refreshed on IPlayerSettings.Changed, already injected). No installer change, no WIRING.
 5. Not run: builder, Unity, tests. HomeCardBuilderTests is red until the builders ran once. Icon size/label font copied from the store (28); icons are not scaled to the taller card bar rows.
+- Supervizor 03.11: kopyada builder + EditMode 1160, Zenject, PlayMode 51/51 yesil (Watch Replay testleri prefab ile gecti).

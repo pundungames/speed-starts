@@ -1,7 +1,7 @@
 ---
 id: T-098
 title: Watch Replay kontrolleri prefab'a - ReplayControlsView UI'i koddan kurmaz, builder'in urettigi prefab'i baglar (kural 3.1)
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-091, T-094]
 owns_paths:
@@ -17,7 +17,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/WatchReplaySmokeTests.cs"
 touches_scene: false
 branch: agent/T-098-replay-prefab
-commits: []
+commits: [2fb44ab4, 6f7cd3e3]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/ReplayControlsPrefabTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/BuilderHandEditsTests.cs"
@@ -25,8 +25,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "Kopyada UiPrefabBuilder.BuildAll(overwrite: true): UiReplayPrefabs.BuildAll uretir ReplayControls.prefab; UiResultsPrefabs.BuildAll ResultsScreen.prefab uzerinde replayControlsPrefab baglar (eski replaySkin alani kalkti). Race.unity YENIDEN KURULMAZ; ResultsScreen orada prefab ornegi, referans prefab ile gelir. Sonra Results prefab + ReplayControls prefab git ciktisi alinir."
+    durum: closed
+    not: "Kopyada UiPrefabBuilder.BuildAll(overwrite: true): UiReplayPrefabs.BuildAll uretir ReplayControls.prefab; UiResultsPrefabs.BuildAll ResultsScreen.prefab uzerinde replayControlsPrefab baglar (eski replaySkin alani kalkti). Race.unity YENIDEN KURULMAZ; ResultsScreen orada prefab ornegi, referans prefab ile gelir. Sonra Results prefab + ReplayControls prefab git ciktisi alinir. -> 6f7cd3e3 (kopyada 03.11; Race kayitli halinde, 26 referans duruyor)"
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:
@@ -65,3 +65,4 @@ Prefab/sahne/asset dosyasina YAZMA; builder'i calistirma (merkezi dogrulama).
 - ResultsScreenView: replaySkin kalkti, replayControlsPrefab geldi (bossa Watch Replay kapali); UiResultsPrefabs baglar.
 - WatchReplaySmokeTests degismedi (Find("Exit") dogrudan cocuk, prefab de oyle); builder/Unity/test CALISTIRILMADI.
 - Risk: eski kodda kok varsayilan katmandaydi, prefab UI katmaninda; skin.font bossa Results fontu yerine yerlesik font kullanilir.
+- Supervizor 03.11: kopyada builder + EditMode 1160, Zenject, PlayMode 51/51 yesil (Watch Replay testleri prefab ile gecti).
