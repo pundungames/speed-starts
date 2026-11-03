@@ -45,7 +45,7 @@ namespace SpeedStars.Tests.Meta.Regression
         {
             Assert.GreaterOrEqual(Chosen, _h.SettingsConfig.MinCameraDistance);
             Assert.LessOrEqual(Chosen, _h.SettingsConfig.MaxCameraDistance);
-            Assert.AreNotEqual(_h.SettingsConfig.DefaultCameraDistance, Chosen, 1e-4f);
+            Assert.Greater(System.Math.Abs(_h.SettingsConfig.DefaultCameraDistance - Chosen), 1e-4f);
         }
 
         [Test]
