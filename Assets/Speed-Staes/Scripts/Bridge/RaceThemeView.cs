@@ -69,6 +69,22 @@ namespace SpeedStars.Bridge
             if (_builtSlot >= 0) BuildSlot(_builtSlot); // same world, from the start
         }
 
+        /// <summary>
+        /// The open world streams around this runner from now on (a relay's baton holder); null = the scene's runner again. The world
+        /// is not rebuilt: the runners of one race share the road, so the sections ahead simply keep coming.
+        /// </summary>
+        public void Follow(Transform runner)
+        {
+            Transform target = runner != null ? runner : (body != null ? body.transform : null);
+            int themedIndex = RaceThemeSlots.ThemedIndexOf(_builtSlot);
+            if (themedIndex < 0)
+            {
+                if (standardWorld != null) standardWorld.runner = target;
+            }
+            else if (themedWorlds != null && themedIndex < themedWorlds.Length && themedWorlds[themedIndex] != null)
+                themedWorlds[themedIndex].runner = target;
+        }
+
         /// <summary>Opens the world for a showcase index (out of range = standard city), closes the rest and builds it at the runner.</summary>
         public void ShowWorld(int showcaseIndex)
         {
