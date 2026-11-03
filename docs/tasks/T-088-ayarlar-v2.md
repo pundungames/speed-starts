@@ -11,6 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Scripts/Meta/Persistence/PlayerProgress.cs"
   - "Assets/Speed-Staes/Scripts/Meta/Persistence/ProgressRepository.cs"
   - "Assets/Speed-Staes/Scripts/Meta/Economy/RaceCashRewardResolver.cs"
+  - "Assets/Speed-Staes/Scripts/Meta/Economy/RaceRewardResolver.cs"
   - "Assets/Speed-Staes/Scripts/Core/Runtime/Race/Bots/**"
   - "Assets/Speed-Staes/Scripts/Bridge/RaceBots.cs"
   - "Assets/Speed-Staes/Scripts/Bridge/SettingsRunnerAdapter.cs"
@@ -34,11 +35,11 @@ needs:
     durum: open
     not: "SettingsPopup prefab'ina yeni bolumleri ekle (tasarimcinin elle duzenlemelerine dokunmadan, yalniz ExtraSections dugumu + siralama): kopyada Unity batchmode, TEK komut: -executeMethod SpeedStars.Tools.Builders.SettingsV2Rebuild.Run (UiSettingsPrefabs.cs icinde; basari isareti log'da SETTINGS_V2_REBUILD_OK; baska prefab/sahne/config yazmaz). Uretir: SettingsPopupView.extraSections -> ExtraSections (SettingsExtraSectionsView: Competitors/Gameplay/Visuals/Emote/Reset options satirlari). Sonra prefab'da extraSections ve satir alanlarinin fileID: 0 olmadigini grep ile dogrula. Yeni .cs dosyalarinin .meta'lari kopyada uretilir, geri alinip commit'lenir (SettingsRules, BotLanes, SettingsRunnerAdapter, SettingsExtraSectionsView, SettingsChoiceRowView, SettingsSliderRowView, SettingsToggleRowView, iki yeni test dosyasi)."
   - tip: DECISION
-    durum: open
-    not: "Time trial'da rakip yok (RunnerCount 1). RaceRewardResolver (Assets/Speed-Staes/Scripts/Meta/Economy/RaceRewardResolver.cs, bu task'in yolu degil) Mor Elmas'i yalniz rank'a ve awardsPurpleGems'e bakarak verir: gem ceren bir etkinlikte Time trial secen oyuncu rank 1 ile elmas kazanir. Cash tarafi (RaceCashRewardResolver) rakipsizde zaten 0. Karar: RaceRewardResolver'a rakipsiz kosuda (RunnerCount < 2) 0 koşulu eklensin mi (onerilen: evet)."
+    durum: closed
+    not: "Time trial'da rakip yok (RunnerCount 1). RaceRewardResolver (Assets/Speed-Staes/Scripts/Meta/Economy/RaceRewardResolver.cs, bu task'in yolu degil) Mor Elmas'i yalniz rank'a ve awardsPurpleGems'e bakarak verir: gem ceren bir etkinlikte Time trial secen oyuncu rank 1 ile elmas kazanir. Cash tarafi (RaceCashRewardResolver) rakipsizde zaten 0. Karar: RaceRewardResolver'a rakipsiz kosuda (RunnerCount < 2) 0 kosulu eklensin mi (onerilen: evet). -> kullanici/supervizor 03.11: hata, duzeltildi (RaceRewardResolver + test)"
   - tip: DECISION
-    durum: open
-    not: "Zorluk bonusu artik round(config bonusu x oyuncu zorlugu): varsayilan zorluk 0.5 oldugu icin yeni oyuncuya bugunku sabit bonusun yarisi odenir (gorev metni bunu istiyor). Bugunku tam bonusu korumak istenirse SettingsConfig.defaultCompetitorDifficulty 1 yapilmaz (bot sahasini da degistirir); ayri 'bonus carpani' alani gerekir."
+    durum: closed
+    not: "Zorluk bonusu artik round(config bonusu x oyuncu zorlugu): varsayilan zorluk 0.5 oldugu icin yeni oyuncuya bugunku sabit bonusun yarisi odenir (gorev metni bunu istiyor). Bugunku tam bonusu korumak istenirse SettingsConfig.defaultCompetitorDifficulty 1 yapilmaz (bot sahasini da degistirir); ayri 'bonus carpani' alani gerekir. -> kullanici/supervizor 03.11: referansla ayni, olcekli kalir"
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:

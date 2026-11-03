@@ -25,6 +25,15 @@ namespace SpeedStars.Tests.Meta.Economy
         }
 
         [Test]
+        public void RunAlone_PaysNoGems_ButWithOpponentsEveryRankRowStillPays()
+        {
+            Assert.AreEqual(0, _k.Rewards.Resolve(_k.Outcome(EconomyTestKit.GemEvent, 1, 12.5, 1), "solo"));
+            Assert.AreEqual(0, _k.Progress.PurpleGems);
+            for (int rank = 1; rank <= 3; rank++)
+                Assert.AreEqual(_k.Gems.GetPurpleGems(rank), _k.Rewards.Resolve(_k.Outcome(EconomyTestKit.GemEvent, rank, 12.5, 2), "duel-" + rank));
+        }
+
+        [Test]
         public void BetterRank_PaysAtLeastAsMuch()
         {
             int first = _k.Rewards.Resolve(_k.Outcome(EconomyTestKit.GemEvent, 1), "a");

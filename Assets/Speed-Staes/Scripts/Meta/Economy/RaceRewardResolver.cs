@@ -31,6 +31,7 @@ namespace SpeedStars.Meta.Economy
         {
             if (string.IsNullOrEmpty(payoutId)) return 0;
             if (outcome.Rank < 1 || !(outcome.TimeSeconds > 0d)) return 0;
+            if (outcome.RunnerCount < 2) return 0; // a run alone (Practice, time trial) beats nobody: same rule as the Cash reward
             if (!_events.TryGet(outcome.EventId, out RaceEventDefinition definition) || !definition.AwardsPurpleGems) return 0;
 
             int gems = _rewards.GetPurpleGems(outcome.Rank);
