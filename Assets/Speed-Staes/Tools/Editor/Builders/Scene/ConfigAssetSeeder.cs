@@ -48,11 +48,11 @@ namespace SpeedStars.Tools.Builders
             new EventSeed("training", "Antrenman Alanı", 100f, ticket: false, gems: false, playable: true),
             new EventSeed("race_of_the_day", "Race of the Day", 0f, ticket: false, gems: false, playable: false),
             new EventSeed("100m", "100m", 100f, ticket: false, gems: false, playable: true),
-            new EventSeed("200m", "200m", 200f, ticket: true, gems: false, playable: false),
-            new EventSeed("400m", "400m", 400f, ticket: true, gems: true, playable: false),
-            new EventSeed("60mh", "60mH", 60f, ticket: true, gems: true, playable: false, hurdles: 5, firstHurdle: 13.72f, hurdleSpacing: 9.14f),
+            new EventSeed("200m", "200m", 200f, ticket: true, gems: false, playable: true),
+            new EventSeed("400m", "400m", 400f, ticket: true, gems: true, playable: true),
+            new EventSeed("60mh", "60mH", 60f, ticket: true, gems: true, playable: true, hurdles: 5, firstHurdle: 13.72f, hurdleSpacing: 9.14f),
             new EventSeed("110mh", "110mH", 110f, ticket: true, gems: false, playable: true, hurdles: 10, firstHurdle: 13.72f, hurdleSpacing: 9.14f),
-            new EventSeed("400mh", "400mH", 400f, ticket: true, gems: false, playable: false, hurdles: 10, firstHurdle: 45f, hurdleSpacing: 35f),
+            new EventSeed("400mh", "400mH", 400f, ticket: true, gems: false, playable: true, hurdles: 10, firstHurdle: 45f, hurdleSpacing: 35f),
             new EventSeed("4x100m", "4×100m", 400f, ticket: true, gems: false, playable: false), // relay: 4 legs x 100 m, from the name
             new EventSeed("medley", "Medley", 0f, ticket: true, gems: true, playable: false),
         };
@@ -138,7 +138,7 @@ namespace SpeedStars.Tools.Builders
         /// <summary>
         /// Event access as in the reference game: 100m, Race of the Day and Practice are free and unlimited; the other events
         /// need a ticket (Timed Ticket). The flag per id comes from the seed table <c>Events</c>; an event of the catalog
-        /// that is not in the table is left as it is. Only requiresTicket is written (isPlayable is not touched).
+        /// that is not in the table is left as it is. requiresTicket and isPlayable are written from the table (200m, 400m, 60mH, 400mH are open; 4x100m, Medley, Race of the Day stay closed).
         /// </summary>
         private static void ApplyEventAccess()
         {
@@ -151,6 +151,7 @@ namespace SpeedStars.Tools.Builders
                 if (index < 0) continue;
                 var so = new SerializedObject(definition);
                 Prop(so, "requiresTicket").boolValue = Events[index].RequiresTicket;
+                Prop(so, "isPlayable").boolValue = Events[index].IsPlayable;
                 Apply(so);
             }
             Log(Source, "Event access written (requiresTicket per the seed table).");
