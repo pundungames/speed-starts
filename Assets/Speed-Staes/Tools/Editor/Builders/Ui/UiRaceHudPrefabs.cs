@@ -32,13 +32,20 @@ namespace SpeedStars.Tools.Builders
             GameObject root = PrefabUtility.LoadPrefabContents(UiPrefabPaths.RaceHud);
             try
             {
-                AddEmoteButton((RectTransform)root.transform);
-                PrefabUtility.SaveAsPrefabAsset(root, UiPrefabPaths.RaceHud);
+                // Add if missing, otherwise leave the prefab alone: the user hand-edits it (T-102).
+                if (root.transform.Find(ButtonName) != null)
+                    UnityEngine.Debug.Log($"UiRaceHudPrefabs: '{UiPrefabPaths.RaceHud}' already has '{ButtonName}'; left as it is.");
+                else
+                {
+                    AddEmoteButton((RectTransform)root.transform);
+                    HandEditGuard.SavePatchedPrefab(root, UiPrefabPaths.RaceHud);
+                }
             }
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
+            HandEditGuard.ConvertPending();
         }
 
         /// <summary>Adds the Emote button and its name label under the HUD root (when missing) and binds them on the view.</summary>
@@ -48,7 +55,7 @@ namespace SpeedStars.Tools.Builders
             if (view == null) throw new InvalidOperationException("UiRaceHudPrefabs: the root has no RaceHudView to bind the Emote button on.");
 
             Transform existing = hudRoot.Find(ButtonName);
-            if (existing != null) UnityEngine.Object.DestroyImmediate(existing.gameObject); // rebuilt, so a changed layout always lands
+            if (existing != null) return; // never delete and rebuild: it may be hand-edited (T-102)
 
             var topRight = new Vector2(1f, 1f);
             Sprite background = UiArt.RaceHud("square_button_background");

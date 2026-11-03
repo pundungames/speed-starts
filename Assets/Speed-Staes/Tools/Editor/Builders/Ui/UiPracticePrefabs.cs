@@ -69,14 +69,14 @@ namespace SpeedStars.Tools.Builders
                 Kit.EnsureFolder(System.IO.Path.GetDirectoryName(PrefabPath).Replace('\\', '/'));
                 RectTransform root = Kit.NewRoot("PracticePanel", scene);
                 Fill(root);
-                GameObject saved = PrefabUtility.SaveAsPrefabAsset(root.gameObject, PrefabPath, out bool success);
-                if (!success || saved == null) throw new InvalidOperationException($"UiPracticePrefabs: could not save '{PrefabPath}'.");
+                GameObject saved = HandEditGuard.SaveNewPrefab(root.gameObject, PrefabPath);
                 UnityEngine.Object.DestroyImmediate(root.gameObject);
                 return saved;
             }
             finally
             {
                 EditorSceneManager.ClosePreviewScene(scene);
+                HandEditGuard.ConvertPending(); // a fresh panel holds legacy Text: TextMeshPro like the other prefabs (T-100)
             }
         }
 

@@ -18,9 +18,9 @@ namespace SpeedStars.Tools.Builders
     public static class UiPrefabBuilder
     {
         /// <summary>Command-line flag (without the dash) that lets overwrite rebuild hand-edited prefabs / Home.unity.</summary>
-        public const string ForceFlag = "forceOverwriteHandEdits";
+        public const string ForceFlag = HandEditGuard.ForceFlag;
 
-        public static bool ForceOverwriteHandEdits => Array.IndexOf(Environment.GetCommandLineArgs(), "-" + ForceFlag) >= 0;
+        public static bool ForceOverwriteHandEdits => HandEditGuard.ForceOverwriteHandEdits;
 
         public static void BuildAll(bool overwrite)
         {
@@ -66,7 +66,7 @@ namespace SpeedStars.Tools.Builders
             }
 
             // Freshly built prefabs carry legacy Text: convert them in place (existing, already converted ones are untouched).
-            if (run.BuiltPaths.Count > 0) SpeedStars.Tools.Migration.TmpMigration.ConvertPaths(run.BuiltPaths);
+            HandEditGuard.ConvertPending();
 
             UnityEngine.Debug.Log($"UI_PREFABS_OK built={run.Built} kept={run.Kept} (overwrite={overwrite})");
         }
@@ -107,8 +107,8 @@ namespace SpeedStars.Tools.Builders
                 try
                 {
                     fill(root);
-                    GameObject saved = PrefabUtility.SaveAsPrefabAsset(root.gameObject, path, out bool success);
-                    if (!success || saved == null) throw new InvalidOperationException($"UiPrefabBuilder: could not save '{path}'.");
+                    GameObject saved = HandEditGuard.SaveNewPrefab(root.gameObject, path);
+                    if (saved == null) { Kept++; return LoadExisting(path); }
                     Built++;
                     BuiltPaths.Add(path);
                     return saved;

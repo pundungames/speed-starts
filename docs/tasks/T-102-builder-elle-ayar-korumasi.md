@@ -1,7 +1,7 @@
 ---
 id: T-102
 title: Builder'lar elle duzenlenmis prefab/sahneyi asla ezmez - butun kaydetmeler tek korumali yoldan, yamalar yalniz eksigi ekler, cikti TMP
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-100]
 owns_paths:
@@ -19,8 +19,8 @@ needs:
   - tip: SCENE
     durum: open
     not: "Supervizor kopyada butun builder giris noktalarini (EconomyUiRebuild.Run, Faz1 overwrite, patch menuleri) kosar; sonra UI prefab'lari + Home.unity + Race.unity icin git diff BOS olmali."
-started:
-finished:
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -56,3 +56,8 @@ CALISTIRMA (supervizor kopyada butun builder'lari kosup diff'in bos oldugunu kon
 - Builder uretim mantiginin TMP'ye cevrilmesi (cikti donusturucuyle TMP), yeni UI isi
 
 ## Calisma notu
+- Yeni `Builders/HandEditGuard.cs`: tek yazma noktasi (SaveNewPrefab, SavePatchedPrefab, SaveScene, saf `Decide(exists, overwrite, force)`, `ConvertPending` = TmpMigration.ConvertPaths). Ham SaveAsPrefabAsset/SaveScene yalniz orada ve istisna `ProjectContextBuilder`'da (kompozisyon koku, elle duzenlenmez; koda gerekce yazildi).
+- Yonlendirilenler: UiPrefabBuilder, UiPracticePrefabs (yeni uretilen artik TMP), UiRaceHudPrefabs (var olan Emote dugumu silinmez, yoksa ekler), UiSettingsPrefabs AddExtraSections/AddCameraRow (var olan bolum silinmez, log + atla), SceneBuilder (BuildRace artik BuildHome gibi korunur: var olan + force bayragi yoksa atlar), SceneCosmetics/ScenePracticePanel/SceneRaceEmotes yamalari (kayittan sonra ConvertPending). SceneRaceBots/SceneRaceHurdles dogrudan kaydetmiyor (BuildRace uzerinden).
+- Menu basliklari: Faz1 "(overwrite configs, keeps existing UI prefabs and scenes)", EconomyUiRebuild "(keeps existing, no configs)". Test: `BuilderGuardTests` (metin taramasi + Decide'in reflection ile tablosu). Yeni `.cs.meta` yazmadim: Unity uretir, supervizor commit'e katsin.
+- Calistirilmadi (Unity/test yok). Supervizor kopyada kossun (-batchmode -quit -executeMethod): SpeedStars.Tools.Builders.EconomyUiRebuild.Run | Faz1Builder.BuildAll | Faz1Builder.RebuildAll | UiRaceHudPrefabs.PatchRaceHudPrefab | SettingsV2Rebuild.Run | UiPracticePrefabs.Build | ScenePracticePanel.PatchRaceScene | SceneRaceEmotes.PatchRaceScene | SceneCosmetics.PatchRaceOfTheDay | SceneCosmetics.RebuildRaceOfTheDayUi | ProjectContextBuilder.Rebuild (istisna; diff beklenir yoksa bos) — sonra UI prefab'lari/Home/Race'te `git diff` bos olmali. Yama sahne kayitlari Race'i yeniden serilestirir; bos olmazsa burada bak.
+- Not: AddExtraSections/AddCameraRow legacy Text uretir; kayittan sonra ConvertPending TMP'ye cevirir. Ikinci kosuda yama dugumu bulup kaydetmeden doner.

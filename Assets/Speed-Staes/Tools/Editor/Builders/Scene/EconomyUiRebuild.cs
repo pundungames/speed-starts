@@ -5,7 +5,8 @@ using UnityEngine;
 namespace SpeedStars.Tools.Builders
 {
     /// <summary>
-    /// T-085: rebuilds only the UI prefabs and the Home / Race scenes (overwrite), WITHOUT seeding or overwriting any config asset
+    /// T-085: builds only the missing UI prefabs and Home / Race scenes (existing hand-edited ones are kept unless the force
+    /// flag is on the command line, HandEditGuard), WITHOUT seeding or overwriting any config asset
     /// (Faz1Builder.RebuildAll would). Parameterless so it can run with -executeMethod in a verification copy:
     /// <c>SpeedStars.Tools.Builders.EconomyUiRebuild.Run</c>. Writes the marker below on success.
     /// </summary>
@@ -13,7 +14,7 @@ namespace SpeedStars.Tools.Builders
     {
         public const string OkMarker = "ECONOMY_UI_REBUILD_OK";
 
-        [MenuItem("Tools/Speed Stars/Build/Economy UI - prefabs + Home + Race (overwrite, no configs)")]
+        [MenuItem("Tools/Speed Stars/Build/Economy UI - prefabs + Home + Race (keeps existing, no configs)")]
         public static void Run()
         {
             try

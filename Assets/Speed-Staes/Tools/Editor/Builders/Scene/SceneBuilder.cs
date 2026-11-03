@@ -20,7 +20,7 @@ namespace SpeedStars.Tools.Builders
     /// for Malik's runner prefab; Race is a copy of Malik's PhysicalTest scene (his file is only copied, never opened for
     /// writing) with the runner's debug tools switched off as scene overrides. Our UI layer goes on top of both. Scenes open in Single mode one at a time;
     /// outside batchmode the builder refuses to run over unsaved scene or prefab work and puts the user's scenes
-    /// back afterwards. An existing scene is skipped unless overwrite is asked for (then same path, same GUID).
+    /// back afterwards. An existing scene is skipped unless overwrite is asked for AND the force flag is given (then same path, same GUID).
     /// </summary>
     public static class SceneBuilder
     {
@@ -38,9 +38,8 @@ namespace SpeedStars.Tools.Builders
         {
             bool existed = FileExists(HomeScenePath);
             // The user hand-edits Home (commit 4f38e016): an existing file is only rebuilt with the explicit force flag.
-            if (existed && !(overwrite && UiPrefabBuilder.ForceOverwriteHandEdits))
+            if (HandEditGuard.Decide(HomeScenePath, overwrite, Source) == WriteDecision.Keep)
             {
-                if (overwrite) Warn(Source, $"'{HomeScenePath}' exists and is hand-edited: kept. Pass -{UiPrefabBuilder.ForceFlag} to rebuild it anyway.");
                 Skipped(Source, HomeScenePath);
                 return;
             }
@@ -105,14 +104,19 @@ namespace SpeedStars.Tools.Builders
                     Warn(Source, $"Home build failed after the copy; '{HomeScenePath}' now holds a bare theme-scene copy. Fix the error and rebuild with overwrite.");
             }
             // A fresh Home holds legacy Text (the loading label): convert it like the prefabs (TMP migration, T-100).
-            SpeedStars.Tools.Migration.TmpMigration.ConvertPaths(new[] { HomeScenePath });
+            HandEditGuard.ConvertPending();
             Log(Source, $"Wrote {HomeScenePath} (copy of {ThemeTemplateScenePath} + runner prefab + UI).");
         }
 
         public static void BuildRace(bool overwrite)
         {
             bool existed = FileExists(RaceScenePath);
-            if (existed && !overwrite) { Skipped(Source, RaceScenePath); return; }
+            // Race holds Malik's saved buildings and the user's edits (docs/TUZAKLAR.md): same guard as Home.
+            if (HandEditGuard.Decide(RaceScenePath, overwrite, Source) == WriteDecision.Keep)
+            {
+                Skipped(Source, RaceScenePath);
+                return;
+            }
             if (!FileExists(PhysicalTestScenePath))
                 throw new InvalidOperationException($"'{PhysicalTestScenePath}' not found; the Race scene is a copy of it.");
 
@@ -167,6 +171,7 @@ namespace SpeedStars.Tools.Builders
                 else if (!done && copied)
                     Warn(Source, $"Race build failed after the copy; '{RaceScenePath}' now holds a bare PhysicalTest copy. Fix the error and rebuild with overwrite.");
             }
+            HandEditGuard.ConvertPending();
             Log(Source, $"Wrote {RaceScenePath} (copy of {PhysicalTestScenePath} + theme worlds + UI).");
         }
 
@@ -277,9 +282,7 @@ namespace SpeedStars.Tools.Builders
 
         private static void Save(Scene scene, string path)
         {
-            EditorSceneManager.MarkSceneDirty(scene);
-            if (!EditorSceneManager.SaveScene(scene, path))
-                throw new InvalidOperationException($"Could not save scene '{path}'.");
+            HandEditGuard.SaveScene(scene, path);
         }
 
         /// <summary>Refuses to replace open scenes that hold unsaved work; returns the open scenes to restore later.</summary>
