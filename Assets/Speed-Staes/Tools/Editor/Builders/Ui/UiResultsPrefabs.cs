@@ -22,7 +22,6 @@ namespace SpeedStars.Tools.Builders
     internal static class UiResultsPrefabs
     {
         public const string ArtFolder = UiArt.ArtRoot + "/Results";
-        public const string ReplaySkinPath = "Assets/Speed-Staes/UI/Widgets/ReplayControlsSkin.asset";
         public const string RowPath = UiPrefabPaths.Root + "/Rows/ResultsTableRow.prefab";
 
         private const string LayoutPath = ArtFolder + "/layout.json";
@@ -266,7 +265,7 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "raceAgainButton", raceAgain);
             Ref(so, "mainMenuButton", mainMenu);
             Ref(so, "watchReplayButton", watchReplay);
-            BindReplaySkin(so);
+            BindReplayControls(so);
             Ref(so, "highScoresButton", highScores);
             Ref(so, "statsButton", stats);
             Ref(so, "practiceButton", practice);
@@ -529,16 +528,14 @@ namespace SpeedStars.Tools.Builders
             property.objectReferenceValue = value;
         }
 
-        /// <summary>The Replay controls' look lives in a shared asset (Malik bound it by hand, 03.11); a missing asset is logged, never skipped quietly.</summary>
-        private static void BindReplaySkin(SerializedObject so)
+        /// <summary>Watch Replay opens the ReplayControls prefab (T-098; UiReplayPrefabs builds it just before this screen).</summary>
+        private static void BindReplayControls(SerializedObject so)
         {
-            var skin = AssetDatabase.LoadAssetAtPath<ReplayControlsSkin>(ReplaySkinPath);
-            if (skin == null)
-            {
-                UnityEngine.Debug.LogError($"UiResultsPrefabs: {ReplaySkinPath} not found; ResultsScreenView.replaySkin stays empty.");
-                return;
-            }
-            Ref(so, "replaySkin", skin);
+            var go = AssetDatabase.LoadAssetAtPath<GameObject>(UiPrefabPaths.ReplayControls);
+            var view = go != null ? go.GetComponent<ReplayControlsView>() : null;
+            if (view == null)
+                throw new InvalidOperationException($"UiResultsPrefabs: '{UiPrefabPaths.ReplayControls}' has no ReplayControlsView; build the replay prefab first.");
+            Ref(so, "replayControlsPrefab", view);
         }
 
         private static void RefArray(SerializedObject so, string field, List<CanvasGroup> items)

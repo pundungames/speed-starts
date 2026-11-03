@@ -40,14 +40,15 @@ namespace SpeedStars.Tests.UI.Builders
         }
 
         [Test]
-        public void ResultsScreenView_HasReplaySkinBound()
+        public void ResultsScreenView_HasReplayControlsPrefabBound()
         {
             GameObject root = Load(Results);
             var view = root.GetComponentInChildren<ResultsScreenView>(true);
             Assert.IsNotNull(view, "ResultsScreenView missing");
-            var skin = new SerializedObject(view).FindProperty("replaySkin").objectReferenceValue;
-            Assert.IsNotNull(skin, "replaySkin is empty: the builder must bind ReplayControlsSkin");
-            Assert.IsInstanceOf<ReplayControlsSkin>(skin);
+            var prefab = new SerializedObject(view).FindProperty("replayControlsPrefab").objectReferenceValue;
+            Assert.IsNotNull(prefab, "replayControlsPrefab is empty: the builder must bind the ReplayControls prefab (T-098)");
+            Assert.IsInstanceOf<ReplayControlsView>(prefab);
+            Assert.IsTrue(PrefabUtility.IsPartOfPrefabAsset(prefab), "replayControlsPrefab must point at the prefab asset, not a scene object");
         }
 
         private static GameObject Load(string path)

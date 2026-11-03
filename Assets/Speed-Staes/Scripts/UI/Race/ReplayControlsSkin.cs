@@ -6,6 +6,7 @@ namespace SpeedStars.UI.Race
     /// The look of the replay controls, taken from the race HUD and Results art (UI/Art/RaceHud, UI/Art/Results, UI/Art/EventSelect) so the
     /// replay reads like the rest of the game. Icons that only exist inside a wider sprite (the camera of the Watch Replay button, the
     /// Continue arrow) are cut out by a pixel rect, measured from the sprite's top-left corner.
+    /// Builder input only: UiReplayPrefabs reads it and bakes the art into the ReplayControls prefab; nothing reads it in the game.
     /// </summary>
     [CreateAssetMenu(menuName = "Speed Stars/UI/Replay Controls Skin", fileName = "ReplayControlsSkin")]
     public sealed class ReplayControlsSkin : ScriptableObject

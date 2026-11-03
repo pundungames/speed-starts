@@ -28,6 +28,7 @@ namespace SpeedStars.Tools.Builders
         public const string RedDot = Root + "/Widgets/RedDot.prefab";
         public const string RewardFlight = Root + "/Widgets/RewardFlight.prefab";
         public const string RaceStart = Root + "/Widgets/RaceStart.prefab";
+        public const string ReplayControls = Root + "/Widgets/ReplayControls.prefab"; // T-098
 
         public const string SettingsRow = Root + "/Rows/SettingsRow.prefab";
         public const string LanguageRow = Root + "/Rows/LanguageRow.prefab";

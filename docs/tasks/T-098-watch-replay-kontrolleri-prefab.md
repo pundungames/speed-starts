@@ -1,7 +1,7 @@
 ---
 id: T-098
 title: Watch Replay kontrolleri prefab'a - ReplayControlsView UI'i koddan kurmaz, builder'in urettigi prefab'i baglar (kural 3.1)
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-091, T-094]
 owns_paths:
@@ -18,12 +18,17 @@ owns_paths:
 touches_scene: false
 branch: agent/T-098-replay-prefab
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/ReplayControlsPrefabTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/BuilderHandEditsTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Kopyada UiPrefabBuilder.BuildAll(overwrite: true): UiReplayPrefabs.BuildAll uretir ReplayControls.prefab; UiResultsPrefabs.BuildAll ResultsScreen.prefab uzerinde replayControlsPrefab baglar (eski replaySkin alani kalkti). Race.unity YENIDEN KURULMAZ; ResultsScreen orada prefab ornegi, referans prefab ile gelir. Sonra Results prefab + ReplayControls prefab git ciktisi alinir."
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -54,3 +59,9 @@ Prefab/sahne/asset dosyasina YAZMA; builder'i calistirma (merkezi dogrulama).
 - Replay mekanigi (Malik), yeni ozellik, gorunum degisikligi
 
 ## Calisma notu
+
+- ReplayControlsView artik hiyerarsi kurmaz: 12 [SerializeField] alani baglar, Open(prefab, replay) prefabi Instantiate eder.
+- UiReplayPrefabs: eski koddaki dugum/rect/renk/kanvas degerleri birebir, skin asset builder girdisi (yoksa duz panel + uyari).
+- ResultsScreenView: replaySkin kalkti, replayControlsPrefab geldi (bossa Watch Replay kapali); UiResultsPrefabs baglar.
+- WatchReplaySmokeTests degismedi (Find("Exit") dogrudan cocuk, prefab de oyle); builder/Unity/test CALISTIRILMADI.
+- Risk: eski kodda kok varsayilan katmandaydi, prefab UI katmaninda; skin.font bossa Results fontu yerine yerlesik font kullanilir.
