@@ -1,7 +1,7 @@
 ---
 id: T-096
 title: FPS toleransi testi - ayni girdi 30 / 60 / 120 FPS'te ayni yaris sonucunu verir mi (olcum + PlayMode testi)
-status: todo
+status: review
 owner: test-agent
 depends_on: []
 owns_paths:
@@ -9,12 +9,13 @@ owns_paths:
 touches_scene: false
 branch: agent/T-096-fps-tolerans
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/PlayMode/FrameRateToleranceTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -32,11 +33,16 @@ Malik'in koduna YAZMA. Fark tolerans disindaysa test kirmizi kalir - [Ignore] ko
 bagli olabilecek yeri (dosya:satir, ornegin Update'te deltaTime ile entegrasyon) yaz; supervizor Malik'e iletir.
 
 ## Kabul kriterleri
-- [ ] FrameRateToleranceTests: iki takvim x 3 FPS, sonuclar loglanir, tolerans assert'i
-- [ ] Calisma notunda: girdi yolu, olcum noktasi, FPS'e bagli olabilecek kod yerleri
-- [ ] Unity calistirma (merkezi dogrulama supervizorde)
+- [x] FrameRateToleranceTests: iki takvim x 3 FPS, sonuclar loglanir, tolerans assert'i
+- [x] Calisma notunda: girdi yolu, olcum noktasi, FPS'e bagli olabilecek kod yerleri
+- [x] Unity calistirma (merkezi dogrulama supervizorde)
 
 ## Kapsam disi
 - RunnerSim / RunnerBody duzeltmesi (Malik), cihazda FPS olcumu
 
 ## Calisma notu
+1. Yazildi: FrameRateToleranceTests (2 UnityTest: 0.32 sn ritim, 0.1 sn sik basma; her biri 30/60/120 FPS, referans 60). Unity CALISTIRILMADI; log satiri `FPS_TOLERANCE fps= finish= dist6= speed6=`.
+2. Girdi yolu: RunnerInput.Inject(leg, pressed, gameTime) kendi kesin zaman damgasiyla; bir sonraki kare araligina dusen olaylar kare sonunda kuyruga atilir (RunnerBody.Update tuketir, Sim tam o ana ilerler). Time.captureFramerate sabit kare suresi verir; Sim.Time/Distance/Speed reflection ile okunur.
+3. Olcum: 6. sn mesafe+hiz (kareler arasi dogrusal duzeltmeli) ve 100 m bitis suresi (dogrusal interpolasyon); tolerans %1 (referansa gore 60 FPS). Bitis yalniz ikisi de bitirdiyse karsilastirilir, biri bitirip digeri bitirmediyse kirmizi.
+4. FPS'e bagli olabilecek yerler: RunnerBody.cs:62,80 (Sim karenin sonuna kadar ilerletilir; kalan dt RunnerSim.cs:309-317'de 1/240 alt adimlarla biter, son parca kare uzunluguna gore degisir -> Euler entegrasyonu kucuk fark); RunnerBody.cs:68 (zaman damgasi `min(tap, now)`: olay kare icine gec ulasirsa basis o kareye kayar; gercek girdide ctx.time ile RunnerInput.cs:136-141 Enqueue yas hesabi ayni kareden gelir); RunnerSim.cs:437/447 (StepHead Time ile surekli ama h degisken); Sim disinda Time.deltaTime kullananlar yalniz gorsel/geri bildirim (PoseDriver:952, *StepFeedback) ve RaceRecorder.cs:104 (bitis sonrasi sure toplami). FixedUpdate yok.
+5. Okunmadi/kapsam disi: RaceController bitis kontrolu (kare kuantali olabilir), cihaz FPS'i. Beklenti: Sim sabit alt adim + kesin zaman damgasi oldugu icin fark kucuk olmali; kirmizi cikarsa sebep yukaridaki ilk madde olabilir, Malik'e iletilir.
