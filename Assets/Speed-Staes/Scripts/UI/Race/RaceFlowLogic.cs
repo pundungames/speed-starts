@@ -11,7 +11,7 @@ namespace SpeedStars.UI.Race
     /// <summary>
     /// The decisions of the Race scene, as pure C# (RaceFlow is the thin Zenject shell around it). Start: take the
     /// confirmed entry from the gate and start the race with the catalog distance; with no pending entry (Play pressed
-    /// in the editor straight from the Race scene) start the selected event for free and warn once. Finish: pay the gem reward once and open Results.
+    /// in the editor straight from the Race scene) start the selected event for free and warn once. Finish: pay the gem reward once and open Results (Practice: nothing is paid or recorded and no Results opens).
     /// Results Race Again enters a new race through the gate; HUD Restart resets the current attempt immediately.
     /// </summary>
     public sealed class RaceFlowLogic : IDisposable
@@ -33,12 +33,14 @@ namespace SpeedStars.UI.Race
         private readonly IRaceTraces _traces; // optional: without it Analysis shows the player alone
         private readonly IRaceCashRewardResolver _cashRewards; // optional: without it no Cash is paid for a race
         private readonly IRaceOfTheDay _daily; // optional: without it Race of the Day runs the catalog distance and reads like any event
+        private readonly Func<RaceEventId, bool> _isPractice; // optional: without it every event ends with Results
         private readonly List<DayBestRecord> _dayScratch = new List<DayBestRecord>();
 
         private RaceEventInfo _current;
         private bool _hasCurrent;
         private bool _started;
         private bool _resultsOpen;
+        private bool _practiceFinished; // a Practice run crossed the line: nothing more is recorded until the next start
         private bool _warnedFreeStart;
         private float _currentDistance; // the length of the race being run (a Race of the Day's changes by day)
         private string _payoutId = string.Empty;
@@ -52,8 +54,9 @@ namespace SpeedStars.UI.Race
             ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, IEntryGatePrompt prompt,
             IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null,
             IDayBestSource dayBests = null, IClock clock = null, IRaceTraces traces = null,
-            IRaceCashRewardResolver cashRewards = null, IRaceOfTheDay raceOfTheDay = null)
+            IRaceCashRewardResolver cashRewards = null, IRaceOfTheDay raceOfTheDay = null, Func<RaceEventId, bool> isPractice = null)
         {
+            _isPractice = isPractice;
             _daily = raceOfTheDay;
             _cashRewards = cashRewards;
             _traces = traces;
@@ -75,6 +78,9 @@ namespace SpeedStars.UI.Race
 
         /// <summary>True while the Results screen is up (between a finish and the next start).</summary>
         public bool ResultsOpen => _resultsOpen;
+
+        /// <summary>True after a Practice run crossed the line (no Results screen is shown for it).</summary>
+        public bool PracticeFinished => _practiceFinished;
 
         /// <summary>The race scene opened: take the entry and start. Safe to call once; repeats are ignored.</summary>
         public void Start()
@@ -122,6 +128,7 @@ namespace SpeedStars.UI.Race
             _current = info;
             _hasCurrent = true;
             _resultsOpen = false;
+            _practiceFinished = false;
             _analysisPlayerSeries = null;
             _payoutId = Guid.NewGuid().ToString("N"); // one reward id per race start: a repeated finish cannot pay twice
             // The Race of the Day takes its length from the day's rule (the catalog has none); everything else from the catalog.
@@ -151,7 +158,14 @@ namespace SpeedStars.UI.Race
 
         private void OnFinished(RaceOutcome outcome)
         {
-            if (_resultsOpen) return; // exactly one Results per race
+            if (_resultsOpen || _practiceFinished) return; // exactly one Results per race
+
+            // Practice ends on the line: no Results, no reward, no personal / day best. The HUD stays up with Exit / Restart.
+            if (_isPractice != null && _isPractice(outcome.EventId))
+            {
+                _practiceFinished = true;
+                return;
+            }
 
             string title;
             if (_hasCurrent && _current.Id == outcome.EventId) title = _current.DisplayName;

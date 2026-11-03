@@ -100,6 +100,31 @@ namespace SpeedStars.PlayTests
         }
 
         [UnityTest]
+        public IEnumerator Practice_Finish_OpensNoResults_HudStays_RestartRunsAgain()
+        {
+            yield return EnterFreeRace(withOpponents: false);
+            PracticePanelView panel = Require<PracticePanelView>();
+            yield return WaitUntil(() => RequireField<GameObject>(panel, "content").activeInHierarchy, "the Practice panel to show");
+
+            IRaceSession session = Object.FindObjectOfType<SceneContext>().Container.Resolve<IRaceSession>();
+            System.Reflection.MethodInfo finish = session.GetType().GetMethod("DevForceFinish");
+            if (finish == null) Assert.Ignore("RaceSessionAdapter.DevForceFinish is not compiled in (non-dev build): no way to finish the race from a test.");
+            ResultsScreenView results = Require<ResultsScreenView>();
+            RaceHudView hud = Require<RaceHudView>();
+
+            finish.Invoke(session, null);
+            yield return WaitUntil(() => session.State == RaceSessionState.Finished, "the session to report the finish");
+            for (int i = 0; i < 10; i++) yield return null; // Results would have opened by now
+
+            Assert.IsFalse(results.gameObject.activeInHierarchy, "Practice ends without a Results screen");
+            Assert.IsTrue(hud.gameObject.activeInHierarchy, "the HUD stays up after a Practice finish");
+
+            yield return Tap(RequireField<Button>(hud, "restartButton"), "HUD Restart");
+            yield return WaitUntil(() => session.State != RaceSessionState.Finished, "Restart to begin a new run");
+            Assert.IsFalse(results.gameObject.activeInHierarchy, "Restart must not open Results either");
+        }
+
+        [UnityTest]
         public IEnumerator NormalEvent_HasNoPracticePanel()
         {
             yield return EnterFreeRace(withOpponents: true);

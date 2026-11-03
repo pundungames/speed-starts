@@ -1,7 +1,7 @@
 ---
 id: T-092
 title: Practice'te bitiste sonuc ekrani acilmaz (referans) - HUD'da Exit / Restart kalir, odul ve rekor yok
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-090]
 owns_paths:
@@ -13,12 +13,20 @@ owns_paths:
 touches_scene: false
 branch: agent/T-092-practice-sonuc-yok
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceFlowPracticeTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/PracticePanelSmokeTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "Yeni Tests/EditMode/UI/Race/RaceFlowPracticeTests.cs icin .meta kopyada derlenip alinir (hook .meta yazdirmaz)."
+  - tip: DECISION
+    durum: open
+    not: "Practice ayrimi RaceFlow'da RaceEventCatalog'dan (HasOpponents=false) okunur; ayri bir RaceEventInfo.IsPractice alani gerekirse RaceEventLookup.cs (owns disi) degisir - simdilik gerekmedi."
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -48,3 +56,8 @@ KAMERA  : yok
 - Watch Replay (T-094), Practice paneli (T-090), enerji / ayakta cikis (Malik)
 
 ## Calisma notu
+1. Practice'te bugun yazilanlar (koddan): ResultsScreen acilir; `IPersonalBests.Record` PB + gunluk en iyiyi event id'si altinda yazar (gunluk en iyi liderlik ekraninin kaynagi); gem odulu 0 (RunnerCount<2), Nakit odulu yok (ayni kural), Cash karti cuzdan bakiyesini gosterir, Analysis verisi hazirlanir. Hepsi `RaceFlowLogic.OnFinished` icindeydi.
+2. Kesim: `RaceFlowLogic` opsiyonel `isPractice` kosulu alir; Practice bitisinde OnFinished hemen doner (Results yok, odul/Record yok, HUD acik, `PracticeFinished` bayragi). Restart `_resultsOpen` false oldugu icin dogrudan BeginRace (kapi yok).
+3. `RaceFlow` (kabuk) `[InjectOptional] RaceEventCatalog` ile kosulu kurar: `!HasOpponents` (Practice panelinin kuraliyla ayni). Katalog ProjectInstaller'da bagli; installer degismedi.
+4. Testler: RaceFlowPracticeTests (kes/restart/normal etkinlik aynen/kural yoksa aynen), PracticePanelSmokeTests'e gercek tiklamali Restart adimi (DevForceFinish ile). Hicbir sey derlenmedi/kosulmadi.
+5. Risk: "saat bitis suresinde durur" session Finished durumuna baglidir, ayrica kod eklenmedi; RaceEmotes bitis tepkisi (ayri abone) Practice'te de calisir - degistirilmedi.
