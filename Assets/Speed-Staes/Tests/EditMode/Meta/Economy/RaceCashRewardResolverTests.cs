@@ -69,12 +69,12 @@ namespace SpeedStars.Tests.Meta.Economy
         }
 
         [Test]
-        public void SoloRace_NoOpponents_PaysNoOpponentBonus()
+        public void OneOpponent_RankOne_GetsTheFullOpponentBonus()
         {
-            RaceCashReward reward = Pay(1, "solo", runners: 1);
+            RaceCashReward reward = Pay(1, "duel", runners: 2);
 
-            Assert.AreEqual(0, reward.Opponents);
-            Assert.AreEqual(Finish + Difficulty, reward.Total);
+            Assert.AreEqual(OpponentFull, reward.Opponents);
+            Assert.AreEqual(Finish + Difficulty + OpponentFull, reward.Total);
         }
 
         [Test]
@@ -97,12 +97,21 @@ namespace SpeedStars.Tests.Meta.Economy
         }
 
         [Test]
-        public void FreeEvent_PaysNothing()
+        public void EventWithoutATicketRule_StillPays_WhenThereAreOpponents()
         {
-            RaceCashReward reward = _k.CashRewards.Resolve(_k.Outcome(EconomyTestKit.PlainEvent, 1), "r");
+            RaceCashReward reward = _k.CashRewards.Resolve(_k.Outcome(EconomyTestKit.PlainEvent, 1, 12.5, Runners), "r");
 
-            Assert.IsTrue(reward.IsEmpty);
+            Assert.Greater(reward.Total, 0);
+            Assert.AreEqual(reward.Total, _k.Progress.Cash);
+        }
+
+        [Test]
+        public void RunAlone_PaysNothing_WhateverTheEvent()
+        {
+            Assert.IsTrue(_k.CashRewards.Resolve(_k.Outcome(EconomyTestKit.PaidEvent, 1, 12.5, 1), "a").IsEmpty);
+            Assert.IsTrue(_k.CashRewards.Resolve(_k.Outcome(EconomyTestKit.PlainEvent, 1, 12.5, 1), "b").IsEmpty);
             Assert.AreEqual(0, _k.Progress.Cash);
+            Assert.AreEqual(0, _k.Progress.ProcessedTransactionIds.Count);
         }
 
         [Test]

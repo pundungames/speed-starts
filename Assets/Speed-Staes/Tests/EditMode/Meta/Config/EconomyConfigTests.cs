@@ -14,14 +14,14 @@ namespace SpeedStars.Tests.Meta.Config
         public void TearDown() => fixture.DestroyAll();
 
         [Test]
-        public void NewConfig_EveryTicketOptionIsClosed()
+        public void NewConfig_EntryTicketAndAdTicketAreClosed_TimedTicketHasItsSeededPrice()
         {
             var config = fixture.Create<EconomyConfig>();
 
             Assert.IsFalse(config.TryGetEntryTicketCashPrice(out var entryPrice));
             Assert.AreEqual(0, entryPrice);
-            Assert.IsFalse(config.TryGetTimedTicketCashPrice(out var timedPrice));
-            Assert.AreEqual(0, timedPrice);
+            Assert.IsTrue(config.TryGetTimedTicketCashPrice(out var timedPrice));
+            Assert.Greater(timedPrice, 0);
             Assert.IsFalse(config.TryGetRewardedAdEntryTickets(out var adTickets));
             Assert.AreEqual(0, adTickets);
         }

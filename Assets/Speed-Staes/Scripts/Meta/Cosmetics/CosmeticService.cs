@@ -268,6 +268,30 @@ namespace SpeedStars.Meta.Cosmetics
                 progress.CosmeticPresets.Add(preset);
             }
             if (progress.SelectedPresetIndex < 0 || progress.SelectedPresetIndex >= count) progress.SelectedPresetIndex = 0;
+            GrandfatherWornItems(progress);
+        }
+
+        /// <summary>
+        /// One-time-style migration (economy v2): a normal item that was free (so owned) when the player put it on, but has
+        /// a price now, stays owned if a saved preset wears it, so nobody loses what they wear. Idempotent: ids already
+        /// owned are skipped and a save happens only when something was added. Premium items and unknown ids are left alone;
+        /// a locked premium in a preset is still not worn.
+        /// </summary>
+        private void GrandfatherWornItems(PlayerProgress progress)
+        {
+            bool added = false;
+            foreach (CosmeticPreset preset in progress.CosmeticPresets)
+            {
+                foreach (SelectedCosmetic saved in preset.Slots)
+                {
+                    if (!Enum.TryParse(saved.Category, out CosmeticCategory category)) continue;
+                    if (!_catalog.TryGet(saved.CosmeticId, out CosmeticDefinition item) || item.Category != category) continue;
+                    if (item.IsPremium || !item.IsForSale || progress.OwnedCosmeticIds.Contains(item.Id)) continue;
+                    progress.OwnedCosmeticIds.Add(item.Id);
+                    added = true;
+                }
+            }
+            if (added) _repository.Save();
         }
 
         private PlayerProgress Progress => _repository.Current

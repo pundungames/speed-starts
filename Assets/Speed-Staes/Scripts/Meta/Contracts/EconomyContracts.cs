@@ -137,12 +137,12 @@ namespace SpeedStars.Meta.Contracts
         public bool IsEmpty => Total <= 0;
     }
 
-    /// <summary>Cash for a finished race of a ticketed event (economy v2). Free events pay nothing.</summary>
+    /// <summary>Cash for a finished race against opponents (economy v2). A run alone pays nothing.</summary>
     public interface IRaceCashRewardResolver
     {
         /// <summary>
         /// Pays once per <paramref name="payoutId"/> and returns the breakdown for the result screen. Empty for a free
-        /// event, an unfinished or invalid outcome, an unknown event or a repeated id.
+        /// event (or a run alone), an unfinished or invalid outcome, an unknown event or a repeated id.
         /// </summary>
         RaceCashReward Resolve(RaceOutcome outcome, string payoutId);
     }

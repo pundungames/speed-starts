@@ -12,6 +12,8 @@ owns_paths:
   - "Assets/Speed-Staes/Scripts/Meta/Persistence/**"
   - "Assets/Speed-Staes/Scripts/UI/Race/RaceFlowLogic.cs"
   - "Assets/Speed-Staes/Scripts/UI/Race/RaceViewContracts.cs"
+  - "Assets/Speed-Staes/Scripts/UI/Race/RaceFlow.cs"
+  - "Assets/Speed-Staes/Scripts/Meta/Cosmetics/**"
   - "Assets/Speed-Staes/Tools/Editor/Builders/Scene/ConfigAssetSeeder.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/**"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/**"
@@ -29,15 +31,9 @@ needs:
   - tip: WIRING
     durum: open
     not: "ProjectInstaller -> Container.Bind<IRaceCashRewardResolver>().To<RaceCashRewardResolver>().AsSingle(); Container.Bind<ITimedTicketShop>().To<TimedTicketShop>().AsSingle(); Container.Bind<IRewardedCash>().FromMethod(c => new RewardedCashService(c.Container.TryResolve<IRewardedAds>(), c.Container.Resolve<ProgressRepository>(), c.Container.Resolve<IClock>(), c.Container.Resolve<EconomyConfig>(), c.Container.Resolve<IEconomyLedger>())).AsSingle();  (RaceCashRewardResolver ctor: RaceEventCatalog, EconomyConfig, IEconomyLedger, ProgressRepository - RaceRewardResolver ile ayni kaynaklar)"
-  - tip: WIRING
-    durum: open
-    not: "Scripts/UI/Race/RaceFlow.cs (owns_paths disi) -> ctor'a '[InjectOptional] IRaceCashRewardResolver cashRewards' ekle ve RaceFlowLogic'e son parametre olarak ver: new RaceFlowLogic(..., traces, cashRewards). Yoksa yarista Nakit odenmez."
   - tip: ASSET
     durum: open
-    not: "Seeder'i kopyada kos: ConfigAssetSeeder.ApplyEconomyV2() (menu: Tools/Speed Stars/Build/Apply economy v2 prices; SeedAll da cagirir). Yazar: EconomyConfig.asset entryTicketCashPrice=100, timedTicketCashPrice=1000, raceFinishCash=10, raceDifficultyBonusCash=10, raceOpponentBonusCash=10, rewardedAdCash=200, rewardedAdCashDailyLimit=3; CosmeticDefinition asset'leri (Data/Config/Cosmetics) normal: price 500 (Headwear 1000), currency Cash, catalog.defaultOutfit ogeleri 0; premium dokunulmaz; EmoteCatalog.asset ucretsizler 0, ucretliler sirayla 2500/2500/5000/7500. Degisen asset'ler commit'e girer."
-  - tip: DECISION
-    durum: open
-    not: "Mevcut oyuncu kaydi: normal kozmetikler fiyatsizken sahipli sayiliyordu (CosmeticService.IsOwned); fiyat gelince eski kayitta giyilen/hazir presetteki ama OwnedCosmeticIds'te olmayan oge kilitli gorunur. Dagitim oncesi mevcut oyuncu yoksa sorun degil; varsa CosmeticService'e (owns_paths disi) 'kayitli presetlerde giyilen ogeler sahipli' gecisi gerekir."
+    not: "Seeder'i kopyada kos: ConfigAssetSeeder.ApplyEconomyV2() (menu: Tools/Speed Stars/Build/Apply economy v2 prices; SeedAll da cagirir). Yazar: EconomyConfig.asset entryTicketCashPrice=0, timedTicketCashPrice=300, raceFinishCash=10, raceDifficultyBonusCash=10, raceOpponentBonusCash=10, rewardedAdCash=200, rewardedAdCashDailyLimit=3; CosmeticDefinition asset'leri (Data/Config/Cosmetics) normal: price 500 (Headwear 1000); RaceEventDefinition.requiresTicket: 100m/training/race_of_the_day=false, 200m/400m/60mh/110mh/400mh/4x100m/medley=true (isPlayable dokunulmaz), currency Cash, catalog.defaultOutfit ogeleri 0; premium dokunulmaz; EmoteCatalog.asset ucretsizler 0, ucretliler sirayla 2500/2500/5000/7500. Degisen asset'ler commit'e girer."
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:
@@ -83,3 +79,5 @@ Once oku: docs/TUZAKLAR.md, docs/CALISMA-KURALLARI.md §6 (denge sayisi), mevcut
 - Saat geri alma: ClockService zaten son gorulene sabitler; ek olarak kayitli gun anahtari bugunden ileriyse sayac bugune sayilir, hak geri gelmez.
 - Hazir kiyafet kurali: preset'ler CosmeticCatalog.defaultOutfit ile doldurulur (CosmeticService), bu yuzden defaultOutfit ogeleri 0 fiyatli; baska preset kaynagi yok. Seeder dosyasi digerlerini (Premium 50 Mor Mucevher) bozmaz.
 - Zorlandim/birakilan: kod derlenmedi/test kosulmadi (kural). EntryTicketShop 100 Nakit sadece seeder'dan; kod varsayilani fiyat alanlarinda 0 kaldi (EconomyConfigTests "yeni config kapali" testi korunsun diye). RaceFlow.cs ve CosmeticService owns_paths disi: needs'te.
+- Takip (03.11): Nakit uygunlugu requiresTicket degil rakipli her yaris (solo 0); Sureli Bilet 300, Adet Bileti Nakit satisi kapali (0); seeder etkinlik erisimi yazar; RaceFlow.cs RaceFlowLogic'e nakit cozumleyiciyi iletir (WIRING kalkti).
+- Takip: CosmeticService.EnsurePresets kayitli preset'te giyili, artik fiyatli normal ogeleri OwnedCosmeticIds'e ekler (idempotent, yalniz ekleme olunca kayit); DECISION kapandi.

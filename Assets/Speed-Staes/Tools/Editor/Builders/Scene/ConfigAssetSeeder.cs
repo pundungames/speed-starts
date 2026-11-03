@@ -47,14 +47,14 @@ namespace SpeedStars.Tools.Builders
         {
             new EventSeed("training", "Antrenman Alanı", 100f, ticket: false, gems: false, playable: true),
             new EventSeed("race_of_the_day", "Race of the Day", 0f, ticket: false, gems: false, playable: false),
-            new EventSeed("100m", "100m", 100f, ticket: true, gems: false, playable: true),
-            new EventSeed("200m", "200m", 200f, ticket: false, gems: false, playable: false),
-            new EventSeed("400m", "400m", 400f, ticket: false, gems: true, playable: false),
-            new EventSeed("60mh", "60mH", 60f, ticket: false, gems: true, playable: false, hurdles: 5, firstHurdle: 13.72f, hurdleSpacing: 9.14f),
-            new EventSeed("110mh", "110mH", 110f, ticket: false, gems: false, playable: true, hurdles: 10, firstHurdle: 13.72f, hurdleSpacing: 9.14f),
-            new EventSeed("400mh", "400mH", 400f, ticket: false, gems: false, playable: false, hurdles: 10, firstHurdle: 45f, hurdleSpacing: 35f),
-            new EventSeed("4x100m", "4×100m", 400f, ticket: false, gems: false, playable: false), // relay: 4 legs x 100 m, from the name
-            new EventSeed("medley", "Medley", 0f, ticket: false, gems: true, playable: false),
+            new EventSeed("100m", "100m", 100f, ticket: false, gems: false, playable: true),
+            new EventSeed("200m", "200m", 200f, ticket: true, gems: false, playable: false),
+            new EventSeed("400m", "400m", 400f, ticket: true, gems: true, playable: false),
+            new EventSeed("60mh", "60mH", 60f, ticket: true, gems: true, playable: false, hurdles: 5, firstHurdle: 13.72f, hurdleSpacing: 9.14f),
+            new EventSeed("110mh", "110mH", 110f, ticket: true, gems: false, playable: true, hurdles: 10, firstHurdle: 13.72f, hurdleSpacing: 9.14f),
+            new EventSeed("400mh", "400mH", 400f, ticket: true, gems: false, playable: false, hurdles: 10, firstHurdle: 45f, hurdleSpacing: 35f),
+            new EventSeed("4x100m", "4×100m", 400f, ticket: true, gems: false, playable: false), // relay: 4 legs x 100 m, from the name
+            new EventSeed("medley", "Medley", 0f, ticket: true, gems: true, playable: false),
         };
 
         public static void SeedAll(bool overwrite)
@@ -81,8 +81,8 @@ namespace SpeedStars.Tools.Builders
         }
 
         // ---- Economy v2 (T-084; docs/analiz/2026-11-03-referans-oyun-ekonomi.md section 4, user decision 03.11) ----
-        private const int EntryTicketCashPrice = 100;
-        private const int TimedTicketCashPrice = 1000;
+        private const int EntryTicketCashPrice = 0;        // the reference sells no single entry; Entry Tickets are not sold for Cash
+        private const int TimedTicketCashPrice = 300;     // reference game: "Spend 300 -> unlock for 1 hour"
         private const int RaceFinishCash = 10;
         private const int RaceDifficultyBonusCash = 10;
         private const int RaceOpponentBonusCash = 10;   // paid in full when every opponent is passed
@@ -122,6 +122,8 @@ namespace SpeedStars.Tools.Builders
             }
             else Warn(Source, $"'{EconomyPath}' is missing; economy v2 numbers not written.");
 
+            ApplyEventAccess();
+
             var cosmetics = AssetDatabase.LoadAssetAtPath<CosmeticCatalog>(CosmeticCatalogPath);
             if (cosmetics != null) ApplyCosmeticPrices(cosmetics);
             else Warn(Source, $"'{CosmeticCatalogPath}' is missing; cosmetic prices not written.");
@@ -131,6 +133,27 @@ namespace SpeedStars.Tools.Builders
             else Warn(Source, $"'{EmoteCatalogSeed.CatalogPath}' is missing; emote prices not written.");
 
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// Event access as in the reference game: 100m, Race of the Day and Practice are free and unlimited; the other events
+        /// need a ticket (Timed Ticket). The flag per id comes from the seed table <c>Events</c>; an event of the catalog
+        /// that is not in the table is left as it is. Only requiresTicket is written (isPlayable is not touched).
+        /// </summary>
+        private static void ApplyEventAccess()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<RaceEventCatalog>(RaceEventCatalogPath);
+            if (catalog == null) { Warn(Source, $"'{RaceEventCatalogPath}' is missing; event access not written."); return; }
+
+            foreach (RaceEventDefinition definition in catalog.GetEvents())
+            {
+                int index = System.Array.FindIndex(Events, e => e.Id == definition.Id.Value);
+                if (index < 0) continue;
+                var so = new SerializedObject(definition);
+                Prop(so, "requiresTicket").boolValue = Events[index].RequiresTicket;
+                Apply(so);
+            }
+            Log(Source, "Event access written (requiresTicket per the seed table).");
         }
 
         private static void ApplyCosmeticPrices(CosmeticCatalog catalog)

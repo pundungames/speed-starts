@@ -43,7 +43,7 @@ namespace SpeedStars.Meta.Config
         [SerializeField, Min(0)] private int entryTicketCashPrice;
 
         [Tooltip("Cash price of one Timed Ticket. 0 = no price: the option is shown greyed out.")]
-        [SerializeField, Min(0)] private int timedTicketCashPrice;
+        [SerializeField, Min(0)] private int timedTicketCashPrice = 300;
 
         [Header("Entry Ticket from a rewarded ad")]
         [Tooltip("Offer Entry Tickets for watching a rewarded ad.")]
@@ -52,11 +52,11 @@ namespace SpeedStars.Meta.Config
         [Tooltip("Entry Tickets one rewarded ad gives. 0 = option closed even when enabled.")]
         [SerializeField, Min(0)] private int rewardedAdEntryTickets;
 
-        [Header("Race Cash reward (ticketed events only)")]
-        [Tooltip("Cash for finishing a ticketed race. 0 = no finish payment.")]
+        [Header("Race Cash reward (races with opponents)")]
+        [Tooltip("Cash for finishing a race with opponents. 0 = no finish payment.")]
         [SerializeField, Min(0)] private int raceFinishCash = 10;
 
-        [Tooltip("Flat difficulty bonus Cash for finishing a ticketed race (the game has no difficulty setting, so it is a constant). 0 = off.")]
+        [Tooltip("Flat difficulty bonus Cash for finishing a race with opponents (the game has no difficulty setting, so it is a constant). 0 = off.")]
         [SerializeField, Min(0)] private int raceDifficultyBonusCash = 10;
 
         [Tooltip("Opponent bonus Cash if every opponent is passed: round(this x passed opponents / all opponents). 0 = off.")]
