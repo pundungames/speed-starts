@@ -105,6 +105,8 @@ namespace SpeedStars.Installers
             Container.Bind(typeof(ILeaderboard), typeof(System.IDisposable)).To<LocalLeaderboard>().AsSingle();
             // T-040: emote ownership/equip (Cash via the ledger) and the preview the menu character plays.
             Container.Bind<IEmoteService>().To<EmoteService>().AsSingle();
+            // T-089: the race emote switches (button, auto emote) come from the player settings (T-088).
+            Container.Bind<IEmoteRaceOptions>().To<PlayerSettingsEmoteOptions>().AsSingle();
             Container.Bind<IEmotePreview>().To<EmotePreview>().AsSingle();
             // T-042: daily Entry Ticket gift + 7-day rewards (UTC day; one card per day; ledger/cosmetic grants).
             Container.BindInterfacesAndSelfTo<DailyGiftService>().AsSingle();
