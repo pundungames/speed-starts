@@ -27,6 +27,8 @@ namespace SpeedStars.Bridge
         RaceStartConfig startConfig;
         [SerializeField, Tooltip("The opponents (T-075). Their order at the player's finish gives the outcome's rank and runner count. Empty = the player runs alone: rank 1 of 1.")]
         RaceBots bots;
+        [SerializeField, Tooltip("Practice (T-090): in a Practice race the start distance is the player's dropdown choice. Empty = every race takes the requested distance.")]
+        PracticeSession practice;
 
         RaceSessionState _state = RaceSessionState.Ready;
         RaceEventId _eventId;
@@ -128,7 +130,8 @@ namespace SpeedStars.Bridge
             Initialize();
             if (!race) return;
             _eventId = request.EventId;
-            if (request.DistanceMeters > 0f) race.raceDistance = request.DistanceMeters;
+            float distance = practice ? practice.AdjustDistance(request.EventId, request.DistanceMeters) : request.DistanceMeters;
+            if (distance > 0f) race.raceDistance = distance;
 
             _requesting = true;
             _state = RaceSessionState.Ready;

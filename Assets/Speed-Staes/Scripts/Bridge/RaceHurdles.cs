@@ -16,6 +16,8 @@ namespace SpeedStars.Bridge
         RaceSessionAdapter session;
         [SerializeField, Tooltip("The hurdles on the player's lane.")]
         RunnerHurdles hurdles;
+        [SerializeField, Tooltip("Practice (T-090): in a Practice race the Hurdles box decides the layout. Empty = the event's own layout.")]
+        PracticeSession practice;
 
         RaceEventCatalog _events;
 
@@ -38,7 +40,15 @@ namespace SpeedStars.Bridge
             RaceEventDefinition definition = null;
             bool found = _events != null && _events.TryGet(session.CurrentEventId, out definition);
             int count = found ? definition.HurdleCount : 0;
-            hurdles.Configure(count, found ? definition.FirstHurdleMeters : 0f, found ? definition.HurdleSpacingMeters : 0f);
+            float first = found ? definition.FirstHurdleMeters : 0f;
+            float spacing = found ? definition.HurdleSpacingMeters : 0f;
+            if (practice && practice.TryGetHurdleLayout(session.CurrentEventId, out int pCount, out float pFirst, out float pSpacing))
+            {
+                count = pCount;
+                first = pFirst;
+                spacing = pSpacing;
+            }
+            hurdles.Configure(count, first, spacing);
             if (hurdles.body) hurdles.body.acceptJump = count > 0;
         }
     }

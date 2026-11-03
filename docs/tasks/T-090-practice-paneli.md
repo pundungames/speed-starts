@@ -1,7 +1,7 @@
 ---
 id: T-090
 title: Practice paneli - referanstaki antrenman secenekleri (baslangic 100/200/300/400 m, engeller, enerji; ayakta cikis Malik'te)
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-086]
 owns_paths:
@@ -17,12 +17,28 @@ owns_paths:
 touches_scene: false
 branch: agent/T-090-practice-paneli
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Practice/PracticeOptionsTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Practice/PracticePanelModelTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/PracticePanelSmokeTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: DECISION
+    durum: open
+    not: "Malik: RunnerSim'e `RefillEnergy()` ve `lockEnergy` bayragi (public); arayuz Meta/Practice/PracticeContracts.cs IPracticeEnergy, PracticeSession.BindEnergy ile baglanir. Lock/Reset energy satirlari o zamana dek gri."
+  - tip: DECISION
+    durum: open
+    not: "Malik: ayakta cikis (standing start) mekanigi, public bayrak/metot; arayuz IPracticeStandingStart, PracticeSession.BindStandingStart. Satir o zamana dek gri."
+  - tip: SCENE
+    durum: open
+    not: "Race sahnesine yama: Tools > Speed Stars > Build > Race scene - add Practice panel (ScenePracticePanel.PatchRaceScene). Config asset (Data/Config/PracticeConfig.asset) ve UI/Widgets/PracticePanel.prefab ayni adimda uretilir; sahneyi YENIDEN KURMAZ."
+  - tip: ASSET
+    durum: open
+    not: "Yeni .cs dosyalarinin .meta'lari kopyada derlenip alinir (TUZAKLAR: .meta'siz commit)."
+
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -50,4 +66,8 @@ Paralel calisan T-087 (Race of the Day) `RaceFlowLogic`, `ResultsScreenView`, `U
 - Malik'in `Scripts/Physical/**` kodu; Race of the Day (T-087)
 
 ## Calisma notu
-(Agent doldurur: 5 satir)
+1. Pasif seam'li panel: Meta/Practice (config, secenek modeli, kayit `practice` anahtari ISaveStore'da), Bridge/PracticeSession, PracticePanelView, UiPracticePrefabs, ScenePracticePanel.
+2. Mesafe: RaceSessionAdapter.RequestStart secimi uygular; secim RaceFlow.RequestRestart ile yeniden baslatir (Practice biletsiz). Hurdles: RaceHurdles READY'de Practice dizilimini alir.
+3. PracticeSession panele kendini Bind eder: installer satiri gerekmedi. BuildRace'e panel eklenmedi; sahne yamayla gelir (BuildRace yeniden kurulursa yama tekrar kosulur).
+4. Lock/Reset energy ve Standing start: API yok -> gri; IPracticeEnergy / IPracticeStandingStart arayuzleri hazir. Referanstaki "saat GO beklemeden akar" yapilmadi (RaceController saatini adapter GO'da baslatiyor, Malik alani).
+5. Hicbir sey derlenmedi/kosulmadi; kopyada derleme + EditMode + PlayMode gerekir. Sonuc ekraninin Practice'te gizlenmesi T-087/ResultsScreen alani, yapilmadi.
