@@ -19,7 +19,7 @@ analytics:
 needs:
   - tip: WIRING
     durum: open
-    not: "ArrowKeyRunnerInput -> RaceSceneInstaller.InstallBindings (Container.BindInterfacesTo<ArrowKeyRunnerInput>().AsSingle().WithArguments(raceSession); constructor takes the RaceSessionAdapter)"
+    not: "ArrowKeyRunnerInput -> RaceSceneInstaller.InstallBindings (Container.BindInterfacesTo<ArrowKeyRunnerInput>().AsSingle().WithArguments(raceSession).NonLazy(); constructor takes the RaceSessionAdapter; IResultsView satirindan sonra) - kompozisyon koku kancasi supervizoru de engelliyor, kullanici onayi bekleniyor (03.11)"
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:
