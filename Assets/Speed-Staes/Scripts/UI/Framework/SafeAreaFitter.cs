@@ -20,11 +20,17 @@ namespace SpeedStars.UI.Framework
     /// are untouched, so an animation moving anchoredPosition keeps working. A screen background or dim (a stretched child
     /// that draws something, or one marked FullBleed) is left alone and still fills the whole screen.
     /// Written only when the safe area or the screen size changes.
+    /// Edit-mode preview: so the notch shows in the Device Simulator while the UI is designed, the fitted anchors are also
+    /// applied in Edit mode, but only as DRIVEN values (DrivenRectTransformTracker): they are not saved to the scene or prefab and
+    /// are restored to the authored anchors the moment the fitter is disabled or the preview is switched off
+    /// (menu Tools/Speed Stars/Notch Preview (Edit Mode)). While the preview is inset, those anchors are read-only
+    /// (greyed) in the Inspector; switch the preview off to edit them. Play mode ignores the preview flag entirely.
     /// </summary>
+    [ExecuteAlways]
     [DisallowMultipleComponent]
     public sealed class SafeAreaFitter : MonoBehaviour
     {
-        [SerializeField, Tooltip("Children: fit the direct children of this stretched root. Self: fit this rect itself.")]
+        [SerializeField, Tooltip("Children: fit the direct children of this stretched root. Self: fit this rect itself. In Edit mode the fitted anchors are driven (greyed, read-only, never saved) while a notch preview is active; turn it off with Tools > Speed Stars > Notch Preview (Edit Mode) to edit them.")]
         private SafeAreaMode mode = SafeAreaMode.Children;
 
         [SerializeField, Tooltip("Also keep the top/bottom edges inside the safe area (the game is landscape, so normally off).")]
@@ -35,6 +41,92 @@ namespace SpeedStars.UI.Framework
 
         [SerializeField, Min(0f), Tooltip("Insets this small (px) count as none, so a notch-less phone keeps the authored layout.")]
         private float tolerancePx = 1f;
+
+#if UNITY_EDITOR
+        /// <summary>EditorPrefs key of the Edit-mode preview switch (default on).</summary>
+        public const string PreviewPrefKey = "SpeedStars.SafeAreaEditPreview";
+
+        private static readonly List<SafeAreaFitter> ActiveFitters = new List<SafeAreaFitter>();
+        private static int _previewCache = -1;
+
+        /// <summary>Edit-mode notch preview switch (persisted in EditorPrefs, default on). Never read in Play mode.</summary>
+        public static bool EditorPreview
+        {
+            get
+            {
+                if (_previewCache < 0) _previewCache = UnityEditor.EditorPrefs.GetBool(PreviewPrefKey, true) ? 1 : 0;
+                return _previewCache == 1;
+            }
+        }
+
+        /// <summary>Switches the preview and refits every active fitter at once (off restores the authored anchors).</summary>
+        public static void SetEditorPreview(bool on)
+        {
+            _previewCache = on ? 1 : 0;
+            UnityEditor.EditorPrefs.SetBool(PreviewPrefKey, on);
+            RefreshActive();
+        }
+
+        /// <summary>Before an editor save: drop driven anchors so nothing inset can reach the file, even if Unity serialized them.</summary>
+        public static void SuspendPreviewForSave()
+        {
+            if (Application.isPlaying) return;
+            for (int i = 0; i < ActiveFitters.Count; i++)
+            {
+                if (ActiveFitters[i] == null) continue;
+                ActiveFitters[i].ReleaseDriven();
+                ActiveFitters[i]._hasApplied = false;
+            }
+        }
+
+        /// <summary>After an editor save: put the preview back.</summary>
+        public static void ResumePreviewAfterSave()
+        {
+            RefreshActive();
+        }
+
+        private static void RefreshActive()
+        {
+            for (int i = ActiveFitters.Count - 1; i >= 0; i--)
+            {
+                if (i >= ActiveFitters.Count) continue;
+                SafeAreaFitter fitter = ActiveFitters[i];
+                if (fitter == null) { ActiveFitters.RemoveAt(i); continue; }
+                fitter.Refresh();
+            }
+        }
+
+        // The Device Simulator changing device does not trigger Update in Edit mode, so poll the two cached values.
+        private void EditorTick()
+        {
+            if (this == null || Application.isPlaying || !isActiveAndEnabled) return;
+            Refresh();
+        }
+#endif
+
+        private static bool EditMode
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return !Application.isPlaying;
+#else
+                return false;
+#endif
+            }
+        }
+
+        private static bool PreviewOn
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return EditorPreview;
+#else
+                return false;
+#endif
+            }
+        }
 
         private struct Entry
         {
@@ -47,6 +139,9 @@ namespace SpeedStars.UI.Framework
         private ISafeAreaSource _source;
         private bool _collected;
         private bool _hasApplied;
+        private bool _lastPreview;
+        private bool _driven;
+        private DrivenRectTransformTracker _tracker;
         private Vector2 _lastScreen;
         private Rect _lastSafe;
 
@@ -54,6 +149,9 @@ namespace SpeedStars.UI.Framework
         public int WriteCount { get; private set; }
 
         public SafeAreaMode Mode => mode;
+
+        /// <summary>True while the Edit-mode preview holds the fitted anchors as driven (unsaved, read-only) values.</summary>
+        public bool IsDriving => _driven;
 
         /// <summary>Replaces the source (tests, or a future platform wrapper) and refits at once.</summary>
         public void SetSource(ISafeAreaSource source)
@@ -65,6 +163,7 @@ namespace SpeedStars.UI.Framework
         /// <summary>Seam for code that builds the component (scene builder) without going through the serialized fields.</summary>
         public void Configure(SafeAreaMode newMode, bool vertical, bool mirror = true)
         {
+            ReleaseDriven();
             mirrorSides = mirror;
             mode = newMode;
             includeVertical = vertical;
@@ -74,7 +173,24 @@ namespace SpeedStars.UI.Framework
 
         private void OnEnable()
         {
+#if UNITY_EDITOR
+            ActiveFitters.Add(this);
+            if (!Application.isPlaying) UnityEditor.EditorApplication.update += EditorTick;
+#endif
             Refresh();
+        }
+
+        private void OnDisable()
+        {
+#if UNITY_EDITOR
+            ActiveFitters.Remove(this);
+            UnityEditor.EditorApplication.update -= EditorTick;
+#endif
+            if (_driven)
+            {
+                ReleaseDriven();
+                _hasApplied = false;
+            }
         }
 
         // The safe area changes on rotation / fold / simulator switch; polling two cached values is cheaper than any event.
@@ -89,15 +205,25 @@ namespace SpeedStars.UI.Framework
             ISafeAreaSource source = _source ?? (_source = new ScreenSafeAreaSource());
             Vector2 screen = source.ScreenSize;
             Rect safe = source.SafeArea;
-            if (_hasApplied && screen == _lastScreen && safe == _lastSafe) return false;
+            bool edit = EditMode;
+            bool preview = edit && PreviewOn;
+            if (_hasApplied && screen == _lastScreen && safe == _lastSafe && preview == _lastPreview) return false;
 
             Collect();
             SafeAreaMath.SafeAnchors(screen, safe, includeVertical, tolerancePx, out Vector2 safeMin, out Vector2 safeMax, mirrorSides);
+            if (edit)
+            {
+                // Edit mode: preview off shows the authored layout; no notch drives nothing.
+                if (!preview) { safeMin = Vector2.zero; safeMax = Vector2.one; }
+                bool inset = safeMin != Vector2.zero || safeMax != Vector2.one;
+                if (inset) BeginDrive(); else ReleaseDriven();
+            }
             for (int i = 0; i < _entries.Count; i++) Write(_entries[i], safeMin, safeMax);
 
             _hasApplied = true;
             _lastScreen = screen;
             _lastSafe = safe;
+            _lastPreview = preview;
             WriteCount++;
             return true;
         }
@@ -105,6 +231,8 @@ namespace SpeedStars.UI.Framework
         private void Collect()
         {
             if (_collected) return;
+            // Authored anchors are only read while nothing is driven (a driven rect holds the inset value).
+            ReleaseDriven();
             _collected = true;
             _entries.Clear();
 
@@ -127,6 +255,27 @@ namespace SpeedStars.UI.Framework
         private void AddEntry(RectTransform rect)
         {
             _entries.Add(new Entry { Rect = rect, AuthoredMin = rect.anchorMin, AuthoredMax = rect.anchorMax });
+        }
+
+        private void BeginDrive()
+        {
+            if (_driven) return;
+            _tracker.Clear();
+            for (int i = 0; i < _entries.Count; i++)
+            {
+                if (_entries[i].Rect == null) continue;
+                _tracker.Add(this, _entries[i].Rect, DrivenTransformProperties.AnchorMin | DrivenTransformProperties.AnchorMax);
+            }
+            _driven = true;
+        }
+
+        /// <summary>Stops driving and puts the authored anchors back (offsets and sizes are preserved).</summary>
+        private void ReleaseDriven()
+        {
+            if (!_driven) return;
+            _tracker.Clear();
+            _driven = false;
+            for (int i = 0; i < _entries.Count; i++) Write(_entries[i], Vector2.zero, Vector2.one);
         }
 
         private static void Write(Entry entry, Vector2 safeMin, Vector2 safeMax)

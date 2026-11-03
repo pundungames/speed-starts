@@ -1,11 +1,12 @@
 ---
 id: T-103
 title: Centik korumasi Edit modda da gorunsun - SafeAreaFitter onizlemesi (surulen anchor, sahneye/prefab'a YAZILMAZ)
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-099]
 owns_paths:
   - "Assets/Speed-Staes/Scripts/UI/Framework/SafeAreaFitter.cs"
+  - "Assets/Speed-Staes/Tools/Editor/SafeAreaPreviewMenu.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Framework/SafeAreaEditPreviewTests.cs"
 touches_scene: false
 branch: agent/T-103-centik-onizleme
@@ -15,8 +16,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -45,3 +46,8 @@ Prefab/sahne/asset dosyasina YAZMA (testin gecici dosyasi haric); Unity/test CAL
 - Prefab modunda (prefab stage) onizleme; dikey kenarlar
 
 ## Calisma notu
+- Fitter `[ExecuteAlways]`; Edit modda anchor'lar DrivenRectTransformTracker ile surulur, OnDisable'da birakilip tasarim anchor'lari geri yazilir; Edit'te EditorApplication.update ile yoklanir.
+- Toggle: `Tools/Speed Stars/Notch Preview (Edit Mode)` (EditorPrefs `SpeedStars.SafeAreaEditPreview`, varsayilan acik); `SafeAreaFitter.SetEditorPreview` aktif fitter'lari hemen yeniler; Play bayragi yok sayar.
+- Guvenlik agi: `SafeAreaPreviewSaveGuard` (AssetModificationProcessor) kayittan once surulen anchor'lari birakir, sonra geri koyar (Unity surulen degeri yine de yazarsa diye).
+- Testler `SafeAreaEditPreviewTests` (6 test; kayit testi gecici prefab'i `Assets/_T103Temp`'e yazip siler). Calistirilmadi.
+- Suphe: surulen RectTransform degerlerinin kayda girmedigi kesin degil (layout group'larda surulen degerlerin dosyaya yazildigi gorulur); test (c) bunu kanitlar, kirmizi cikarsa SaveGuard tek yol.
