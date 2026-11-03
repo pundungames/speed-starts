@@ -5,7 +5,7 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-11-03 17:20 · main 71bc3a48 (push kullanıcıda) · worktree yok (D:\Pundun\speed-starts-t093 klasörü silinebilir)
+Son güncelleme: 2026-11-03 17:45 · main 0a6c5f05 (push kullanıcıda; ana ağaçta kullanıcının commit'siz TMP ayarları: 13 prefab + Home) · worktree yok (D:\Pundun\speed-starts-t093 klasörü silinebilir)
 
 ## Faz 8 (cila) — bugün main'e girenler (son kopya koşusu yeşil: EditMode 1198, PlayMode 52 + 7 atlanan, Zenject)
 - T-081..T-090: ok tuşları, regresyon, ekonomi v2 (ADR `ADR-2026-11-03-ekonomi-v2-referans.md`), 200m/400m/60mH/400mH, ayarlar v2,
@@ -13,7 +13,8 @@ Son güncelleme: 2026-11-03 17:20 · main 71bc3a48 (push kullanıcıda) · workt
 - T-091 Malik'in elle ayarları builder'da + EventModal 4. sekme · T-092 Practice'te sonuç/ödül/rekor yok · T-093 High Scores'ta Race
   of the Day · T-094 Watch Replay duman testleri · T-095 lisans envanteri · T-096 FPS toleransı %0.001 · T-097 ana menü kartı · T-098 replay prefab.
 - T-099 çentik iki yana (inset = max(sol, sağ), yalnız Play'de) · T-100/T-101 TextMeshPro + American Captain: 243 yazı prefab'larda
-  YERİNDE çevrildi (fileID aynı; menü: Tools → Speed Stars → Convert UI Text to TMP), 2 InputField legacy (TTF), builder var olanı ezmez.
+  YERİNDE çevrildi (fileID aynı; menü: Tools → Speed Stars → Convert UI Text to TMP), 2 InputField legacy (TTF) · T-102 bütün builder
+  kayıtları `HandEditGuard`'dan: var olan prefab/sahne ezilmez, yamalar yalnız eksiği ekler (kopyada 10 giriş noktası, 36 dosyada fark 0).
 
 ## Verilen kararlar
 - Kullanıcı 03.11: "referans oyun ne ise aynısı". Ekonomi: yarış Nakit'i bitirme +10, zorluk bonusu 10 × oyuncu zorluğu, rakip bonusu
@@ -43,19 +44,19 @@ Son güncelleme: 2026-11-03 17:20 · main 71bc3a48 (push kullanıcıda) · workt
   High Scores → DAILY, Watch Replay, Close konumları, ana menü kartı; 30.10'dan beri: tema, karakter döndürme, botlar, liderlik, kostüm.
 
 ## Dikkat
-- Race sahnesini `SceneBuilder.BuildRace` ile YENİDEN KURMA (Malik'in binaları); UI prefab'larına BuildAll koşma (kullanıcının ayarları).
+- Builder'lar artık var olanı ezmiyor (T-102); `-forceOverwriteHandEdits` bayrağını kullanma (Malik'in binaları + kullanıcının ayarları gider).
 - TMP Essentials batchmode'da `-importPackage <proje>/Library/PackageCache/com.unity.textmeshpro@3.0.7/Package Resources/TMP Essential Resources.unitypackage`.
 - PowerShell'de `git` bozuk (system32 gölgesi): git Bash'ten. Kancada `git commit` + "main" aynı komutta olmaz.
 
 <!-- OTOMATIK:BASLA -->
-_tur-sonu.ps1 2026-11-03 17:17 - otomatik blok, elle yazilan bu blokta kaybolur._
+_tur-sonu.ps1 2026-11-03 17:30 - otomatik blok, elle yazilan bu blokta kaybolur._
 
 - **KAPI TEMIZ (cikis 0)**
 - Acik needs: 3 (DECISION 3)
 - Review kuyrugu: 0
-- Goz bekleyen (merged): 93 - T-100, T-101, T-099, T-097, T-098, T-095, T-093, T-094
+- Goz bekleyen (merged): 94 - T-102, T-100, T-101, T-099, T-097, T-098, T-095, T-093
 - in-progress: 0 / blocked: 0
 - Uyari: govde-needs 0, test 4, analytics 0 (kapsam: status in-progress/review/merged)
-- GIT: 1 calisma agaci (ana: main); ana agacta commit'siz .prefab/.unity/.asset: 0
+- GIT: 1 calisma agaci (ana: main); ana agacta commit'siz .prefab/.unity/.asset: 14
 - KOPYALAR: 2 (kopya.ps1 -Liste -Json)
 <!-- OTOMATIK:BITIR -->
