@@ -1,5 +1,6 @@
 using System;
 using SpeedStars.Meta.Contracts;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,7 +16,7 @@ namespace SpeedStars.UI.Settings
         [SerializeField] private Image background;
 
         [Tooltip("Language name.")]
-        [SerializeField] private Text label;
+        [SerializeField] private TMP_Text label;
 
         [Tooltip("Check mark, shown on the chosen language.")]
         [SerializeField] private GameObject checkMark;

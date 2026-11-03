@@ -2,6 +2,7 @@ using DG.Tweening;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -18,7 +19,7 @@ namespace SpeedStars.UI.Themes
     {
         [Header("Shown theme")]
         [Tooltip("ThemeName/Label: the shown theme's display name.")]
-        [SerializeField] private Text nameText;
+        [SerializeField] private TMP_Text nameText;
 
         [Tooltip("ThemePrevious: previews the previous theme. Not interactable at the first theme.")]
         [SerializeField] private Button previousButton;
@@ -37,10 +38,10 @@ namespace SpeedStars.UI.Themes
         [SerializeField] private GameObject currencyIcon;
 
         [Tooltip("ThemeAction/PriceLabel: the price, right of the currency icon.")]
-        [SerializeField] private Text priceText;
+        [SerializeField] private TMP_Text priceText;
 
         [Tooltip("ThemeAction/StateLabel: 'USE' / 'IN USE', centered.")]
-        [SerializeField] private Text stateText;
+        [SerializeField] private TMP_Text stateText;
 
         [Tooltip("Text of the USE state.")]
         [SerializeField] private string useLabel = "USE";

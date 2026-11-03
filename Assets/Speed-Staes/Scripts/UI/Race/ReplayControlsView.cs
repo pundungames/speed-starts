@@ -1,4 +1,5 @@
 using SpeedStars.Core.Race;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,13 +16,13 @@ namespace SpeedStars.UI.Race
     {
         [Header("Clock")]
         [Tooltip("Clock/Time: the replay's race clock.")]
-        [SerializeField] private Text timeText;
+        [SerializeField] private TMP_Text timeText;
 
         [Tooltip("Clock/Speed: the followed runner's speed.")]
-        [SerializeField] private Text speedText;
+        [SerializeField] private TMP_Text speedText;
 
         [Tooltip("Name/Label: the followed runner's name.")]
-        [SerializeField] private Text nameText;
+        [SerializeField] private TMP_Text nameText;
 
         [Header("Top right buttons")]
         [Tooltip("Exit: leaves the replay.")]
@@ -41,7 +42,7 @@ namespace SpeedStars.UI.Race
         [SerializeField] private Button playButton;
 
         [Tooltip("Play/Label: 'II' while playing, the play triangle while paused.")]
-        [SerializeField] private Text playText;
+        [SerializeField] private TMP_Text playText;
 
         [Tooltip("Timeline: the seek bar (0..1 of the replay).")]
         [SerializeField] private Slider timeline;
@@ -50,7 +51,7 @@ namespace SpeedStars.UI.Race
         [SerializeField] private Button rateButton;
 
         [Tooltip("Rate/Label: the playback speed, like '1x'.")]
-        [SerializeField] private Text rateText;
+        [SerializeField] private TMP_Text rateText;
 
         private IRaceReplay _replay;
 

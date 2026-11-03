@@ -10,6 +10,7 @@ using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Race;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -419,7 +420,7 @@ namespace SpeedStars.PlayTests
             Assert.AreEqual(startPosition, body.transform.position);
             Assert.IsFalse((bool)body.GetType().GetField("acceptInput").GetValue(body));
             yield return null;
-            Assert.AreEqual("0.00", RequireField<Text>(hud, "timeText").text);
+            Assert.AreEqual("0.00", RequireField<TMP_Text>(hud, "timeText").text);
             var follow = Object.FindObjectsOfType<MonoBehaviour>().FirstOrDefault(c => c.GetType().Name == "SideFollowCamera");
             Assert.IsNotNull(follow);
             // The camera sits at (distance * player scale) back and lookHeight + back * tan(pitch) up (zoom is 0 right after a snap).

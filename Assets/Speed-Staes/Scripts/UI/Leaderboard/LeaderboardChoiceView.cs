@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -18,7 +19,7 @@ namespace SpeedStars.UI.Leaderboard
         [SerializeField] private Image background;
 
         [Tooltip("Label text.")]
-        [SerializeField] private Text label;
+        [SerializeField] private TMP_Text label;
 
         [Tooltip("Check mark layer, shown while selected. Empty on entries without one (category tabs).")]
         [SerializeField] private GameObject checkMark;

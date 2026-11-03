@@ -4,6 +4,7 @@ using SpeedStars.Core.Audio;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Rewards;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -27,16 +28,16 @@ namespace SpeedStars.UI.Race
         [SerializeField] private CanvasGroup totalGroup;
 
         [Tooltip("CashBreakdown/Block/Total/Value.")]
-        [SerializeField] private Text totalText;
+        [SerializeField] private TMP_Text totalText;
 
         [Tooltip("The three line roots in screen order: finish, difficulty, rivals beaten (each needs a CanvasGroup).")]
         [SerializeField] private CanvasGroup[] lineGroups = new CanvasGroup[CashBreakdown.LineCount];
 
         [Tooltip("The three line texts, same order as the line roots.")]
-        [SerializeField] private Text[] lineTexts = new Text[CashBreakdown.LineCount];
+        [SerializeField] private TMP_Text[] lineTexts = new TMP_Text[CashBreakdown.LineCount];
 
         [Tooltip("Diamond/Value of the Results screen: the Cash counter that counts up when the diamond lands.")]
-        [SerializeField] private Text counterText;
+        [SerializeField] private TMP_Text counterText;
 
         [Tooltip("Diamond (the whole Cash box): target of the flight; punches on arrival.")]
         [SerializeField] private RectTransform counterBox;

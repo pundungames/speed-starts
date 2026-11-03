@@ -3,6 +3,7 @@ using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Rewards;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -24,7 +25,7 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Button eventSelectButton;
 
         [Tooltip("RaceSelect/Label: shows the selected event's name.")]
-        [SerializeField] private Text eventNameText;
+        [SerializeField] private TMP_Text eventNameText;
 
         [Tooltip("EditRacer: opens the cosmetics screen.")]
         [SerializeField] private Button editRacerButton;
@@ -64,7 +65,7 @@ namespace SpeedStars.UI.Home
 
         [Header("Character card")]
         [Tooltip("CharacterCard/Select/Name: racer preset name.")]
-        [SerializeField] private Text racerNameText;
+        [SerializeField] private TMP_Text racerNameText;
 
         [Tooltip("CharacterCard/PowerBar/Fill: Filled image; the stat system is not built, the builder sets the look.")]
         [SerializeField] private Image powerFill;
@@ -73,10 +74,10 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Image staminaFill;
 
         [Tooltip("CharacterCard/HeightField/Label.")]
-        [SerializeField] private Text heightText;
+        [SerializeField] private TMP_Text heightText;
 
         [Tooltip("CharacterCard/PlayerName: the player's name from Settings, under the Edit racer and Emote buttons; empty when no name is set. Optional.")]
-        [SerializeField] private Text playerNameText;
+        [SerializeField] private TMP_Text playerNameText;
 
         [Header("Racer of the day")]
         [Tooltip("CharacterCard/RacerOfTheDay: the 'Racer of the day' label, shown only while Race of the Day is the selected event. Optional.")]

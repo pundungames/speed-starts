@@ -1,7 +1,7 @@
 ---
 id: T-101
 title: TMP gecisi 2/2 - bizim view kodu, testler ve asmdef'ler legacy Text yerine TMP_Text; prefab testleri elle duzenlemeye dayanikli
-status: todo
+status: review
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -20,8 +20,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -77,3 +77,8 @@ KAMERA  : yok
 - Prefab/sahne donusumu ve font asset'i (T-100), guvenli alan (T-099), Cince yedek font (karar acik), builder uretim mantiginin TMP'ye cevrilmesi
 
 ## Calisma notu
+- 37 view dosyasinda (~130 alan + 4 Text[] dizisi + EventCategoryCardView.Label) `Text` -> `TMP_Text`, alan adlari ayni; asmdef'lere (UI, Tests, PlayTests) `Unity.TextMeshPro`.
+- Legacy `Text` KALAN: `SettingsPopupView.namePlaceholder` ve `LeaderboardScreenView.searchPlaceholder` (2 InputField'in placeholder'i; InputField alanlari ayni).
+- RaceStartView: ThickOutline alani KALDIRILDI (TMP mesh efektini calistirmaz); kontur `wordText.outlineWidth/outlineColor` (kendi materyal ornegi) ile; yeni config alani `RaceStartConfig.OutlineWidth` (0.2). ThickOutline.cs + testi duruyor, kodda kullanilmiyor. Prefab'ta Word'deki ThickOutline bileseni elle/T-100 ile silinmeli (zararsiz).
+- Testler: PlayMode Text->TMP_Text (7 dosya); HomeCardBuilderTests kart testi iliskiye cevrildi (layout.json sayisi yok), BuilderHandEdits/ReplayControlsPrefabTests konum/cozunurluk sayilari gevsetildi. Builder kodu degismedi (tip-bagimsiz SerializedObject baglama; derleme bozulmasi beklenmiyor).
+- Zorluk: derleyemedim; TMP 3.0.7 kaynagindan dogrulandi (outlineColor/outlineWidth materyal ornegi olusturur, OUTLINE_ON anahtari elle acildi). Kontur kalinligi 0.2 tahmini, gorselle ayarlanmali.

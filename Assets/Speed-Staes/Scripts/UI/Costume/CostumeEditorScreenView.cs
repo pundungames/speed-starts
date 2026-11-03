@@ -6,6 +6,7 @@ using SpeedStars.Meta.Cosmetics;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Emotes;
 using SpeedStars.UI.Home;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -81,7 +82,7 @@ namespace SpeedStars.UI.Costume
         [SerializeField] private Button purchaseButton;
 
         [Tooltip("Purchase/Price: the price of that item.")]
-        [SerializeField] private Text purchasePriceText;
+        [SerializeField] private TMP_Text purchasePriceText;
 
         [Tooltip("Purchase background: flashes when the player cannot afford the item.")]
         [SerializeField] private Graphic purchaseBackground;
@@ -94,7 +95,7 @@ namespace SpeedStars.UI.Costume
         [SerializeField] private Image staminaFill;
 
         [Tooltip("Stats/Height/Label.")]
-        [SerializeField] private Text heightText;
+        [SerializeField] private TMP_Text heightText;
 
         [Tooltip("Where the bars start and end on the stats art, as fractions of its width (read off the art by the builder). x = start, y = end.")]
         [SerializeField] private Vector2 statBarSpan = new Vector2(0f, 1f);

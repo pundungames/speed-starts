@@ -1,5 +1,6 @@
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Home;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -14,16 +15,16 @@ namespace SpeedStars.UI.Costume
     public sealed class CostumeResourceView : MonoBehaviour
     {
         [Tooltip("PurpleGem/Value.")]
-        [SerializeField] private Text purpleGemText;
+        [SerializeField] private TMP_Text purpleGemText;
 
         [Tooltip("EntryTicket/Value: 'count/cap'.")]
-        [SerializeField] private Text entryTicketText;
+        [SerializeField] private TMP_Text entryTicketText;
 
         [Tooltip("TimedTicket/Value: unused Timed Tickets, or the 'active' text while the window runs.")]
-        [SerializeField] private Text timedTicketText;
+        [SerializeField] private TMP_Text timedTicketText;
 
         [Tooltip("Cash/Value.")]
-        [SerializeField] private Text cashText;
+        [SerializeField] private TMP_Text cashText;
 
         [Tooltip("Costume editor config asset (the text of the active Timed Ticket window).")]
         [SerializeField] private CostumeEditorConfig config;

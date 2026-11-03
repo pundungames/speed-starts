@@ -112,7 +112,11 @@ namespace SpeedStars.Core.Race
         [Min(20f)]
         [SerializeField] private float bannerWordFontSize = 132f;
 
-        [Tooltip("Outline thickness as a share of the font size (the art's preview: 7 px on a 110 px word = 0.065).")]
+        [Tooltip("Outline width of the words on the TextMeshPro material (0-1, the shader's own scale). Replaces the old thickness ratio, which only the legacy ThickOutline read.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float outlineWidth = 0.2f;
+
+        [Tooltip("Legacy: outline thickness as a share of the font size (the art's preview: 7 px on a 110 px word = 0.065). Only the builder and the old ThickOutline read it.")]
         [Range(0f, 0.2f)]
         [SerializeField] private float outlineThicknessRatio = 0.065f;
 
@@ -174,6 +178,7 @@ namespace SpeedStars.Core.Race
         public Color DimColor => dimColor;
         public bool ReadySetOutline => readySetOutline;
         public float OutlineThicknessRatio => outlineThicknessRatio;
+        public float OutlineWidth => outlineWidth;
         public int OutlineDirections => outlineDirections;
         public bool ReduceMotion => reduceMotion;
         public float ReducedFadeSeconds => reducedFadeSeconds;

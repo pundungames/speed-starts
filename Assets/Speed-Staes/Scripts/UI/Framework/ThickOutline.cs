@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace SpeedStars.UI.Framework
 {
     /// <summary>
-    /// A solid outline for legacy Text / Image that stays smooth at any width. The built-in Outline copies the graphic four times,
+    /// A solid outline for legacy Text / Image (not TextMeshPro: use its material outline) that stays smooth at any width. The built-in Outline copies the graphic four times,
     /// which shows corner blocks once the distance is more than a few pixels; this one copies it on a full circle (default 16
     /// directions) and draws every outline copy first, the original fill last, so neighbouring glyphs never paint their outline
     /// over each other's fill. The copy maths is a pure static (<see cref="Expand"/>) so it is tested without a scene.

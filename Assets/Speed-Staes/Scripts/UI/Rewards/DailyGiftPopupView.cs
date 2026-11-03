@@ -1,6 +1,7 @@
 using SpeedStars.Core.Audio;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -20,16 +21,16 @@ namespace SpeedStars.UI.Rewards
     {
         [Header("Texts")]
         [Tooltip("Window/Title: DAILY GIFT (on the red header).")]
-        [SerializeField] private Text titleText;
+        [SerializeField] private TMP_Text titleText;
 
         [Tooltip("Window/Quantity: '+1' next to the ticket; hidden in the full view.")]
-        [SerializeField] private Text quantityText;
+        [SerializeField] private TMP_Text quantityText;
 
         [Tooltip("Window/State: ENTRY TICKET or TICKETS FULL.")]
-        [SerializeField] private Text stateText;
+        [SerializeField] private TMP_Text stateText;
 
         [Tooltip("Window/Capacity: 'Tickets: n / cap'.")]
-        [SerializeField] private Text capacityText;
+        [SerializeField] private TMP_Text capacityText;
 
         [Header("Button")]
         [Tooltip("Window/Action: CLAIM, or OK in the full view.")]
@@ -39,7 +40,7 @@ namespace SpeedStars.UI.Rewards
         [SerializeField] private Image actionArt;
 
         [Tooltip("Window/Action/Label: CLAIM or OK.")]
-        [SerializeField] private Text actionLabel;
+        [SerializeField] private TMP_Text actionLabel;
 
         [Tooltip("Button art of the CLAIM state.")]
         [SerializeField] private Sprite claimSprite;

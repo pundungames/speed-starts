@@ -4,6 +4,7 @@ using SpeedStars.UI.Emotes;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Costume;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -104,7 +105,7 @@ namespace SpeedStars.PlayTests
 
             EmoteCardView none = cards[0];
             Assert.IsFalse(RequireField<GameObject>(none, "lockOverlay").activeSelf, "None is free: never locked");
-            Assert.IsFalse(RequireField<Text>(none, "priceText").gameObject.activeSelf, "None shows no price");
+            Assert.IsFalse(RequireField<TMP_Text>(none, "priceText").gameObject.activeSelf, "None shows no price");
 
             Button purchase = RequireField<Button>(screen, "purchaseButton");
             Button equip = RequireField<Button>(screen, "equipButton");
