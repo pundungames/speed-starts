@@ -1,7 +1,7 @@
 ---
 id: T-101
 title: TMP gecisi 2/2 - bizim view kodu, testler ve asmdef'ler legacy Text yerine TMP_Text; prefab testleri elle duzenlemeye dayanikli
-status: review
+status: merged
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -13,7 +13,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/**"
 touches_scene: false
 branch: agent/T-101-tmp-kod
-commits: []
+commits: [998f85dc, 933b4706]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/ (Text kullanan butun testler TMP_Text'e)"
   - "Assets/Speed-Staes/Tests/PlayMode/ (Text kullanan butun testler TMP_Text'e)"
@@ -82,3 +82,4 @@ KAMERA  : yok
 - RaceStartView: ThickOutline alani KALDIRILDI (TMP mesh efektini calistirmaz); kontur `wordText.outlineWidth/outlineColor` (kendi materyal ornegi) ile; yeni config alani `RaceStartConfig.OutlineWidth` (0.2). ThickOutline.cs + testi duruyor, kodda kullanilmiyor. Prefab'ta Word'deki ThickOutline bileseni elle/T-100 ile silinmeli (zararsiz).
 - Testler: PlayMode Text->TMP_Text (7 dosya); HomeCardBuilderTests kart testi iliskiye cevrildi (layout.json sayisi yok), BuilderHandEdits/ReplayControlsPrefabTests konum/cozunurluk sayilari gevsetildi. Builder kodu degismedi (tip-bagimsiz SerializedObject baglama; derleme bozulmasi beklenmiyor).
 - Zorluk: derleyemedim; TMP 3.0.7 kaynagindan dogrulandi (outlineColor/outlineWidth materyal ornegi olusturur, OUTLINE_ON anahtari elle acildi). Kontur kalinligi 0.2 tahmini, gorselle ayarlanmali.
+- Supervizor 03.11: kopyada derleme temiz, EditMode 1198/1198, PlayMode 52 gecti / 7 atlandi. READY/SET/GO kontur kalinligi (OutlineWidth 0.2) gozle bakilacak.

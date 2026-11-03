@@ -1,7 +1,7 @@
 ---
 id: T-099
 title: Guvenli alan iki yana - centik hangi kenardaysa iki kenar da ayni miktar iceri (SafeAreaMath + SafeAreaFitter)
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-051]
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/SafeAreaPlayTests.cs"
 touches_scene: false
 branch: agent/T-099-centik-iki-yana
-commits: []
+commits: [9b58f63b]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Framework/SafeAreaTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/SafeAreaPlayTests.cs"
@@ -55,3 +55,4 @@ Edit modda onizleme bu task'ta YOK: kullanicinin elle duzenledigi sahne/prefab'a
 - EditMode: 7 Mirror_* + MirrorOff_IsTheOldBehaviour + 2 Fitter_Mirror* test; eski testler degismedi (acik/kapali ayni sonuc: sol centik).
 - PlayMode: Home_LeftNotch_AlsoPullsRightEdgeItemsIn (ayna dikdortgene gore); eski testler ayni kaldi.
 - Calistirilmadi (merkezi dogrulama). Risk: sahnelerdeki tum fitter'lar artik aynali; Race'te sag kenar ogeleri sola centikte ice kayar (istenen).
+- Supervizor 03.11: kopyada derleme + EditMode 1198/1198, PlayMode 52 gecti / 7 atlandi (Home_LeftNotch_AlsoPullsRightEdgeItemsIn dahil).

@@ -1,7 +1,7 @@
 ---
 id: T-100
 title: TMP gecisi 1/2 - American Captain SDF font asset'i + prefab/sahnelerdeki legacy Text'i YERINDE TextMeshProUGUI'ye ceviren donusturucu + builder'larin elle duzenlenmis prefab'lari ezmemesi
-status: review
+status: merged
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -12,18 +12,18 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Migration/**"
 touches_scene: false
 branch: agent/T-100-tmp-donusturucu
-commits: []
+commits: [1346a514, 8d660f5d, 150a9cad, 933b4706]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Migration/"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
-    not: "Supervizor: Packages/manifest.json'a com.unity.textmeshpro 3.0.7; American Captain TTF'i Assets/Speed-Staes/UI/Fonts/AmericanCaptain/AmericanCaptain.ttf (+ lisans metinleri yaninda). Kopyada TMP Essential Resources + TmpMigration (font asset, preset'ler, TMP Settings varsayilan font) calisir; ciktilar (Assets/TextMesh Pro, font asset/materyal/preset, .meta, packages-lock) commit edilir."
+    durum: closed
+    not: "Supervizor: Packages/manifest.json'a com.unity.textmeshpro 3.0.7; American Captain TTF'i Assets/Speed-Staes/UI/Fonts/AmericanCaptain/AmericanCaptain.ttf (+ lisans metinleri yaninda). Kopyada TMP Essential Resources + TmpMigration (font asset, preset'ler, TMP Settings varsayilan font) calisir; ciktilar (Assets/TextMesh Pro, font asset/materyal/preset, .meta, packages-lock) commit edilir. -> ed926c5a + 933b4706"
   - tip: SCENE
-    durum: open
-    not: "Supervizor kopyada TmpMigration donusturucusunu EN SON main'in prefab'lari ve Home.unity / Race.unity uzerinde kosar (Race YENIDEN KURULMAZ, yalniz legacy Text dokumanlari degisir); git diff ile yalniz Text/Outline dokumanlarinin ve ilgili override'larin degistigi kontrol edilir."
+    durum: closed
+    not: "Supervizor kopyada TmpMigration donusturucusunu EN SON main'in prefab'lari ve Home.unity / Race.unity uzerinde kosar (Race YENIDEN KURULMAZ, yalniz legacy Text dokumanlari degisir); git diff ile yalniz Text/Outline dokumanlarinin ve ilgili override'larin degistigi kontrol edilir. -> 933b4706 (kopyada 03.11, kullanicinin 4f38e016 prefab'lari uzerinde)"
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:
@@ -104,3 +104,4 @@ KAMERA  : yok
 4. RISK/T-101: RaceStartView.wordOutline (ThickOutline) bilesen silinince prefab'ta {fileID: 0} olur; T-101 bu alani kaldirmali ya da null korumali (kod zaten != null kontrollu, ama ThickOutline.Configure/SetColor TMP'de calismaz; kontur kalinligi/rengi artik materyal preset'inde, fade yok). Override'lardan m_FontData.m_Font/Alignment/Style vb. karsiligi olmayanlar dusurulur ve rapora 'Warnings' olarak yazilir. Race'in BuildRace yolu degismedi.
 5. Dogrulanmadi: hicbir sey derlenmedi/kosulmadi. En belirsiz yerler: TMP_FontAsset.CreateFontAsset sonrasi sub-asset kaydi (TMP'nin kendi creator mantigi izlendi), TMP dokumani alan listesi (kaynaktan dogrulandi, ForceReserialize normallestirir), nested asmdef'in Tests/EditMode altinda calismasi.
 6. Duzeltme: stripped proxy Text'leri (ust prefab/sahnede kendi m_Script'i olan) kaynagi TMP olunca TMP'ye cevrilir (ProxiesSwitched). Batchmode'da ImportEssentials async: bunun yerine Unity -batchmode -quit -importPackage <proje>/Library/PackageCache/com.unity.textmeshpro@3.0.7/Package Resources/TMP Essential Resources.unitypackage.
+- Supervizor 03.11: ImportEssentials batchmode'da bitmiyor (async import, Unity once kapaniyor) -> `-importPackage` ile; ilk kosuda ic ice prefab'larin stripped Text vekilleri legacy kaldi, SettingsPopup'ta 22 baglanti koptu (8d660f5d ile duzeldi). Son kosu: 243 donustu, ikinci kosu sifir; EditMode 1198, PlayMode 52/7, Zenject yesil; kopan referans 0.
