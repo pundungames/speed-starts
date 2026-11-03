@@ -32,8 +32,8 @@ needs:
     durum: closed
     not: "Race sahnesi: prefab builder (UiPrefabBuilder.BuildAll + ConfigAssetSeeder.SeedAll) calistirilir -> UI/Widgets/RaceStart.prefab + Data/Config/RaceStartConfig.asset olusur; sonra Race.unity icin SceneWiring.WireRace yeniden calistirilir (mevcut sahnede RaceStart prefab'i HUD canvas'ina yerlesir ve adapter.startConfig atanir) ya da BuildRace overwrite. Art: UI/Art/RaceStart/*.png (UiArt.ImportAll alir). Not: UiArt PNG'leri Compressed alir; ince cizgilerde artefakt gorulurse RaceStart icin Uncompressed gerekir (UiArt benim yolum degil)."
   - tip: DECISION
-    durum: open
-    not: "Malik: RaceController sureyi ILK BASISTA baslatiyor (sim.LastPressTime); gercek kurala gore sure GO aninda baslamali (tepki suresi). Bizim taraf GO'da girdiyi acar; saatin GO'dan baslamasi Malik'in kodu"
+    durum: closed
+    not: "Malik: RaceController sureyi ILK BASISTA baslatiyor (sim.LastPressTime); gercek kurala gore sure GO aninda baslamali (tepki suresi). Bizim taraf GO'da girdiyi acar; saatin GO'dan baslamasi Malik'in kodu. KAPANDI 03.11: Malik 57a92abe ile saat GO'dan (RaceController.StartClock, RaceSessionAdapter GO'da cagirir)"
 started: 2026-10-30
 finished: 2026-10-30
 blocked_reason:

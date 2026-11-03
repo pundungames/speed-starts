@@ -5,6 +5,15 @@
 > Mimari kararlar `docs/TEMEL-SOZLESME.md`'de; açık ürün kararları `docs/decisions/OPEN-2026-10-28-gdd-acik-kararlar.md`.
 > Sayılar (3 bilet, 30 dk, 60 dk, 3/2/1, 50 …) **config asset'inde** durur; bu belgede yalnız referans.
 
+## Durum (2026-11-03)
+Aşağıdaki kutucuklar 28.10 planıdır, işaretlenmedi; gerçek durum `docs/tasks/` (T-001..T-076 merged) ve `docs/DURUM.md`'dedir.
+
+| Faz | Durum |
+|---|---|
+| 0-6 | Bitti (iskelet, dikey dilim, ekonomi, günlük ödüller, kozmetik, High Scores) |
+| 7 | Büyük ölçüde bitti: GO'dan süre, rakip botlar + sıra, Stats'ta botlar, 110mH, Practice (Malik 02.11). Kalan: UI üstündeki dokunma adım sayılmasın, Watch Replay, 200/400 m, 60mH/400mH, bayrak/Medley, Race of the Day |
+| 8 | **Sürüyor.** Bitti: ayarlar, ses/titreşim, güvenli alan, restart regresyonu, Android build, mağaza build. Kalan: cihazda deneme, ana menü yükleme hızı, kill/restart/saat kayması/çevrimdışı, APK öncesi tam tur, teslim |
+
 ## Kim ne yapar
 
 | Kim | Kapsam (GDD karşılığı) |
