@@ -1,7 +1,7 @@
 ---
 id: T-088
 title: Ayarlar v2 - referanstaki bolumler (Competitors, Gameplay, Visuals, Emote, Reset options) bizim sistemlere bagli olanlar
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-084, T-086]
 owns_paths:
@@ -22,7 +22,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Economy/**"
 touches_scene: false
 branch: agent/T-088-ayarlar-v2
-commits: []
+commits: [88c57b75, 92cfac9b, 09323821]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Settings/SettingsV2Tests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Core/Race/Bots/BotSettingsOverrideTests.cs"
@@ -32,8 +32,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "SettingsPopup prefab'ina yeni bolumleri ekle (tasarimcinin elle duzenlemelerine dokunmadan, yalniz ExtraSections dugumu + siralama): kopyada Unity batchmode, TEK komut: -executeMethod SpeedStars.Tools.Builders.SettingsV2Rebuild.Run (UiSettingsPrefabs.cs icinde; basari isareti log'da SETTINGS_V2_REBUILD_OK; baska prefab/sahne/config yazmaz). Uretir: SettingsPopupView.extraSections -> ExtraSections (SettingsExtraSectionsView: Competitors/Gameplay/Visuals/Emote/Reset options satirlari). Sonra prefab'da extraSections ve satir alanlarinin fileID: 0 olmadigini grep ile dogrula. Yeni .cs dosyalarinin .meta'lari kopyada uretilir, geri alinip commit'lenir (SettingsRules, BotLanes, SettingsRunnerAdapter, SettingsExtraSectionsView, SettingsChoiceRowView, SettingsSliderRowView, SettingsToggleRowView, iki yeni test dosyasi)."
+    durum: closed
+    not: "SettingsPopup prefab'ina yeni bolumleri ekle (tasarimcinin elle duzenlemelerine dokunmadan, yalniz ExtraSections dugumu + siralama): kopyada Unity batchmode, TEK komut: -executeMethod SpeedStars.Tools.Builders.SettingsV2Rebuild.Run (UiSettingsPrefabs.cs icinde; basari isareti log'da SETTINGS_V2_REBUILD_OK; baska prefab/sahne/config yazmaz). Uretir: SettingsPopupView.extraSections -> ExtraSections (SettingsExtraSectionsView: Competitors/Gameplay/Visuals/Emote/Reset options satirlari). Sonra prefab'da extraSections ve satir alanlarinin fileID: 0 olmadigini grep ile dogrula. Yeni .cs dosyalarinin .meta'lari kopyada uretilir, geri alinip commit'lenir (SettingsRules, BotLanes, SettingsRunnerAdapter, SettingsExtraSectionsView, SettingsChoiceRowView, SettingsSliderRowView, SettingsToggleRowView, iki yeni test dosyasi). -> 09323821 (SettingsV2Rebuild kopyada 03.11)"
   - tip: DECISION
     durum: closed
     not: "Time trial'da rakip yok (RunnerCount 1). RaceRewardResolver (Assets/Speed-Staes/Scripts/Meta/Economy/RaceRewardResolver.cs, bu task'in yolu degil) Mor Elmas'i yalniz rank'a ve awardsPurpleGems'e bakarak verir: gem ceren bir etkinlikte Time trial secen oyuncu rank 1 ile elmas kazanir. Cash tarafi (RaceCashRewardResolver) rakipsizde zaten 0. Karar: RaceRewardResolver'a rakipsiz kosuda (RunnerCount < 2) 0 kosulu eklensin mi (onerilen: evet). -> kullanici/supervizor 03.11: hata, duzeltildi (RaceRewardResolver + test)"

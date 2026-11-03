@@ -1,7 +1,7 @@
 ---
 id: T-089
 title: Emote v2 - prosedurel 6 emote yerine Malik'in pisirdigi 9 animasyon (menu onizleme + yarista emote butonu/tusu + otomatik emote)
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-084]
 owns_paths:
@@ -23,7 +23,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/EmoteScreenSmokeTests.cs"
 touches_scene: false
 branch: agent/T-089-emote-v2
-commits: []
+commits: [8f1d2aaa, 7f5e3e2f, d28851a0, 40db14a3, 09323821, b7608523]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmotePlaybackTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Emotes/EmoteCatalogMigrationTests.cs"
@@ -35,17 +35,17 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
-    not: "Run in a verification copy, in this order: 1) SpeedStars.Tools.Builders.EmoteCatalogSeed.ApplyEmoteV2 (rewrites Data/Config/EmoteCatalog.asset: None + 9 baked clips, 3 x 2500 / 3 x 5000 / 3 x 7500; until then the old asset has no clipName and every emote acts as None)."
+    durum: closed
+    not: "Run in a verification copy, in this order: 1) SpeedStars.Tools.Builders.EmoteCatalogSeed.ApplyEmoteV2 (rewrites Data/Config/EmoteCatalog.asset: None + 9 baked clips, 3 x 2500 / 3 x 5000 / 3 x 7500; until then the old asset has no clipName and every emote acts as None). -> 09323821 / 40db14a3 (kopyada 03.11: ApplyEmoteV2, PatchRaceHudPrefab, PatchRaceScene; ProjectInstaller IEmoteRaceOptions)"
   - tip: SCENE
-    durum: open
-    not: "Continue in the same copy: 2) SpeedStars.Tools.Builders.UiRaceHudPrefabs.PatchRaceHudPrefab (adds RaceHud/Emote + Emote/Name, binds RaceHudView.emoteButton/emoteNameText); 3) SpeedStars.Tools.Builders.SceneRaceEmotes.PatchRaceScene (opens Scenes/Game/Race.unity WITHOUT rebuilding it: RaceEmotes on the runner root that carries RaceRunnerOutfit, bots <- RaceBots, RaceSceneInstaller.raceEmotes set, saved; logs RACE_EMOTES_PATCH_OK, Exit(1) on error in batchmode). UiV2Prefabs.RaceHud and SceneBuilder.BuildRace call the same steps now, so a future full rebuild keeps them."
+    durum: closed
+    not: "Continue in the same copy: 2) SpeedStars.Tools.Builders.UiRaceHudPrefabs.PatchRaceHudPrefab (adds RaceHud/Emote + Emote/Name, binds RaceHudView.emoteButton/emoteNameText); 3) SpeedStars.Tools.Builders.SceneRaceEmotes.PatchRaceScene (opens Scenes/Game/Race.unity WITHOUT rebuilding it: RaceEmotes on the runner root that carries RaceRunnerOutfit, bots <- RaceBots, RaceSceneInstaller.raceEmotes set, saved; logs RACE_EMOTES_PATCH_OK, Exit(1) on error in batchmode). UiV2Prefabs.RaceHud and SceneBuilder.BuildRace call the same steps now, so a future full rebuild keeps them. -> 09323821 / 40db14a3 (kopyada 03.11: ApplyEmoteV2, PatchRaceHudPrefab, PatchRaceScene; ProjectInstaller IEmoteRaceOptions)"
   - tip: WIRING
     durum: closed
     not: "RaceSceneInstaller raceEmotes field + IRaceEmoteControl binding (done by the supervisor, 7f5e3e2f)."
   - tip: WIRING
-    durum: open
-    not: "ProjectInstaller -> Container.Bind<IEmoteRaceOptions>().To<PlayerSettingsEmoteOptions>().AsSingle(); (using SpeedStars.Meta.Emotes; ctor takes IPlayerSettings, already bound) INSTEAD of DefaultEmoteRaceOptions. Without a binding RaceEmotes / RaceHudView fall back to the all-on default."
+    durum: closed
+    not: "ProjectInstaller -> Container.Bind<IEmoteRaceOptions>().To<PlayerSettingsEmoteOptions>().AsSingle(); (using SpeedStars.Meta.Emotes; ctor takes IPlayerSettings, already bound) INSTEAD of DefaultEmoteRaceOptions. Without a binding RaceEmotes / RaceHudView fall back to the all-on default. -> 09323821 / 40db14a3 (kopyada 03.11: ApplyEmoteV2, PatchRaceHudPrefab, PatchRaceScene; ProjectInstaller IEmoteRaceOptions)"
 started: 2026-11-03
 finished: 2026-11-03
 blocked_reason:
