@@ -1,4 +1,4 @@
-using System.Text;
+using System.Collections.Generic;
 using SpeedStars.Core.Race;
 using SpeedStars.Core.Race.Relay;
 using UnityEngine;
@@ -8,37 +8,72 @@ namespace SpeedStars.Bridge
 {
     /// <summary>
     /// The relay's own HUD, as in the reference game: a band at every leg line ("100m: 23.82s (+9.24)", then "2nd leg: 12.28"),
-    /// the handoff banner ("Perfect handoff!" / "Late handoff!"), the split list under the race buttons, and the distance marker
-    /// over the player's next runner counting the metres down to the exchange. Built at runtime on its own overlay canvas (no scene
-    /// or prefab change), with the race HUD's font; shown only while a relay runs and hidden under Results.
+    /// the handoff banner ("PERFECT HANDOFF!" / "LATE HANDOFF!"), the split list under the race HUD's counters, and the distance
+    /// marker over the player's next runner counting the metres down to the exchange. Dressed in the game's UI art (UI/Art: the
+    /// start banner, the Results header strip, the HUD counter panel) and laid out on the race HUD's own reference resolution, so it
+    /// reads as part of the HUD. Built at runtime on its own overlay canvas (no scene or prefab change): the sprites are the ones the
+    /// Race scene already has loaded, found by name; shown only while a relay runs and hidden under Results.
     /// </summary>
     public sealed class RaceRelayHud : MonoBehaviour
     {
+        [Header("Timing")]
         [SerializeField, Min(0f), Tooltip("How long a leg line band stays on screen (s).")]
         float bandSeconds = 3f;
         [SerializeField, Min(0f), Tooltip("How long the handoff banner stays on screen (s).")]
         float bannerSeconds = 2.5f;
+
+        [Header("Art (UI/Art sprite names, loaded by the Race scene)")]
+        [SerializeField, Tooltip("Leg line band: the race start banner (RaceStart/Banner).")]
+        string bandSprite = "start_banner_background";
+        [SerializeField, Tooltip("Handoff banner: the dark header strip of the Results screen (Results).")]
+        string bannerSprite = "daily_best_header";
+        [SerializeField, Tooltip("Split rows and the distance marker: the race HUD's counter panel (RaceHud).")]
+        string panelSprite = "counter_panel";
+
+        [Header("Layout (race HUD reference pixels, 2400 x 1080)")]
+        [SerializeField, Tooltip("Reference resolution of the race HUD canvas; this canvas uses the same so both line up.")]
+        Vector2 referenceResolution = new Vector2(2400f, 1080f);
+        [SerializeField, Tooltip("Leg line band: centre below the top edge, size.")]
+        Vector2 bandPosition = new Vector2(0f, -250f);
+        [SerializeField] Vector2 bandSize = new Vector2(780f, 166f);
+        [SerializeField, Tooltip("Handoff banner: centre below the top edge, size.")]
+        Vector2 bannerPosition = new Vector2(0f, -372f);
+        [SerializeField] Vector2 bannerSize = new Vector2(560f, 66f);
+        [SerializeField, Tooltip("First split row: top-left, from the HUD counters' anchor (5 % of the width, top), like the Cash / Place counters.")]
+        Vector2 splitsPosition = new Vector2(52f, -218f);
+        [SerializeField, Tooltip("Split row size and the step between rows.")]
+        Vector2 splitRowSize = new Vector2(205f, 62f);
+        [SerializeField] float splitRowStep = 68f;
+        [SerializeField, Tooltip("Distance marker size.")]
+        Vector2 markerSize = new Vector2(140f, 56f);
         [SerializeField, Min(0f), Tooltip("The distance marker keeps at least this far inside the screen edges (reference pixels).")]
-        float markerEdgeMargin = 90f;
-        [SerializeField, Tooltip("Sorting order of the relay HUD canvas: above the race HUD.")]
+        float markerEdgeMargin = 110f;
+        [SerializeField, Tooltip("Sorting order of the relay HUD canvas: above the race HUD, below Results.")]
         int sortingOrder = 5;
-        [SerializeField, Tooltip("Colour of the split time in the band.")]
-        Color splitColor = new Color(0.10f, 0.78f, 0.85f);
-        [SerializeField, Tooltip("Colour of the gap to the fastest team in the band.")]
-        Color behindColor = new Color(0.95f, 0.30f, 0.35f);
-        [SerializeField, Tooltip("Colour of the 'Perfect handoff!' banner text.")]
-        Color perfectColor = new Color(0.62f, 0.15f, 0.72f);
-        [SerializeField, Tooltip("Colour of the 'Late handoff!' banner text.")]
-        Color lateColor = new Color(0.90f, 0.15f, 0.20f);
+
+        [Header("Colours (the HUD's own)")]
+        [SerializeField, Tooltip("HUD text navy.")]
+        Color navy = new Color32(0x0A, 0x1F, 0x5C, 0xFF);
+        [SerializeField, Tooltip("Gap to the fastest team in the band: the banner's red.")]
+        Color behindColor = new Color32(0xE8, 0x20, 0x2E, 0xFF);
+        [SerializeField, Tooltip("'PERFECT HANDOFF!' on the dark strip.")]
+        Color perfectColor = Color.white;
+        [SerializeField, Tooltip("'LATE HANDOFF!' on the dark strip.")]
+        Color lateColor = new Color32(0xFF, 0x5A, 0x64, 0xFF);
+        [SerializeField, Range(0f, 1f), Tooltip("Distance marker panel: how much of the leg colour tints the cream panel.")]
+        float markerTint = 0.55f;
 
         RaceRelay _relay;
         RaceSessionAdapter _session;
         Canvas _canvas;
         RectTransform _root;
-        GameObject _band, _banner;
-        Text _bandText, _bandLegText, _bannerText, _splitsText, _markerText;
+        Font _font;
+        GameObject _band, _banner, _marker;
+        Image _markerPanel;
+        Text _bandText, _bandLegText, _bannerText, _markerText;
+        RectTransform _splits;
+        readonly List<GameObject> _splitRows = new List<GameObject>();
         float _bandUntil, _bannerUntil;
-        readonly StringBuilder _splits = new StringBuilder();
         bool _finished;
 
         public void Bind(RaceRelay relay, RaceSessionAdapter session)
@@ -97,21 +132,19 @@ namespace SpeedStars.Bridge
             EnsureBuilt();
             string meters = Mathf.RoundToInt(line * _relay.LegMeters) + "m";
             string gap = behind.HasValue ? $" <color=#{ColorUtility.ToHtmlStringRGB(behindColor)}>(+{behind.Value:0.00})</color>" : string.Empty;
-            _bandText.text = $"<color=#{ColorUtility.ToHtmlStringRGB(splitColor)}>{meters}: {seconds:0.00}s</color>{gap}";
+            _bandText.text = $"{meters}: {seconds:0.00}s{gap}";
             _bandLegText.text = legTime.HasValue ? $"{Ordinal(line)} leg: {legTime.Value:0.00}" : string.Empty;
             _bandLegText.color = _relay.LegColor(line - 1);
             _bandUntil = Time.time + bandSeconds;
-
-            if (_splits.Length > 0) _splits.Append('\n');
-            _splits.Append(meters).Append(": ").Append(seconds.ToString("0.00"));
-            _splitsText.text = _splits.ToString();
+            AddSplitRow(meters, seconds, _relay.LegColor(line - 1));
         }
 
         void OnHandedOver(int leg, HandoffQuality quality)
         {
             EnsureBuilt();
-            _bannerText.text = quality == HandoffQuality.Perfect ? "Perfect handoff!" : "Late handoff!";
-            _bannerText.color = quality == HandoffQuality.Perfect ? perfectColor : lateColor;
+            bool perfect = quality == HandoffQuality.Perfect;
+            _bannerText.text = perfect ? "PERFECT HANDOFF!" : "LATE HANDOFF!";
+            _bannerText.color = perfect ? perfectColor : lateColor;
             _bannerUntil = Time.time + bannerSeconds;
         }
 
@@ -137,12 +170,12 @@ namespace SpeedStars.Bridge
                     Vector2 half = _root.rect.size * 0.5f - new Vector2(markerEdgeMargin, markerEdgeMargin);
                     local.x = Mathf.Clamp(local.x, -half.x, half.x);
                     local.y = Mathf.Clamp(local.y, -half.y, half.y);
-                    _markerText.rectTransform.anchoredPosition = local;
+                    ((RectTransform)_marker.transform).anchoredPosition = local;
                     _markerText.text = Mathf.FloorToInt(meters) + "m";
-                    _markerText.color = _relay.LegColor(leg);
+                    _markerPanel.color = Color.Lerp(Color.white, _relay.LegColor(leg), markerTint);
                 }
             }
-            _markerText.gameObject.SetActive(marker);
+            _marker.SetActive(marker);
         }
 
         void Refresh()
@@ -157,15 +190,40 @@ namespace SpeedStars.Bridge
         void Clear()
         {
             if (!_canvas) return;
-            _splits.Clear();
-            _splitsText.text = string.Empty;
+            foreach (GameObject row in _splitRows) Destroy(row);
+            _splitRows.Clear();
             _bandUntil = _bannerUntil = 0f;
+        }
+
+        /// <summary>One HUD counter panel per leg line, stacked under the Cash counter: a leg-coloured tick, the line and its time.</summary>
+        void AddSplitRow(string meters, double seconds, Color legColor)
+        {
+            var row = Panel("Split " + meters, _splits, panelSprite, splitRowSize);
+            var rect = (RectTransform)row.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -_splitRows.Count * splitRowStep);
+
+            var tick = new GameObject("Leg", typeof(RectTransform), typeof(Image));
+            tick.transform.SetParent(row.transform, false);
+            var tickRect = (RectTransform)tick.transform;
+            tickRect.anchorMin = tickRect.anchorMax = tickRect.pivot = new Vector2(0f, 0.5f);
+            tickRect.anchoredPosition = new Vector2(14f, 0f);
+            tickRect.sizeDelta = new Vector2(8f, splitRowSize.y * 0.55f);
+            Image tickImage = tick.GetComponent<Image>();
+            tickImage.color = legColor;
+            tickImage.raycastTarget = false;
+
+            Text text = Label(row.transform, "Text", 26, navy, TextAnchor.MiddleCenter);
+            text.rectTransform.offsetMin = new Vector2(20f, 0f); // clear of the leg tick
+            text.rectTransform.offsetMax = new Vector2(-8f, 0f);
+            text.text = $"{meters}  {seconds:0.00}";
+            _splitRows.Add(row);
         }
 
         void EnsureBuilt()
         {
             if (_canvas) return;
-            Font font = HudFont();
+            _font = HudFont();
 
             var go = new GameObject("Relay HUD", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
             go.transform.SetParent(transform, false);
@@ -174,57 +232,73 @@ namespace SpeedStars.Bridge
             _canvas.sortingOrder = sortingOrder;
             var scaler = go.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 1f;
+            scaler.referenceResolution = referenceResolution;
+            scaler.matchWidthOrHeight = 0f; // as the race HUD: by width
             _root = (RectTransform)go.transform;
 
-            _band = Strip("Leg Band", new Vector2(0f, -250f), 150f, 0.92f);
-            _bandText = Label(_band.transform, "Split", new Vector2(0f, 22f), 72, font, TextAnchor.MiddleCenter);
-            _bandLegText = Label(_band.transform, "Leg", new Vector2(0f, -42f), 44, font, TextAnchor.MiddleCenter);
+            _band = Panel("Leg Band", _root, bandSprite, bandSize);
+            Place(_band, new Vector2(0.5f, 1f), bandPosition);
+            _bandText = Label(_band.transform, "Split", 58, navy, TextAnchor.MiddleCenter);
+            _bandText.rectTransform.offsetMin = new Vector2(0f, bandSize.y * 0.36f);
+            _bandText.rectTransform.offsetMax = new Vector2(0f, -bandSize.y * 0.06f);
+            _bandLegText = Label(_band.transform, "Leg", 38, navy, TextAnchor.MiddleCenter);
+            _bandLegText.rectTransform.offsetMin = new Vector2(0f, bandSize.y * 0.12f);
+            _bandLegText.rectTransform.offsetMax = new Vector2(0f, -bandSize.y * 0.58f);
+            Outline(_bandLegText, navy, 2f); // leg colours (yellow too) stay readable on the cream band
+            _band.SetActive(false);
 
-            _banner = Strip("Handoff Banner", new Vector2(0f, -360f), 64f, 0.92f);
-            _bannerText = Label(_banner.transform, "Text", Vector2.zero, 50, font, TextAnchor.MiddleCenter);
+            _banner = Panel("Handoff Banner", _root, bannerSprite, bannerSize);
+            Place(_banner, new Vector2(0.5f, 1f), bannerPosition);
+            _bannerText = Label(_banner.transform, "Text", 38, perfectColor, TextAnchor.MiddleCenter);
+            _banner.SetActive(false);
 
-            _splitsText = Label(_root, "Splits", Vector2.zero, 36, font, TextAnchor.UpperLeft);
-            RectTransform splits = _splitsText.rectTransform;
-            splits.anchorMin = splits.anchorMax = splits.pivot = new Vector2(0f, 1f);
-            splits.anchoredPosition = new Vector2(48f, -420f); // under the band and the banner
-            splits.sizeDelta = new Vector2(420f, 240f);
-            Outline(_splitsText);
+            var splits = new GameObject("Splits", typeof(RectTransform));
+            splits.transform.SetParent(_root, false);
+            _splits = (RectTransform)splits.transform;
+            _splits.anchorMin = _splits.anchorMax = new Vector2(0.05f, 1f); // the HUD counters' anchor
+            _splits.pivot = new Vector2(0f, 1f);
+            _splits.anchoredPosition = splitsPosition;
+            _splits.sizeDelta = splitRowSize;
 
-            _markerText = Label(_root, "Distance Marker", Vector2.zero, 64, font, TextAnchor.MiddleCenter);
-            RectTransform marker = _markerText.rectTransform;
-            marker.anchorMin = marker.anchorMax = new Vector2(0.5f, 0.5f);
-            Outline(_markerText);
-            _markerText.gameObject.SetActive(false);
+            _marker = Panel("Distance Marker", _root, panelSprite, markerSize);
+            var markerRect = (RectTransform)_marker.transform;
+            markerRect.anchorMin = markerRect.anchorMax = markerRect.pivot = new Vector2(0.5f, 0.5f);
+            _markerPanel = _marker.GetComponent<Image>();
+            _markerText = Label(_marker.transform, "Text", 38, navy, TextAnchor.MiddleCenter);
+            _marker.SetActive(false);
         }
 
-        GameObject Strip(string stripName, Vector2 position, float height, float alpha)
+        static void Place(GameObject go, Vector2 anchor, Vector2 position)
         {
-            var go = new GameObject(stripName, typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(_root, false);
             var rect = (RectTransform)go.transform;
-            rect.anchorMin = new Vector2(0f, 1f);
-            rect.anchorMax = new Vector2(1f, 1f);
+            rect.anchorMin = rect.anchorMax = anchor;
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = position;
-            rect.sizeDelta = new Vector2(0f, height);
+        }
+
+        /// <summary>An Image with a UI/Art sprite (stretched to the size, as the HUD draws its panels); plain cream without the sprite.</summary>
+        GameObject Panel(string panelName, Transform parent, string spriteName, Vector2 size)
+        {
+            var go = new GameObject(panelName, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            ((RectTransform)go.transform).sizeDelta = size;
             Image image = go.GetComponent<Image>();
-            image.color = new Color(1f, 1f, 1f, alpha);
+            image.sprite = FindSprite(spriteName);
+            if (!image.sprite) image.color = new Color(1f, 0.98f, 0.93f);
             image.raycastTarget = false;
-            go.SetActive(false);
             return go;
         }
 
-        static Text Label(Transform parent, string labelName, Vector2 position, int size, Font font, TextAnchor anchor)
+        Text Label(Transform parent, string labelName, int size, Color color, TextAnchor anchor)
         {
             var go = new GameObject(labelName, typeof(RectTransform), typeof(Text));
             go.transform.SetParent(parent, false);
             var rect = (RectTransform)go.transform;
-            rect.anchoredPosition = position;
-            rect.sizeDelta = new Vector2(1600f, size * 1.4f);
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
             Text text = go.GetComponent<Text>();
-            text.font = font;
+            text.font = _font;
             text.fontStyle = FontStyle.BoldAndItalic; // the race HUD's style
             text.fontSize = size;
             text.alignment = anchor;
@@ -232,15 +306,24 @@ namespace SpeedStars.Bridge
             text.raycastTarget = false;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.verticalOverflow = VerticalWrapMode.Overflow;
-            text.color = Color.white;
+            text.color = color;
             return text;
         }
 
-        static void Outline(Text text)
+        static void Outline(Text text, Color color, float size)
         {
             var outline = text.gameObject.AddComponent<Outline>();
-            outline.effectColor = Color.black;
-            outline.effectDistance = new Vector2(3f, -3f);
+            outline.effectColor = color;
+            outline.effectDistance = new Vector2(size, -size);
+        }
+
+        /// <summary>A sprite the scene already uses (UI/Art), by name; null if none is loaded.</summary>
+        static Sprite FindSprite(string spriteName)
+        {
+            if (string.IsNullOrEmpty(spriteName)) return null;
+            foreach (Sprite sprite in Resources.FindObjectsOfTypeAll<Sprite>())
+                if (sprite.name == spriteName) return sprite;
+            return null;
         }
 
         /// <summary>The race HUD's own font, so the relay texts look like the rest; the built-in font without one.</summary>
