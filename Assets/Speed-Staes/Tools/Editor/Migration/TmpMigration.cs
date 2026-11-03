@@ -46,7 +46,10 @@ namespace SpeedStars.Tools.Migration
             }
         }
 
-        /// <summary>Separate step for the package import (it can trigger a domain reload, so it may need its own batchmode run).</summary>
+        /// <summary>
+        /// Interactive package import. In batchmode the import is async and Unity quits first: use instead
+        /// Unity -batchmode -quit -importPackage "&lt;project&gt;/Library/PackageCache/com.unity.textmeshpro@3.0.7/Package Resources/TMP Essential Resources.unitypackage".
+        /// </summary>
         public static void ImportEssentials()
         {
             try

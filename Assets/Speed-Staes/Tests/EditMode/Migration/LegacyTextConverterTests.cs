@@ -334,5 +334,48 @@ namespace SpeedStars.Tests.Migration
                 .Select(l => l.Substring(0, l.IndexOf(':'))).ToArray();
             Assert.AreEqual(keys.Length, keys.Distinct().Count());
         }
+        [Test]
+        public void StrippedProxy_OfAConvertedText_SwitchesScript_AndKeepsItsId()
+        {
+            TextConversionContext ctx = Context();
+            ctx.TextTargets.Add(Prefab + ":6898960499942952424");
+            const string proxy =
+                "--- !u!114 &361633941944031407 stripped
+MonoBehaviour:
+" +
+                "  m_CorrespondingSourceObject: {fileID: 6898960499942952424, guid: " + Prefab + ", type: 3}
+" +
+                "  m_PrefabInstance: {fileID: 6537749064677676359}
+  m_PrefabAsset: {fileID: 0}
+" +
+                "  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+" +
+                "  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+";
+            const string view =
+                "--- !u!114 &900
+MonoBehaviour:
+  m_Script: {fileID: 11500000, guid: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee, type: 3}
+" +
+                "  label: {fileID: 361633941944031407}
+";
+            string yaml = Header + proxy + view;
+
+            ConversionResult r = LegacyTextConverter.Convert(yaml, ctx);
+
+            Assert.AreEqual(1, r.ProxiesSwitched);
+            StringAssert.Contains("guid: " + MigrationGuids.TextMeshProUgui + ", type: 3}", r.Text);
+            StringAssert.DoesNotContain(MigrationGuids.LegacyText, r.Text);
+            StringAssert.Contains("--- !u!114 &361633941944031407 stripped
+", r.Text);
+            StringAssert.Contains("  label: {fileID: 361633941944031407}
+", r.Text);
+            Assert.IsFalse(LegacyTextConverter.Convert(r.Text, ctx).Changed);
+
+            // A proxy of a text that is not a target (InputField-owned) stays legacy.
+            Assert.IsFalse(LegacyTextConverter.Convert(yaml, Context()).Changed);
+        }
     }
 }
