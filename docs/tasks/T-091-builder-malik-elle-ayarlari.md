@@ -1,7 +1,7 @@
 ---
 id: T-091
 title: Builder'a Malik'in 03.11 elle ayarlari - EventModal ve 7 gun Close sag kenara sabit, ResultsScreen replaySkin
-status: todo
+status: review
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -12,12 +12,16 @@ owns_paths:
 touches_scene: false
 branch: agent/T-091-builder-malik-ayarlari
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Builders/BuilderHandEditsTests.cs"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "Supervizor kopyada sirayla: UiPrefabBuilder.BuildAll(true), sonra SceneBuilder.BuildHome(true). Race YENIDEN KURULMAZ; Race'in prefab fileID'leri yeni prefab'larda duruyor mu bakilir. Sonra BuilderHandEditsTests yesile doner (builder calisana kadar kirmizi)."
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -47,3 +51,8 @@ Diger Close butonlarina, yerlesime, renge DOKUNMA. Builder'i calistirma (merkezi
 - Malik'in `ReplayControlsView` kodu (UI'i runtime'da kuruyor; ayri karar), diger popup'larin Close'lari
 
 ## Calisma notu
+1. Iki Close (EventModal, 7 gun) builder'da sag-ust kosesine sabitlendi: anchor/pivot (1,1), anchoredPosition (0,0); boyut eski builder boyutu (56*S, CloseBox*Scale).
+2. UiResultsPrefabs.BindReplaySkin: ReplayControlsSkin.asset yuklenip replaySkin'e baglanir; asset yoksa LogError (build durmaz).
+3. BuilderHandEditsTests uretilmis prefab'lari AssetDatabase ile okur; builder calisana kadar KIRMIZI (prefab'lar henuz eski).
+4. Malik'in sahne override'inda size.x 64.5/92.2 vardi (elle buyutme); gorev "boyut ayni" dedigi icin boyuta dokunmadim.
+5. Builder/Unity/test calistirilmadi; derleme dogrulamasi supervizorde.

@@ -615,7 +615,10 @@ namespace SpeedStars.Tools.Builders
             w.EventHeader = Kit.Label(window, "Title", LeaderboardTexts.EventHeader, WindowTitleSize, UiArt.Navy, TextAnchor.MiddleLeft);
             PlaceTopLeft(w.EventHeader.rectTransform, 30f, 10f, 400f, 52f);
 
-            RectTransform close = At(window, "Close", 760f - 70f, 6f, 56f, 56f);
+            // Pinned to the window's top-right corner (Malik, 03.11): stays on the edge when the window gets wider.
+            RectTransform close = Kit.Node(window, "Close");
+            var topRight = new Vector2(1f, 1f);
+            Kit.Anchor(close, topRight, topRight, Vector2.zero, new Vector2(56f * S, 56f * S));
             w.ModalClose = StateButton(close, "small_button_normal", "small_button_hover", "small_button_pressed", "small_button_disabled");
             UiArt.Layer(close, "Icon", Art("small_button_close"));
 

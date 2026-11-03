@@ -238,7 +238,9 @@ namespace SpeedStars.Tools.Builders
                 layout.PremiumRect[0] - layout.SevenDayPanelRect[0], layout.PremiumRect[1] - layout.SevenDayPanelRect[1], layout.GroupSize("premium_card"));
 
             RectTransform close = Kit.Node(window, "Close");
-            PlaceTopLeft(close, layout, CloseBox);
+            // Pinned to the window's top-right corner (Malik, 03.11): stays on the edge if the window is resized.
+            var topRight = new Vector2(1f, 1f);
+            Kit.Place(close, topRight, topRight, topRight, Vector2.zero, new Vector2(CloseBox[2], CloseBox[3]) * layout.Scale);
             Image closeBackground = UiArt.Paint(close.gameObject, Art("close_background"), raycast: true);
             UiArt.Layer(close, "Icon", Art("close_icon"));
             Kit.Clickable(close.gameObject, closeBackground);
