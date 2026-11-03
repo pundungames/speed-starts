@@ -1,7 +1,7 @@
 ---
 id: T-087
 title: Race of the Day - her gun degisen mesafe + gunun yarisci kiyafeti (herkes ayni), biletsiz, gunluk PB / gunluk dunya rekoru
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-084, T-088, T-089]
 owns_paths:
@@ -29,7 +29,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Home/**"
 touches_scene: false
 branch: agent/T-087-race-of-the-day
-commits: []
+commits: [44ac023a, 7cb3924a, a99e07bc, 11927846, 47c57dda]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/RaceOfTheDay/RaceOfTheDayRuleTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/RaceOfTheDay/RaceOfTheDayServiceTests.cs"
@@ -42,14 +42,14 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: WIRING
-    durum: open
-    not: "ProjectInstaller -> (1) field [SerializeField] private SpeedStars.Meta.DailyRace.RaceOfTheDayConfig raceOfTheDay; + BindConfig(raceOfTheDay); (2) Container.Bind<IRaceOfTheDay>().FromMethod(c => SpeedStars.Meta.DailyRace.RaceOfTheDayService.Create(c.Container.Resolve<IClock>(), c.Container.Resolve<SpeedStars.Meta.DailyRace.RaceOfTheDayConfig>(), c.Container.Resolve<SpeedStars.Meta.Leaderboard.LeaderboardConfig>())).AsSingle(); RaceFlow, HomeScreenView and RaceOfTheDayOutfit take it optionally (no RaceSceneInstaller change). ProjectContextBuilder (not in this task's paths) must set it: Prop(installerSo, \"raceOfTheDay\").objectReferenceValue = LoadRequired<RaceOfTheDayConfig>(ConfigAssetSeeder.RaceOfTheDayPath, seeder); and the ProjectContext prefab gets the field assigned."
+    durum: closed
+    not: "ProjectInstaller -> (1) field [SerializeField] private SpeedStars.Meta.DailyRace.RaceOfTheDayConfig raceOfTheDay; + BindConfig(raceOfTheDay); (2) Container.Bind<IRaceOfTheDay>().FromMethod(c => SpeedStars.Meta.DailyRace.RaceOfTheDayService.Create(c.Container.Resolve<IClock>(), c.Container.Resolve<SpeedStars.Meta.DailyRace.RaceOfTheDayConfig>(), c.Container.Resolve<SpeedStars.Meta.Leaderboard.LeaderboardConfig>())).AsSingle(); RaceFlow, HomeScreenView and RaceOfTheDayOutfit take it optionally (no RaceSceneInstaller change). ProjectContextBuilder (not in this task's paths) must set it: Prop(installerSo, \"raceOfTheDay\").objectReferenceValue = LoadRequired<RaceOfTheDayConfig>(ConfigAssetSeeder.RaceOfTheDayPath, seeder); and the ProjectContext prefab gets the field assigned. -> a99e07bc"
   - tip: ASSET
-    durum: open
-    not: "Run SpeedStars.Tools.Builders.ConfigAssetSeeder.ApplyRaceOfTheDay (parameterless; creates Data/Config/RaceOfTheDayConfig.asset with 5 distances 60/100/150/200/300 and 7 looks when missing, never touches an existing one; then writes isPlayable=true for race_of_the_day into its RaceEventDefinition like ApplyEconomyV2 does for every event). ConfigAssetSeeder.SeedAll also seeds it now."
+    durum: closed
+    not: "Run SpeedStars.Tools.Builders.ConfigAssetSeeder.ApplyRaceOfTheDay (parameterless; creates Data/Config/RaceOfTheDayConfig.asset with 5 distances 60/100/150/200/300 and 7 looks when missing, never touches an existing one; then writes isPlayable=true for race_of_the_day into its RaceEventDefinition like ApplyEconomyV2 does for every event). ConfigAssetSeeder.SeedAll also seeds it now. -> 47c57dda (kopyada 03.11)"
   - tip: SCENE
-    durum: open
-    not: "Run SpeedStars.Tools.Builders.SceneCosmetics.RebuildRaceOfTheDayUi (parameterless, -executeMethod, logs RACE_OF_THE_DAY_UI_OK): UiPrefabBuilder.BuildAll(true) (HomeScreen: CharacterCard/RacerOfTheDay label + HomeScreenView.racerOfTheDayRoot/hiddenForRacerOfTheDay; ResultsScreen: worldPositionTitleText + percentileCard) + SceneBuilder.BuildHome(true) + PatchRaceOfTheDay (opens the SAVED Race scene without rebuilding it, adds RaceOfTheDayOutfit next to RaceRunnerOutfit wired to RaceSessionAdapter and RaceBots, saves; logs RACE_OF_THE_DAY_PATCH_OK). Race is not rebuilt (docs/TUZAKLAR.md, buildings): check afterwards that the Race scene's ResultsScreen instance still points into the new prefab (m_CorrespondingSourceObject fileIDs, as T-085)."
+    durum: closed
+    not: "Run SpeedStars.Tools.Builders.SceneCosmetics.RebuildRaceOfTheDayUi (parameterless, -executeMethod, logs RACE_OF_THE_DAY_UI_OK): UiPrefabBuilder.BuildAll(true) (HomeScreen: CharacterCard/RacerOfTheDay label + HomeScreenView.racerOfTheDayRoot/hiddenForRacerOfTheDay; ResultsScreen: worldPositionTitleText + percentileCard) + SceneBuilder.BuildHome(true) + PatchRaceOfTheDay (opens the SAVED Race scene without rebuilding it, adds RaceOfTheDayOutfit next to RaceRunnerOutfit wired to RaceSessionAdapter and RaceBots, saves; logs RACE_OF_THE_DAY_PATCH_OK). Race is not rebuilt (docs/TUZAKLAR.md, buildings): check afterwards that the Race scene's ResultsScreen instance still points into the new prefab (m_CorrespondingSourceObject fileIDs, as T-085). -> 47c57dda (kopyada 03.11)"
   - tip: SCENE
     durum: closed
     not: "DONE in the follow-up: SceneBuilder.BuildRace now calls SceneCosmetics.AddRaceOfTheDay (was: should call SceneCosmetics.AddRaceOfTheDay(scene) right after SceneRaceEmotes.Add(scene), so a future full Race rebuild keeps the outfit component)."
