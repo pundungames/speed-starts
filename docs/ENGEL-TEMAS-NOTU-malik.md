@@ -1,7 +1,7 @@
 # Engel teması: Malik'in notu
 
 **Tarih:** 2 Kasım 2026
-**Durum:** Açık. Karakter işi bittikten sonra Malik dönecek; o zamana kadar dokunulmayacak.
+**Durum:** Kodu yazıldı 3 Kasım 2026, Play'de denenmedi. `RunnerHurdles` artık bacak kemiklerini (uyluk, baldır, ayak, parmak) çizildikleri yerden okuyor. Engel çizgisinden bar üstünün `forgiveness` (0.15 m) kadar altından daha aşağıda geçen parça varsa engel devrilir ve hız düşer. `logClearance` her engelin ölçümünü konsola yazar. Botlar da aynı kodu kullanıyor. Karakter dosyalarına dokunulmadı.
 
 ## Sorun
 

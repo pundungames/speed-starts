@@ -61,7 +61,11 @@ namespace SpeedStars.Core.Race.Bots
             for (int i = 0; i < count; i++)
             {
                 BotIdentity who = pool[order[i]];
-                float skill = Clamp01(BotSkillCurve.SkillForSeconds(table, targets[i]));
+                int style = config.DrawStyle(random);
+                // The table is measured without a style; a style runs slower or faster by its factor, so aim the table at the time
+                // that the factor turns into the target.
+                float plain = Clamp01(BotSkillCurve.SkillForSeconds(table, targets[i]));
+                float skill = Clamp01(BotSkillCurve.SkillForSeconds(table, targets[i] / config.StyleTimeFactor(style, plain)));
                 plans.Add(new BotPlan(
                     who.name, who.countryCode, targets[i], skill,
                     reactionSeconds: Lerp(config.ReactionWorstSeconds, config.ReactionBestSeconds, skill),
@@ -69,7 +73,8 @@ namespace SpeedStars.Core.Race.Bots
                     holdSeconds: Lerp(config.HoldWorstSeconds, config.HoldBestSeconds, skill),
                     jitterSeconds: Lerp(config.JitterWorstMs, config.JitterBestMs, skill) * 0.001f,
                     mistakeChance: Lerp(config.MistakeWorstChance, config.MistakeBestChance, skill),
-                    mistakeShiftRatio: config.MistakeShiftRatio));
+                    mistakeShiftRatio: config.MistakeShiftRatio,
+                    quirks: config.QuirksFor(skill, style)));
             }
             return plans;
         }

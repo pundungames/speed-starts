@@ -4,6 +4,51 @@ using UnityEngine;
 
 namespace SpeedStars.Core.Race.Bots
 {
+    /// <summary>
+    /// One way a bot can run; each bot draws one per race, by weight. Scales on the bot's own numbers: an early presser taps faster
+    /// than the step wants, a late one waits too long, an erratic one slips a lot. Its time factors keep it on its target time.
+    /// </summary>
+    [Serializable]
+    public struct BotStyle
+    {
+        [Tooltip("Name, only for reading the list.")]
+        public string name;
+        [Tooltip("How often this style is drawn, against the others.")]
+        [Min(0f)] public float weight;
+        [Tooltip("Press period x this (below 1 = taps faster, above = slower).")]
+        [Range(0.5f, 1.6f)] public float periodScale;
+        [Tooltip("Key hold x this (short taps or long pushes).")]
+        [Range(0.3f, 2f)] public float holdScale;
+        [Tooltip("Tempo wander x this (0 = metronome).")]
+        [Range(0f, 4f)] public float driftScale;
+        [Tooltip("Wrong foot chance x this.")]
+        [Range(0f, 4f)] public float wrongFootScale;
+        [Tooltip("Rush chance x this.")]
+        [Range(0f, 4f)] public float rushScale;
+        [Tooltip("Stumble chance x this.")]
+        [Range(0f, 4f)] public float stumbleScale;
+        [Tooltip("Measured by the calibration tool: this style's 100 m time / the plain table's, for the worst bot. The planner " +
+                 "aims a styled bot at the time that this turns into its target.")]
+        [Min(0.1f)] public float timeFactorWorst;
+        [Tooltip("Measured by the calibration tool: the same for the best bot.")]
+        [Min(0.1f)] public float timeFactorBest;
+
+        public BotStyle(string name, float weight, float periodScale, float holdScale, float driftScale, float wrongFootScale,
+            float rushScale, float stumbleScale, float timeFactorWorst = 1f, float timeFactorBest = 1f)
+        {
+            this.timeFactorWorst = timeFactorWorst;
+            this.timeFactorBest = timeFactorBest;
+            this.name = name;
+            this.weight = weight;
+            this.periodScale = periodScale;
+            this.holdScale = holdScale;
+            this.driftScale = driftScale;
+            this.wrongFootScale = wrongFootScale;
+            this.rushScale = rushScale;
+            this.stumbleScale = stumbleScale;
+        }
+    }
+
     /// <summary>One calibration row: a bot of this skill runs about this 100 m time (filled by the calibration tool).</summary>
     [Serializable]
     public struct BotCalibrationPoint
@@ -170,96 +215,156 @@ namespace SpeedStars.Core.Race.Bots
         [Range(0f, 0.9f)]
         [SerializeField] private float mistakeShiftRatio = 0.5f;
 
+        [Header("Liveliness (best skill .. worst skill): habits that keep a bot from running like a metronome")]
+        [Tooltip("Chance per press that the best bot presses the same foot twice (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float wrongFootBestChance = 0.01f;
+
+        [Tooltip("Chance per press that the worst bot presses the same foot twice (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float wrongFootWorstChance = 0.05f;
+
+        [Tooltip("Chance per press that the best bot starts a rush: too many presses, the head tips forward, then it recovers (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float rushBestChance = 0.015f;
+
+        [Tooltip("Chance per press that the worst bot starts a rush (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float rushWorstChance = 0.05f;
+
+        [Tooltip("Fewest presses in one rush.")]
+        [Min(1)]
+        [SerializeField] private int rushPressesMin = 3;
+
+        [Tooltip("Most presses in one rush.")]
+        [Min(1)]
+        [SerializeField] private int rushPressesMax = 6;
+
+        [Tooltip("Press period during a rush, as a share of the bot's own (0.45 = about twice as fast).")]
+        [Range(0.2f, 1f)]
+        [SerializeField] private float rushPeriodRatio = 0.45f;
+
+        [Tooltip("Chance per press that the best bot stumbles: a few presses all over the place, a pause, then it recovers (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float stumbleBestChance = 0.004f;
+
+        [Tooltip("Chance per press that the worst bot stumbles (0..1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float stumbleWorstChance = 0.02f;
+
+        [Tooltip("Slower presses after a rush or a stumble while the bot finds its rhythm again.")]
+        [Min(0)]
+        [SerializeField] private int recoverPresses = 3;
+
+        [Tooltip("Press period while recovering, as a share of the bot's own (above 1 = slower).")]
+        [Range(1f, 2f)]
+        [SerializeField] private float recoverPeriodRatio = 1.2f;
+
+        [Tooltip("The tempo moves between faster and slower stretches, up to this share of the press period either way, before " +
+                 "the style scales it (0 = metronome).")]
+        [Range(0f, 0.3f)]
+        [SerializeField] private float tempoDrift = 0.08f;
+
+        [Tooltip("Each bot draws one of these per race, by weight: its own tempo, hold, wander and slips. After changing them, run " +
+                 "the bot calibration again (it measures each style's time factors).")]
+        [SerializeField] private List<BotStyle> styles = new List<BotStyle>
+        {
+            new BotStyle("On time", 0.3f, 1f, 1f, 0.3f, 0.3f, 0.3f, 0f, 0.995f, 0.975f),
+            new BotStyle("Early", 0.25f, 0.75f, 0.6f, 1f, 1f, 1.5f, 0.5f, 0.822f, 1.037f),
+            new BotStyle("Late", 0.25f, 1.3f, 1.5f, 0.8f, 0.6f, 0.5f, 0.6f, 1.142f, 1.228f),
+            new BotStyle("Erratic", 0.2f, 1f, 1f, 2.5f, 2.5f, 2f, 3f, 1.034f, 1.048f),
+        };
+
         [Header("Calibration (skill -> expected 100 m time)")]
         [Tooltip("Skill to expected time rows, skill ascending, seconds falling. Measured against the runner sim by the calibration tool.")]
         [SerializeField] private List<BotCalibrationPoint> calibration = new List<BotCalibrationPoint>
         {
-            new BotCalibrationPoint(0f, 22.72887f),
-            new BotCalibrationPoint(0.1f, 21.64705f),
-            new BotCalibrationPoint(0.2f, 20.65838f),
-            new BotCalibrationPoint(0.3f, 19.69595f),
-            new BotCalibrationPoint(0.4f, 18.57485f),
-            new BotCalibrationPoint(0.5f, 17.01661f),
-            new BotCalibrationPoint(0.6f, 15.20134f),
-            new BotCalibrationPoint(0.7f, 13.37755f),
-            new BotCalibrationPoint(0.8f, 12.07655f),
-            new BotCalibrationPoint(0.9f, 11.00178f),
-            new BotCalibrationPoint(1f, 10.50756f),
+            new BotCalibrationPoint(0f, 22.468f),
+            new BotCalibrationPoint(0.1f, 21.316f),
+            new BotCalibrationPoint(0.2f, 21.016f),
+            new BotCalibrationPoint(0.3f, 19.719f),
+            new BotCalibrationPoint(0.4f, 18.931f),
+            new BotCalibrationPoint(0.5f, 17.192f),
+            new BotCalibrationPoint(0.6f, 15.561f),
+            new BotCalibrationPoint(0.7f, 13.75f),
+            new BotCalibrationPoint(0.8f, 12.381f),
+            new BotCalibrationPoint(0.9f, 11.319f),
+            new BotCalibrationPoint(1f, 11.137f),
         };
 
         [Header("Event profiles (one table per event; the table above is the 100 m base)")]
         [Tooltip("Tables measured over an event's own length and hurdles by the calibration tool. An event not listed uses the 100 m table above.")]
         [SerializeField] private List<BotEventProfile> eventProfiles = new List<BotEventProfile>
         {
-            new BotEventProfile("110mh", 21.44f, new[]
+            new BotEventProfile("110mh", 21.43f, new[]
             {
-                new BotCalibrationPoint(0f, 24.378f),
-                new BotCalibrationPoint(0.1f, 23.22f),
-                new BotCalibrationPoint(0.2f, 22.163f),
-                new BotCalibrationPoint(0.3f, 21.105f),
-                new BotCalibrationPoint(0.4f, 19.526f),
-                new BotCalibrationPoint(0.5f, 17.97f),
-                new BotCalibrationPoint(0.6f, 16.14f),
-                new BotCalibrationPoint(0.7f, 14.566f),
-                new BotCalibrationPoint(0.8f, 13.199f),
-                new BotCalibrationPoint(0.9f, 12.163f),
-                new BotCalibrationPoint(1f, 11.501f),
+                new BotCalibrationPoint(0f, 24.652f),
+                new BotCalibrationPoint(0.1f, 23.058f),
+                new BotCalibrationPoint(0.2f, 22.767f),
+                new BotCalibrationPoint(0.3f, 21.059f),
+                new BotCalibrationPoint(0.4f, 20.101f),
+                new BotCalibrationPoint(0.5f, 18.109f),
+                new BotCalibrationPoint(0.6f, 16.657f),
+                new BotCalibrationPoint(0.7f, 14.895f),
+                new BotCalibrationPoint(0.8f, 13.432f),
+                new BotCalibrationPoint(0.9f, 12.307f),
+                new BotCalibrationPoint(1f, 12.162f),
             }),
-            new BotEventProfile("200m", 36.98f, new[]
+            new BotEventProfile("200m", 37.32f, new[]
             {
-                new BotCalibrationPoint(0f, 42.33f),
-                new BotCalibrationPoint(0.1f, 40.185f),
-                new BotCalibrationPoint(0.2f, 38.24f),
-                new BotCalibrationPoint(0.3f, 36.403f),
-                new BotCalibrationPoint(0.4f, 34.333f),
-                new BotCalibrationPoint(0.5f, 31.428f),
-                new BotCalibrationPoint(0.6f, 28.04f),
-                new BotCalibrationPoint(0.7f, 24.586f),
-                new BotCalibrationPoint(0.8f, 21.996f),
-                new BotCalibrationPoint(0.9f, 19.961f),
-                new BotCalibrationPoint(1f, 18.792f),
+                new BotCalibrationPoint(0f, 42.387f),
+                new BotCalibrationPoint(0.1f, 39.373f),
+                new BotCalibrationPoint(0.2f, 39.124f),
+                new BotCalibrationPoint(0.3f, 36.82f),
+                new BotCalibrationPoint(0.4f, 35.015f),
+                new BotCalibrationPoint(0.5f, 31.923f),
+                new BotCalibrationPoint(0.6f, 28.967f),
+                new BotCalibrationPoint(0.7f, 25.502f),
+                new BotCalibrationPoint(0.8f, 22.7f),
+                new BotCalibrationPoint(0.9f, 20.628f),
+                new BotCalibrationPoint(1f, 19.67f),
             }),
-            new BotEventProfile("400m", 71.12f, new[]
+            new BotEventProfile("400m", 71.46f, new[]
             {
-                new BotCalibrationPoint(0f, 81.625f),
-                new BotCalibrationPoint(0.1f, 77.382f),
-                new BotCalibrationPoint(0.2f, 73.58f),
-                new BotCalibrationPoint(0.3f, 69.981f),
-                new BotCalibrationPoint(0.4f, 66.001f),
-                new BotCalibrationPoint(0.5f, 60.195f),
-                new BotCalibrationPoint(0.6f, 53.683f),
-                new BotCalibrationPoint(0.7f, 47.002f),
-                new BotCalibrationPoint(0.8f, 41.845f),
-                new BotCalibrationPoint(0.9f, 37.894f),
-                new BotCalibrationPoint(1f, 35.358f),
+                new BotCalibrationPoint(0f, 81.177f),
+                new BotCalibrationPoint(0.1f, 76.52f),
+                new BotCalibrationPoint(0.2f, 74.678f),
+                new BotCalibrationPoint(0.3f, 70.577f),
+                new BotCalibrationPoint(0.4f, 67.268f),
+                new BotCalibrationPoint(0.5f, 61.379f),
+                new BotCalibrationPoint(0.6f, 55.446f),
+                new BotCalibrationPoint(0.7f, 48.81f),
+                new BotCalibrationPoint(0.8f, 43.41f),
+                new BotCalibrationPoint(0.9f, 39.032f),
+                new BotCalibrationPoint(1f, 36.676f),
             }),
-            new BotEventProfile("60mh", 13.19f, new[]
+            new BotEventProfile("60mh", 13.13f, new[]
             {
-                new BotCalibrationPoint(0f, 14.677f),
-                new BotCalibrationPoint(0.1f, 14.18f),
-                new BotCalibrationPoint(0.2f, 13.7f),
-                new BotCalibrationPoint(0.3f, 12.958f),
-                new BotCalibrationPoint(0.4f, 11.935f),
-                new BotCalibrationPoint(0.5f, 10.986f),
-                new BotCalibrationPoint(0.6f, 9.956f),
-                new BotCalibrationPoint(0.7f, 8.885f),
-                new BotCalibrationPoint(0.8f, 8.155f),
-                new BotCalibrationPoint(0.9f, 7.696f),
-                new BotCalibrationPoint(1f, 7.338f),
+                new BotCalibrationPoint(0f, 14.706f),
+                new BotCalibrationPoint(0.1f, 13.973f),
+                new BotCalibrationPoint(0.2f, 13.963f),
+                new BotCalibrationPoint(0.3f, 12.904f),
+                new BotCalibrationPoint(0.4f, 12.058f),
+                new BotCalibrationPoint(0.5f, 11.064f),
+                new BotCalibrationPoint(0.6f, 10.192f),
+                new BotCalibrationPoint(0.7f, 9.026f),
+                new BotCalibrationPoint(0.8f, 8.356f),
+                new BotCalibrationPoint(0.9f, 7.666f),
+                new BotCalibrationPoint(1f, 7.656f),
             }),
-            new BotEventProfile("400mh", 70.84f, new[]
+            new BotEventProfile("400mh", 71.18f, new[]
             {
-                new BotCalibrationPoint(0f, 81.482f),
-                new BotCalibrationPoint(0.1f, 76.63f),
-                new BotCalibrationPoint(0.2f, 72.946f),
-                new BotCalibrationPoint(0.3f, 69.863f),
-                new BotCalibrationPoint(0.4f, 65.853f),
-                new BotCalibrationPoint(0.5f, 59.952f),
-                new BotCalibrationPoint(0.6f, 53.126f),
-                new BotCalibrationPoint(0.7f, 47.433f),
-                new BotCalibrationPoint(0.8f, 41.691f),
-                new BotCalibrationPoint(0.9f, 37.988f),
-                new BotCalibrationPoint(1f, 35.17f),
+                new BotCalibrationPoint(0f, 81.296f),
+                new BotCalibrationPoint(0.1f, 76.427f),
+                new BotCalibrationPoint(0.2f, 74.125f),
+                new BotCalibrationPoint(0.3f, 70.369f),
+                new BotCalibrationPoint(0.4f, 66.735f),
+                new BotCalibrationPoint(0.5f, 60.871f),
+                new BotCalibrationPoint(0.6f, 55.06f),
+                new BotCalibrationPoint(0.7f, 48.787f),
+                new BotCalibrationPoint(0.8f, 43.437f),
+                new BotCalibrationPoint(0.9f, 38.883f),
+                new BotCalibrationPoint(1f, 36.605f),
             }),
         };
 
@@ -309,6 +414,56 @@ namespace SpeedStars.Core.Race.Bots
         public float MistakeBestChance => mistakeBestChance;
         public float MistakeWorstChance => mistakeWorstChance;
         public float MistakeShiftRatio => mistakeShiftRatio;
+
+        public IReadOnlyList<BotStyle> Styles => styles;
+
+        /// <summary>A style index drawn by weight; -1 when there are none.</summary>
+        public int DrawStyle(System.Random random)
+        {
+            float total = 0f;
+            for (int i = 0; i < styles.Count; i++) total += Mathf.Max(0f, styles[i].weight);
+            if (total <= 0f) return -1;
+            double draw = random.NextDouble() * total;
+            for (int i = 0; i < styles.Count; i++)
+            {
+                draw -= Mathf.Max(0f, styles[i].weight);
+                if (draw < 0.0) return i;
+            }
+            return styles.Count - 1;
+        }
+
+        /// <summary>A style's time / the plain table's time for a bot of this skill (1 for no style).</summary>
+        public float StyleTimeFactor(int style, float skill)
+        {
+            if (style < 0 || style >= styles.Count) return 1f;
+            float f = Mathf.Lerp(styles[style].timeFactorWorst, styles[style].timeFactorBest, Mathf.Clamp01(skill));
+            return f > 0.1f ? f : 1f;
+        }
+
+        /// <summary>Writes a style's measured time factors (calibration tool).</summary>
+        public void SetStyleTimeFactors(int style, float worst, float best)
+        {
+            BotStyle s = styles[style];
+            s.timeFactorWorst = worst;
+            s.timeFactorBest = best;
+            styles[style] = s;
+        }
+
+        /// <summary>
+        /// The habits of a bot of this skill (0 = worst, 1 = best) in one style (-1 = plain, no style: what the calibration table is
+        /// measured with). Used by the planner and the calibration tool alike.
+        /// </summary>
+        public BotQuirks QuirksFor(float skill, int style = -1)
+        {
+            float s = skill < 0f ? 0f : (skill > 1f ? 1f : skill);
+            return new BotQuirks(
+                wrongFootChance: wrongFootWorstChance + (wrongFootBestChance - wrongFootWorstChance) * s,
+                rushChance: rushWorstChance + (rushBestChance - rushWorstChance) * s,
+                stumbleChance: stumbleWorstChance + (stumbleBestChance - stumbleWorstChance) * s,
+                rushPressesMin: rushPressesMin, rushPressesMax: rushPressesMax, rushPeriodRatio: rushPeriodRatio,
+                recoverPresses: recoverPresses, recoverPeriodRatio: recoverPeriodRatio, tempoDrift: tempoDrift,
+                styles: style >= 0 && style < styles.Count ? new[] { styles[style] } : null);
+        }
         public IReadOnlyList<BotCalibrationPoint> Calibration => calibration;
         public IReadOnlyList<BotEventProfile> EventProfiles => eventProfiles;
         public IReadOnlyList<BotIdentity> Identities => identities;
