@@ -417,18 +417,16 @@ namespace SpeedStars.PlayTests
             Assert.AreEqual(RaceStartPhase.Ready, signal.StartPhase);
             Assert.AreEqual(0, session.Distance, 0.001f);
             Assert.AreEqual(0, session.RaceTime, 0.001);
-            Assert.AreEqual(startPosition, body.transform.position);
+            // Back on the start line; every start draws its lane, so only the way along the track is the same.
+            Assert.AreEqual(Vector3.Dot(startPosition, body.transform.forward), Vector3.Dot(body.transform.position, body.transform.forward), 0.001f);
             Assert.IsFalse((bool)body.GetType().GetField("acceptInput").GetValue(body));
             yield return null;
             Assert.AreEqual("0.00", RequireField<TMP_Text>(hud, "timeText").text);
             var follow = Object.FindObjectsOfType<MonoBehaviour>().FirstOrDefault(c => c.GetType().Name == "SideFollowCamera");
             Assert.IsNotNull(follow);
-            // The camera sits at (distance * player scale) back and lookHeight + back * tan(pitch) up (zoom is 0 right after a snap).
-            float lead = CameraField(follow, "leadAhead");
-            float distance = CameraField(follow, "distance") * CameraField(follow, "distanceScale");
-            float height = CameraField(follow, "lookHeight") + distance * Mathf.Tan(CameraField(follow, "pitch") * Mathf.Deg2Rad);
-            Vector3 expectedCamera = startPosition + body.transform.forward * lead + body.transform.right * distance + Vector3.up * height;
-            Assert.Less(Vector3.Distance(expectedCamera, follow.transform.position), 0.1f, "Restart must snap the camera back immediately.");
+            // The opening camera frames the runner from close by: no flight back over the 240 m it was away.
+            float nearby = 2f * CameraField(follow, "distance") * CameraField(follow, "distanceScale");
+            Assert.Less(Vector3.Distance(body.transform.position, follow.transform.position), nearby, "Restart must snap the camera back immediately.");
             yield return null;
             var chunks = Object.FindObjectsOfType<MonoBehaviour>().Where(c => c.GetType().Name == "LoopWayChunk" || c.GetType().Name == "ThemeChunk")
                 .Where(c => c.gameObject.activeInHierarchy).ToArray();

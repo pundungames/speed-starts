@@ -173,6 +173,7 @@ namespace SpeedStars.Bridge
         {
             Initialize();
             if (!GetComponent<RunnerPressGate>()) gameObject.AddComponent<RunnerPressGate>();
+            if (!GetComponent<RaceStartCamera>()) gameObject.AddComponent<RaceStartCamera>();
         }
 
         void OnEnable() => Initialize();
@@ -219,6 +220,7 @@ namespace SpeedStars.Bridge
             _eventId = request.EventId;
             float distance = practice ? practice.AdjustDistance(request.EventId, request.DistanceMeters) : request.DistanceMeters;
             if (distance > 0f) race.raceDistance = distance;
+            if (bots) bots.PrepareLanes(); // a new race, a new lane; a false start runs the countdown again on the same one
 
             StartOver();
         }
@@ -256,6 +258,9 @@ namespace SpeedStars.Bridge
             }
             StartPhaseChanged?.Invoke(phase);
         }
+
+        /// <summary>The numbers of the race start, also for the opening camera.</summary>
+        public RaceStartConfig StartSettings => StartConfig();
 
         RaceStartConfig StartConfig()
         {

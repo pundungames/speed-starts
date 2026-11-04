@@ -156,6 +156,9 @@ namespace SpeedStars.PlayTests
             Assert.IsFalse(results.gameObject.activeInHierarchy, "the Results wait for the finish sequence");
             yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish", FinishSequenceSeconds);
             Assert.AreEqual(1f, Time.timeScale, 0.001f, "normal speed behind the Results");
+            Vector3 standing = body.transform.position;
+            yield return new WaitForSeconds(0.3f);
+            Assert.Less((body.transform.position - standing).magnitude, 0.001f, "emoting on planted feet: the body must stand still, not slide");
             Assert.AreNotEqual(ownReady, ready.GetValue(driver), "the runner stands in the finish stance");
             Assert.GreaterOrEqual((float)simDistance.GetValue(sim), session.TargetDistance, "the runner is still past the line behind the Results");
 

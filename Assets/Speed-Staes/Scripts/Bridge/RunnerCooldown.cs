@@ -16,12 +16,13 @@ namespace SpeedStars.Bridge
     }
 
     /// <summary>
-    /// A runner after the line: no slide on still legs and no crouch at the end. It takes a few more steps, further and further apart,
-    /// through its own physics (RunnerInput.Inject, as the bots run), and as it slows down its waiting stance turns from the crouch into
-    /// an upright one (the pose driver's public crouch and ready values, read every frame, so its springs do the standing up). A runner
-    /// diving through the line first gets up. A reaction moves the same stance for a while, so it flows in and out the same way. A reset
-    /// puts everything back. Malik's code and assets are untouched: the stance is a pose of this component's own. Runs after
-    /// RunnerPressGate (-150), so its presses never meet that gate, and before RunnerBody (-100).
+    /// A runner after the line: it slows down along a curve of its own (the sim has no quick stop, and its brake would slide the body on
+    /// planted feet, <see cref="RunnerRootOffset"/> holds the root to this curve) and takes a few more steps through its own physics
+    /// (RunnerInput.Inject, as the bots run), further and further apart, the last one landing as the body stops. As it slows down its
+    /// waiting stance turns from the crouch into an upright one (the pose driver's public crouch and ready values, read every frame, so its
+    /// springs do the standing up). A runner diving through the line first gets up. A reaction moves the same stance for a while, so it
+    /// flows in and out the same way. A reset puts everything back. Malik's code and assets are untouched: the stance is a pose of this
+    /// component's own. Runs after RunnerPressGate (-150), so its presses never meet that gate, and before RunnerBody (-100).
     /// </summary>
     [DefaultExecutionOrder(-120)]
     public sealed class RunnerCooldown : MonoBehaviour
@@ -29,6 +30,7 @@ namespace SpeedStars.Bridge
         const int NoLeg = -1;
 
         RunnerBody _body;
+        RunnerRootOffset _root;
         RunnerPoseDriver _driver;
         RaceFinishConfig _config;
         RunnerPose _stance;
@@ -36,17 +38,23 @@ namespace SpeedStars.Bridge
         RunnerPoseDriver.LegAngles _crouch;
         Behaviour[] _stepFeedback = new Behaviour[0];
         bool _active;
-        bool _stepping;
         bool _keysUp;
         int _stepsLeft;
         float _gap;
-        double _nextPress;
-        double _release;
+        float _elapsed;
+        float _nextPress;
+        float _release;
         int _heldLeg = NoLeg;
+        float _startSpeed;
+        float _stopSeconds;
+        float _distance;
         float _stand;
         RunnerFinishReaction _reaction;
         float _reactionLeft;
         float _reactionWeight;
+
+        /// <summary>How fast the body really goes now (m/s): 0 means it stands, whatever the sim still says.</summary>
+        public float Speed { get; private set; }
 
         /// <summary>Starts easing this runner off (again from the start if it already was).</summary>
         public static RunnerCooldown Begin(RunnerBody body, RaceFinishConfig config)
@@ -70,6 +78,7 @@ namespace SpeedStars.Bridge
             Restore();
             _body = body;
             _config = config;
+            _root = RunnerRootOffset.Of(body);
             _driver = body.GetComponentInChildren<RunnerPoseDriver>();
             if (_driver)
             {
@@ -80,10 +89,11 @@ namespace SpeedStars.Bridge
             }
             _body.RunReset -= Restore;
             _body.RunReset += Restore;
-            // The steps here are not the player's: no perfect / early / late on them.
+            // The steps here are not the player's: no perfect / early / late / momentum on them.
             _stepFeedback = new Behaviour[]
             {
                 body.GetComponent<PerfectStepFeedback>(), body.GetComponent<EarlyStepFeedback>(), body.GetComponent<LateStepFeedback>(),
+                body.GetComponent<MomentumWindFeedback>(),
             };
             for (int i = 0; i < _stepFeedback.Length; i++)
             {
@@ -91,10 +101,17 @@ namespace SpeedStars.Bridge
                 else _stepFeedback[i] = null; // off by itself (no material): not ours to turn on
             }
 
+            RunnerSim sim = body.Sim;
             _body.acceptInput = true; // presses are how it steps; the player's own are stopped by the gate
-            _stepsLeft = config.StepCount;
+            _startSpeed = sim != null ? sim.Speed : 0f;
+            _distance = sim != null ? sim.Distance : 0f;
+            float share = sim != null ? Mathf.Clamp01(_startSpeed / Mathf.Max(0.01f, sim.T.maxSpeed)) : 0f;
+            _stopSeconds = _startSpeed > 0f ? Mathf.Lerp(config.StopSecondsFromWalk, config.StopSecondsFromTop, share) : 0f;
+            Speed = _startSpeed;
+            _elapsed = 0f;
+            _stepsLeft = config.StepsAfterLine;
             _gap = config.FirstStepGapSeconds;
-            _nextPress = Time.timeAsDouble + _gap;
+            _nextPress = _gap;
             _heldLeg = NoLeg;
             _stand = 0f;
             _keysUp = false;
@@ -102,7 +119,7 @@ namespace SpeedStars.Bridge
             _reactionLeft = 0f;
             _reactionWeight = 0f;
             _active = true;
-            _stepping = true;
+            _root.HoldDistance(_distance);
             ApplyStance();
         }
 
@@ -119,10 +136,16 @@ namespace SpeedStars.Bridge
             RunnerSim sim = _body.Sim;
             if (sim == null) return;
 
-            if (_stepping) Steps(sim);
-
             float dt = Time.deltaTime;
-            float wanted = Mathf.InverseLerp(_config.StandFromSpeed, _config.StandFullSpeed, sim.Speed);
+            _elapsed += dt;
+            float left = _stopSeconds > 0f ? Mathf.Clamp01(1f - _elapsed / _stopSeconds) : 0f;
+            Speed = _startSpeed * Mathf.Pow(left, _config.StopCurve);
+            _distance += Speed * dt;
+            _root.HoldDistance(_distance);
+
+            Steps(sim);
+
+            float wanted = Mathf.InverseLerp(_config.StandFromSpeed, _config.StandFullSpeed, Speed);
             _stand = Mathf.MoveTowards(_stand, wanted, dt / _config.StandSeconds);
             _reactionLeft -= dt;
             _reactionWeight = Mathf.MoveTowards(_reactionWeight, _reactionLeft > 0f ? 1f : 0f, dt / _config.ReactionBlendSeconds);
@@ -144,20 +167,18 @@ namespace SpeedStars.Bridge
                 }
             }
 
-            if (_heldLeg != NoLeg && now >= _release)
+            if (_heldLeg != NoLeg && _elapsed >= _release)
             {
                 if (input) input.Inject(_heldLeg, false, now);
                 _heldLeg = NoLeg;
             }
-            if (_stepsLeft > 0 && _heldLeg == NoLeg && now >= _nextPress)
+            if (_stepsLeft > 0 && _heldLeg == NoLeg && _elapsed >= _nextPress)
             {
-                if (sim.Speed < _config.MinStepSpeed) _stepsLeft = 0;
+                if (_elapsed > _stopSeconds - _config.LastStepLeadSeconds) _stepsLeft = 0; // it could not land before the body stops
                 else if (sim.HeadAngle <= _config.StepHeadLimit) Step(sim, input, now);
             }
 
-            if (_stepsLeft > 0 || _heldLeg != NoLeg || sim.Speed > 0f) return;
-            _body.acceptInput = false; // stopped: nothing more to press
-            _stepping = false;
+            if (_stepsLeft == 0 && _heldLeg == NoLeg && Speed <= 0f) _body.acceptInput = false; // stopped: nothing more to press
         }
 
         void Step(RunnerSim sim, RunnerInput input, double now)
@@ -165,10 +186,10 @@ namespace SpeedStars.Bridge
             int leg = sim.LastLeg == 0 ? 1 : 0;
             if (input) input.Inject(leg, true, now);
             _heldLeg = leg;
-            _release = now + _config.StepPressSeconds;
+            _release = _elapsed + _config.StepPressSeconds;
             _stepsLeft--;
             _gap *= _config.StepGapGrowth;
-            _nextPress = now + _gap;
+            _nextPress = _elapsed + _gap;
         }
 
         /// <summary>The stance in between: the runner's own crouch and ready pose at 0, the config's upright one at 1, the reaction over it, eased.</summary>
@@ -211,7 +232,7 @@ namespace SpeedStars.Bridge
         void Restore()
         {
             _active = false;
-            _stepping = false;
+            Speed = 0f;
             if (_driver && _stance && _driver.ready == _stance)
             {
                 _driver.ready = _ready;

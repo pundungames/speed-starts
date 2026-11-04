@@ -124,7 +124,7 @@ namespace SpeedStars.Bridge
             if (_timeline == null) return;
             float seconds = Mathf.Min(Time.unscaledDeltaTime, _config.MaxFrameSeconds);
             bool wasHolding = _timeline.Phase == RaceFinishPhase.Holding;
-            _timeline.Tick(seconds, _body && _body.Sim != null ? _body.Sim.Speed : 0f);
+            _timeline.Tick(seconds, _cooldown ? _cooldown.Speed : 0f);
 
             if (!wasHolding || Time.timeScale != _savedTimeScale)
                 Time.timeScale = _timeline.Phase == RaceFinishPhase.Holding ? _savedTimeScale : _timeline.TimeScale * _savedTimeScale;

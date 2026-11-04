@@ -70,7 +70,7 @@ namespace SpeedStars.Tests.RaceStart
             Assert.IsFalse(_timeline.TakeEmoteDue(), "still running");
             Assert.AreEqual(RaceFinishPhase.Slowdown, _timeline.Phase);
 
-            _timeline.Tick(Step, _config.EmoteFromSpeed);
+            _timeline.Tick(Step, _config.EmoteStartSpeed);
 
             Assert.IsTrue(_timeline.TakeEmoteDue());
             Assert.AreEqual(RaceFinishPhase.Celebrate, _timeline.Phase);

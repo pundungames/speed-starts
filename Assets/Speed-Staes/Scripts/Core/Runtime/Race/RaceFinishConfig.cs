@@ -3,8 +3,8 @@ using UnityEngine;
 namespace SpeedStars.Core.Race
 {
     /// <summary>
-    /// Numbers of the finish sequence in one asset (Data/Config/RaceFinishConfig): the slow motion at the line, the steps the runner
-    /// takes easing off, how it stands up, how long the celebration holds the Results back and where the camera goes. All first values,
+    /// Numbers of the finish sequence in one asset (Data/Config/RaceFinishConfig): the slow motion at the line, how the runner stops and the
+    /// steps it takes doing so, how it stands up, how long the celebration holds the Results back and where the camera goes. All first values,
     /// to be tuned by feel. The field defaults are what the seeder writes once; at runtime the asset counts.
     /// </summary>
     [CreateAssetMenu(fileName = "RaceFinishConfig", menuName = "Speed Stars/Config/Race Finish")]
@@ -23,10 +23,27 @@ namespace SpeedStars.Core.Race
         [Min(0f)]
         [SerializeField] private float slowMotionReturnSeconds = 0.4f;
 
+        [Header("Easing off: how the body stops")]
+        [Tooltip("Game seconds from the line to standing still, coming over it at top speed. The sim's own stop is much longer and slides on planted feet: the body follows this instead.")]
+        [Min(0.01f)]
+        [SerializeField] private float stopSecondsFromTop = 2.1f;
+
+        [Tooltip("The same, coming over it at walking speed; in between by speed.")]
+        [Min(0.01f)]
+        [SerializeField] private float stopSecondsFromWalk = 0.7f;
+
+        [Tooltip("How the speed falls on the way: 1 = evenly, above 1 = quickly at first, gently into the stop.")]
+        [Min(0.1f)]
+        [SerializeField] private float stopCurve = 1.3f;
+
         [Header("Easing off: the steps after the line")]
-        [Tooltip("How many steps the runner still takes after the line, each further apart. Without them it would slide to a stop on still legs.")]
+        [Tooltip("How many steps the runner still takes after the line at most, each further apart. Without them it would slide to a stop on still legs.")]
         [Min(0)]
-        [SerializeField] private int stepCount = 3;
+        [SerializeField] private int stepsAfterLine = 4;
+
+        [Tooltip("No step starts later than this before the body stops (game seconds): it needs the time to land, or the legs would still be running on a standing body.")]
+        [Min(0f)]
+        [SerializeField] private float lastStepLeadSeconds = 0.35f;
 
         [Tooltip("Game seconds from the line to the first of those steps.")]
         [Min(0.05f)]
@@ -39,10 +56,6 @@ namespace SpeedStars.Core.Race
         [Tooltip("How long the key of such a step stays down (game seconds). Long enough to read as a step, short enough not to become a hold.")]
         [Min(0.02f)]
         [SerializeField] private float stepPressSeconds = 0.11f;
-
-        [Tooltip("Under this speed (m/s) the runner takes no more steps: it just walks it out.")]
-        [Min(0f)]
-        [SerializeField] private float minStepSpeed = 2f;
 
         [Tooltip("With the head further forward than this (deg: a dive through the line) no step comes until the runner is up again.")]
         [SerializeField] private float stepHeadLimit = 30f;
@@ -79,9 +92,9 @@ namespace SpeedStars.Core.Race
         [SerializeField] private float standElbow = 16f;
 
         [Header("Celebration")]
-        [Tooltip("The emote starts when the runner is this slow (m/s).")]
+        [Tooltip("The emote and the reaction start when the body is this slow (m/s). Standing: on planted feet anything faster is a slide.")]
         [Min(0f)]
-        [SerializeField] private float emoteFromSpeed = 1.5f;
+        [SerializeField] private float emoteStartSpeed = 0.01f;
 
         [Tooltip("The emote starts at the latest this long after the slow motion (real seconds), however fast the runner still is.")]
         [Min(0f)]
@@ -172,11 +185,14 @@ namespace SpeedStars.Core.Race
         public float SlowMotionScale => slowMotionScale;
         public float SlowMotionSeconds => slowMotionSeconds;
         public float SlowMotionReturnSeconds => slowMotionReturnSeconds;
-        public int StepCount => stepCount;
+        public float StopSecondsFromTop => stopSecondsFromTop;
+        public float StopSecondsFromWalk => stopSecondsFromWalk;
+        public float StopCurve => stopCurve;
+        public int StepsAfterLine => stepsAfterLine;
+        public float LastStepLeadSeconds => lastStepLeadSeconds;
         public float FirstStepGapSeconds => firstStepGapSeconds;
         public float StepGapGrowth => stepGapGrowth;
         public float StepPressSeconds => stepPressSeconds;
-        public float MinStepSpeed => minStepSpeed;
         public float StepHeadLimit => stepHeadLimit;
         public float StandFromSpeed => standFromSpeed;
         public float StandFullSpeed => standFullSpeed;
@@ -187,7 +203,7 @@ namespace SpeedStars.Core.Race
         public float StandWidth => standWidth;
         public float StandArmSwing => standArmSwing;
         public float StandElbow => standElbow;
-        public float EmoteFromSpeed => emoteFromSpeed;
+        public float EmoteStartSpeed => emoteStartSpeed;
         public float SlowdownMaxSeconds => slowdownMaxSeconds;
         public float NoEmoteSeconds => noEmoteSeconds;
         public float MaxEmoteWaitSeconds => maxEmoteWaitSeconds;

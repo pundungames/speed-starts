@@ -41,6 +41,18 @@ namespace SpeedStars.Tools.Builders
             Apply(so);
         }
 
+        /// <summary>Writes the race start and finish assets again as they load: new fields get their defaults on disk, old ones go. Values stay.</summary>
+        public static void ResaveConfigs()
+        {
+            foreach (string path in new[] { Path, RaceStartConfigSeed.Path })
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path);
+                if (asset != null) EditorUtility.SetDirty(asset);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log(OkMarker);
+        }
+
         [MenuItem("Tools/Speed Stars/Build/Race scene - add finish config (patch, no rebuild)")]
         public static void PatchRaceScene()
         {

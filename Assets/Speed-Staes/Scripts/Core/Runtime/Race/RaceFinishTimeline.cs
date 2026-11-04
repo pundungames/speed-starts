@@ -63,7 +63,7 @@ namespace SpeedStars.Core.Race
             if (Phase == RaceFinishPhase.SlowMotion && _elapsed >= _config.SlowMotionSeconds) Phase = RaceFinishPhase.Slowdown;
 
             // Also after a skip: the Results are up, the runner still gets its emote when it has stopped.
-            bool slowEnough = runnerSpeed <= _config.EmoteFromSpeed || _elapsed >= _config.SlowMotionSeconds + _config.SlowdownMaxSeconds;
+            bool slowEnough = runnerSpeed <= _config.EmoteStartSpeed || _elapsed >= _config.SlowMotionSeconds + _config.SlowdownMaxSeconds;
             if (!_emoteAsked && Phase != RaceFinishPhase.SlowMotion && slowEnough)
             {
                 _emoteAsked = true;

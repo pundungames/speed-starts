@@ -40,8 +40,11 @@ namespace SpeedStars.Bridge
         GameObject hurdlePrefab;
 
         [Header("Track")]
-        [SerializeField, Min(0.1f), Tooltip("Distance (m) between neighbouring lanes. Lanes lie on the side away from the follow camera (the camera sits to the runner's right), so no bot can hide the player.")]
+        [SerializeField, Min(0.1f), Tooltip("Distance (m) between neighbouring lanes. The lanes spread evenly around the road's middle line (where the scene put the player's runner); keep the whole field on the road.")]
         float laneSpacing = 1.2f;
+
+        [SerializeField, Min(0f), Tooltip("How much the race camera backs off for each lane between the player and the camera side, as a share of the lane width: the runners there would otherwise pass right under its lens.")]
+        float cameraBackPerLane = 0.5f;
 
         [Header("Driver")]
         [SerializeField, Min(1f), Tooltip("The key schedule is made for this multiple of the bot's target time, so a slow run still has presses left.")]
@@ -101,6 +104,11 @@ namespace SpeedStars.Bridge
         string _playerFlag = string.Empty;
         Vector3 _basePosition;
         Vector3 _laneDirection;
+        int _playerSlot;
+        int _laneCount;
+        int? _relaySlot;
+        SideFollowCamera _laneCamera;
+        float _cameraDistance;
 
         /// <summary>IRaceTraces: every racing bot's run so far, for the Analysis screen.</summary>
         public IReadOnlyList<RaceTrace> Traces
@@ -201,16 +209,41 @@ namespace SpeedStars.Bridge
         }
 
         /// <summary>
-        /// World position of a runner's lane at the start line. The player's lane choice shifts the bots: the player stays where the scene put it and the bots take the other lanes, so a
-        /// better lane number puts some of them on the camera side (negative offset). Automatic = the player nearest the camera.
+        /// World position of a bot's lane at the start line. The whole field stands around the road's middle line; the player has one slot among the others.
         /// </summary>
-        public Vector3 StartPositionOf(int runnerIndex) =>
-            _basePosition + _laneDirection * (BotLanes.BotOffset(runnerIndex, PlayerLaneSlot()) * laneSpacing);
+        public Vector3 StartPositionOf(int runnerIndex) => _basePosition + LaneOffset(BotLanes.BotSlot(runnerIndex, _playerSlot));
 
-        int PlayerLaneSlot()
+        Vector3 LaneOffset(int slot) => _laneDirection * (BotLanes.FromMiddle(slot, Mathf.Max(1, _laneCount)) * laneSpacing);
+
+        int BotsOnTheField => HasOpponents() && config ? Mathf.Min(Mathf.Max(config.BotCount, 0), config.Identities.Count) : 0;
+
+        /// <summary>
+        /// A new race: the player's lane for it, drawn unless the player chose one (the settings' lane preference), and the player's runner goes
+        /// there at once. Before the session's READY, so everybody who reads the runner's place then (its hurdles) finds the new one. The
+        /// bots follow when the round is planned. A relay has its own lanes: the player's own runner waits on the middle line.
+        /// </summary>
+        public void PrepareLanes()
         {
-            int bots = config ? Mathf.Min(Mathf.Max(config.BotCount, 0), config.Identities.Count) : 0;
-            return BotLanes.PlayerSlot(_settings != null ? _settings.LanePreference : 0, bots);
+            Initialize();
+            if (!_initialized) return;
+            bool relay = TryGetRelay(out _);
+            int bots = relay ? 0 : BotsOnTheField;
+            _laneCount = bots + 1;
+            _playerSlot = BotLanes.PlayerSlot(_settings != null ? _settings.LanePreference : 0, bots, _random.Next(_laneCount));
+            RunnerRootOffset.Of(player).SetLane(LaneOffset(_playerSlot));
+            BackCameraOff();
+        }
+
+        void BackCameraOff()
+        {
+            if (!_laneCamera)
+            {
+                Camera main = Camera.main;
+                _laneCamera = main ? main.GetComponent<SideFollowCamera>() : null;
+                if (!_laneCamera) return;
+                _cameraDistance = _laneCamera.distance;
+            }
+            _laneCamera.distance = _cameraDistance + _playerSlot * laneSpacing * cameraBackPerLane;
         }
 
         /// <summary>
@@ -238,7 +271,7 @@ namespace SpeedStars.Bridge
             GameObject root = Instantiate(runnerPrefab, holder);
             root.name = "Bot " + (index + 1);
 
-            var bot = new Bot { Root = root, Start = StartPositionOf(index) };
+            var bot = new Bot { Root = root, Start = _basePosition }; // the middle line; its lane comes with each round
             bot.Input = root.GetComponentInChildren<RunnerInput>(true);
             bot.Body = root.GetComponentInChildren<RunnerBody>(true);
             if (bot.Body == null || bot.Input == null)
@@ -291,6 +324,7 @@ namespace SpeedStars.Bridge
         {
             if (!_runnersReady) { _roundPending = true; return; }
             _roundPending = false;
+            if (_laneCount == 0) PrepareLanes(); // a scene that starts rounds without the session's request
             _racing = false;
             _playerFinished = false;
             _playerTime = 0.0;
@@ -331,7 +365,8 @@ namespace SpeedStars.Bridge
                 bot.PrevDistance = 0f;
                 bot.Active = true;
                 bot.Root.SetActive(true);
-                bot.Body.ResetRun(); // sim to zero, back on its lane, input queue cleared
+                bot.Body.ResetRun(); // sim to zero, back on the middle line, input queue cleared
+                RunnerRootOffset.Of(bot.Body).SetLane(LaneOffset(BotLanes.BotSlot(lanes[i], _playerSlot)));
                 Dress(bot);
             }
             for (int i = 0; i < _bots.Count; i++)
@@ -547,9 +582,11 @@ namespace SpeedStars.Bridge
         internal Vector3 RelayLanePosition(int? other, int others)
         {
             Initialize();
-            int slot = BotLanes.PlayerSlot(_settings != null ? _settings.LanePreference : 0, others);
-            int offset = other.HasValue ? BotLanes.BotOffset(other.Value, slot) : 0;
-            return _basePosition + _laneDirection * (offset * laneSpacing);
+            // Relay runners are built once, so the player's team keeps its lane: drawn the first time, unless the player chose one.
+            if (!_relaySlot.HasValue)
+                _relaySlot = BotLanes.PlayerSlot(_settings != null ? _settings.LanePreference : 0, others, _random.Next(others + 1));
+            int slot = other.HasValue ? BotLanes.BotSlot(other.Value, _relaySlot.Value) : _relaySlot.Value;
+            return _basePosition + _laneDirection * (BotLanes.FromMiddle(slot, others + 1) * laneSpacing);
         }
 
         SideFollowCamera _camera;

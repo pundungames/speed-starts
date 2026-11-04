@@ -69,10 +69,29 @@ namespace SpeedStars.Tests.RaceBots
         // ---------------------------------------------------------------- lanes
 
         [Test]
-        public void AutomaticLane_KeepsThePlayerOnSlotZero_AndTheBotsInOrderBehindIt()
+        public void AutomaticLane_IsTheDrawnSlot_InsideTheField()
         {
-            Assert.AreEqual(0, BotLanes.PlayerSlot(0, 5));
-            for (int i = 0; i < 5; i++) Assert.AreEqual(i + 1, BotLanes.BotOffset(i, 0));
+            Assert.AreEqual(3, BotLanes.PlayerSlot(0, 5, 3));
+            Assert.AreEqual(5, BotLanes.PlayerSlot(0, 5, 99));
+            Assert.AreEqual(0, BotLanes.PlayerSlot(0, 5, -1));
+            Assert.AreEqual(0, BotLanes.PlayerSlot(0, 0, 3), "alone on the track there is one slot");
+        }
+
+        [Test]
+        public void TheField_StandsAroundTheMiddleOfTheRoad_WhicheverSlotThePlayerHas()
+        {
+            const int bots = 5;
+            int lanes = bots + 1;
+            for (int player = 0; player < lanes; player++)
+            {
+                var offsets = Enumerable.Range(0, bots).Select(i => BotLanes.FromMiddle(BotLanes.BotSlot(i, player), lanes)).ToList();
+                offsets.Add(BotLanes.FromMiddle(player, lanes));
+                Assert.AreEqual(0f, offsets.Sum(), 1e-5f, "the whole field is centred, not just some of it");
+                Assert.AreEqual(-offsets.Max(), offsets.Min(), 1e-5f);
+                Assert.LessOrEqual(offsets.Max(), (lanes - 1) * 0.5f);
+                CollectionAssert.AllItemsAreUnique(offsets);
+            }
+            Assert.AreEqual(0f, BotLanes.FromMiddle(0, 1), "alone: the very middle");
         }
 
         [Test]
@@ -81,9 +100,9 @@ namespace SpeedStars.Tests.RaceBots
             const int bots = 5;
             for (int preference = 1; preference <= bots + 1; preference++)
             {
-                int slot = BotLanes.PlayerSlot(preference, bots);
+                int slot = BotLanes.PlayerSlot(preference, bots, 0);
                 Assert.AreEqual(preference - 1, slot);
-                var taken = Enumerable.Range(0, bots).Select(i => BotLanes.BotOffset(i, slot) + slot).ToList();
+                var taken = Enumerable.Range(0, bots).Select(i => BotLanes.BotSlot(i, slot)).ToList();
                 CollectionAssert.AllItemsAreUnique(taken);
                 CollectionAssert.DoesNotContain(taken, slot, "no bot stands in the player's lane");
                 Assert.GreaterOrEqual(taken.Min(), 0);
@@ -94,8 +113,8 @@ namespace SpeedStars.Tests.RaceBots
         [Test]
         public void ALaneChoicePastTheLastLane_IsTheLastLane()
         {
-            Assert.AreEqual(5, BotLanes.PlayerSlot(99, 5));
-            Assert.AreEqual(0, BotLanes.PlayerSlot(3, 0));
+            Assert.AreEqual(5, BotLanes.PlayerSlot(99, 5, 0));
+            Assert.AreEqual(0, BotLanes.PlayerSlot(3, 0, 0));
         }
     }
 }

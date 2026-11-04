@@ -395,6 +395,73 @@ namespace SpeedStars.PlayTests
             }
         }
 
+        /// <summary>Race starts in chosen lanes: the opening camera, the swing, then the race camera on the run, with the field around the runner.</summary>
+        [UnityTest]
+        public IEnumerator Shot_RaceStartLanes()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            int[] lanes = { 1, 2, 3, 4, 6 };
+            const float OpeningSeconds = 0.4f;
+            const float SwingShotSeconds = 0.9f;
+            const float PressSeconds = 0.13f;
+            const int Steps = 9;
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            IRaceSelection selection = ProjectContext.Instance.Container.Resolve<IRaceSelection>();
+            RaceEventId selectedBefore = selection.Selected;
+            PlayerProgress progress = ProjectContext.Instance.Container.Resolve<ProgressRepository>().Current;
+            int laneBefore = progress.LanePreference;
+            try
+            {
+                foreach (RaceEventDefinition definition in ProjectContext.Instance.Container.Resolve<RaceEventCatalog>().GetEvents())
+                    if (definition.IsPlayable && definition.HasOpponents && definition.HurdleCount == 0 && !definition.IsRelay && !definition.Id.Value.Contains("day"))
+                    {
+                        selection.Select(definition.Id);
+                        break;
+                    }
+                yield return LoadScene(RaceScene);
+                MonoBehaviour adapter = null;
+                foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>(true))
+                    if (behaviour is IRaceSession) { adapter = behaviour; break; }
+                Assert.IsNotNull(adapter, "No IRaceSession in the Race scene.");
+                var session = (IRaceSession)adapter;
+                var signal = (IRaceStartSignal)adapter;
+                object body = adapter.GetType().GetProperty("PlayerBody").GetValue(adapter);
+                object input = body.GetType().GetField("input").GetValue(body);
+                System.Reflection.MethodInfo inject = input.GetType().GetMethod("Inject");
+                yield return new WaitForSecondsRealtime(OpeningSeconds);
+
+                foreach (int lane in lanes)
+                {
+                    progress.LanePreference = lane;
+                    session.RequestStart(new RaceStartRequest(selection.Selected, session.TargetDistance));
+                    yield return new WaitForSecondsRealtime(OpeningSeconds);
+                    yield return Capture(dir, $"Race_lanes_{lane}_0_opening");
+                    yield return new WaitForSecondsRealtime(SwingShotSeconds);
+                    yield return Capture(dir, $"Race_lanes_{lane}_1_swing");
+                    yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.Go, "GO", 15f);
+                    int leg = 0;
+                    for (int step = 0; step < Steps; step++)
+                    {
+                        inject.Invoke(input, new object[] { leg, true, Time.timeAsDouble });
+                        yield return new WaitForSeconds(PressSeconds);
+                        inject.Invoke(input, new object[] { leg, false, Time.timeAsDouble });
+                        yield return new WaitForSeconds(PressSeconds);
+                        leg = 1 - leg;
+                    }
+                    yield return Capture(dir, $"Race_lanes_{lane}_2_race_camera");
+                }
+            }
+            finally
+            {
+                progress.LanePreference = laneBefore;
+                if (!selectedBefore.IsEmpty) selection.Select(selectedBefore);
+                saveFiles.Restore();
+            }
+        }
+
         /// <summary>The first race's tutorial step by step on a real run.</summary>
         [UnityTest]
         public IEnumerator Shot_RaceTutorial()

@@ -39,6 +39,26 @@ namespace SpeedStars.Core.Race
         [Range(0.05f, 1f)]
         [SerializeField] private float falseStartTimeScale = 0.45f;
 
+        [Header("Opening camera (each race, so the player finds their runner in its lane)")]
+        [Tooltip("Where the camera opens, from the runner's feet (m): x = the runner's right, y = up, z = ahead of the runner.")]
+        [SerializeField] private Vector3 introCameraOffset = new Vector3(2.3f, 1.05f, 3.3f);
+
+        [Tooltip("The height on the runner the camera looks at there (m above the feet). High = the runner stands low in the picture, under the banner.")]
+        [Min(0f)]
+        [SerializeField] private float introLookHeight = 1.25f;
+
+        [Tooltip("Vertical field of view there (deg).")]
+        [Range(10f, 90f)]
+        [SerializeField] private float introFieldOfView = 38f;
+
+        [Tooltip("How long the camera stays there (real seconds from READY). GO ends it at the latest.")]
+        [Min(0f)]
+        [SerializeField] private float introHoldSeconds = 1.1f;
+
+        [Tooltip("How long it takes to swing round to the race camera (real seconds).")]
+        [Min(0.01f)]
+        [SerializeField] private float introSwingSeconds = 1f;
+
         [Header("READY")]
         [Tooltip("READY slides in from above and settles (seconds).")]
         [Min(0.01f)]
@@ -177,6 +197,11 @@ namespace SpeedStars.Core.Race
         public float HoldShakeSeconds => holdShakeSeconds;
         public float HoldCycleSeconds => holdCycleSeconds;
         public float FinishWordSeconds => finishWordSeconds;
+        public Vector3 IntroCameraOffset => introCameraOffset;
+        public float IntroLookHeight => introLookHeight;
+        public float IntroFieldOfView => introFieldOfView;
+        public float IntroHoldSeconds => introHoldSeconds;
+        public float IntroSwingSeconds => introSwingSeconds;
         public float GoSeconds => goSeconds;
         public float GoOpaqueSeconds => goOpaqueSeconds;
         public float GoScaleFrom => goScaleFrom;

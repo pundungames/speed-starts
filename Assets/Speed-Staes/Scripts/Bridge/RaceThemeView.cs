@@ -34,6 +34,7 @@ namespace SpeedStars.Bridge
         private IThemeService _themes;
         private bool _subscribed;
         private int _builtSlot = -1;
+        private float? _roadX;
 
         [Inject]
         public void Construct(IThemeService themes)
@@ -107,7 +108,9 @@ namespace SpeedStars.Bridge
 
             Transform runner = body != null ? body.transform : null;
             float z = runner != null ? runner.position.z : 0f;
-            float shiftX = runner != null ? runner.position.x - authoredRunnerX : 0f;
+            // The road stays where the scene's runner first stood: a runner on another lane does not take the road with it.
+            if (!_roadX.HasValue && runner != null) _roadX = runner.position.x;
+            float shiftX = _roadX.HasValue ? _roadX.Value - authoredRunnerX : 0f;
 
             if (themedIndex < 0)
             {
