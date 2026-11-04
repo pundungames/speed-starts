@@ -8,8 +8,8 @@ namespace SpeedStars.Meta.Themes
     /// <summary>
     /// Active (saved) and shown (previewed) world theme, ownership and purchases (Cash, or Purple Gems for premium themes). Save: <c>PlayerProgress</c>;
     /// prices and currency: <c>ThemeCatalog</c>. The default theme and any theme with price 0 are always owned (free). Buying spends the price currency through the economy ledger and is
-    /// idempotent: an owned theme is never charged again. <c>allThemesOwned</c> is the development switch (Editor /
-    /// Development Build): every theme counts as owned; the caller decides, so tests control it.
+    /// idempotent: an owned theme is never charged again. <c>allThemesOwned</c>: every theme counts as owned, for tests; the game
+    /// passes false, the Editor included, because it would hide the prices.
     /// </summary>
     public sealed class ThemeService : IThemeService
     {

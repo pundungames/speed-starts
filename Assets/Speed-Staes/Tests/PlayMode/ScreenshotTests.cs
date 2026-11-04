@@ -767,8 +767,8 @@ namespace SpeedStars.PlayTests
         }
 
         /// <summary>
-        /// Theme select on the premium theme: gold frames while it is only previewed, red once it is the theme in use (the
-        /// editor owns every theme). The previous active theme is put back so later shots are unchanged.
+        /// Theme select on the premium theme: gold frames while it is only previewed, red once it is the theme in use (only
+        /// shot when the save owns it). The previous active theme is put back so later shots are unchanged.
         /// </summary>
         private static IEnumerator ShootPremiumTheme(string dir, HomeScreenView home, DiContainer container)
         {

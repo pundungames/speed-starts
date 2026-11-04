@@ -169,7 +169,7 @@ namespace SpeedStars.Installers
         {
             var c = context.Container;
             return new ThemeService(c.Resolve<ThemeCatalog>(), c.Resolve<ProgressRepository>(), c.Resolve<IEconomyLedger>(),
-                Application.isEditor || Debug.isDebugBuild);
+                allThemesOwned: false); // themes have prices now (user, 04.11): the Editor sells them like the game does
         }
 
         private ClockService CreateClock(InjectContext context)
