@@ -55,6 +55,18 @@ namespace SpeedStars.Core.Race
             Enter(RaceStartPhase.Idle);
         }
 
+        /// <summary>
+        /// A runner moved before GO: the countdown stops until <see cref="Begin"/>, and time alone never reaches GO from here.
+        /// False when nothing is counting (GO was already given, or the sequence is idle): that press is no false start.
+        /// </summary>
+        public bool FalseStart()
+        {
+            if (!IsCounting) return false;
+            _elapsed = 0f;
+            Enter(RaceStartPhase.FalseStart);
+            return true;
+        }
+
         /// <summary>Advances the countdown by <paramref name="deltaSeconds"/>; ignored when not counting or not positive.</summary>
         public void Tick(float deltaSeconds)
         {

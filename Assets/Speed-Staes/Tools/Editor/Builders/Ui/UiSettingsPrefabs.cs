@@ -939,6 +939,14 @@ namespace SpeedStars.Tools.Builders
     {
         public const string OkMarker = "SETTINGS_V2_REBUILD_OK";
 
+        /// <summary><c>-executeMethod SpeedStars.Tools.Builders.SettingsV2Rebuild.AddEmotePriceIcon</c>: the Cash diamond on the emote card.</summary>
+        [UnityEditor.MenuItem("Tools/Speed Stars/Build/Emote card - add the Cash icon to the price")]
+        public static void AddEmotePriceIcon()
+        {
+            UiEmotePrefabs.AddPriceIconToCard();
+            UnityEditor.AssetDatabase.SaveAssets();
+        }
+
         /// <summary><c>-executeMethod SpeedStars.Tools.Builders.SettingsV2Rebuild.RemoveDeadRows</c>: see <see cref="UiSettingsPrefabs.RemoveDeadRowsFromPrefab"/>.</summary>
         [UnityEditor.MenuItem("Tools/Speed Stars/Build/Settings - remove the rows that do nothing")]
         public static void RemoveDeadRows()

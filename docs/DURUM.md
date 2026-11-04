@@ -8,7 +8,7 @@ MOD: hızlı
 Son güncelleme: 2026-11-04 · main 1b5902cb (push kullanıcıda)
 **Kullanıcı 04.11: hızlı mod. Küçük iş agent + worktree + kopya olmadan, doğrudan ana klasörde.** MCP bu oturumda yoktu: prefab/sahne için oturumu yeniden aç.
 **Bugün main'e girenler (kopyada EditMode 1238, PlayMode 58 + 7 görüntü testi atlandı):** T-103 Edit modda çentik önizlemesi (Tools → Speed Stars → Notch Preview) · T-104 kostüm kartında fiyat, normal kıyafet Nakit ile alınır · T-105 düğme küçük kalma ve kart şişme (`UiPunch`) · T-106 Results Practice çalışır, Nakit kartı okunur, "Antrenman Alanı" → "Practice".
-**Kullanıcıdan bekleyen:** tema fiyatları (öneri: Egypt 2.500, Rome 5.000, Pirate Sea 7.500 Nakit, Sky Islands 50 Mor Mücevher; Standard City bedava; sayı onaysız yazılmaz).
+**04.11 ek:** tema fiyatları (kullanıcı onayı): Egypt 2.500, Rome 5.000, Pirate Sea 7.500 Nakit, Sky Islands 50 Mor Mücevher, Standard City bedava · GO'dan önce basış = FAIL: oyun yavaşlar, koşucu düşer, geri sayım baştan; bilet yanmaz (kullanıcı) · düğmede başlayan parmak adım sayılmaz (`RunnerPressGate`) · Ayarlar'dan Music, Language, Privacy, Terms, Support kalktı (mağaza öncesi Privacy adresi gerekecek) · `Tools → Speed Stars → Delete Save`.
 
 ## Faz 8 (cila) — bugün main'e girenler (son kopya koşusu yeşil: EditMode 1198, PlayMode 52 + 7 atlanan, Zenject)
 - T-081..T-090: ok tuşları, regresyon, ekonomi v2 (ADR `ADR-2026-11-03-ekonomi-v2-referans.md`), 200m/400m/60mH/400mH, ayarlar v2,

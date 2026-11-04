@@ -245,6 +245,9 @@ namespace SpeedStars.Tools.Builders
         /// T-106: writes the Practice event's display name from the seed table into the EXISTING asset (seeding skips existing
         /// assets). Touches that one field of that one asset and saves only when the name differs, so a second run changes nothing.
         /// </summary>
+        [MenuItem("Tools/Speed Stars/Build/Apply theme prices")]
+        public static void ApplyThemePrices() => ThemeCatalogSeed.ApplyPrices(ThemeCatalogPath);
+
         [MenuItem("Tools/Speed Stars/Build/Apply Practice event name")]
         public static void ApplyPracticeEventName()
         {

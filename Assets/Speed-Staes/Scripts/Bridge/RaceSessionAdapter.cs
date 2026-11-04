@@ -40,6 +40,8 @@ namespace SpeedStars.Bridge
         readonly System.Random _random = new System.Random();
         RaceStartSequence _sequence;
         RaceStartConfig _fallbackConfig;
+        float _falseStartLeft;
+        float _timeScaleBeforeFail = 1f;
 
         public RaceSessionState State => _state;
         public float TargetDistance => race ? race.raceDistance : 0f;
@@ -49,6 +51,7 @@ namespace SpeedStars.Bridge
             get
             {
                 if (_state == RaceSessionState.Finished) return _outcome.TimeSeconds;
+                if (IsFailing) return 0.0; // the fall is made of presses, which start the runner's own clock
                 return race ? race.RaceTime : 0.0;
             }
         }
@@ -63,7 +66,7 @@ namespace SpeedStars.Bridge
             }
         }
 
-        public float SpeedMetersPerSecond => Relay ? bots.Relay.PlayerSpeed : body && body.Sim != null ? body.Sim.Speed : 0f;
+        public float SpeedMetersPerSecond => IsFailing ? 0f : Relay ? bots.Relay.PlayerSpeed : body && body.Sim != null ? body.Sim.Speed : 0f;
 
         public float Energy01
         {
@@ -95,6 +98,36 @@ namespace SpeedStars.Bridge
         /// <summary>The current race is a relay: distance, speed and energy come from the player's team, the finish from <see cref="FinishRelay"/>.</summary>
         bool Relay => bots && bots.RelayActive;
 
+        /// <summary>READY or SET is running: a press now is a false start.</summary>
+        public bool IsCountingDown => _sequence != null && _sequence.IsCounting;
+
+        /// <summary>A false start is playing: the runner is falling and FAIL is up. No press counts until the countdown is back.</summary>
+        public bool IsFailing => _falseStartLeft > 0f;
+
+        /// <summary>
+        /// A press before GO (RunnerPressGate): the game slows down, the runner falls (its own dive, both feet down: the gate presses them)
+        /// and FAIL shows; then everybody is back on the line and the countdown starts over. No ticket and no reward moves, and the race
+        /// never counts as started. False when no countdown is running.
+        /// </summary>
+        public bool ReportFalseStart()
+        {
+            if (_sequence == null || !_sequence.FalseStart()) return false;
+            RaceStartConfig config = StartConfig();
+            _falseStartLeft = config.FalseStartSeconds;
+            _timeScaleBeforeFail = Time.timeScale;
+            Time.timeScale = config.FalseStartTimeScale;
+            if (body) body.acceptInput = true;
+            return true;
+        }
+
+        /// <summary>Back to normal speed. Every way out of FAIL comes through here, so the slow motion cannot outlive it.</summary>
+        void CancelFail()
+        {
+            if (!IsFailing) return;
+            _falseStartLeft = 0f;
+            Time.timeScale = _timeScaleBeforeFail;
+        }
+
         /// <summary>The event of the current race (empty before the first RequestStart). The opponents scale to the player's best of it.</summary>
         public RaceEventId CurrentEventId => _eventId;
 
@@ -102,7 +135,12 @@ namespace SpeedStars.Bridge
         public event Action<RaceOutcome> Finished;
         public event Action<RaceStartPhase> StartPhaseChanged;
 
-        void Awake() => Initialize();
+        void Awake()
+        {
+            Initialize();
+            if (!GetComponent<RunnerPressGate>()) gameObject.AddComponent<RunnerPressGate>();
+        }
+
         void OnEnable() => Initialize();
 
         /// <summary>Watch Replay: hands the Results screen the race's replay (until RaceSceneInstaller binds IRaceReplay itself).</summary>
@@ -115,6 +153,7 @@ namespace SpeedStars.Bridge
         void OnDisable()
         {
             _sequence?.Cancel(); // scene change / disable: no countdown survives, views drop their state
+            CancelFail();
             if (_subscribed && body)
             {
                 body.RunReset -= OnRunReset;
@@ -145,6 +184,12 @@ namespace SpeedStars.Bridge
             float distance = practice ? practice.AdjustDistance(request.EventId, request.DistanceMeters) : request.DistanceMeters;
             if (distance > 0f) race.raceDistance = distance;
 
+            StartOver();
+        }
+
+        /// <summary>Everybody back on the line, then the countdown.</summary>
+        void StartOver()
+        {
             _requesting = true;
             _state = RaceSessionState.Ready;
             race.ResetRace(); // the runner reopens its input on a reset; the countdown closes it again right below
@@ -158,6 +203,7 @@ namespace SpeedStars.Bridge
         void BeginCountdown()
         {
             if (body) body.acceptInput = false;
+            CancelFail();
             // A fresh sequence per start: the config's numbers apply, and a pending Go of the old one cannot fire.
             if (_sequence != null) _sequence.PhaseChanged -= OnSequencePhase;
             RaceStartConfig config = StartConfig();
@@ -189,8 +235,20 @@ namespace SpeedStars.Bridge
             if (_sequence != null && _sequence.IsCounting)
                 _sequence.Tick(Mathf.Min(Time.deltaTime, StartConfig().MaxFrameSeconds));
 
+            if (IsFailing)
+            {
+                // Real time: the slow motion must not stretch its own length.
+                _falseStartLeft -= Mathf.Min(Time.unscaledDeltaTime, StartConfig().MaxFrameSeconds);
+                if (!IsFailing)
+                {
+                    Time.timeScale = _timeScaleBeforeFail;
+                    if (race) StartOver();
+                }
+            }
+
             // Ready -> Running: the runner's own state is the source.
-            if (_state == RaceSessionState.Ready && race && race.Current == RaceController.State.Running)
+            // Not during FAIL: the fall is made of presses, and the clock counts a press as the start of the race.
+            if (_state == RaceSessionState.Ready && !IsFailing && race && race.Current == RaceController.State.Running)
                 BeginRunning();
         }
 
@@ -233,6 +291,7 @@ namespace SpeedStars.Bridge
             }
             _outcome = new RaceOutcome(_eventId, seconds, TargetDistance, rank, runnerCount);
             _sequence?.Cancel(); // a finish during the countdown (dev key): GO must not reopen input under Results
+            CancelFail();
             // After RunnerBody set acceptInput = true (it runs before raising RunReset): keep the runner still under Results.
             if (body) body.acceptInput = false;
             Finished?.Invoke(_outcome);

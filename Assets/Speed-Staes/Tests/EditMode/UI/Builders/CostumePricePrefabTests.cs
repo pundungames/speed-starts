@@ -17,6 +17,16 @@ namespace SpeedStars.Tests.UI.Builders
         private const string ScreenPath = "Assets/Speed-Staes/UI/Screens/CosmeticsScreen.prefab";
 
         [Test]
+        public void EmoteCard_PriceCarriesTheCashIcon_SoItShowsAndHidesWithThePrice()
+        {
+            GameObject root = Load("Assets/Speed-Staes/UI/Rows/EmoteCard.prefab");
+            Transform icon = root.transform.Find("Price/CashIcon");
+            Assert.IsNotNull(icon, "EmoteCard has no Price/CashIcon");
+            var image = new SerializedObject(icon.GetComponent("Image"));
+            Assert.IsNotNull(image.FindProperty("m_Sprite").objectReferenceValue, "the Cash icon has no sprite");
+        }
+
+        [Test]
         public void ItemCard_HasThePriceStrip_AndEveryPriceFieldIsBoundInsideThePrefab()
         {
             GameObject root = Load(CardPath);

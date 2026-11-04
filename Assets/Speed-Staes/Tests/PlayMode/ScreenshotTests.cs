@@ -244,10 +244,46 @@ namespace SpeedStars.PlayTests
                 yield return ShootStart(dir, view, "Race_start_04_hold", RaceStartPhase.Set, compress + config.HoldCycleSeconds * 1.25f);
                 yield return ShootStart(dir, view, "Race_start_05_release", RaceStartPhase.Go, go * 0.27f);
                 yield return ShootStart(dir, view, "Race_start_06_clear", RaceStartPhase.Go, go * 0.93f);
+                yield return ShootStart(dir, view, "Race_start_07_false_start", RaceStartPhase.FalseStart, compress);
             }
             finally
             {
                 Time.timeScale = previousScale;
+                saveFiles.Restore();
+            }
+        }
+
+        /// <summary>The real thing, not a preview: a press before GO, then the slowed fall under FAIL at two moments.</summary>
+        [UnityTest]
+        public IEnumerator Shot_FalseStartFall()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            try
+            {
+                yield return LoadScene(RaceScene);
+                MonoBehaviour session = null;
+                IRaceStartSignal signal = null;
+                foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>(true))
+                    if (behaviour is IRaceStartSignal found) { session = behaviour; signal = found; break; }
+                Assert.IsNotNull(signal, "No IRaceStartSignal in the Race scene.");
+                yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.Ready || signal.StartPhase == RaceStartPhase.Set, "the countdown");
+
+                object body = session.GetType().GetProperty("PlayerBody").GetValue(session);
+                object input = body.GetType().GetField("input").GetValue(body);
+                input.GetType().GetMethod("Inject").Invoke(input, new object[] { 0, true, Time.timeAsDouble });
+                yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.FalseStart, "FAIL");
+
+                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Capture(dir, "Race_false_start_1");
+                yield return new WaitForSecondsRealtime(0.6f);
+                yield return Capture(dir, "Race_false_start_2");
+            }
+            finally
+            {
                 saveFiles.Restore();
             }
         }
@@ -390,6 +426,15 @@ namespace SpeedStars.PlayTests
                 yield return Capture(dir, "Home_costume_presets");
 
                 yield return Tap(RequireField<Button>(dropdown, "bar"), "preset bar (close)");
+
+                CostumeTabView emoteTab = null;
+                foreach (CostumeTabView view in RequireField<CostumeTabView[]>(screen, "tabs"))
+                    if (view != null && view.Tab == CostumeTab.Emote) emoteTab = view;
+                Assert.IsNotNull(emoteTab, "Emote tab view is not bound");
+                yield return Tap(RequireField<Button>(emoteTab, "button"), "Emote tab");
+                yield return Settle();
+                yield return Capture(dir, "Home_costume_emote");
+
                 yield return Tap(CloseButtonOf(screen), "cosmeticsScreen Back");
                 yield return WaitClosed(screen, "cosmeticsScreen");
             }

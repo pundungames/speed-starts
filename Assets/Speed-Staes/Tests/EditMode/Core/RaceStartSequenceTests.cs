@@ -26,6 +26,37 @@ namespace SpeedStars.Tests.RaceStart
         }
 
         [Test]
+        public void FalseStart_DuringTheCountdown_StopsIt_AndOnlyBeginStartsItOver()
+        {
+            RaceStartSequence sequence = Make();
+            sequence.Begin();
+
+            Assert.IsTrue(sequence.FalseStart());
+            Assert.AreEqual(RaceStartPhase.FalseStart, sequence.Phase);
+            Assert.IsFalse(sequence.IsCounting);
+
+            sequence.Tick(100f);
+            Assert.AreEqual(RaceStartPhase.FalseStart, sequence.Phase, "time alone never reaches GO after a false start");
+            CollectionAssert.DoesNotContain(_events, RaceStartPhase.Go);
+
+            sequence.Begin();
+            Assert.AreEqual(RaceStartPhase.Ready, sequence.Phase);
+        }
+
+        [Test]
+        public void FalseStart_AfterGoOrWhileIdle_IsRefused()
+        {
+            RaceStartSequence sequence = Make();
+            Assert.IsFalse(sequence.FalseStart(), "idle");
+
+            sequence.Begin();
+            sequence.Tick(100f);
+            Assert.AreEqual(RaceStartPhase.Go, sequence.Phase);
+            Assert.IsFalse(sequence.FalseStart(), "a press after GO is a step");
+            Assert.AreEqual(RaceStartPhase.Go, sequence.Phase);
+        }
+
+        [Test]
         public void New_IsIdle_AndTickDoesNothing()
         {
             RaceStartSequence sequence = Make();

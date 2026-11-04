@@ -23,6 +23,7 @@ namespace SpeedStars.UI.Race
         private const string ReadyWord = "READY";
         private const string SetWord = "SET";
         private const string GoWord = "GO!";
+        private const string FalseStartWord = "FAIL";
 
         [Tooltip("RaceStartConfig asset: motion numbers, colours, group scale.")]
         [SerializeField] private RaceStartConfig config;
@@ -115,7 +116,7 @@ namespace SpeedStars.UI.Race
             wordText.outlineWidth = config.OutlineWidth;
             wordText.outlineColor = config.OutlineColor;
             if (wordText.font != null && wordText.font.atlasPopulationMode == AtlasPopulationMode.Dynamic)
-                wordText.font.TryAddCharacters(ReadyWord + SetWord + GoWord);
+                wordText.font.TryAddCharacters(ReadyWord + SetWord + GoWord + FalseStartWord);
         }
 
         private void Unsubscribe()
@@ -131,6 +132,7 @@ namespace SpeedStars.UI.Race
             if (phase == RaceStartPhase.Ready) _sfx.Play(SfxId.CountdownReady);
             else if (phase == RaceStartPhase.Set) _sfx.Play(SfxId.CountdownSet);
             else if (phase == RaceStartPhase.Go) _sfx.Play(SfxId.CountdownGo);
+            else if (phase == RaceStartPhase.FalseStart) _sfx.Play(SfxId.Denied);
         }
 
         /// <summary>Starts the motion of a phase from its first frame, replacing whatever was playing.</summary>
@@ -146,7 +148,8 @@ namespace SpeedStars.UI.Race
                 Hide();
                 return;
             }
-            wordText.text = phase == RaceStartPhase.Ready ? ReadyWord : phase == RaceStartPhase.Set ? SetWord : GoWord;
+            wordText.text = phase == RaceStartPhase.Ready ? ReadyWord : phase == RaceStartPhase.Set ? SetWord
+                : phase == RaceStartPhase.FalseStart ? FalseStartWord : GoWord;
             Apply(_motion.Sample(phase, 0f));
         }
 
@@ -206,15 +209,16 @@ namespace SpeedStars.UI.Race
             textRoot.localScale = new Vector3(pose.TextScale.x, pose.TextScale.y, 1f);
             effectsRoot.localScale = new Vector3(pose.EffectsScale, pose.EffectsScale, 1f);
 
-            // READY / SET: navy on the cream banner; GO!: red with the navy outline.
-            Color fill = _phase == RaceStartPhase.Go ? config.GoColor : config.ReadySetColor;
+            // READY / SET: navy on the cream banner; GO! and FAIL: red with the navy outline.
+            bool red = _phase == RaceStartPhase.Go || _phase == RaceStartPhase.FalseStart;
+            Color fill = red ? config.GoColor : config.ReadySetColor;
             fill.a *= pose.TextAlpha;
             wordText.color = fill;
             // The TMP outline is one pass under the fill (no stacked copies), so it fades with the word's own alpha.
             Color outline = config.OutlineColor;
             outline.a *= pose.TextAlpha;
             // Navy words on cream need no outline (the approved art has none); stacked navy copies would only fatten the letters.
-            if (_phase != RaceStartPhase.Go && !config.ReadySetOutline) outline.a = 0f;
+            if (!red && !config.ReadySetOutline) outline.a = 0f;
             wordText.outlineColor = outline;
 
             SetAlpha(impactImages, pose.ImpactAlpha);
