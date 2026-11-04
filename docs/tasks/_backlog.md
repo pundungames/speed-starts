@@ -23,3 +23,5 @@
 ## Test kapsamasi bosluklari
 - [builder] Her RebuildAll prefab içi fileID'leri yeniden üretiyor (her build binlerce satır diff) → var olan prefab'ı yerinde güncelleyen builder ya da sabit fileID; o zamana kadar sahne + prefab'lar aynı build'den commit'lenir (28.10)
 - [emote] emote fiyatlari yer tutucu (Nakit); gercek fiyatlar karara bagli (30.10)
+- [ ] [gorsel] Results `GemReward/Label` ("+3 Purple Gems"): zeminsiz, kontur 0.75, Nakit karti gibi okunmuyor olabilir; `PersonalBest` zemini + kontursuz yazi + `purple_gem_icon` (T-106 kalibi; MCP ile 1 dk) (04.11)
+- [ ] [input] Butun Selectable'lar Navigation=Automatic: basilan dugme secili kalir, ok/Enter tuslari UI'da gezer; dokunmatik oyunda Navigation=None dusunulebilir (04.11)
