@@ -32,8 +32,9 @@ namespace SpeedStars.Tools.Editor
     }
 
     /// <summary>
-    /// Safety net: before any editor save the driven preview anchors are dropped (so no inset value can reach a scene or
-    /// prefab file), and the preview is put back right after.
+    /// Unity serializes driven anchors as (0,0), so the preview must be dropped whenever the scene is serialized: before any
+    /// editor save (here) and before entering Play mode (the play-entry scene backup does not go through OnWillSaveAssets).
+    /// The preview is put back right after.
     /// </summary>
     public sealed class SafeAreaPreviewSaveGuard : AssetModificationProcessor
     {
@@ -43,6 +44,22 @@ namespace SpeedStars.Tools.Editor
             SafeAreaFitter.SuspendPreviewForSave();
             EditorApplication.delayCall += SafeAreaFitter.ResumePreviewAfterSave;
             return paths;
+        }
+    }
+
+    /// <summary>Drops the preview when Play mode is about to back the scene up, and brings it back on return to Edit mode.</summary>
+    [InitializeOnLoad]
+    public static class SafeAreaPreviewPlayGuard
+    {
+        static SafeAreaPreviewPlayGuard()
+        {
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingEditMode) SafeAreaFitter.SuspendPreviewForSave();
+            else if (state == PlayModeStateChange.EnteredEditMode) SafeAreaFitter.ResumePreviewAfterSave();
         }
     }
 }

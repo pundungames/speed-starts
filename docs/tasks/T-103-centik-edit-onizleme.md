@@ -46,8 +46,8 @@ Prefab/sahne/asset dosyasina YAZMA (testin gecici dosyasi haric); Unity/test CAL
 - Prefab modunda (prefab stage) onizleme; dikey kenarlar
 
 ## Calisma notu
-- Fitter `[ExecuteAlways]`; Edit modda anchor'lar DrivenRectTransformTracker ile surulur, OnDisable'da birakilip tasarim anchor'lari geri yazilir; Edit'te EditorApplication.update ile yoklanir.
-- Toggle: `Tools/Speed Stars/Notch Preview (Edit Mode)` (EditorPrefs `SpeedStars.SafeAreaEditPreview`, varsayilan acik); `SafeAreaFitter.SetEditorPreview` aktif fitter'lari hemen yeniler; Play bayragi yok sayar.
-- Guvenlik agi: `SafeAreaPreviewSaveGuard` (AssetModificationProcessor) kayittan once surulen anchor'lari birakir, sonra geri koyar (Unity surulen degeri yine de yazarsa diye).
-- Testler `SafeAreaEditPreviewTests` (6 test; kayit testi gecici prefab'i `Assets/_T103Temp`'e yazip siler). Calistirilmadi.
-- Suphe: surulen RectTransform degerlerinin kayda girmedigi kesin degil (layout group'larda surulen degerlerin dosyaya yazildigi gorulur); test (c) bunu kanitlar, kirmizi cikarsa SaveGuard tek yol.
+- Olcum sonrasi duzeltme: Unity surulen anchor'i dosyaya (0,0) yazar; bu yuzden onizleme kayittan (OnWillSaveAssets) ve Play girisinden (playModeStateChanged ExitingEditMode, SafeAreaPreviewPlayGuard) once birakilir, geri gelisi EnteredEditMode/delayCall.
+- Edit modda surulmuyorken her uygulamadan once anchor'lar yeniden toplanir (elle duzenleme kaybolmaz); durum alanlari [NonSerialized]; IsDriving canli rect yoksa false.
+- Prefab stage / onizleme sahnesinde onizleme kapali; tercih EditorUserSettings (proje basina, varsayilan acik, anahtar ayni); ReleaseDriven once tasarimi yazar sonra tracker'i birakir; Start/StopRecordingUndo reflection ile (gorunurluk surume gore degisir).
+- Testler SafeAreaEditPreviewTests (13: dosya metni, sahne kaydi, Play girisi, elle duzenleme, domain reload, dirty, preview scene). Calistirilmadi.
+- Suphe: SaveAsPrefabAsset kodla kayitta OnWillSaveAssets'i tetiklemeyebilir (prefab testi kirmizi olabilir); Start/StopRecordingUndo gercekten Undo girisini engelliyor mu olculmedi.
