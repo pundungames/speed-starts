@@ -51,7 +51,7 @@ namespace SpeedStars.PlayTests
         {
             private readonly object _sim;
             private readonly MethodInfo _press, _release, _advance;
-            private readonly PropertyInfo _distance, _speed, _airborne, _head, _form, _time, _lastPress, _lastResult, _lastEff, _presses;
+            private readonly PropertyInfo _distance, _speed, _airborne, _head, _form, _time, _lastPress, _lastResult, _lastEff, _presses, _hopBias;
 
             public Sim(object tuning)
             {
@@ -69,6 +69,7 @@ namespace SpeedStars.PlayTests
                 _lastResult = SimType.GetProperty("LastResult");
                 _lastEff = SimType.GetProperty("LastEfficiency");
                 _presses = SimType.GetProperty("Presses");
+                _hopBias = SimType.GetProperty("HopBias");
             }
 
             public void Press(int leg) => _press.Invoke(_sim, new object[] { leg });
@@ -84,6 +85,7 @@ namespace SpeedStars.PlayTests
             public string LastResult => _lastResult.GetValue(_sim).ToString();
             public float LastEfficiency => (float)_lastEff.GetValue(_sim);
             public int Presses => (int)_presses.GetValue(_sim);
+            public float HopBias => (float)_hopBias.GetValue(_sim);
         }
 
         private struct Result
@@ -207,6 +209,68 @@ namespace SpeedStars.PlayTests
             Assert.AreEqual(2, s.Presses);
             Assert.AreEqual(result, s.LastResult);
             Assert.AreEqual(efficiency, s.LastEfficiency, 1e-4f);
+        }
+
+        /// <summary>Taps in the order given (leg numbers; -1 = both keys together), one every gap seconds.</summary>
+        private static Sim Taps(object tuning, float gap, params int[] legs)
+        {
+            var s = new Sim(tuning);
+            s.Advance(0.2f);
+            foreach (int leg in legs)
+            {
+                if (leg < 0) { s.Press(0); s.Press(1); } else s.Press(leg);
+                s.Advance(KeyHold);
+                if (leg < 0) { s.Release(0); s.Release(1); } else s.Release(leg);
+                s.Advance(gap - KeyHold);
+            }
+            return s;
+        }
+
+        [Test]
+        public void TheSameLegAgainRaisesHopBiasAndTheOtherLegLowersIt()
+        {
+            object tuning = NewTuning();
+            float last = -1f;
+            for (int n = 1; n <= 5; n++)
+            {
+                float bias = Taps(tuning, 0.3f, Enumerable.Repeat(0, n).ToArray()).HopBias;
+                Assert.Greater(bias, last, $"{n} taps on the same leg: the bias must keep rising");
+                last = bias;
+            }
+            float other = Taps(tuning, 0.3f, 0, 0, 0, 0, 1).HopBias;
+            Assert.Less(other, Taps(tuning, 0.3f, 0, 0, 0, 0, 0).HopBias, "the other leg's press must lower it");
+        }
+
+        [Test]
+        public void KeysInTurnAndKeysTogetherLeaveHopBiasBelowOneKeyAgain()
+        {
+            object tuning = NewTuning();
+            float single = Taps(tuning, 0.3f, 0, 0, 0, 0, 0, 0, 0, 0).HopBias;
+            float turns = Taps(tuning, 0.3f, 0, 1, 0, 1, 0, 1, 0, 1).HopBias;
+            float together = Taps(tuning, 0.3f, -1, -1, -1, -1, -1, -1, -1, -1).HopBias;
+            Assert.Less(turns, single * 0.5f);
+            Assert.Less(together, single * 0.5f);
+        }
+
+        [Test]
+        public void HopBiasFadesWithoutPresses()
+        {
+            var s = Taps(NewTuning(), 0.3f, 0, 0, 0, 0, 0, 0);
+            float bias = s.HopBias;
+            s.Advance(5f);
+            Assert.Less(s.HopBias, bias * 0.5f);
+        }
+
+        [Test]
+        public void HopBiasChangesNoSpeed()
+        {
+            float Speed(float follow)
+            {
+                var s = Taps(NewTuning(t => Set(t, "hopBiasFollow", follow)), 0.3f, 0, 0, 0, 0, 0, 0);
+                return s.Speed;
+            }
+
+            Assert.AreEqual(Speed(0f), Speed(1f), 1e-4f);
         }
 
         [Test]

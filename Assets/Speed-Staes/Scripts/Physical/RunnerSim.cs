@@ -170,6 +170,13 @@ namespace SpeedStars.Physical
         [Tooltip("How long after the last press Form stays as it is before it starts to fade (s).")]
         public float formHoldTime = 0.5f;
 
+        [Header("Hop bias (one key again and again → one-leg hops; read by the visual, no effect on speed)")]
+        [Tooltip("Each press moves HopBias this share of the way to 1 when it is the same leg as the press before, to 0 when it is the other " +
+                 "leg (keys in turn, or two keys together, which come one after the other).")]
+        [Range(0f, 1f)] public float hopBiasFollow = 0.45f;
+        [Tooltip("HopBias fades toward 0 at this rate (1/s) as time passes, so a stray double press does not stay.")]
+        public float hopBiasDecay = 0.5f;
+
         [Header("Hurdle jump")]
         [Tooltip("Before leaving the ground the leading leg comes up with the other foot still planted (s), standing (x) and at max speed (y).")]
         public Vector2 jumpWindup = new Vector2(0.2f, 0.05f);
@@ -273,6 +280,8 @@ namespace SpeedStars.Physical
         /// <summary>How well the runner has been running (0..1): the moving average of the presses' timing efficiency
         /// (before head and energy), fading when no press comes. For the visual; it changes no speed.</summary>
         public float Form => _form;
+        /// <summary>0..1: how much the presses have been the same leg again and again (1) rather than the other leg or both (0). For the visual (a one-leg hop); it changes no speed.</summary>
+        public float HopBias => _hopBias;
         /// <summary>Where the head rests with no key down (deg): headBack while running, upright standing.</summary>
         public float HeadRest => T.headBack * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T.headBackSpeed.x, T.headBackSpeed.y, Speed));
         /// <summary>How much of its push a press gets at this head angle (1 upright or back, 0 at headSpoil).</summary>
@@ -298,7 +307,7 @@ namespace SpeedStars.Physical
         public float StepTime => Mathf.Lerp(T.stepTime.x, T.stepTime.y, Speed / T.maxSpeed);
         public int HoldingCount => (Legs[0].Holding ? 1 : 0) + (Legs[1].Holding ? 1 : 0);
 
-        float _pending, _hopVelocity, _launchVelocity, _form;
+        float _pending, _hopVelocity, _launchVelocity, _form, _hopBias;
         Spring _head, _headFwd;   // the head angle; where the keys have taken it, coming back with no key down
         double _keyUpTime;        // sim time the last key down came up
         double _launchTime, _landTime;
@@ -313,7 +322,7 @@ namespace SpeedStars.Physical
         public void Reset()
         {
             Time = 0.0;
-            Speed = Distance = HopY = _hopVelocity = _pending = _form = 0f;
+            Speed = Distance = HopY = _hopVelocity = _pending = _form = _hopBias = 0f;
             _windupLeft = _jumpLeft = _hitLeft = 0f;
             Energy = T.energyMax;
             Presses = 0;
@@ -397,6 +406,8 @@ namespace SpeedStars.Physical
 
             LeanSpring.Velocity += T.leanKick * (1f + T.stumbleKick * (1f - eff)) * share;
             if (!pairSecond) _form += (timing - _form) * T.formFollow;
+            // The same leg again raises the hop bias, the other leg (a pair's second key too) lowers it: a continuous state, no mode.
+            _hopBias += ((LastLeg == leg ? 1f : 0f) - _hopBias) * T.hopBiasFollow;
 
             if (result == PressResult.Start || result == PressResult.Good || result == PressResult.Late || nearLanding)
             {
@@ -566,6 +577,7 @@ namespace SpeedStars.Physical
 
             StepHead(h);
             if (Time - LastPressTime > T.formHoldTime) _form *= Mathf.Exp(-T.formDecay * h);
+            _hopBias *= Mathf.Exp(-T.hopBiasDecay * h);
 
             // Speed. Every held foot pushes: both held push twice, no special case.
             float applied = _pending * (1f - Mathf.Exp(-3f * h / Mathf.Max(0.001f, T.pushTime)));
