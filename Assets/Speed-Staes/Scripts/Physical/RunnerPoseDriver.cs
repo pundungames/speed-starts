@@ -323,6 +323,18 @@ namespace SpeedStars.Physical
         public float holdTakeTime = 0.12f;
 
         [Header("Hops: one key again and again (one leg hops, the other held out), two keys together (a sack hop)")]
+        [Tooltip("One-key hop (blended in by the hop weight): toe-off, how far back the pressed leg goes with the foot down.")]
+        public LegAngles hopPushEnd = new LegAngles(5f, 150f);
+        [Tooltip("One-key hop swing, first key: the leg flexes under the body, no heel kick.")]
+        public LegAngles hopRecover = new LegAngles(8f, 115f);
+        [Tooltip("One-key hop swing, second key: the deepest flex, thigh and knee both small.")]
+        public LegAngles hopMid = new LegAngles(16f, 110f);
+        [Tooltip("One-key hop swing, third key: the leg opens again going down.")]
+        public LegAngles hopKneeDrive = new LegAngles(24f, 130f);
+        [Tooltip("One-key hop touchdown: the foot lands under the hips, the leg nearly straight.")]
+        public LegAngles hopContact = new LegAngles(25f, 165f);
+        [Tooltip("The balance leg's thigh sways this many degrees (forward while the body rises) with the one-key hop, so it does not look frozen.")]
+        public float hopSway = 6f;
         [Tooltip("The leg the hops leave out (not the one pressed again and again): held out in front, nearly straight, in the " +
                  "air, balancing; it carries nothing. Blended in by the sim's HopBias.")]
         public LegAngles balanceLeg = new LegAngles(40f, 175f);
@@ -368,6 +380,9 @@ namespace SpeedStars.Physical
         [Tooltip("Fastest the pelvis may go up while running (m/s): a leg's height ask that jumps (mashing) cannot throw the body " +
                  "up in one frame. Not used in the dive, over hurdles or getting up.")]
         [Min(0.1f)] public float maxRiseSpeed = 2f;
+        [Tooltip("Rate (1/s) at which the sitting-back pivot moves from the hip to the heels of the legs that carry (and between " +
+                 "them): switching it at once moved the hip several cm in one frame. The dive switches at once.")]
+        [Min(1f)] public float sitPivotBlend = 8f;
         [Tooltip("Getting up from low down (the body more than liftBelow under its standing height, fully so liftRange " +
                  "further down): the height goes through this softer spring instead (~0.5 s up off the ground). Running and " +
                  "the crouch stay above liftBelow and keep heightSpring.")]
@@ -621,6 +636,7 @@ namespace SpeedStars.Physical
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
         const float LockKnee = 15f;
         const float HopBlend = 4f;             // the hop and pair weights follow their targets this fast (1/s)
+        const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
         const float IdleRate = 4f;             // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
 
@@ -637,6 +653,7 @@ namespace SpeedStars.Physical
         float _gaitW, _speedCurve, _accel, _lastSpeed, _gaitHead;   // gait weight 0..1; speed curve 0..1; trunk's share of head lean
         Spring _gait, _kick;                       // gait lean and the press pitch (deg, trunk)
         int _lastPresses;
+        readonly float[] _sitW = new float[2];       // each leg's share in the sit-back pivot (blends over sitPivotBlend)
         float _hop, _pair, _dive;                   // one-leg hop weight, two-keys-together weight, hold weight (dive) 0..1
         float _twist, _roll, _lastThighL, _lastThighR, _chestYaw, _chestRoll;
         bool _trunkInit;
@@ -886,7 +903,7 @@ namespace SpeedStars.Physical
         void StartCatch(Leg leg, double time)
         {
             EnsureBuffers(leg);
-            LegAngles c = Stride(contact);
+            LegAngles c = Key(contact, hopContact);
             // Already there (the touchdown pose, or the foot on the ground past the fold): nothing to catch, plant it now.
             // A catch of even a few frames would slide the foot along the ground at the body's speed. A foot still in the
             // air is not down: it is caught and planted when it touches, or the body would drop to it in one frame.
@@ -908,7 +925,7 @@ namespace SpeedStars.Physical
 
         /// <summary>A swinging foot that is on the ground past the folded pass (not the heel still lifting off behind): it has landed.</summary>
         bool Touching(Leg leg) =>
-            leg.angles.thigh >= Stride(mid).thigh && leg.ankle.y - AnkleGround(leg) <= TouchHeight;
+            leg.angles.thigh >= Key(mid, hopMid).thigh && leg.ankle.y - AnkleGround(leg) <= TouchHeight;
 
         /// <summary>
         /// Toe-off (or the release of a hold): the leg's swing to the touchdown pose, one Hermite curve from where it
@@ -927,10 +944,10 @@ namespace SpeedStars.Physical
             LegAngles[] k = leg.keys, m = leg.slope;
             float[] n = leg.knots;
             k[0] = leg.angles;
-            k[1] = Stride(recover);
-            k[2] = Stride(mid);
-            k[3] = Stride(kneeDrive);
-            k[4] = Stride(contact);
+            k[1] = Key(recover, hopRecover);
+            k[2] = Key(mid, hopMid);
+            k[3] = Key(kneeDrive, hopKneeDrive);
+            k[4] = Key(contact, hopContact);
             n[0] = 0f;
             n[1] = Mathf.Clamp(swingKeys.x, 0.02f, 0.9f);
             n[2] = Mathf.Clamp(swingKeys.y, n[1] + 0.02f, 0.95f);
@@ -1135,9 +1152,15 @@ namespace SpeedStars.Physical
                 case LegPhase.Front: return LegAngles.Lerp(reach, holdSupport, otherHold);
                 case LegPhase.Push:
                 case LegPhase.Hold: return LegAngles.Lerp(pushEnd, holdBack, ownHold);
-                default: return LegAngles.Lerp(Home(), balanceLeg, leg.idle);
+                default: return LegAngles.Lerp(Home(), Balance(), leg.idle);
             }
         }
+
+        /// <summary>A stride key blended toward its hop shape by the one-key hop weight (0 running, pairs and dives: the key itself).</summary>
+        LegAngles Key(LegAngles key, LegAngles hopKey) => Stride(LegAngles.Lerp(key, hopKey, _hop * (1f - _pair)));
+
+        /// <summary>The balance leg: held out straight, its thigh swaying a few degrees with the body's bounce (forward going up).</summary>
+        LegAngles Balance() => new LegAngles(balanceLeg.thigh + hopSway * Mathf.Clamp(_bodyY.Velocity / HopSwaySpeed, -1f, 1f), balanceLeg.knee);
 
         LegAngles Home() => LegAngles.Lerp(crouch, runHome, _runHome);
 
@@ -1183,7 +1206,7 @@ namespace SpeedStars.Physical
                     break;
                 }
                 case LegPhase.Land:
-                    if (leg.keys != null) leg.angles = LegAngles.Lerp(leg.keys[4], balanceLeg, leg.idle);
+                    if (leg.keys != null) leg.angles = LegAngles.Lerp(leg.keys[4], Balance(), leg.idle);
                     air = 1f;
                     break;
                 case LegPhase.Reach:
@@ -1341,7 +1364,7 @@ namespace SpeedStars.Physical
             }
             else leg.footZ -= rootStep * footGrip;
             float behind = joint.z - leg.footZ;
-            LegAngles end = Stride(pushEnd);
+            LegAngles end = Key(pushEnd, hopPushEnd);
             float endBehind = -(leg.thighLength * Mathf.Sin(end.thigh * Mathf.Deg2Rad) +
                                 leg.shinLength * Mathf.Sin((end.thigh - (180f - end.knee)) * Mathf.Deg2Rad));
             endBehind = Mathf.Max(endBehind, leg.dz0 + 0.05f);
@@ -1737,15 +1760,21 @@ namespace SpeedStars.Physical
         /// </summary>
         void SitBack(ref Vector3 hip, float backLean)
         {
-            Vector3 pivot = hip;
-            int n = 0;
+            // The pivot's weights follow which legs carry through a short blend: switching it at once moved the hip
+            // by several cm in one frame (the hip swings about the heels, whose place differs from the hip's own).
+            float step = _ballistic ? 1f : sitPivotBlend * Time.deltaTime;
+            float sumW = 0f;
             Vector3 sum = Vector3.zero;
             for (int i = 0; i < 2; i++)
             {
                 Leg leg = Legs(i);
-                if (leg.carry) { sum += Heel(leg); n++; }
+                _sitW[i] = Mathf.MoveTowards(_sitW[i], leg.carry ? 1f : 0f, step);
+                if (_sitW[i] <= 0f) continue;
+                sum += Heel(leg) * _sitW[i];
+                sumW += _sitW[i];
             }
-            if (n > 0) pivot = sum / n;
+            float hipW = Mathf.Max(0f, 1f - sumW);
+            Vector3 pivot = (hip * hipW + sum) / (hipW + sumW);
             Quaternion r = Quaternion.Euler(backLean, 0f, 0f);
             Quaternion foot = Quaternion.Euler(backLean * heelRock, 0f, 0f);
             hip = pivot + r * (hip - pivot);
@@ -2020,6 +2049,7 @@ namespace SpeedStars.Physical
             _gait.Reset();
             _kick.Reset();
             _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = 0f;
+            _sitW[0] = _sitW[1] = 0f;
             _lastPresses = 0;
             _twist = _roll = _chestYaw = _chestRoll = 0f;
             _trunkInit = false;
