@@ -75,6 +75,7 @@ namespace SpeedStars.UI.Home
 
         [Tooltip("CharacterCard/HeightField/Label.")]
         [SerializeField] private TMP_Text heightText;
+        [SerializeField] private SpeedStars.UI.Costume.CostumeEditorConfig statsConfig;
 
         [Tooltip("CharacterCard/PlayerName: the player's name from Settings, under the Edit racer and Emote buttons; empty when no name is set. Optional.")]
         [SerializeField] private TMP_Text playerNameText;
@@ -301,11 +302,27 @@ namespace SpeedStars.UI.Home
         /// <summary>Racer name = the selected preset's name; the arrows only work with more than one preset.</summary>
         private void RefreshPresets()
         {
+            if(statsConfig != null)
+            {
+                SetStatBar(powerFill,statsConfig.PowerFill);
+                SetStatBar(staminaFill,statsConfig.StaminaFill);
+                if(heightText != null)heightText.text="Height: "+statsConfig.HeightText.Replace("Height:",string.Empty).Trim();
+            }
             if (_cosmetics == null) return;
             if (racerNameText != null) racerNameText.text = _cosmetics.GetPresetName(_cosmetics.SelectedPreset);
             bool steppable = _cosmetics.PresetCount > 1;
             if (previousRacerButton != null) previousRacerButton.interactable = steppable;
             if (nextRacerButton != null) nextRacerButton.interactable = steppable;
+        }
+
+        private static void SetStatBar(Image fill,float amount)
+        {
+            if(!fill)return;
+            fill.fillAmount=Mathf.Clamp01(amount);
+            fill.rectTransform.anchorMin=Vector2.zero;
+            fill.rectTransform.anchorMax=new Vector2(fill.fillAmount,1);
+            fill.rectTransform.offsetMin=new Vector2(6,6);
+            fill.rectTransform.offsetMax=new Vector2(-6,-6);
         }
 
         private void OnPreviousRacer() => StepPreset(-1);

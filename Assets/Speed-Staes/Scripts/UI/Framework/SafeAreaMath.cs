@@ -8,6 +8,14 @@ namespace SpeedStars.UI.Framework
     /// </summary>
     public static class SafeAreaMath
     {
+        /// <summary>Reject mixed or uninitialized viewport measurements during a resize.</summary>
+        public static bool IsValidSample(Vector2 screen, Rect safe, float tolerancePx)
+        {
+            return screen.x > 0f && screen.y > 0f && safe.width > 0f && safe.height > 0f
+                && safe.xMin >= -tolerancePx && safe.yMin >= -tolerancePx
+                && safe.xMax <= screen.x + tolerancePx && safe.yMax <= screen.y + tolerancePx;
+        }
+
         /// <summary>
         /// Anchors (0..1 of the screen) of the safe rectangle. Insets of at most <paramref name="tolerancePx"/> count as none,
         /// so rounding noise of a notch-less phone leaves the layout exactly as authored. The vertical axis only changes

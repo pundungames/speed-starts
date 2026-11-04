@@ -272,6 +272,38 @@ namespace SpeedStars.Tests.UI
         }
 
         [Test]
+        public void Fitter_SimulatorResizeWithStaleSafeArea_KeepsLastLayoutUntilMeasurementsAgree()
+        {
+            SafeAreaFitter fitter = NewScreen(out RectTransform corner, out _, out _);
+            var source = new FixedSafeAreaSource(Screen2400x1080, new Rect(120f, 0f, 2280f, 1080f));
+            fitter.SetSource(source);
+            Vector2 before = corner.anchorMin;
+            int writes = fitter.WriteCount;
+
+            source.ScreenSize = new Vector2(1334f, 750f);
+            Assert.IsFalse(fitter.Refresh(), "Old simulator safe area must not reset anchors in the smaller Game view.");
+            Assert.AreEqual(before, corner.anchorMin);
+            Assert.AreEqual(writes, fitter.WriteCount);
+
+            source.SafeArea = new Rect(0f, 0f, 1334f, 750f);
+            Assert.IsTrue(fitter.Refresh());
+            Assert.AreEqual(new Vector2(0f, 1f), corner.anchorMin);
+            Assert.AreEqual(new Vector2(30f, -20f), corner.anchoredPosition);
+        }
+
+        [Test]
+        public void Fitter_SmallerStaleSimulatorArea_DoesNotInvertMirroredAnchors()
+        {
+            SafeAreaFitter fitter = NewScreen(out RectTransform corner, out _, out _);
+            var source = new FixedSafeAreaSource(Screen2400x1080, new Rect(120f, 0f, 2280f, 1080f));
+            fitter.SetSource(source);
+            Vector2 before = corner.anchorMin;
+            source.SafeArea = new Rect(0f, 0f, 800f, 600f);
+            Assert.IsFalse(fitter.Refresh());
+            Assert.AreEqual(before, corner.anchorMin);
+        }
+
+        [Test]
         public void Fitter_MirrorsByDefault_RightNotchMovesALeftCornerIn()
         {
             SafeAreaFitter fitter = NewScreen(out RectTransform corner, out RectTransform background, out _);

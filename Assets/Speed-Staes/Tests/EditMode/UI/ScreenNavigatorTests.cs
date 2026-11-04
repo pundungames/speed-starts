@@ -21,6 +21,26 @@ namespace SpeedStars.Tests.UI
         private FakeView View(string id) => new FakeView(id, _log);
 
         [Test]
+        public void Back_ClosesAnInternalListBeforeClosingItsPopup()
+        {
+            var popup=new ListPopup();
+            _nav.OpenPopup(popup);
+            Assert.IsTrue(_nav.Back());
+            Assert.AreSame(popup,_nav.TopPopup);
+            Assert.IsFalse(popup.ListOpen);
+            Assert.IsTrue(_nav.Back());
+            Assert.IsNull(_nav.TopPopup);
+        }
+
+        sealed class ListPopup : IUiView, IUiBackHandler
+        {
+            public bool ListOpen=true;
+            public void Show() { }
+            public void Hide() { }
+            public bool TryHandleBack() { if(!ListOpen)return false;ListOpen=false;return true; }
+        }
+
+        [Test]
         public void Push_FirstScreen_ShowsItAndMakesItCurrent()
         {
             var home = View("home");

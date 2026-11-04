@@ -49,6 +49,10 @@ namespace SpeedStars.UI.Framework
         private bool _hasApplied;
         private Vector2 _lastScreen;
         private Rect _lastSafe;
+        private Canvas _canvas;
+        private Vector2 _candidateScreen;
+        private Rect _candidateSafe;
+        private int _candidateFrame = -1;
 
         /// <summary>How many times anchors were actually written (tests: unchanged input must not write again).</summary>
         public int WriteCount { get; private set; }
@@ -78,7 +82,7 @@ namespace SpeedStars.UI.Framework
         }
 
         // The safe area changes on rotation / fold / simulator switch; polling two cached values is cheaper than any event.
-        private void Update()
+        private void LateUpdate()
         {
             Refresh();
         }
@@ -89,6 +93,29 @@ namespace SpeedStars.UI.Framework
             ISafeAreaSource source = _source ?? (_source = new ScreenSafeAreaSource());
             Vector2 screen = source.ScreenSize;
             Rect safe = source.SafeArea;
+            // A resize/simulator switch can publish the new Screen size before the
+            // safe rectangle and Canvas have caught up. Keep the last good layout.
+            if (!SafeAreaMath.IsValidSample(screen, safe, tolerancePx)) return false;
+            if (mirrorSides && 2f * Mathf.Max(safe.xMin, screen.x - safe.xMax) >= screen.x) return false;
+            if (source is ScreenSafeAreaSource && Application.isPlaying)
+            {
+                if (!_canvas) _canvas = GetComponentInParent<Canvas>();
+                if (_canvas)
+                {
+                    Vector2 rendered = _canvas.rootCanvas.renderingDisplaySize;
+                    if (Mathf.Abs(rendered.x - screen.x) > tolerancePx
+                        || Mathf.Abs(rendered.y - screen.y) > tolerancePx) return false;
+                }
+                // Require a full frame of the same sample, not multiple calls in one frame.
+                if (_candidateFrame < 0 || screen != _candidateScreen || safe != _candidateSafe)
+                {
+                    _candidateScreen = screen;
+                    _candidateSafe = safe;
+                    _candidateFrame = Time.frameCount;
+                    return false;
+                }
+                if (Time.frameCount == _candidateFrame) return false;
+            }
             if (_hasApplied && screen == _lastScreen && safe == _lastSafe) return false;
 
             Collect();

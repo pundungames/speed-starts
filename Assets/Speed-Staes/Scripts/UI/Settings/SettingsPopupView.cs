@@ -21,7 +21,7 @@ namespace SpeedStars.UI.Settings
     /// a refused name turns the field red, shows the reason and shakes it); X (the base close button) just closes, and
     /// because every opening reloads the saved name, whatever was typed and not committed is discarded.
     /// </summary>
-    public sealed class SettingsPopupView : UiPopup
+    public sealed class SettingsPopupView : UiPopup, IUiBackHandler
     {
         [Header("Texts")]
         [Tooltip("Header/Title.")]
@@ -487,6 +487,13 @@ namespace SpeedStars.UI.Settings
                 flagWindow.SetActive(true);
                 flagArrow.sprite = arrowUp;
             }
+        }
+
+        public bool TryHandleBack()
+        {
+            if (flagWindow.activeSelf) { CloseFlagWindow(); return true; }
+            if (languageWindow.activeSelf) { CloseLanguageWindow(); return true; }
+            return false;
         }
 
         private void CloseFlagWindow()
