@@ -1,7 +1,9 @@
 using System;
 using DG.Tweening;
+using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,7 +12,8 @@ namespace SpeedStars.UI.Costume
     /// <summary>
     /// One item card of the wardrobe grid (prefab CostumeItemCard, created by the screen under the grid's content). Normal
     /// and selected background layers, the item picture, a tick while worn, a lock while not owned. A premium item
-    /// swaps to its own layer family (see <see cref="PremiumCardLayers"/>). The card is a Button: the screen hears the tap through <see cref="Tapped"/>.
+    /// swaps to its own layer family (see <see cref="PremiumCardLayers"/>). While locked and priced the card also shows its
+    /// price with the icon of the currency (Cash or Purple Gem). The card is a Button: the screen hears the tap through <see cref="Tapped"/>.
     /// Binds existing objects only.
     /// </summary>
     public sealed class CostumeItemCardView : MonoBehaviour
@@ -55,8 +58,23 @@ namespace SpeedStars.UI.Costume
         [Tooltip("Premium veil: only while the card is really disabled (not the same as locked).")]
         [SerializeField] private GameObject premiumDisabledOverlay;
 
+        [Header("Price (shown only while the item is locked and has a price)")]
+        [Tooltip("Price/Text: the price of the item. Optional: a card without it just shows no price.")]
+        [SerializeField] private TMP_Text priceText;
+
+        [Tooltip("Price/CashIcon: currency icon beside the price of a Cash item. Optional.")]
+        [SerializeField] private GameObject priceCashIcon;
+
+        [Tooltip("Price/GemIcon: currency icon beside the price of a Purple Gem item. Optional.")]
+        [SerializeField] private GameObject priceGemIcon;
+
+        [Tooltip("Price: parent of the text and both icons; shown only while the card is locked and priced. Optional.")]
+        [SerializeField] private GameObject priceGroup;
+
         private Tween _punch;
         private bool _premium;
+        private bool _forSale;
+        private CosmeticCurrency _currency;
         private Vector3 _baseScale = Vector3.one;
         private bool _baseKnown;
 
@@ -90,6 +108,9 @@ namespace SpeedStars.UI.Costume
             CosmeticId = item.Id;
             icon.sprite = picture;
             _premium = item.IsPremium;
+            _forSale = item.IsForSale;
+            _currency = item.Currency;
+            if (priceText != null) priceText.text = item.Price.ToString();
             // A premium card draws its picture inside the premium group (under the frame), so the plain picture stays off.
             bool hasPicture = picture != null;
             icon.enabled = hasPicture && (!_premium || premiumIcon == null);
@@ -102,7 +123,7 @@ namespace SpeedStars.UI.Costume
 
         public void SetState(bool selected, bool locked, bool disabled = false)
         {
-            PremiumCardLayers layers = PremiumCardLayers.Resolve(_premium, selected, locked, disabled);
+            PremiumCardLayers layers = PremiumCardLayers.Resolve(_premium, selected, locked, disabled, _forSale, _currency);
             normalBackground.gameObject.SetActive(layers.NormalBackground);
             selectedBackground.gameObject.SetActive(layers.NormalSelectedBackground);
             check.SetActive(layers.NormalCheck);
@@ -113,6 +134,9 @@ namespace SpeedStars.UI.Costume
             Show(premiumLock, layers.PremiumLock);
             Show(premiumCheck, layers.PremiumCheck);
             Show(premiumDisabledOverlay, layers.PremiumDisabledOverlay);
+            Show(priceGroup, layers.PriceVisible);
+            Show(priceCashIcon, layers.PriceCashIcon);
+            Show(priceGemIcon, layers.PriceGemIcon);
         }
 
         private static void Show(GameObject layer, bool visible)
@@ -158,6 +182,8 @@ namespace SpeedStars.UI.Costume
     /// background, picture and ONE frame: gold while not selected, red while selected (never both: the red one replaces the
     /// gold). Locked adds the lock (the card still selects and previews); the selected one adds the tick only when the item
     /// is really owned (a previewed locked item is not "worn"); the veil is only for a really disabled card.
+    /// The price (with the icon of its currency) shows only on a locked card that is for sale: an owned card and a free
+    /// one (never locked) show none, on normal and premium cards alike.
     /// </summary>
     public readonly struct PremiumCardLayers
     {
@@ -171,9 +197,15 @@ namespace SpeedStars.UI.Costume
         public bool PremiumLock { get; }
         public bool PremiumCheck { get; }
         public bool PremiumDisabledOverlay { get; }
+        public bool PriceVisible { get; }
+        public bool PriceCashIcon { get; }
+        public bool PriceGemIcon { get; }
 
-        private PremiumCardLayers(bool premium, bool selected, bool locked, bool disabled)
+        private PremiumCardLayers(bool premium, bool selected, bool locked, bool disabled, bool forSale, CosmeticCurrency currency)
         {
+            PriceVisible = locked && forSale;
+            PriceCashIcon = PriceVisible && currency == CosmeticCurrency.Cash;
+            PriceGemIcon = PriceVisible && currency == CosmeticCurrency.PurpleGem;
             NormalBackground = !premium && !selected;
             NormalSelectedBackground = !premium && selected;
             NormalCheck = !premium && selected;
@@ -186,7 +218,8 @@ namespace SpeedStars.UI.Costume
             PremiumDisabledOverlay = premium && disabled;
         }
 
-        public static PremiumCardLayers Resolve(bool premium, bool selected, bool locked, bool disabled)
-            => new PremiumCardLayers(premium, selected, locked, disabled);
+        public static PremiumCardLayers Resolve(bool premium, bool selected, bool locked, bool disabled,
+            bool forSale = false, CosmeticCurrency currency = CosmeticCurrency.Cash)
+            => new PremiumCardLayers(premium, selected, locked, disabled, forSale, currency);
     }
 }

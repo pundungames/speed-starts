@@ -78,11 +78,17 @@ namespace SpeedStars.UI.Costume
         [SerializeField] private Graphic saveBackground;
 
         [Header("Purchase (under the pedestal)")]
-        [Tooltip("Purchase: the buy button. Shown only while the worn item of the tab is a locked premium item.")]
+        [Tooltip("Purchase: the buy button. Shown only while the worn item of the tab is locked and has a price (Cash or Purple Gems).")]
         [SerializeField] private Button purchaseButton;
 
         [Tooltip("Purchase/Price: the price of that item.")]
         [SerializeField] private TMP_Text purchasePriceText;
+
+        [Tooltip("Purchase/Icon: the Purple Gem icon, shown beside the price of a premium item. Optional.")]
+        [SerializeField] private GameObject purchaseGemIcon;
+
+        [Tooltip("Purchase/CashIcon: the Cash icon, shown beside the price of a normal item. Optional: without it a Cash price shows no icon.")]
+        [SerializeField] private GameObject purchaseCashIcon;
 
         [Tooltip("Purchase background: flashes when the player cannot afford the item.")]
         [SerializeField] private Graphic purchaseBackground;
@@ -345,6 +351,10 @@ namespace SpeedStars.UI.Costume
             bool buyable = _model.TryGetBuyableItem(out CosmeticItemInfo buy);
             purchaseButton.gameObject.SetActive(!emotes && buyable);
             if (buyable) purchasePriceText.text = buy.Price.ToString();
+            // The icon follows the currency of the selected item: a Cash price never wears the gem.
+            bool cashPrice = buyable && buy.Currency == CosmeticCurrency.Cash;
+            if (purchaseGemIcon != null) purchaseGemIcon.SetActive(buyable && !cashPrice);
+            if (purchaseCashIcon != null) purchaseCashIcon.SetActive(cashPrice);
         }
 
         /// <summary>

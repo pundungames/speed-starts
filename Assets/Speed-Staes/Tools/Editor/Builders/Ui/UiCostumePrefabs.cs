@@ -20,7 +20,7 @@ namespace SpeedStars.Tools.Builders
     /// canvas, so they move and turn around their own centre. Dynamic content stays empty: item cards and preset rows are
     /// prefabs the views create under the content parents. Never runs in the game.
     /// </summary>
-    internal static class UiCostumePrefabs
+    public static class UiCostumePrefabs
     {
         public const string ArtFolder = UiArt.ArtRoot + "/Costume";
         public const string ItemsFolder = ArtFolder + "/Items";
@@ -49,6 +49,21 @@ namespace SpeedStars.Tools.Builders
         private const float PremiumIconInset = 0.12f;
         private const float PriceGap = 0.03f; // between the gem and the price text
         private const float PriceEdge = 0.94f;
+        // T-104: the price of a locked item card sits in the bottom-left strip (the lock owns the bottom-right corner): the
+        // currency icon on the left, the number after it.
+        private const string PriceName = "Price";
+        private const string PriceTextName = "Text";
+        private const string CashIconName = "CashIcon";
+        private const string GemIconName = "GemIcon";
+        private const string PurchaseGemIconName = "Icon";
+        private const string CashIconArt = "diamond_icon";      // the Cash box's own icon
+        private const string GemIconArt = "purple_gem_icon";
+        private const float CardPriceSize = 40f;
+        private const float CardPriceLeft = 0.06f;
+        private const float CardPriceBottom = 0.05f;
+        private const float CardPriceLockGap = 0.02f;
+        private const float CardPriceIconWidth = 0.34f;          // of the price strip
+        private const float CardPriceTextLeft = 0.38f;
         private const float HeightInset = 0.03f;
         private const float TabLabelSize = 30f;
         private const float TitleSize = 40f;
@@ -155,6 +170,8 @@ namespace SpeedStars.Tools.Builders
             lockOverlay.SetActive(false);
             check.SetActive(false);
 
+            AddCardPrice(root);
+
             var so = new SerializedObject(view);
             Ref(so, "button", button);
             Ref(so, "normalBackground", normal);
@@ -169,7 +186,143 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "premiumLock", premiumLock);
             Ref(so, "premiumCheck", premiumCheck);
             Ref(so, "premiumDisabledOverlay", premiumDisabled);
+            BindPriceFields(so, root);
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // ---------------------------------------------------------------- T-104: price on the card, Cash icon on the purchase button
+
+        /// <summary>Adds the price strip (hidden group: currency icons + number) to a card root. Callers check the Price node is missing first.</summary>
+        private static void AddCardPrice(RectTransform root)
+        {
+            Vector4 lockBounds = AlphaBounds("item_locked_icon"); // x, y (from bottom), x2, y2 of the lock on the card canvas
+            RectTransform group = Kit.Span(Kit.Node(root, PriceName),
+                new Vector2(CardPriceLeft, CardPriceBottom), new Vector2(lockBounds.x - CardPriceLockGap, lockBounds.w));
+            var area = new Vector4(0f, 0f, CardPriceIconWidth, 1f);
+            CurrencyIcon(group, CashIconName, CashIconArt, area);
+            CurrencyIcon(group, GemIconName, GemIconArt, area);
+            UiArt.Slot(group, PriceTextName, "0", CardPriceSize, new Vector2(CardPriceTextLeft, 0f), new Vector2(1f, 1f), TextAnchor.MiddleLeft);
+            group.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// A currency icon that keeps the art's aspect inside <paramref name="area"/> (fractions of the parent: x, y, x2, y2),
+        /// hidden until the view shows it. Same recipe as the theme screen's gem icon.
+        /// </summary>
+        private static RectTransform CurrencyIcon(RectTransform parent, string name, string artFile, Vector4 area)
+        {
+            RectTransform holder = Kit.Span(Kit.Node(parent, name), new Vector2(area.x, area.y), new Vector2(area.z, area.w));
+            string path = ArtFolder + "/" + artFile + ".png";
+            Vector4 bounds = AlphaBounds(artFile);
+            UiArt.ReadPngSize(path, out int width, out int height);
+            float visibleWidth = (bounds.z - bounds.x) * width;
+            float visibleHeight = (bounds.w - bounds.y) * height;
+
+            RectTransform fit = Kit.Node(holder, "Fit");
+            fit.anchorMin = fit.anchorMax = fit.pivot = new Vector2(0.5f, 0.5f);
+            var fitter = fit.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = visibleWidth / visibleHeight;
+            UiArt.CanvasLayer(fit, "Art", Art(artFile), bounds);
+            holder.gameObject.SetActive(false);
+            return holder;
+        }
+
+        /// <summary>Binds the price fields of the card view from the Price node, only the ones still empty. True when something was bound.</summary>
+        private static bool BindPriceFields(SerializedObject so, Transform root)
+        {
+            Transform group = root.Find(PriceName);
+            if (group == null) throw new InvalidOperationException("UiCostumePrefabs: the card has no Price node to bind.");
+            bool changed = BindIfEmpty(so, "priceGroup", group.gameObject);
+            changed |= BindIfEmpty(so, "priceText", group.Find(PriceTextName)?.GetComponent<Graphic>());
+            changed |= BindIfEmpty(so, "priceCashIcon", group.Find(CashIconName)?.gameObject);
+            changed |= BindIfEmpty(so, "priceGemIcon", group.Find(GemIconName)?.gameObject);
+            return changed;
+        }
+
+        /// <summary>Sets an object reference only while the field is empty (a hand-bound field is never replaced). True when it changed.</summary>
+        private static bool BindIfEmpty(SerializedObject so, string field, UnityEngine.Object value)
+        {
+            if (value == null) throw new InvalidOperationException($"UiCostumePrefabs: {so.targetObject.GetType().Name}.{field}: nothing to assign.");
+            SerializedProperty property = Find(so, field);
+            if (property.objectReferenceValue != null) return false;
+            property.objectReferenceValue = value;
+            return true;
+        }
+
+        /// <summary>
+        /// T-104 patch for the EXISTING prefabs (the user hand-edits them): adds the Price strip to CostumeItemCard.prefab and
+        /// the Cash icon to the Purchase button of CosmeticsScreen.prefab, binds the new view fields, and touches nothing
+        /// that already exists. A second run finds everything in place and saves nothing. Never runs in the game.
+        /// Command line: <c>-executeMethod SpeedStars.Tools.Builders.UiCostumePrefabs.PatchCostumePricePrefabs</c>.
+        /// </summary>
+        [MenuItem("Tools/Speed Stars/Build/Costume - price on item cards and Cash icon on Purchase")]
+        public static void PatchCostumePricePrefabs()
+        {
+            PatchItemCardPrefab();
+            PatchScreenPrefab();
+            HandEditGuard.ConvertPending();
+        }
+
+        private static void PatchItemCardPrefab()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(ItemCardPath);
+            try
+            {
+                var view = root.GetComponent<CostumeItemCardView>();
+                if (view == null) throw new InvalidOperationException($"UiCostumePrefabs: '{ItemCardPath}' has no CostumeItemCardView.");
+                bool changed = false;
+                if (root.transform.Find(PriceName) == null)
+                {
+                    AddCardPrice((RectTransform)root.transform);
+                    changed = true;
+                }
+                var so = new SerializedObject(view);
+                changed |= BindPriceFields(so, root.transform);
+                if (changed)
+                {
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    HandEditGuard.SavePatchedPrefab(root, ItemCardPath);
+                }
+                else UnityEngine.Debug.Log($"UiCostumePrefabs: '{ItemCardPath}' already has the price strip; left as it is.");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        private static void PatchScreenPrefab()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(UiPrefabPaths.CosmeticsScreen);
+            try
+            {
+                var view = root.GetComponent<CostumeEditorScreenView>();
+                if (view == null) throw new InvalidOperationException($"UiCostumePrefabs: '{UiPrefabPaths.CosmeticsScreen}' has no CostumeEditorScreenView.");
+                Transform purchase = root.transform.Find("Purchase");
+                if (purchase == null) throw new InvalidOperationException("UiCostumePrefabs: the screen has no Purchase button to add the Cash icon to.");
+
+                bool changed = false;
+                if (purchase.Find(CashIconName) == null)
+                {
+                    CurrencyIcon((RectTransform)purchase, CashIconName, CashIconArt, AlphaBounds("purchase_icon"));
+                    changed = true;
+                }
+                var so = new SerializedObject(view);
+                Transform gem = purchase.Find(PurchaseGemIconName);
+                if (gem != null) changed |= BindIfEmpty(so, "purchaseGemIcon", gem.gameObject);
+                changed |= BindIfEmpty(so, "purchaseCashIcon", purchase.Find(CashIconName).gameObject);
+                if (changed)
+                {
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    HandEditGuard.SavePatchedPrefab(root, UiPrefabPaths.CosmeticsScreen);
+                }
+                else UnityEngine.Debug.Log($"UiCostumePrefabs: '{UiPrefabPaths.CosmeticsScreen}' already has the Cash icon; left as it is.");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         /// <summary>
@@ -275,6 +428,7 @@ namespace SpeedStars.Tools.Builders
             Button random = ActionButton(root, layout, "Random", "random", CostumeTexts.Random, UiArt.Navy, out _);
             Button save = ActionButton(root, layout, "Save", "save", CostumeTexts.Save, LabelWhite, out Image saveBackground);
             Button purchase = PurchaseButton(root, layout, out Text price, out Image purchaseBackground);
+            Transform purchaseNode = purchase.transform;
 
             RectTransform wardrobe = Kit.Stretch(Kit.Node(root, "Wardrobe"));
             wardrobe.pivot = Vector2.one;
@@ -311,6 +465,8 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "purchaseButton", purchase);
             Ref(so, "purchasePriceText", price);
             Ref(so, "purchaseBackground", purchaseBackground);
+            Ref(so, "purchaseGemIcon", purchaseNode.Find(PurchaseGemIconName).gameObject);
+            Ref(so, "purchaseCashIcon", purchaseNode.Find(CashIconName).gameObject);
             Ref(so, "powerFill", powerFill);
             Ref(so, "staminaFill", staminaFill);
             Ref(so, "heightText", heightText);
@@ -526,8 +682,9 @@ namespace SpeedStars.Tools.Builders
             layout.PlaceOnScreen(node, layout.Get("purchase"));
             background = UiArt.Paint(node.gameObject, Art("purchase_background"), raycast: true);
             Button button = UiArt.MakeButton(node.gameObject, background, true, alphaHit: false);
-            UiArt.Layer(node, "Icon", Art("purchase_icon"));
+            UiArt.Layer(node, PurchaseGemIconName, Art("purchase_icon"));
             Vector4 icon = AlphaBounds("purchase_icon");
+            CurrencyIcon(node, CashIconName, CashIconArt, icon);
             price = UiArt.Slot(node, "Price", "0", PriceSize, new Vector2(icon.z + PriceGap, 0.12f), new Vector2(PriceEdge, 0.88f));
             return button;
         }
