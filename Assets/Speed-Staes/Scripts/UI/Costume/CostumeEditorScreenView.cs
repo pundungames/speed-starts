@@ -133,16 +133,8 @@ namespace SpeedStars.UI.Costume
 
         private void FitTabsInsidePanel()
         {
-            var wardrobe = transform.Find("Wardrobe") as RectTransform;
-            if (wardrobe)
-            {
-                wardrobe.pivot = Vector2.one;
-                wardrobe.anchorMin = Vector2.zero;
-                wardrobe.anchorMax = Vector2.one;
-                wardrobe.offsetMin = wardrobe.offsetMax = Vector2.zero;
-                wardrobe.anchoredPosition = Vector2.zero;
-                FitWardrobeScale();
-            }
+            // Wardrobe's anchors are not written here: the prefab already stretches it, and SafeAreaFitter owns them at runtime.
+            FitWardrobeScale();
             var panel = transform.Find("Wardrobe/Panel") as RectTransform;
             if (!panel || tabs.Length == 0) return;
             const float top = 0.87f, bottom = 0.035f, gap = 0.006f;
