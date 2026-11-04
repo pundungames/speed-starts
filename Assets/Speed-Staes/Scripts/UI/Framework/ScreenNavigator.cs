@@ -123,6 +123,7 @@ namespace SpeedStars.UI.Framework
         /// </summary>
         public bool Back()
         {
+            if (TopPopup is IUiBackHandler handler && handler.TryHandleBack()) return true;
             return CloseTopPopup() || Pop();
         }
 

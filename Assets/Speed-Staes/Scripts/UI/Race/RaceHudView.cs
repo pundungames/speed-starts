@@ -43,6 +43,13 @@ namespace SpeedStars.UI.Race
         [Min(0.1f)]
         [SerializeField] private float cadenceMaxPressesPerSecond = 10f;
 
+        [Header("Reference HUD")]
+        [SerializeField] private bool referenceHud;
+        [SerializeField] private bool approvedHudV3;
+        [SerializeField] private TMP_Text energyValueText;
+        [SerializeField] private TMP_Text cadenceValueText;
+        [SerializeField] private Image cadenceFill;
+
         [Tooltip("Exit: back to the main menu (no ticket refund).")]
         [SerializeField] private Button exitButton;
 
@@ -76,7 +83,7 @@ namespace SpeedStars.UI.Race
 
         private IRaceSession _session;
         private IRaceStandings _standings;
-        private UiMotionConfig _motion;
+        private UiMotionConfig _standingsMotion;
         private string _shownPlace;
         private Tween _placePunch;
         private IRaceTelemetry _telemetry;
@@ -108,7 +115,7 @@ namespace SpeedStars.UI.Race
         public void InjectStandings([InjectOptional] IRaceStandings standings, [InjectOptional] UiMotionConfig motion)
         {
             _standings = standings;
-            _motion = motion;
+            _standingsMotion = motion;
         }
 
         /// <summary>Optional: without the emote control (or without an emote equipped) the Emote button stays hidden.</summary>
@@ -207,16 +214,21 @@ namespace SpeedStars.UI.Race
 
             bool hadPlace = !string.IsNullOrEmpty(_shownPlace);
             _shownPlace = text;
-            if (placeText != null) placeText.text = text;
+            if (placeText != null)
+            {
+                if (referenceHud && _standings != null && text.Length > 0)
+                    placeText.text = $"<color=#FFBD12>{_standings.PlayerRank}</color><size=60%>{text.Substring(_standings.PlayerRank.ToString().Length)}</size>";
+                else placeText.text = text;
+            }
             if (punch && hadPlace && text.Length > 0) PunchPlace();
         }
 
         private void PunchPlace()
         {
-            if (_motion == null || placeText == null || !isActiveAndEnabled) return;
+            if (_standingsMotion == null || placeText == null || !isActiveAndEnabled) return;
             KillPlacePunch();
             Transform target = placeRoot != null ? placeRoot.transform : placeText.transform;
-            Tween punch = target.DOPunchScale(Vector3.one * _motion.ButtonPunchScale, _motion.ButtonPunchDuration, _motion.ButtonPunchVibrato)
+            Tween punch = target.DOPunchScale(Vector3.one * _standingsMotion.ButtonPunchScale, _standingsMotion.ButtonPunchDuration, _standingsMotion.ButtonPunchVibrato)
                 .SetLink(gameObject);
             punch.OnKill(() =>
             {
@@ -294,11 +306,20 @@ namespace SpeedStars.UI.Race
                 if (tenths != _shownSpeedTenths)
                 {
                     _shownSpeedTenths = tenths;
-                    speedText.text = RaceDisplayFormat.Speed(_telemetry.SpeedMetersPerSecond);
+                    speedText.text = referenceHud
+                        ? (_telemetry.SpeedMetersPerSecond * 2.2369363f).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " mph"
+                        : RaceDisplayFormat.Speed(_telemetry.SpeedMetersPerSecond);
                 }
             }
 
-            if (energyFill != null) energyFill.fillAmount = Mathf.Clamp01(_telemetry.Energy01);
+            if (energyFill != null) energyFill.fillAmount = referenceHud && !approvedHudV3 ? ReferenceBarAmount(_telemetry.Energy01) : Mathf.Clamp01(_telemetry.Energy01);
+            if (energyValueText != null) energyValueText.text = Mathf.RoundToInt(Mathf.Clamp01(_telemetry.Energy01) * 100f).ToString();
+            if (cadenceValueText != null) cadenceValueText.text = _telemetry.PressesPerSecond.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+            if (cadenceFill != null)
+            {
+                float fraction = RaceDisplayFormat.CadenceFraction(_telemetry.PressesPerSecond, cadenceMaxPressesPerSecond);
+                cadenceFill.fillAmount = approvedHudV3 ? fraction : ReferenceBarAmount(fraction);
+            }
 
             if (cadenceTrack != null && cadenceMarker != null)
             {
@@ -317,10 +338,13 @@ namespace SpeedStars.UI.Race
         private void UpdateCash()
         {
             if (_wallet == null || cashText == null) return;
-            int cash = _wallet.Cash;
+            int cash = approvedHudV3 ? _wallet.PurpleGems : _wallet.Cash;
             if (cash == _shownCash) return;
             _shownCash = cash;
             cashText.text = cash.ToString();
         }
+
+        // Supplied bar sprites share the entire 203px panel canvas; the painted bar occupies x43..189.
+        private static float ReferenceBarAmount(float fraction) => (43f + 146f * Mathf.Clamp01(fraction)) / 203f;
     }
 }

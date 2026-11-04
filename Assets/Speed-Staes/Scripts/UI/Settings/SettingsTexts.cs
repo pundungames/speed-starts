@@ -10,7 +10,9 @@ namespace SpeedStars.UI.Settings
     public static class SettingsTexts
     {
         public const string Title = "SETTINGS";
+        public const string Music = "Music";
         public const string CameraDistance = "Camera";
+        public const string Language = "Language";
         public const string Flag = "Flag";
         public const string PlayerName = "Player Name";
         public const string Done = "Done";
@@ -18,6 +20,9 @@ namespace SpeedStars.UI.Settings
         public const string Off = "OFF";
         public const string NamePlaceholder = "Enter name";
 
+        public const string PrivacyPolicy = "Privacy Policy";
+        public const string TermsOfUse = "Terms of Use";
+        public const string Support = "Support";
         public const string ResetPersonalBests = "Reset All Personal Bests";
         public const string ResetAllProgress = "Reset All Progress";
         public const string Cancel = "Cancel";

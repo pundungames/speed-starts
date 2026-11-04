@@ -14,18 +14,24 @@ using Zenject;
 namespace SpeedStars.UI.Settings
 {
     /// <summary>
-    /// Settings window (prefab SettingsPopup, a UiPopup on the home popup layer): Camera slider, Flag grid,
+    /// Settings window (prefab SettingsPopup, a UiPopup on the home popup layer): Music switch, Language list, Flag grid,
     /// Player Name field, Done and X. Binds the objects of the prefab and fills them from <see cref="IPlayerSettings"/>;
     /// it builds no hierarchy: rows and cells are instances of their prefabs under the lists' Content objects.
-    /// Camera and flag are saved the moment they change. The name is committed by Done only (validated first:
+    /// Music, language and flag are saved the moment they change. The name is committed by Done only (validated first:
     /// a refused name turns the field red, shows the reason and shakes it); X (the base close button) just closes, and
     /// because every opening reloads the saved name, whatever was typed and not committed is discarded.
     /// </summary>
-    public sealed class SettingsPopupView : UiPopup
+    public sealed class SettingsPopupView : UiPopup, IUiBackHandler
     {
         [Header("Texts")]
         [Tooltip("Header/Title.")]
         [SerializeField] private TMP_Text titleText;
+
+        [Tooltip("Label of the Music row.")]
+        [SerializeField] private TMP_Text musicLabel;
+
+        [Tooltip("Label of the Language row.")]
+        [SerializeField] private TMP_Text languageLabel;
 
         [Tooltip("Label of the Flag row.")]
         [SerializeField] private TMP_Text flagLabel;
@@ -35,6 +41,10 @@ namespace SpeedStars.UI.Settings
 
         [Tooltip("Label of the Done button.")]
         [SerializeField] private TMP_Text doneLabel;
+
+        [Header("Music")]
+        [Tooltip("Switch in the Music row.")]
+        [SerializeField] private SettingsToggleView musicToggle;
 
         [Header("Camera")]
         [Tooltip("Label of the Camera Distance row.")]
@@ -46,6 +56,28 @@ namespace SpeedStars.UI.Settings
         [Tooltip("The slider moves in steps of this size, so a drag saves only when the value really changes.")]
         [Min(0.001f)]
         [SerializeField] private float cameraDistanceStep = 0.05f;
+
+        [Header("Language")]
+        [Tooltip("Closed Language field: opens the list.")]
+        [SerializeField] private Button languageButton;
+
+        [Tooltip("Closed Language field: shows the chosen language's name.")]
+        [SerializeField] private TMP_Text languageValueText;
+
+        [Tooltip("Arrow of the Language field (down while closed, up while open).")]
+        [SerializeField] private Image languageArrow;
+
+        [Tooltip("PopupLayer/LanguagePopup: whole-screen catcher + the list window. Starts inactive.")]
+        [SerializeField] private GameObject languageWindow;
+
+        [Tooltip("LanguagePopup catcher button: a tap outside the list closes it.")]
+        [SerializeField] private Button languageCatcher;
+
+        [Tooltip("Language list Content: LanguageRow prefabs are put here.")]
+        [SerializeField] private RectTransform languageContent;
+
+        [Tooltip("LanguageRow prefab.")]
+        [SerializeField] private LanguageRowView languageRowPrefab;
 
         [Header("Flag")]
         [Tooltip("Closed Flag field: opens the grid.")]
@@ -104,7 +136,16 @@ namespace SpeedStars.UI.Settings
         [Tooltip("Done: validates and saves the name, then closes.")]
         [SerializeField] private Button doneButton;
 
-        [Header("Resets")]
+        [Header("Links and resets")]
+        [Tooltip("Privacy Policy row tap area.")]
+        [SerializeField] private SettingsActionRowView privacyRow;
+
+        [Tooltip("Terms of Use row tap area.")]
+        [SerializeField] private SettingsActionRowView termsRow;
+
+        [Tooltip("Support row tap area.")]
+        [SerializeField] private SettingsActionRowView supportRow;
+
         [Tooltip("Reset Personal Bests row tap area.")]
         [SerializeField] private SettingsActionRowView resetBestsRow;
 
@@ -135,6 +176,7 @@ namespace SpeedStars.UI.Settings
         private UiMotionConfig _settingsMotion;
         private IInstantiator _instantiator;
         private ScreenNavigator _navigator;
+        private readonly List<LanguageRowView> _languageRows = new List<LanguageRowView>();
         private readonly List<FlagCellView> _flagCells = new List<FlagCellView>();
         private bool _listsBuilt;
         private bool _nameRefused;
@@ -142,6 +184,7 @@ namespace SpeedStars.UI.Settings
         private Tween _shake;
         private Vector2 _shakeBase;
         private Tween _closeDelay;
+        private SettingsConfig _config;
         private IProgressReset _reset;
         private SceneFlow _sceneFlow;
         private readonly ResetConfirmFlow _confirm = new ResetConfirmFlow();
@@ -151,11 +194,12 @@ namespace SpeedStars.UI.Settings
 
         [Inject]
         public void ConstructSettings(IPlayerSettings settings, UiMotionConfig motion, IInstantiator instantiator,
-            [InjectOptional] ScreenNavigator navigator,
+            [InjectOptional] ScreenNavigator navigator, [InjectOptional] SettingsConfig config,
             [InjectOptional] IProgressReset reset, [InjectOptional] SceneFlow sceneFlow,
             [InjectOptional] RaceEventCatalog events)
         {
             _events = events;
+            _config = config;
             _reset = reset;
             _sceneFlow = sceneFlow;
             _settings = settings;
@@ -167,6 +211,8 @@ namespace SpeedStars.UI.Settings
         protected override void Awake()
         {
             base.Awake();
+            languageButton.onClick.AddListener(ToggleLanguageWindow);
+            languageCatcher.onClick.AddListener(CloseLanguageWindow);
             flagButton.onClick.AddListener(ToggleFlagWindow);
             flagCatcher.onClick.AddListener(CloseFlagWindow);
             doneButton.onClick.AddListener(OnDone);
@@ -181,9 +227,11 @@ namespace SpeedStars.UI.Settings
             base.OnEnable();
             BuildListsOnce();
             _settings.Changed += RefreshValues;
+            musicToggle.Bind(_settings.MusicOn, OnMusicChanged);
             nameInput.characterLimit = _settings.MaxNameLength;
             nameInput.text = _settings.PlayerName; // opening always starts from the saved name: X discards a typed one
             ClearNameError();
+            CloseLanguageWindow();
             CloseFlagWindow();
             RefreshValues();
             BindActionRows();
@@ -198,12 +246,15 @@ namespace SpeedStars.UI.Settings
             _confirm.Cancel();
             UnbindExtra();
             if (confirmDialog != null) confirmDialog.Hide();
-            if (flagWindow != null) flagWindow.SetActive(false); // null while the scene is being destroyed
+            if (languageWindow != null) languageWindow.SetActive(false); // null while the scene is being destroyed
+            if (flagWindow != null) flagWindow.SetActive(false);
             base.OnDisable();
         }
 
         protected override void OnDestroy()
         {
+            if (languageButton != null) languageButton.onClick.RemoveListener(ToggleLanguageWindow);
+            if (languageCatcher != null) languageCatcher.onClick.RemoveListener(CloseLanguageWindow);
             if (flagButton != null) flagButton.onClick.RemoveListener(ToggleFlagWindow);
             if (flagCatcher != null) flagCatcher.onClick.RemoveListener(CloseFlagWindow);
             if (doneButton != null) doneButton.onClick.RemoveListener(OnDone);
@@ -226,7 +277,9 @@ namespace SpeedStars.UI.Settings
         private void FillFixedTexts()
         {
             titleText.text = SettingsTexts.Title;
+            musicLabel.text = SettingsTexts.Music;
             if (cameraDistanceLabel != null) cameraDistanceLabel.text = SettingsTexts.CameraDistance;
+            languageLabel.text = SettingsTexts.Language;
             flagLabel.text = SettingsTexts.Flag;
             nameLabel.text = SettingsTexts.PlayerName;
             doneLabel.text = SettingsTexts.Done;
@@ -243,6 +296,13 @@ namespace SpeedStars.UI.Settings
             if (_listsBuilt) return;
             _listsBuilt = true;
 
+            foreach (LanguageInfo info in _settings.Languages)
+            {
+                LanguageRowView row = _instantiator.InstantiatePrefabForComponent<LanguageRowView>(languageRowPrefab.gameObject, languageContent);
+                row.Bind(info, false, OnLanguagePicked);
+                _languageRows.Add(row);
+            }
+
             foreach (FlagInfo info in _settings.Flags)
             {
                 FlagCellView cell = _instantiator.InstantiatePrefabForComponent<FlagCellView>(flagCellPrefab.gameObject, flagContent);
@@ -253,12 +313,21 @@ namespace SpeedStars.UI.Settings
 
         private void RefreshValues()
         {
+            musicToggle.SetOn(_settings.MusicOn, animate: false); // no-op when the toggle already shows it, so its own slide is not cut
             if (cameraDistanceSlider != null)
             {
                 cameraDistanceSlider.minValue = _settings.CameraDistanceMin;
                 cameraDistanceSlider.maxValue = _settings.CameraDistanceMax;
                 cameraDistanceSlider.SetValueWithoutNotify(_settings.CameraDistance);
             }
+
+            string language = _settings.LanguageCode;
+            languageValueText.text = string.Empty;
+            foreach (LanguageInfo info in _settings.Languages)
+            {
+                if (info.Code == language) languageValueText.text = info.DisplayName;
+            }
+            foreach (LanguageRowView row in _languageRows) row.SetSelected(row.Code == language);
 
             string flag = _settings.FlagCode;
             Sprite flagSprite = null;
@@ -271,10 +340,14 @@ namespace SpeedStars.UI.Settings
             foreach (FlagCellView cell in _flagCells) cell.SetSelected(cell.Code == flag);
         }
 
-        // ---------------------------------------------------------------- resets
+        // ---------------------------------------------------------------- links and resets
 
         private void BindActionRows()
         {
+            BindLink(privacyRow, SettingsTexts.PrivacyPolicy, SettingsLink.PrivacyPolicy);
+            BindLink(termsRow, SettingsTexts.TermsOfUse, SettingsLink.TermsOfUse);
+            BindLink(supportRow, SettingsTexts.Support, SettingsLink.Support);
+
             bool canReset = _reset != null;
             resetBestsRow.Bind(SettingsTexts.ResetPersonalBests, () => BeginReset(ResetKind.PersonalBests), canReset);
             resetAllRow.Bind(SettingsTexts.ResetAllProgress, () => BeginReset(ResetKind.AllProgress), canReset);
@@ -300,6 +373,18 @@ namespace SpeedStars.UI.Settings
             _pendingEvent = eventId;
             _pendingEventName = eventName ?? string.Empty;
             BeginReset(ResetKind.OnePersonalBest);
+        }
+
+        private void BindLink(SettingsActionRowView row, string caption, SettingsLink link)
+        {
+            bool usable = _config != null && !string.IsNullOrEmpty(_config.GetLinkUrl(link));
+            row.Bind(caption, () => OpenLink(link), usable);
+        }
+
+        private void OpenLink(SettingsLink link)
+        {
+            string url = _config != null ? _config.GetLinkUrl(link) : string.Empty;
+            if (!string.IsNullOrEmpty(url)) Application.OpenURL(url);
         }
 
         private void BeginReset(ResetKind kind)
@@ -365,16 +450,50 @@ namespace SpeedStars.UI.Settings
             confirmDialog.Hide();
         }
 
-        // ---------------------------------------------------------------- flag
+        // ---------------------------------------------------------------- music, language, flag
+
+        private void OnMusicChanged(bool on) => _settings.SetMusic(on);
+
+        private void ToggleLanguageWindow()
+        {
+            if (languageWindow.activeSelf) CloseLanguageWindow();
+            else
+            {
+                CloseFlagWindow();
+                languageWindow.SetActive(true);
+                languageArrow.sprite = arrowUp;
+            }
+        }
+
+        private void CloseLanguageWindow()
+        {
+            languageWindow.SetActive(false);
+            languageArrow.sprite = arrowDown;
+        }
+
+        private void OnLanguagePicked(string code)
+        {
+            _settings.SetLanguage(code);
+            RefreshValues();
+            CloseLanguageWindow();
+        }
 
         private void ToggleFlagWindow()
         {
             if (flagWindow.activeSelf) CloseFlagWindow();
             else
             {
+                CloseLanguageWindow();
                 flagWindow.SetActive(true);
                 flagArrow.sprite = arrowUp;
             }
+        }
+
+        public bool TryHandleBack()
+        {
+            if (flagWindow.activeSelf) { CloseFlagWindow(); return true; }
+            if (languageWindow.activeSelf) { CloseLanguageWindow(); return true; }
+            return false;
         }
 
         private void CloseFlagWindow()
