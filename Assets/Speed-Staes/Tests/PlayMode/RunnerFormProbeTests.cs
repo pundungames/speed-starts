@@ -71,6 +71,18 @@ namespace SpeedStars.PlayTests
         /// </summary>
         private const float StutterJumpDegPerSec = 900f;
 
+        /// <summary>A thigh slower than this (deg/s) is "holding" its angle; faster than <see cref="SwapRateDegPerSec"/> it is in a swap.</summary>
+        private const float HoldRateDegPerSec = 120f;
+        private const float SwapRateDegPerSec = 600f;
+        /// <summary>A leg whose world thigh is within this many degrees of straight down is passing the other one.</summary>
+        private const float PassThighDeg = 15f;
+        /// <summary>A foot touches the ground when its toe or foot bone is this close (m) to its height at rest.</summary>
+        private const float TouchToleranceMeters = 0.02f;
+        /// <summary>Below this largest split (deg) the hip-versus-split figures are left empty (the legs never open).</summary>
+        private const float SplitMinDeg = 1f;
+        /// <summary>The share of frames, by split size, that counts as "wide" (top) and "passing" (bottom).</summary>
+        private const float SplitEdgeShare = 0.2f;
+
         private enum Mode { Alternate, SameLeg, Both, Perfect, HoldOne, HoldBoth }
 
         private sealed class Scenario
@@ -102,7 +114,8 @@ namespace SpeedStars.PlayTests
             "L_thighWorldMin,L_thighWorldMax,R_thighWorldMin,R_thighWorldMax,splitMax,thighMaxDegPerSec," +
             "stutters,stutterThresholdDegPerSec,hipYMin,hipYMax,kneeYMin," +
             "armL_swingMin,armL_swingMax,armR_swingMin,armR_swingMax," +
-            "hipsYawRange,hipsRollRange,chestYawRange,chestRollRange,shots";
+            "hipsYawRange,hipsRollRange,chestYawRange,chestRollRange,shots," +
+            "holdShare,swapShare,corrHipSplit,hipAtWide,hipAtPass,passKnee,flightShare,footSlide,steppingAvg";
 
         [UnityTest]
         [Explicit("Measuring rig: run on request with -shotDir (see the class summary).")]
@@ -259,6 +272,17 @@ namespace SpeedStars.PlayTests
 
         private static string F(float v) => float.IsNaN(v) ? "nan" : v.ToString("0.####", CultureInfo.InvariantCulture);
 
+        /// <summary>Like F, but a value that does not exist is an empty cell.</summary>
+        private static string FE(float v) => float.IsNaN(v) ? string.Empty : v.ToString("0.####", CultureInfo.InvariantCulture);
+
+        /// <summary>Yaw (angle in the ground plane against the runner's right) and roll (elevation out of that plane) of a bone's right vector.</summary>
+        private static void YawRoll(Quaternion turn, out float yaw, out float roll)
+        {
+            Vector3 v = turn * Vector3.right; // runner frame: x right, y up, z forward
+            yaw = Mathf.Atan2(v.z, v.x) * Mathf.Rad2Deg;
+            roll = Mathf.Asin(Mathf.Clamp(v.y, -1f, 1f)) * Mathf.Rad2Deg;
+        }
+
         private static float Wrap(float a)
         {
             a %= 360f;
@@ -321,6 +345,7 @@ namespace SpeedStars.PlayTests
         private struct Fr
         {
             public float t, speed, trunk, thL, thR, twL, twR, hipY, kneeL, kneeR, armL, armR, hipsYaw, hipsRoll, chestYaw, chestRoll;
+            public float kneeAngL, kneeAngR, toeL, toeR, footL, footR, fzL, fzR, stepping;
         }
 
         /// <summary>One scenario's state: scripted input, per-frame samples and the contact sheet cells.</summary>
@@ -336,7 +361,9 @@ namespace SpeedStars.PlayTests
             private readonly List<Renderer> _others;
             private readonly bool[] _othersWere;
             private readonly float _side;
-            private readonly Transform _runner, _hipTarget, _hipsBone, _chestBone;
+            private readonly Transform _runner, _hipTarget, _hipsBone, _chestBone, _toeL, _toeR, _footL, _footR;
+            private readonly FieldInfo _stepping;
+            private float _restToeL, _restToeR, _restFootL, _restFootR;
             private readonly object _legL, _legR, _armL, _armR;
             private readonly FieldInfo _phase, _angles, _thighWorld, _legKnee, _legAnkle, _angThigh, _angKnee, _swing, _elbow;
             private readonly PropertyInfo _speed, _head, _hop, _airborne, _lastResult, _lastEff;
@@ -385,6 +412,11 @@ namespace SpeedStars.PlayTests
                 _runner = driver.transform;
                 _hipsBone = FindDeep(_runner, "B-hips");
                 _chestBone = FindDeep(_runner, "B-chest");
+                _toeL = FindDeep(_runner, "B-toe.L"); _toeR = FindDeep(_runner, "B-toe.R");
+                _footL = FindDeep(_runner, "B-foot.L"); _footR = FindDeep(_runner, "B-foot.R");
+                _stepping = d.GetField("_stepping", Any);
+                Assert.IsNotNull(_toeL, "B-toe.L not found"); Assert.IsNotNull(_toeR, "B-toe.R not found");
+                Assert.IsNotNull(_footL, "B-foot.L not found"); Assert.IsNotNull(_footR, "B-foot.R not found");
                 Assert.IsNotNull(_hipTarget, "RunnerPoseDriver.hipTarget is not bound");
                 Assert.IsNotNull(_hipsBone, "B-hips not found under the pose driver");
                 Assert.IsNotNull(_chestBone, "B-chest not found under the pose driver");
@@ -395,9 +427,24 @@ namespace SpeedStars.PlayTests
             {
                 Start = Time.timeAsDouble;
                 _active = true;
+                // Rest heights, measured once while the runner still stands (before the first press).
+                _restToeL = RelY(_toeL); _restToeR = RelY(_toeR); _restFootL = RelY(_footL); _restFootR = RelY(_footR);
                 _csv.Add("t,speed,head,hopY,lastResult,lastEfficiency," + LegColumns("L") + "," + LegColumns("R") +
                          ",hipY,hipPitch,trunkLean,hips_yaw,hips_roll,hips_pitch,chest_yaw,chest_roll,chest_pitch," +
-                         "armL_swing,armL_elbow,armR_swing,armR_elbow");
+                         "armL_swing,armL_elbow,armR_swing,armR_elbow," +
+                         "L_ankleZ,R_ankleZ,L_toeY,R_toeY,L_footY,R_footY,L_footWorldZ,R_footWorldZ,stepping");
+            }
+
+            /// <summary>World Y of a bone minus the runner root's Y.</summary>
+            private float RelY(Transform bone) => bone.position.y - _runner.position.y;
+
+            private float ReadStepping()
+            {
+                if (_stepping == null) return float.NaN;
+                object v = _stepping.GetValue(_driver);
+                if (v is bool b) return b ? 1f : 0f;
+                try { return Convert.ToSingle(v, CultureInfo.InvariantCulture); }
+                catch (Exception) { return float.NaN; }
             }
 
             public void End()
@@ -503,15 +550,24 @@ namespace SpeedStars.PlayTests
                     _hipsRest = hipsRel;
                     _chestRest = chestRel;
                 }
-                Vector3 hipsEuler = (hipsRel * Quaternion.Inverse(_hipsRest)).eulerAngles;
-                Vector3 chestEuler = (chestRel * Quaternion.Inverse(_chestRest)).eulerAngles;
+                Quaternion hipsTurn = hipsRel * Quaternion.Inverse(_hipsRest);
+                Quaternion chestTurn = chestRel * Quaternion.Inverse(_chestRest);
+                Vector3 hipsEuler = hipsTurn.eulerAngles;   // only the pitch column still comes from Euler
+                Vector3 chestEuler = chestTurn.eulerAngles;
+                // Yaw and roll from the turned right vector: a pure forward pitch leaves it alone, so both read 0 at any pitch.
+                YawRoll(hipsTurn, out float hipsYaw, out float hipsRoll);
+                YawRoll(chestTurn, out float chestYaw, out float chestRoll);
                 Vector3 trunk = _runner.InverseTransformVector(_chestBone.position - _hipsBone.position);
                 float trunkLean = Mathf.Atan2(trunk.z, trunk.y) * Mathf.Rad2Deg;
                 Vector3 hipLocal = _runner.InverseTransformPoint(_hipTarget.position);
                 float hipPitch = Wrap((runnerInv * _hipTarget.rotation).eulerAngles.x);
 
-                string legL = ReadLeg(_legL, out float thL, out float twL, out float kneeL);
-                string legR = ReadLeg(_legR, out float thR, out float twR, out float kneeR);
+                string legL = ReadLeg(_legL, out float thL, out float twL, out float kneeL, out float kaL, out float azL);
+                string legR = ReadLeg(_legR, out float thR, out float twR, out float kneeR, out float kaR, out float azR);
+                Vector3 forward = _runner.forward;
+                float toeLy = RelY(_toeL), toeRy = RelY(_toeR), footLy = RelY(_footL), footRy = RelY(_footR);
+                float fzL = Vector3.Dot(_footL.position, forward), fzR = Vector3.Dot(_footR.position, forward);
+                float stepping = ReadStepping();
                 float aLs = (float)_swing.GetValue(_armL), aLe = (float)_elbow.GetValue(_armL);
                 float aRs = (float)_swing.GetValue(_armR), aRe = (float)_elbow.GetValue(_armR);
 
@@ -519,7 +575,9 @@ namespace SpeedStars.PlayTests
                 {
                     t = (float)t, speed = speed, trunk = trunkLean, thL = thL, thR = thR, twL = twL, twR = twR, hipY = hipLocal.y,
                     kneeL = kneeL, kneeR = kneeR, armL = aLs, armR = aRs,
-                    hipsYaw = Wrap(hipsEuler.y), hipsRoll = Wrap(hipsEuler.z), chestYaw = Wrap(chestEuler.y), chestRoll = Wrap(chestEuler.z),
+                    hipsYaw = hipsYaw, hipsRoll = hipsRoll, chestYaw = chestYaw, chestRoll = chestRoll,
+                    kneeAngL = kaL, kneeAngR = kaR, toeL = toeLy, toeR = toeRy, footL = footLy, footR = footRy,
+                    fzL = fzL, fzR = fzR, stepping = stepping,
                 };
                 _frames.Add(fr);
 
@@ -528,21 +586,26 @@ namespace SpeedStars.PlayTests
                   .Append(F((float)_hop.GetValue(_sim))).Append(',').Append(_lastResult.GetValue(_sim)).Append(',')
                   .Append(F((float)_lastEff.GetValue(_sim))).Append(',').Append(legL).Append(',').Append(legR).Append(',')
                   .Append(F(hipLocal.y)).Append(',').Append(F(hipPitch)).Append(',').Append(F(trunkLean)).Append(',')
-                  .Append(F(Wrap(hipsEuler.y))).Append(',').Append(F(Wrap(hipsEuler.z))).Append(',').Append(F(Wrap(hipsEuler.x))).Append(',')
-                  .Append(F(Wrap(chestEuler.y))).Append(',').Append(F(Wrap(chestEuler.z))).Append(',').Append(F(Wrap(chestEuler.x))).Append(',')
-                  .Append(F(aLs)).Append(',').Append(F(aLe)).Append(',').Append(F(aRs)).Append(',').Append(F(aRe));
+                  .Append(F(hipsYaw)).Append(',').Append(F(hipsRoll)).Append(',').Append(F(Wrap(hipsEuler.x))).Append(',')
+                  .Append(F(chestYaw)).Append(',').Append(F(chestRoll)).Append(',').Append(F(Wrap(chestEuler.x))).Append(',')
+                  .Append(F(aLs)).Append(',').Append(F(aLe)).Append(',').Append(F(aRs)).Append(',').Append(F(aRe)).Append(',')
+                  .Append(F(azL)).Append(',').Append(F(azR)).Append(',').Append(F(toeLy)).Append(',').Append(F(toeRy)).Append(',')
+                  .Append(F(footLy)).Append(',').Append(F(footRy)).Append(',').Append(F(fzL)).Append(',').Append(F(fzR)).Append(',')
+                  .Append(F(stepping));
                 _csv.Add(sb.ToString());
 
                 TakeShotIfDue((float)t);
             }
 
-            private string ReadLeg(object leg, out float thigh, out float thighWorld, out float kneeY)
+            private string ReadLeg(object leg, out float thigh, out float thighWorld, out float kneeY, out float kneeAngle, out float ankleZ)
             {
                 object angles = _angles.GetValue(leg);
                 thigh = (float)_angThigh.GetValue(angles);
-                float kneeAngle = (float)_angKnee.GetValue(angles);
+                kneeAngle = (float)_angKnee.GetValue(angles);
                 thighWorld = (float)_thighWorld.GetValue(leg);
-                float ankleY = ((Vector3)_legAnkle.GetValue(leg)).y;
+                Vector3 ankle = (Vector3)_legAnkle.GetValue(leg);
+                float ankleY = ankle.y;
+                ankleZ = ankle.z;
                 kneeY = ((Vector3)_legKnee.GetValue(leg)).y;
                 return $"{_phase.GetValue(leg)},{F(thigh)},{F(thighWorld)},{F(kneeAngle)},{F(ankleY)},{F(kneeY)}";
             }
@@ -666,7 +729,81 @@ namespace SpeedStars.PlayTests
                 int n = Mathf.Max(1, w.Count);
                 return string.Join(",", _sc.Name, PressCount, _fallbacks, w.Count, F(speedSum / n), F(speedPeak), F(trunkSum / n), F(trunkMax),
                     F(lMin), F(lMax), F(rMin), F(rMax), F(split), F(omegaMax), stutters, F(StutterJumpDegPerSec), F(hipMin), F(hipMax), F(kneeMin),
-                    F(alMin), F(alMax), F(arMin), F(arMax), F(hyMax - hyMin), F(hrMax - hrMin), F(cyMax - cyMin), F(crMax - crMin), ShotsTaken);
+                    F(alMin), F(alMax), F(arMin), F(arMax), F(hyMax - hyMin), F(hrMax - hrMin), F(cyMax - cyMin), F(crMax - crMin), ShotsTaken)
+                    + "," + ExtraMetrics(w);
+            }
+
+            private static bool Touches(float toeY, float restToe, float footY, float restFoot) =>
+                Mathf.Abs(toeY - restToe) <= TouchToleranceMeters || Mathf.Abs(footY - restFoot) <= TouchToleranceMeters;
+
+            /// <summary>holdShare, swapShare, corrHipSplit, hipAtWide, hipAtPass, passKnee, flightShare, footSlide, steppingAvg (empty = not defined).</summary>
+            private string ExtraMetrics(List<Fr> w)
+            {
+                int count = w.Count;
+                int legFrames = 0, holds = 0, swaps = 0, passN = 0, flight = 0, slideN = 0, stepN = 0;
+                float passKneeSum = 0f, stepSum = 0f, splitMax = 0f;
+                double slideSum = 0.0;
+                var split = new float[count];
+                for (int i = 0; i < count; i++)
+                {
+                    Fr f = w[i];
+                    split[i] = Mathf.Abs(f.twL - f.twR);
+                    splitMax = Mathf.Max(splitMax, split[i]);
+                    bool touchL = Touches(f.toeL, _restToeL, f.footL, _restFootL);
+                    bool touchR = Touches(f.toeR, _restToeR, f.footR, _restFootR);
+                    if (!touchL && !touchR) flight++;
+                    if (!float.IsNaN(f.stepping)) { stepSum += f.stepping; stepN++; }
+                    if (i == 0) continue;
+
+                    float dt = Mathf.Max(1e-4f, f.t - w[i - 1].t);
+                    float oL = (f.twL - w[i - 1].twL) / dt, oR = (f.twR - w[i - 1].twR) / dt;
+                    legFrames += 2;
+                    if (Mathf.Abs(oL) < HoldRateDegPerSec) holds++;
+                    if (Mathf.Abs(oR) < HoldRateDegPerSec) holds++;
+                    if (Mathf.Abs(oL) > SwapRateDegPerSec) swaps++;
+                    if (Mathf.Abs(oR) > SwapRateDegPerSec) swaps++;
+                    if (oL > 0f && Mathf.Abs(f.twL) < PassThighDeg) { passKneeSum += f.kneeAngL; passN++; }
+                    if (oR > 0f && Mathf.Abs(f.twR) < PassThighDeg) { passKneeSum += f.kneeAngR; passN++; }
+                    if (touchL) { slideSum += Mathf.Abs(f.fzL - w[i - 1].fzL) / dt; slideN++; }
+                    if (touchR) { slideSum += Mathf.Abs(f.fzR - w[i - 1].fzR) / dt; slideN++; }
+                }
+
+                float corr = float.NaN, atWide = float.NaN, atPass = float.NaN;
+                if (count > 2 && splitMax >= SplitMinDeg)
+                {
+                    double mh = 0.0, ms = 0.0;
+                    for (int i = 0; i < count; i++) { mh += w[i].hipY; ms += split[i]; }
+                    mh /= count; ms /= count;
+                    double cov = 0.0, vh = 0.0, vs = 0.0;
+                    for (int i = 0; i < count; i++)
+                    {
+                        double a = w[i].hipY - mh, b = split[i] - ms;
+                        cov += a * b; vh += a * a; vs += b * b;
+                    }
+                    if (vh > 1e-12 && vs > 1e-12) corr = (float)(cov / Math.Sqrt(vh * vs));
+
+                    var order = new int[count];
+                    for (int i = 0; i < count; i++) order[i] = i;
+                    Array.Sort(order, (x, y) => split[x].CompareTo(split[y]));
+                    int edge = Mathf.Max(1, Mathf.RoundToInt(count * SplitEdgeShare));
+                    float lowSum = 0f, highSum = 0f;
+                    for (int i = 0; i < edge; i++)
+                    {
+                        lowSum += w[order[i]].hipY;
+                        highSum += w[order[count - 1 - i]].hipY;
+                    }
+                    atPass = lowSum / edge;
+                    atWide = highSum / edge;
+                }
+
+                float holdShare = legFrames > 0 ? (float)holds / legFrames : float.NaN;
+                float swapShare = legFrames > 0 ? (float)swaps / legFrames : float.NaN;
+                float passKnee = passN > 0 ? passKneeSum / passN : float.NaN;
+                float flightShare = count > 0 ? (float)flight / count : float.NaN;
+                float slide = slideN > 0 ? (float)(slideSum / slideN) : float.NaN;
+                float stepAvg = stepN > 0 ? stepSum / stepN : float.NaN;
+                return string.Join(",", FE(holdShare), FE(swapShare), FE(corr), FE(atWide), FE(atPass), FE(passKnee), FE(flightShare),
+                    FE(slide), FE(stepAvg));
             }
         }
     }
