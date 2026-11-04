@@ -41,7 +41,10 @@ namespace SpeedStars.Core.Race
         Go,
 
         /// <summary>A press before GO: the countdown stands here until the session begins it again.</summary>
-        FalseStart
+        FalseStart,
+
+        /// <summary>The word at the line. Only the start view's motion knows this one: the session's countdown never stands here.</summary>
+        Finish
     }
 
     /// <summary>What the meta side asks the race to be: which event and how long. Tickets are settled before this.</summary>

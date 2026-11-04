@@ -22,9 +22,9 @@ namespace SpeedStars.UI.Race
             [InjectOptional] IPersonalBests records, [InjectOptional] IWallet wallet, [InjectOptional] IPlayerSettings settings,
             [InjectOptional] IDayBestSource dayBests, [InjectOptional] IClock clock, [InjectOptional] IRaceTraces traces,
             [InjectOptional] IRaceCashRewardResolver cashRewards, [InjectOptional] IRaceOfTheDay raceOfTheDay,
-            [InjectOptional] RaceEventCatalog catalog)
+            [InjectOptional] RaceEventCatalog catalog, [InjectOptional] IRaceFinishSequence finishSequence)
         {
-            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings, dayBests, clock, traces, cashRewards, raceOfTheDay, IsPracticeIn(catalog), FindPracticeIn(catalog));
+            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings, dayBests, clock, traces, cashRewards, raceOfTheDay, IsPracticeIn(catalog), FindPracticeIn(catalog), finishSequence);
         }
 
         /// <summary>The first playable, free event without opponents (the rule of the Practice panel); empty id when the catalog has none.</summary>

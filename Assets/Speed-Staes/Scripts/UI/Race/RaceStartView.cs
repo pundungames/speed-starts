@@ -9,7 +9,8 @@ using Zenject;
 namespace SpeedStars.UI.Race
 {
     /// <summary>
-    /// The READY / SET / GO! words and speed lines over the Race HUD (Yaris_Baslangic_UI_v1). It only reacts: the race session
+    /// The READY / SET / GO! words and speed lines over the Race HUD (Yaris_Baslangic_UI_v1), and on the same banner the word at the finish
+    /// line (the flag is already on it). It only reacts: the race session
     /// (IRaceStartSignal) owns the countdown and opens the runner's input; this view never starts, delays or times anything of the race.
     /// A phase that arrives early, a restart (Ready again) or a cancel (Idle) just restarts or hides the motion, so there is never a second
     /// GO! or a layer left on screen. The motion itself is RaceStartMotion (pure, tested); this class copies its pose onto the prefab's
@@ -52,6 +53,8 @@ namespace SpeedStars.UI.Race
         [Tooltip("release_01..06: the lines that burst out with GO!.")]
         [SerializeField] private Image[] releaseImages;
 
+        private IRaceSession _session;
+        private string _finishWord = string.Empty;
         private IRaceStartSignal _signal;
         private RaceStartMotion _motion;
         private RaceStartPhase _phase;
@@ -64,6 +67,9 @@ namespace SpeedStars.UI.Race
         [Inject]
         public void InjectStart(IRaceSession session)
         {
+            if (_subscribed && _session != null) _session.Finished -= OnFinished;
+            _session = session;
+            if (_subscribed && _session != null) _session.Finished += OnFinished;
             Initialize(session as IRaceStartSignal);
         }
 
@@ -100,6 +106,7 @@ namespace SpeedStars.UI.Race
             if (_signal == null || _subscribed || !isActiveAndEnabled) return;
 
             _signal.StartPhaseChanged += OnPhaseChanged;
+            if (_session != null) _session.Finished += OnFinished;
             _subscribed = true;
             // Bound late (the countdown already began): show where it is instead of waiting for the next event.
             ShowPhase(_signal.StartPhase);
@@ -122,7 +129,18 @@ namespace SpeedStars.UI.Race
         private void Unsubscribe()
         {
             if (_subscribed && _signal != null) _signal.StartPhaseChanged -= OnPhaseChanged;
+            if (_subscribed && _session != null) _session.Finished -= OnFinished;
             _subscribed = false;
+        }
+
+        /// <summary>The line: the place (or FINISH!) with its own sound. The session has just cancelled what was left of GO!.</summary>
+        private void OnFinished(RaceOutcome outcome)
+        {
+            _finishWord = RaceStandingsFormat.FinishWord(outcome.Rank, outcome.RunnerCount);
+            if (wordText != null && wordText.font != null && wordText.font.atlasPopulationMode == AtlasPopulationMode.Dynamic)
+                wordText.font.TryAddCharacters(_finishWord);
+            ShowPhase(RaceStartPhase.Finish);
+            _sfx?.Play(outcome.Rank == 1 && outcome.RunnerCount > 1 ? SfxId.Reward : SfxId.Claim);
         }
 
         private void OnPhaseChanged(RaceStartPhase phase)
@@ -149,7 +167,7 @@ namespace SpeedStars.UI.Race
                 return;
             }
             wordText.text = phase == RaceStartPhase.Ready ? ReadyWord : phase == RaceStartPhase.Set ? SetWord
-                : phase == RaceStartPhase.FalseStart ? FalseStartWord : GoWord;
+                : phase == RaceStartPhase.FalseStart ? FalseStartWord : phase == RaceStartPhase.Finish ? _finishWord : GoWord;
             Apply(_motion.Sample(phase, 0f));
         }
 
@@ -187,7 +205,7 @@ namespace SpeedStars.UI.Race
             _shown = false;
             if (group != null) group.gameObject.SetActive(false);
             if (backdropRoot != null) backdropRoot.SetActive(false);
-            if (_phase == RaceStartPhase.Go) _phase = RaceStartPhase.Idle; // the burst is over; nothing more to animate
+            if (_phase == RaceStartPhase.Go || _phase == RaceStartPhase.Finish) _phase = RaceStartPhase.Idle; // the burst is over; nothing more to animate
         }
 
         private void Apply(RaceStartPose pose)
@@ -209,8 +227,8 @@ namespace SpeedStars.UI.Race
             textRoot.localScale = new Vector3(pose.TextScale.x, pose.TextScale.y, 1f);
             effectsRoot.localScale = new Vector3(pose.EffectsScale, pose.EffectsScale, 1f);
 
-            // READY / SET: navy on the cream banner; GO! and FAIL: red with the navy outline.
-            bool red = _phase == RaceStartPhase.Go || _phase == RaceStartPhase.FalseStart;
+            // READY / SET: navy on the cream banner; GO!, FAIL and the finish word: red with the navy outline.
+            bool red = _phase == RaceStartPhase.Go || _phase == RaceStartPhase.FalseStart || _phase == RaceStartPhase.Finish;
             Color fill = red ? config.GoColor : config.ReadySetColor;
             fill.a *= pose.TextAlpha;
             wordText.color = fill;

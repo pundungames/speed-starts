@@ -458,7 +458,8 @@ namespace SpeedStars.Bridge
                     bot.FinishSeconds = crossed - bot.GoSimTime;
                     bot.Finished = true;
                     bot.Samples.Add(new RaceTraceSample(distance, bot.FinishSeconds));
-                    LetGo(bot);
+                    if (session) RunnerCooldown.Begin(bot.Body, session.FinishConfig);
+                    else LetGo(bot);
                     TracesChanged?.Invoke();
                 }
                 else
@@ -471,7 +472,7 @@ namespace SpeedStars.Bridge
             }
         }
 
-        /// <summary>After the line: no more presses, keys released; the runner coasts to a stop on its own physics.</summary>
+        /// <summary>After the line, in a scene without a session: no more presses, keys released; the runner coasts to a stop on its own physics.</summary>
         static void LetGo(Bot bot)
         {
             bot.Body.acceptInput = false;

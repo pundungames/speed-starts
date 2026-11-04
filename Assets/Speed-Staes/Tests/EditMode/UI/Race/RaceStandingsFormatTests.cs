@@ -45,6 +45,14 @@ namespace SpeedStars.Tests.UI.Race
         }
 
         [Test]
+        public void FinishWord_IsThePlaceInAField_AndTheSameAloneWhateverTheRank()
+        {
+            StringAssert.StartsWith(RaceStandingsFormat.Ordinal(3).ToUpperInvariant(), RaceStandingsFormat.FinishWord(3, 7));
+            Assert.AreEqual(RaceStandingsFormat.FinishWord(1, 1), RaceStandingsFormat.FinishWord(1, 0));
+            Assert.AreNotEqual(RaceStandingsFormat.FinishWord(1, 1), RaceStandingsFormat.FinishWord(1, 7));
+        }
+
+        [Test]
         public void PlaceText_WithOpponents_IsOrdinal()
         {
             Assert.AreEqual(RaceStandingsFormat.Ordinal(3), RaceStandingsFormat.PlaceText(3, 7));

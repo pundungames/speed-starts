@@ -288,6 +288,113 @@ namespace SpeedStars.PlayTests
             }
         }
 
+        /// <summary>The finish sequence frame by frame on a real run over a shortened race, plain and with an emote; the numbers go to a csv next to the shots.</summary>
+        [UnityTest]
+        public IEnumerator Shot_FinishSequence() => ShootFinish("Race_finish_plain", string.Empty);
+
+        [UnityTest]
+        public IEnumerator Shot_FinishSequenceEmote() => ShootFinish("Race_finish_emote", "hip_hop");
+
+        /// <summary>Same run, but the race is lost: slow presses, and the line far enough for the field to get there first.</summary>
+        [UnityTest]
+        public IEnumerator Shot_FinishSequenceLost() => ShootFinish("Race_finish_lost", string.Empty, 0.75f, 12f);
+
+        private static IEnumerator ShootFinish(string prefix, string emoteId, float pressSeconds = 0.13f, float raceMeters = 40f)
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            const float ShotEverySeconds = 0.3f;
+            const float ShotsAfterResultsSeconds = 2.5f;
+            const float LimitSeconds = 40f;
+
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            PlayerProgress progress = ProjectContext.Instance.Container.Resolve<ProgressRepository>().Current;
+            string equippedBefore = progress.EquippedEmoteId;
+            bool addedEmote = false;
+            IRaceSelection selection = ProjectContext.Instance.Container.Resolve<IRaceSelection>();
+            RaceEventId selectedBefore = selection.Selected;
+            try
+            {
+                // A flat race with a field: Practice ends without Results.
+                foreach (RaceEventDefinition definition in ProjectContext.Instance.Container.Resolve<RaceEventCatalog>().GetEvents())
+                    if (definition.IsPlayable && definition.HasOpponents && definition.HurdleCount == 0 && !definition.IsRelay)
+                    {
+                        selection.Select(definition.Id);
+                        break;
+                    }
+                if (emoteId.Length > 0)
+                {
+                    addedEmote = !progress.OwnedEmoteIds.Contains(emoteId);
+                    if (addedEmote) progress.OwnedEmoteIds.Add(emoteId);
+                    progress.EquippedEmoteId = emoteId;
+                }
+                yield return LoadScene(RaceScene);
+                MonoBehaviour adapter = null;
+                foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>(true))
+                    if (behaviour is IRaceSession) { adapter = behaviour; break; }
+                Assert.IsNotNull(adapter, "No IRaceSession in the Race scene.");
+                var session = (IRaceSession)adapter;
+                var signal = (IRaceStartSignal)adapter;
+                yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.Go, "GO", 15f);
+
+                object race = adapter.GetType().GetField("race", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(adapter);
+                race.GetType().GetField("raceDistance").SetValue(race, raceMeters);
+                object body = adapter.GetType().GetProperty("PlayerBody").GetValue(adapter);
+                object input = body.GetType().GetField("input").GetValue(body);
+                System.Reflection.MethodInfo inject = input.GetType().GetMethod("Inject");
+                object sim = body.GetType().GetProperty("Sim").GetValue(body);
+                Type simType = sim.GetType();
+                float Read(string property) => (float)simType.GetProperty(property).GetValue(sim);
+
+                float started = Time.realtimeSinceStartup;
+                int leg = 0;
+                while (session.State != RaceSessionState.Finished)
+                {
+                    if (Time.realtimeSinceStartup - started > LimitSeconds) Assert.Fail($"never crossed: {session.Distance:0.0} m, state {session.State}.");
+                    inject.Invoke(input, new object[] { leg, true, Time.timeAsDouble });
+                    yield return new WaitForSeconds(pressSeconds);
+                    inject.Invoke(input, new object[] { leg, false, Time.timeAsDouble });
+                    yield return new WaitForSeconds(pressSeconds);
+                    leg = 1 - leg;
+                }
+
+                ResultsScreenView results = UnityEngine.Object.FindObjectOfType<ResultsScreenView>(true);
+                var numbers = new List<string> { "real,scale,speed,distance,head,results" };
+                float crossed = Time.realtimeSinceStartup;
+                float resultsAt = float.PositiveInfinity;
+                float nextShot = 0f;
+                int shot = 0;
+                while (Time.realtimeSinceStartup < resultsAt + ShotsAfterResultsSeconds && Time.realtimeSinceStartup - crossed < LimitSeconds)
+                {
+                    float now = Time.realtimeSinceStartup - crossed;
+                    bool open = results != null && results.gameObject.activeInHierarchy;
+                    if (open && float.IsPositiveInfinity(resultsAt)) resultsAt = Time.realtimeSinceStartup;
+                    numbers.Add($"{now:0.00},{Time.timeScale:0.00},{Read("Speed"):0.00},{Read("Distance"):0.0},{Read("HeadAngle"):0},{(open ? 1 : 0)}");
+                    if (now >= nextShot)
+                    {
+                        nextShot = now + ShotEverySeconds;
+                        yield return Capture(dir, $"{prefix}_{shot++:00}");
+                    }
+                    else yield return null;
+                }
+                File.WriteAllLines(Path.Combine(dir, prefix + ".csv"), numbers);
+                Assert.IsFalse(float.IsPositiveInfinity(resultsAt), "the Results never opened after the finish sequence.");
+                Assert.AreEqual(1f, Time.timeScale, 0.001f, "the game speed must be back to normal behind the Results.");
+            }
+            finally
+            {
+                if (!selectedBefore.IsEmpty) selection.Select(selectedBefore);
+                if (emoteId.Length > 0)
+                {
+                    progress.EquippedEmoteId = equippedBefore;
+                    if (addedEmote) progress.OwnedEmoteIds.Remove(emoteId);
+                }
+                saveFiles.Restore();
+            }
+        }
+
         private static IEnumerator ShootStart(string dir, RaceStartView view, string name, RaceStartPhase phase, float seconds)
         {
             view.PreviewAt(phase, seconds);

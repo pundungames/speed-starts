@@ -45,7 +45,13 @@ namespace SpeedStars.Installers
             Container.Bind<IRaceEventLookup>().To<CatalogRaceEventLookup>().AsSingle();
             if (entryGateModal != null) Container.Bind<IEntryGatePrompt>().To<RaceFlowEntryGatePrompt>().AsSingle().WithArguments(entryGateModal);
             // T-089: the chosen emote in the race (HUD button, key, auto emote at the finish).
-            if (raceEmotes != null) Container.Bind<IRaceEmoteControl>().FromInstance(raceEmotes).AsSingle();
+            if (raceEmotes != null)
+            {
+                Container.Bind<IRaceEmoteControl>().FromInstance(raceEmotes).AsSingle();
+                Container.Bind<RaceEmotes>().FromInstance(raceEmotes).AsSingle();
+            }
+            // The picture between the line and the Results.
+            Container.Bind<IRaceFinishSequence>().To<RaceFinishSequence>().FromNewComponentOn(raceSession.gameObject).AsSingle();
             Container.BindInterfacesAndSelfTo<RaceFlow>().AsSingle().NonLazy();
         }
     }

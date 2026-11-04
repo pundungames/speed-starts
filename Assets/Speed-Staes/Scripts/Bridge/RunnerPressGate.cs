@@ -15,7 +15,8 @@ namespace SpeedStars.Bridge
     /// Sits between the player's RunnerInput and RunnerBody (their execution orders are -200 and -100), so Malik's input stays as it
     /// is: a finger that came down on a button is not a step, and a press during the countdown is a false start, reported to the
     /// session; the runner then falls with both feet pressed from here, and nothing the player does counts until the countdown is
-    /// back. Every other event goes back into the queue in order, with its own time. Added by RaceSessionAdapter, player only.
+    /// back. After the finish no key is a step any more; a press only tells the finish sequence it may skip. Every other event goes back
+    /// into the queue in order, with its own time. Added by RaceSessionAdapter, player only.
     /// </summary>
     [DefaultExecutionOrder(-150)]
     public sealed class RunnerPressGate : MonoBehaviour
@@ -48,6 +49,11 @@ namespace SpeedStars.Bridge
             while (input.TryDequeue(out TapEvent tap))
             {
                 if (_filter.ShouldDrop(tap.Leg, tap.Pressed) || _session.IsFailing) continue;
+                if (_session.State == RaceSessionState.Finished)
+                {
+                    if (tap.Pressed) _session.ReportFinishTap();
+                    continue;
+                }
                 if (tap.Pressed && _session.IsCountingDown)
                 {
                     fall = _session.ReportFalseStart();

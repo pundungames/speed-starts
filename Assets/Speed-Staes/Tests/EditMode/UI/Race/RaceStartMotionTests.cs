@@ -36,6 +36,18 @@ namespace SpeedStars.Tests.UI.Race
         }
 
         [Test]
+        public void Finish_ShowsForItsSeconds_ThenIsGone()
+        {
+            float seconds = _config.FinishWordSeconds;
+            Assert.IsTrue(_motion.Sample(RaceStartPhase.Finish, 0f).Visible);
+            Assert.IsTrue(_motion.Sample(RaceStartPhase.Finish, seconds * 0.9f).Visible);
+            Assert.IsFalse(_motion.IsFinished(RaceStartPhase.Finish, seconds * 0.9f));
+
+            Assert.IsFalse(_motion.Sample(RaceStartPhase.Finish, seconds).Visible);
+            Assert.IsTrue(_motion.IsFinished(RaceStartPhase.Finish, seconds));
+        }
+
+        [Test]
         public void Ready_StartsAboveItsPlace_AndLandsThere()
         {
             RaceStartPose first = _motion.Sample(RaceStartPhase.Ready, 0f);

@@ -44,6 +44,7 @@ namespace SpeedStars.UI.Race
                 case RaceStartPhase.Set:
                 case RaceStartPhase.FalseStart: return Set(seconds);
                 case RaceStartPhase.Go: return Go(seconds);
+                case RaceStartPhase.Finish: return seconds < _config.FinishWordSeconds ? Ready(seconds) : new RaceStartPose();
                 default: return new RaceStartPose();
             }
         }
@@ -51,7 +52,8 @@ namespace SpeedStars.UI.Race
         /// <summary>True when nothing of the phase is left to show at this time (GO! after its burst, Idle).</summary>
         public bool IsFinished(RaceStartPhase phase, float seconds)
         {
-            return phase == RaceStartPhase.Idle || (phase == RaceStartPhase.Go && seconds >= _config.GoSeconds);
+            return phase == RaceStartPhase.Idle || (phase == RaceStartPhase.Go && seconds >= _config.GoSeconds)
+                || (phase == RaceStartPhase.Finish && seconds >= _config.FinishWordSeconds);
         }
 
         /// <summary>

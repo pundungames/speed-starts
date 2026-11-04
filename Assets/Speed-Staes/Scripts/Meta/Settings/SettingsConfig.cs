@@ -102,7 +102,7 @@ namespace SpeedStars.Meta.Settings
         [SerializeField] private bool defaultShowEmoteButton = true;
 
         [Tooltip("The player's own character emotes by itself, for a new player.")]
-        [SerializeField] private bool defaultAutoEmoteSelf;
+        [SerializeField] private bool defaultAutoEmoteSelf = true;
 
         [Tooltip("The competitors emote by themselves, for a new player.")]
         [SerializeField] private bool defaultAutoEmoteCompetitors;

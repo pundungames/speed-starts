@@ -123,6 +123,62 @@ namespace SpeedStars.Tests.UI.Race
         }
 
         [Test]
+        public void Finished_WithAFinishSequence_PaysOnTheLineAndOpensTheResultsWhenItIsDone()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            var finish = new FakeFinishSequence();
+            var flow = new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, _prompt, finishSequence: finish);
+            flow.Start();
+
+            _session.Finish(Outcome(Dash, 9.589));
+
+            Assert.AreEqual(1, _rewards.Calls.Count, "the money is settled on the line");
+            Assert.AreEqual(9.589, finish.Outcome.TimeSeconds, 0.0001);
+            Assert.AreNotSame(_results, _navigator.CurrentScreen, "the Results wait for the picture");
+            Assert.AreNotSame(_hud, _navigator.CurrentScreen, "and the HUD has left it");
+
+            finish.RaiseResultsDue();
+
+            Assert.AreSame(_results, _navigator.CurrentScreen);
+            Assert.AreEqual(2, _navigator.ScreenCount, "the curtain gave its place: the HUD is right under the Results");
+            Assert.AreEqual(1, _rewards.Calls.Count);
+        }
+
+        [Test]
+        public void Finished_WithAFinishSequence_RaceAgainStillReturnsToTheHud()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            var finish = new FakeFinishSequence();
+            new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, _prompt, finishSequence: finish).Start();
+            _session.Finish(Outcome(Dash, 9.589));
+            finish.RaiseResultsDue();
+            _gate.NextResult = EntryResult.EnteredFree;
+
+            _results.RaiseRaceAgain();
+
+            Assert.AreSame(_hud, _navigator.CurrentScreen);
+            Assert.AreEqual(2, _session.Requests.Count);
+        }
+
+        [Test]
+        public void Finished_BackKeyDuringTheFinishSequence_StillEndsOnTheResults()
+        {
+            _gate.Pending = Dash;
+            _gate.HasPendingEntry = true;
+            var finish = new FakeFinishSequence();
+            new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, _prompt, finishSequence: finish).Start();
+            _session.Finish(Outcome(Dash, 9.589));
+
+            _navigator.Back();
+            finish.RaiseResultsDue();
+
+            Assert.AreSame(_results, _navigator.CurrentScreen);
+            Assert.AreEqual(2, _navigator.ScreenCount);
+        }
+
+        [Test]
         public void Finished_RecordsTheTimeOnce_AndPresentsTheNewRecord()
         {
             var records = new FakeRecords();
@@ -712,6 +768,20 @@ namespace SpeedStars.Tests.UI.Race
         {
             public void Show() { }
             public void Hide() { }
+        }
+
+        private sealed class FakeFinishSequence : IRaceFinishSequence
+        {
+            public RaceOutcome Outcome;
+            private Action _onResultsDue;
+
+            public void Play(RaceOutcome outcome, Action onResultsDue)
+            {
+                Outcome = outcome;
+                _onResultsDue = onResultsDue;
+            }
+
+            public void RaiseResultsDue() => _onResultsDue?.Invoke();
         }
 
         private sealed class FakeRewards : IRaceRewardResolver

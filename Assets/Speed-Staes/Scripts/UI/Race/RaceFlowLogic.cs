@@ -12,6 +12,7 @@ namespace SpeedStars.UI.Race
     /// The decisions of the Race scene, as pure C# (RaceFlow is the thin Zenject shell around it). Start: take the
     /// confirmed entry from the gate and start the race with the catalog distance; with no pending entry (Play pressed
     /// in the editor straight from the Race scene) start the selected event for free and warn once. Finish: pay the gem reward once and open Results (Practice: nothing is paid or recorded and no Results opens).
+    /// With a finish sequence the money and the record are settled on the line as before; only the Results wait for the picture, and the HUD leaves for it.
     /// Results Race Again enters a new race through the gate; HUD Restart resets the current attempt immediately.
     /// </summary>
     public sealed class RaceFlowLogic : IDisposable
@@ -35,6 +36,8 @@ namespace SpeedStars.UI.Race
         private readonly IRaceOfTheDay _daily; // optional: without it Race of the Day runs the catalog distance and reads like any event
         private readonly Func<RaceEventId, bool> _isPractice; // optional: without it every event ends with Results
         private readonly Func<RaceEventId> _findPracticeEvent; // optional: without it the Results Practice button stays off
+        private readonly IRaceFinishSequence _finishSequence; // optional: without it the Results open on the line
+        private readonly IUiView _finishCurtain = new EmptyScreen();
         private readonly List<DayBestRecord> _dayScratch = new List<DayBestRecord>();
 
         private RaceEventInfo _current;
@@ -56,8 +59,9 @@ namespace SpeedStars.UI.Race
             IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null,
             IDayBestSource dayBests = null, IClock clock = null, IRaceTraces traces = null,
             IRaceCashRewardResolver cashRewards = null, IRaceOfTheDay raceOfTheDay = null, Func<RaceEventId, bool> isPractice = null,
-            Func<RaceEventId> findPracticeEvent = null)
+            Func<RaceEventId> findPracticeEvent = null, IRaceFinishSequence finishSequence = null)
         {
+            _finishSequence = finishSequence;
             _findPracticeEvent = findPracticeEvent;
             _isPractice = isPractice;
             _daily = raceOfTheDay;
@@ -173,6 +177,7 @@ namespace SpeedStars.UI.Race
             if (_isPractice != null && _isPractice(outcome.EventId))
             {
                 _practiceFinished = true;
+                _finishSequence?.Play(outcome, null);
                 return;
             }
 
@@ -190,7 +195,28 @@ namespace SpeedStars.UI.Race
             PresentAnalysis(title, outcome);
             if (_results is IGemRewardView gemView) gemView.ShowGemReward(gems); // 0 clears the line of a previous race
             if (_results is IRaceCashRewardView cashView) cashView.ShowCashReward(cash); // empty clears the block of a previous race
-            _navigator.Push(_results);
+            if (_finishSequence == null)
+            {
+                _navigator.Push(_results);
+                return;
+            }
+            _navigator.Push(_finishCurtain);
+            _finishSequence.Play(outcome, OpenResults);
+        }
+
+        /// <summary>The finish sequence is done (or skipped). The curtain gives its place to the Results, so Race Again still pops to the HUD.</summary>
+        private void OpenResults()
+        {
+            if (!_resultsOpen) return;
+            if (_navigator.CurrentScreen == _finishCurtain) _navigator.Replace(_results);
+            else _navigator.Push(_results); // the device's back key took the curtain away
+        }
+
+        /// <summary>A screen with nothing on it: the HUD closes as for any screen on top of it, and the runner has the whole picture.</summary>
+        private sealed class EmptyScreen : IUiView
+        {
+            public void Show() { }
+            public void Hide() { }
         }
 
         /// <summary>Closes the player's split series on the finish and hands the Analysis data to the Results view.</summary>

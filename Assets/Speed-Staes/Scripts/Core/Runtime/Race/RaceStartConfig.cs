@@ -27,6 +27,10 @@ namespace SpeedStars.Core.Race
         [Min(0.01f)]
         [SerializeField] private float maxFrameSeconds = 0.1f;
 
+        [Tooltip("How long the word at the finish line (1ST!, FINISH!) stays up (real seconds, whatever the game speed).")]
+        [Min(0.1f)]
+        [SerializeField] private float finishWordSeconds = 1.3f;
+
         [Tooltip("How long FAIL stays up (real seconds, whatever the game speed) while the runner falls, before the countdown starts over.")]
         [Min(0.1f)]
         [SerializeField] private float falseStartSeconds = 2.2f;
@@ -172,6 +176,7 @@ namespace SpeedStars.Core.Race
         public float HoldShakeAmplitude => holdShakeAmplitude;
         public float HoldShakeSeconds => holdShakeSeconds;
         public float HoldCycleSeconds => holdCycleSeconds;
+        public float FinishWordSeconds => finishWordSeconds;
         public float GoSeconds => goSeconds;
         public float GoOpaqueSeconds => goOpaqueSeconds;
         public float GoScaleFrom => goScaleFrom;

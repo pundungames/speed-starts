@@ -14,8 +14,8 @@ namespace SpeedStars.Bridge
     /// run; its key and his play-next rule stay as they are). This component only chooses WHICH clip it plays: it hands the
     /// runner's <c>clips</c> list the one equipped clip (none = empty list, so the key does nothing), and only from GO on, so
     /// the emote key, the HUD button (<see cref="IRaceEmoteControl"/>) and the automatic emote all play the equipped emote and
-    /// never before the start. After the finish it stays free. With <see cref="IEmoteRaceOptions.AutoEmoteSelf"/> the player's
-    /// runner plays it once the finish is reported; with <see cref="IEmoteRaceOptions.AutoEmoteCompetitors"/> each opponent
+    /// never before the start. With <see cref="IEmoteRaceOptions.AutoEmoteSelf"/> the player's runner plays it in the finish sequence
+    /// (<see cref="PlayFinishEmote"/>); with <see cref="IEmoteRaceOptions.AutoEmoteCompetitors"/> each opponent
     /// plays one of the clips when it crosses the line (read from his runner body, no change in RaceBots). Decisions are in
     /// <c>RaceEmoteRules</c> (pure, tested). Added to the player's runner by the Race scene builder; every dependency is optional,
     /// without them the runner keeps its prefab list.
@@ -53,7 +53,6 @@ namespace SpeedStars.Bridge
         bool _subscribed;
         bool _clipsOpen;
         bool _lastCan;
-        bool _autoSelfPending;
         float _busyUntil;
         int _round;
         readonly List<Opponent> _opponents = new List<Opponent>();
@@ -131,7 +130,6 @@ namespace SpeedStars.Bridge
             if (_subscribed || !_initialized) return;
             _subscribed = true;
             if (_emotes != null) _emotes.Changed += OnEquippedChanged;
-            if (_session != null) _session.Finished += OnFinished;
             if (_signal != null) _signal.StartPhaseChanged += OnPhaseChanged;
             _options.Changed += OnOptionsChanged;
             if (playerEmote.input) playerEmote.input.EmotePressed += OnKeyPressed;
@@ -142,7 +140,6 @@ namespace SpeedStars.Bridge
             if (!_subscribed) return;
             _subscribed = false;
             if (_emotes != null) _emotes.Changed -= OnEquippedChanged;
-            if (_session != null) _session.Finished -= OnFinished;
             if (_signal != null) _signal.StartPhaseChanged -= OnPhaseChanged;
             _options.Changed -= OnOptionsChanged;
             if (playerEmote && playerEmote.input) playerEmote.input.EmotePressed -= OnKeyPressed;
@@ -160,6 +157,22 @@ namespace SpeedStars.Bridge
             return true;
         }
 
+        /// <summary>
+        /// The finish sequence's moment: the equipped emote, whatever the phase (the countdown word is gone by then). Seconds it lasts;
+        /// 0 when nothing plays (none equipped, or the player's "Emote myself" is off). A clip still playing just goes on.
+        /// </summary>
+        public float PlayFinishEmote()
+        {
+            Initialize();
+            if (!RaceEmoteRules.AutoSelfWanted(_options.AutoEmoteSelf, _equippedClip != null)) return 0f;
+            _clipsOpen = true; // the next Update sees the phase and empties the list again; a key press finds nothing
+            playerEmote.clips = new[] { _equippedClip };
+            playerEmote.Play();
+            MarkBusy();
+            Changed?.Invoke();
+            return _equippedClip.Length;
+        }
+
         void OnEquippedChanged()
         {
             ReadEquipped();
@@ -169,15 +182,12 @@ namespace SpeedStars.Bridge
 
         void OnOptionsChanged() => Changed?.Invoke();
 
-        void OnFinished(RaceOutcome outcome) => _autoSelfPending = true; // played next frame: the runner's own reset of this frame is over then
-
         void OnPhaseChanged(RaceStartPhase phase)
         {
             if (phase == RaceStartPhase.Go) return;
             // A new race is being prepared: opponents may emote again, and each round starts their clips from another place.
             _round++;
             foreach (Opponent opponent in _opponents) opponent.Done = false;
-            _autoSelfPending = false;
             _busyUntil = 0f;
         }
 
@@ -218,12 +228,6 @@ namespace SpeedStars.Bridge
         {
             if (!_initialized) return;
             ApplyPlayerClips(force: false);
-
-            if (_autoSelfPending)
-            {
-                _autoSelfPending = false;
-                if (RaceEmoteRules.AutoSelfWanted(_options.AutoEmoteSelf, _equippedClip != null)) RequestEmote();
-            }
 
             bool can = CanEmote;
             if (can != _lastCan)

@@ -73,6 +73,7 @@ namespace SpeedStars.Tools.Builders
             AnalysisConfigSeed.Seed(AnalysisPath, overwrite);
             LeaderboardConfigSeed.Seed(LeaderboardPath, overwrite);
             RaceStartConfigSeed.Seed(overwrite); // T-039: READY / SET timing + start motion
+            RaceFinishConfigSeed.Seed(overwrite); // the picture between the line and the Results
             EmoteCatalogSeed.Seed(overwrite); // T-040
             BotRaceConfigSeed.Seed(overwrite); // T-074: opponent bots (field, difficulty, press driver, names)
             AudioConfigSeed.Seed(AudioPath, overwrite); // T-052: sound cues (placeholder WAVs), music slot, haptic numbers

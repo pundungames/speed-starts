@@ -37,6 +37,13 @@ namespace SpeedStars.UI.Race
             return Ordinal(rank);
         }
 
+        /// <summary>The word on the banner at the line: the place in a field ("1ST!"), FINISH! running alone.</summary>
+        public static string FinishWord(int rank, int runnerCount)
+        {
+            string place = PlaceText(rank, runnerCount);
+            return place.Length > 0 ? place.ToUpperInvariant() + "!" : "FINISH!";
+        }
+
         /// <summary>Race time of a finished runner, a dash while still running.</summary>
         public static string TimeText(RaceEntry entry) =>
             entry.Finished ? ResultsTexts.Time(entry.TimeSeconds) : ResultsTexts.NotFinished;

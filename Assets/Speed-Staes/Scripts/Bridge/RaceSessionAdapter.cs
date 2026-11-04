@@ -8,8 +8,8 @@ namespace SpeedStars.Bridge
 {
     /// <summary>
     /// Translates the runner system (RaceController / RunnerBody, read-only) into IRaceSession and IRaceTelemetry. No decisions here.
-    /// Today the runner has no finish event and resets in the finish frame, so a RunReset that follows a changed
-    /// LastRaceTime is the finish. When the runner gets a real finish event, only this class changes.
+    /// The runner has no finish event and resets in the finish frame, so RaceFinishGate sees the line first and keeps the runner running
+    /// over it; the reset comes with the next race. When the runner gets a real finish event, only these two classes change.
     /// It also owns the race start (T-039): every RequestStart closes the runner's input and runs the READY / SET / GO countdown
     /// (timing in RaceStartSequence); input opens exactly at GO and the phase event follows. Views only react to the events.
     /// The runner's own clock still starts at the first press after GO (Malik's RaceController; see the T-039 needs).
@@ -25,6 +25,8 @@ namespace SpeedStars.Bridge
         float cadenceWindowSeconds = 1f;
         [SerializeField, Tooltip("Countdown numbers (READY time, SET wait range). Empty = the config's own defaults.")]
         RaceStartConfig startConfig;
+        [SerializeField, Tooltip("Finish sequence numbers (slow motion, steps, stance, camera). Empty = the config's own defaults.")]
+        RaceFinishConfig finishConfig;
         [SerializeField, Tooltip("The opponents (T-075). Their order at the player's finish gives the outcome's rank and runner count. Empty = the player runs alone: rank 1 of 1.")]
         RaceBots bots;
         [SerializeField, Tooltip("Practice (T-090): in a Practice race the start distance is the player's dropdown choice. Empty = every race takes the requested distance.")]
@@ -33,18 +35,18 @@ namespace SpeedStars.Bridge
         RaceSessionState _state = RaceSessionState.Ready;
         RaceEventId _eventId;
         RaceOutcome _outcome;
-        float _lastSeenFinishTime;
-        bool _requesting;
         bool _subscribed;
         readonly Queue<double> _pressTimes = new Queue<double>();
         readonly System.Random _random = new System.Random();
         RaceStartSequence _sequence;
         RaceStartConfig _fallbackConfig;
+        RaceFinishConfig _fallbackFinishConfig;
+        RaceFinishGate _finishGate;
         float _falseStartLeft;
         float _timeScaleBeforeFail = 1f;
 
         public RaceSessionState State => _state;
-        public float TargetDistance => race ? race.raceDistance : 0f;
+        public float TargetDistance => _finishGate && _finishGate.IsHandingOver ? _finishGate.HeldLength : race ? race.raceDistance : 0f;
 
         public double RaceTime
         {
@@ -128,6 +130,29 @@ namespace SpeedStars.Bridge
             Time.timeScale = _timeScaleBeforeFail;
         }
 
+        /// <summary>Numbers of the finish sequence, also for the bots' easing off.</summary>
+        public RaceFinishConfig FinishConfig
+        {
+            get
+            {
+                if (finishConfig) return finishConfig;
+                if (!_fallbackFinishConfig) _fallbackFinishConfig = ScriptableObject.CreateInstance<RaceFinishConfig>();
+                return _fallbackFinishConfig;
+            }
+        }
+
+        /// <summary>The replay of this race; null until the RaceController's Start has added it.</summary>
+        public RacePlayback Playback => race ? race.GetComponent<RacePlayback>() : null;
+
+        /// <summary>A new race is about to reset the runner: what the finish took over goes back first.</summary>
+        public event Action Restarting;
+
+        /// <summary>A press on the screen after the finish (not on a button): it steps nobody, the finish sequence may skip on it.</summary>
+        public event Action FinishTapped;
+
+        /// <summary>From RunnerPressGate.</summary>
+        public void ReportFinishTap() => FinishTapped?.Invoke();
+
         /// <summary>The event of the current race (empty before the first RequestStart). The opponents scale to the player's best of it.</summary>
         public RaceEventId CurrentEventId => _eventId;
 
@@ -169,7 +194,9 @@ namespace SpeedStars.Bridge
             if (runnerBody) body = runnerBody;
             if (!body && race) body = race.body;
             if (body) body.EnablePlayerFeedback();
-            if (race) _lastSeenFinishTime = race.LastRaceTime;
+            if (!_finishGate) _finishGate = GetComponent<RaceFinishGate>();
+            if (!_finishGate) _finishGate = gameObject.AddComponent<RaceFinishGate>();
+            _finishGate.Bind(this, race, body);
             if (_subscribed || !body) return;
             body.RunReset += OnRunReset;
             body.Tapped += OnTapped;
@@ -190,12 +217,10 @@ namespace SpeedStars.Bridge
         /// <summary>Everybody back on the line, then the countdown.</summary>
         void StartOver()
         {
-            _requesting = true;
+            Restarting?.Invoke();
+            if (_finishGate) _finishGate.GiveBack();
             _state = RaceSessionState.Ready;
             race.ResetRace(); // the runner reopens its input on a reset; the countdown closes it again right below
-            _requesting = false;
-
-            _lastSeenFinishTime = race.LastRaceTime;
             BeginCountdown();
         }
 
@@ -250,6 +275,13 @@ namespace SpeedStars.Bridge
             // Not during FAIL: the fall is made of presses, and the clock counts a press as the start of the race.
             if (_state == RaceSessionState.Ready && !IsFailing && race && race.Current == RaceController.State.Running)
                 BeginRunning();
+
+            if (_finishGate && _finishGate.TakeCrossing(out double seconds) && _state != RaceSessionState.Finished)
+            {
+                // Finished before the poll above saw Running (same frame): still report Started first.
+                if (_state == RaceSessionState.Ready) BeginRunning();
+                Complete(seconds);
+            }
         }
 
         void BeginRunning()
@@ -267,14 +299,6 @@ namespace SpeedStars.Bridge
         void OnRunReset()
         {
             _pressTimes.Clear();
-            // Our own RequestStart reset, or a reset after we already finished: not a finish.
-            if (_requesting || _state == RaceSessionState.Finished || !race) return;
-            if (Mathf.Approximately(race.LastRaceTime, _lastSeenFinishTime)) return;
-
-            // Finished before our poll saw Running (same frame): still report Started first.
-            if (_state == RaceSessionState.Ready) BeginRunning();
-            _lastSeenFinishTime = race.LastRaceTime;
-            Complete(race.LastRaceTime);
         }
 
         void Complete(double seconds)
@@ -292,8 +316,7 @@ namespace SpeedStars.Bridge
             _outcome = new RaceOutcome(_eventId, seconds, TargetDistance, rank, runnerCount);
             _sequence?.Cancel(); // a finish during the countdown (dev key): GO must not reopen input under Results
             CancelFail();
-            // After RunnerBody set acceptInput = true (it runs before raising RunReset): keep the runner still under Results.
-            if (body) body.acceptInput = false;
+            if (body) body.acceptInput = false; // the player's race is over; the finish sequence eases the runner off by itself
             Finished?.Invoke(_outcome);
         }
 
@@ -313,8 +336,8 @@ namespace SpeedStars.Bridge
         public void DevForceFinish()
         {
             if (_state == RaceSessionState.Finished || !race) return;
-            if (_state == RaceSessionState.Ready) BeginRunning();
-            Complete(race.RaceTime);
+            if (_finishGate) _finishGate.Force(race.RaceTime);
+            else Complete(race.RaceTime);
         }
 #endif
     }

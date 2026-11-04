@@ -33,6 +33,7 @@ namespace SpeedStars.PlayTests
     {
         /// <summary>Fixture length of the shortened race (m): long enough that the replay lasts a few seconds, short enough to run quickly.</summary>
         private const float ShortRaceMeters = 15f;
+        private const float FinishSequenceSeconds = 15f; // the Results wait for the picture: slow motion, easing off, emote
 
         private SaveFolderSnapshot _saveFiles;
         private bool _captured;
@@ -81,7 +82,7 @@ namespace SpeedStars.PlayTests
             yield return RunToTheLine(session);
 
             ResultsScreenView results = Require<ResultsScreenView>();
-            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish");
+            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish", FinishSequenceSeconds);
             IWallet wallet = Container.Resolve<IWallet>();
             int cashAfterFinish = wallet.Cash;
 
@@ -123,6 +124,53 @@ namespace SpeedStars.PlayTests
         }
 
         /// <summary>
+        /// The finish sequence on a real run: the runner goes on over the line instead of jumping back, the game slows down, the time the
+        /// recorder gets is the race's own, the Results wait, and Race Again gives everything back: the runner to the controller and to
+        /// the start line, its own crouch to the pose driver, the normal speed to the game.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Race100m_RunnerStaysPastTheLine_UntilTheNextRace()
+        {
+            yield return EnterRace(Pick100m());
+            IRaceSession session = Session();
+            Component race = RequireField<Component>(session, "race");
+            Component body = RequireField<Component>(session, "body");
+            FieldInfo raceBody = race.GetType().GetField("body");
+            Component driver = body.GetComponentInChildren(body.GetType().Assembly.GetType("SpeedStars.Physical.RunnerPoseDriver"));
+            Assert.IsNotNull(driver, "the runner has no pose driver");
+            FieldInfo crouch = driver.GetType().GetField("crouch");
+            FieldInfo ready = driver.GetType().GetField("ready");
+            object ownCrouch = crouch.GetValue(driver);
+            object ownReady = ready.GetValue(driver);
+            object sim = body.GetType().GetProperty("Sim").GetValue(body);
+            PropertyInfo simDistance = sim.GetType().GetProperty("Distance");
+
+            yield return RunToTheLine(session);
+
+            Assert.AreEqual(RaceSessionState.Finished, session.State);
+            Assert.GreaterOrEqual((float)simDistance.GetValue(sim), session.TargetDistance, "the runner must not jump back at the line");
+            Assert.AreEqual(session.RaceTime, (float)race.GetType().GetProperty("LastRaceTime").GetValue(race), 0.01f,
+                "the replay's finish time must be the race's");
+
+            ResultsScreenView results = Require<ResultsScreenView>();
+            Assert.IsFalse(results.gameObject.activeInHierarchy, "the Results wait for the finish sequence");
+            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish", FinishSequenceSeconds);
+            Assert.AreEqual(1f, Time.timeScale, 0.001f, "normal speed behind the Results");
+            Assert.AreNotEqual(ownReady, ready.GetValue(driver), "the runner stands in the finish stance");
+            Assert.GreaterOrEqual((float)simDistance.GetValue(sim), session.TargetDistance, "the runner is still past the line behind the Results");
+
+            CanvasGroup panel = results.GetComponent<CanvasGroup>();
+            yield return WaitUntil(() => panel.interactable, "the Results to finish opening");
+            yield return Tap(RequireField<Button>(results, "raceAgainButton"), "Results Race Again");
+            yield return AssertFreshCountdown(session);
+
+            Assert.AreSame(body, raceBody.GetValue(race), "the controller has its runner back");
+            Assert.AreEqual(0f, session.RaceTime, 0.5f);
+            Assert.AreEqual(ownReady, ready.GetValue(driver), "the ready pose is the runner's own again");
+            Assert.AreEqual(ownCrouch, crouch.GetValue(driver), "the crouch is the runner's own again");
+        }
+
+        /// <summary>
         /// T-105: the Results open with a reveal that shrinks every item. A nav button pressed, held and slid off (no click, the screen
         /// stays) must come back to the scale it has once the reveal is over, never stay at the reveal's small start scale.
         /// The designed scale is read from the button itself after the reveal; the punch length from UiMotionConfig.
@@ -134,7 +182,10 @@ namespace SpeedStars.PlayTests
             yield return RunToTheLine(Session());
 
             ResultsScreenView results = Require<ResultsScreenView>();
-            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish");
+            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish", FinishSequenceSeconds);
+
+            CanvasGroup panel = results.GetComponent<CanvasGroup>();
+            yield return WaitUntil(() => panel.interactable, "the Results to finish opening");
 
             string[] names = { "raceAgainButton", "mainMenuButton", "watchReplayButton", "highScoresButton", "statsButton" };
             int checkedCount = 0;
@@ -167,7 +218,7 @@ namespace SpeedStars.PlayTests
             yield return RunToTheLine(session);
 
             ResultsScreenView results = Require<ResultsScreenView>();
-            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish");
+            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish", FinishSequenceSeconds);
             int cashAfterFinish = Container.Resolve<IWallet>().Cash;
 
             IRaceReplay replay = RequireField<IRaceReplay>(results, "_replay");
@@ -221,7 +272,7 @@ namespace SpeedStars.PlayTests
 
             yield return RunToTheLine(session, alreadyAtGo: true);
             ResultsScreenView results = Require<ResultsScreenView>();
-            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish");
+            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish", FinishSequenceSeconds);
             string[] rowFields = { "eventTitleText", "personalBestTitleText", "personalBestValueText", "personalBestEventText",
                 "worldPositionTitleText", "worldPositionText", "dailyBestText", "cashText" };
             string rowsBefore = Snapshot(results, rowFields);
