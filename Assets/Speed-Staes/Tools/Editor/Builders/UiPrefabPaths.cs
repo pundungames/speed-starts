@@ -31,7 +31,6 @@ namespace SpeedStars.Tools.Builders
         public const string ReplayControls = Root + "/Widgets/ReplayControls.prefab"; // T-098
 
         public const string SettingsRow = Root + "/Rows/SettingsRow.prefab";
-        public const string LanguageRow = Root + "/Rows/LanguageRow.prefab";
         public const string FlagCell = Root + "/Rows/FlagCell.prefab";
 
         /// <summary>Home scene screens, in the order they sit under "Canvas Screens" (first one is the root screen).</summary>
