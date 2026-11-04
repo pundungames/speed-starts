@@ -1,7 +1,7 @@
 ---
 id: T-104
 title: Kostum magazasi - kilitli kartta fiyat, normal kiyafet Nakit ile satin alinabilsin
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-084]
 owns_paths:
@@ -12,7 +12,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: false
 branch: agent/T-104-kiyafet-fiyat
-commits: []
+commits: [78fff8fb, f5a98ffe, a83fdf89]
 tests:
   - Assets/Speed-Staes/Tests/EditMode/UI/Costume/CostumeEditorModelTests.cs
   - Assets/Speed-Staes/Tests/EditMode/UI/Costume/PremiumCardStateTests.cs

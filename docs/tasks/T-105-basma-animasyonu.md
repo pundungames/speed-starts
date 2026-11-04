@@ -1,7 +1,7 @@
 ---
 id: T-105
 title: Basma animasyonu - sonuc ekraninda dugme kucuk kaliyor, kartta hizli dokunusta olcek sisiyor
-status: review
+status: merged
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -17,7 +17,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: false
 branch: agent/T-105-basma-animasyonu
-commits: []
+commits: [d12ccaa1]
 tests:
   - "Assets/Speed-Staes/Tests/PlayMode/WatchReplaySmokeTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/EmoteScreenSmokeTests.cs"

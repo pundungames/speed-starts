@@ -1,7 +1,7 @@
 ---
 id: T-103
 title: Centik korumasi Edit modda da gorunsun - SafeAreaFitter onizlemesi (surulen anchor, sahneye/prefab'a YAZILMAZ)
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-099]
 owns_paths:
@@ -10,7 +10,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Framework/SafeAreaEditPreviewTests.cs"
 touches_scene: false
 branch: agent/T-103-centik-onizleme
-commits: []
+commits: [c8030362, 4012bef1, 83745600]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Framework/SafeAreaEditPreviewTests.cs"
 analytics:

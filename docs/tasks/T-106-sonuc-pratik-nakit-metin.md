@@ -1,7 +1,7 @@
 ---
 id: T-106
 title: Sonuc ekrani - Practice dugmesi calissin, kazanilan Nakit okunur olsun; Antrenman Alani adi Ingilizce
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-090]
 owns_paths:
@@ -17,7 +17,7 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: false
 branch: agent/T-106-sonuc-pratik-nakit
-commits: []
+commits: [05f648b1, 7006df75, aa6b9787, c1176376]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceFlowPracticeTests.cs"
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Config/RaceEventCatalogTests.cs"
@@ -26,8 +26,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "Yama metodu kopyada kosulacak: ResultsScreen.prefab CashBreakdown genisligi ve yazi boylari; training.asset displayName -> Practice. Supervizor kosar ve alir"
+    durum: closed
+    not: "Yama metodu kopyada kosulacak: ResultsScreen.prefab CashBreakdown genisligi ve yazi boylari; training.asset displayName -> Practice. Supervizor kosar ve alir -> kopyada iki kosu, bayt farki yok; c1176376"
 started: 2026-11-04
 finished: 2026-11-04
 blocked_reason:
