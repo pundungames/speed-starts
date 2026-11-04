@@ -221,6 +221,52 @@ namespace SpeedStars.PlayTests
             return path;
         }
 
+        /// <summary>The UiMotionConfig the scene injected into a button's ButtonFeedback (the numbers of the punch are read from it, never copied).</summary>
+        public static UiMotionConfig MotionOf(ButtonFeedback feedback)
+        {
+            return RequireField<UiMotionConfig>(feedback, "_motion");
+        }
+
+        /// <summary>Waits until the scale has not changed for 10 frames: a reveal or open animation is over and the designed scale is on screen.</summary>
+        public static IEnumerator WaitScaleSettled(Transform target, string what)
+        {
+            Vector3 last = target.localScale;
+            int still = 0;
+            yield return WaitUntil(() =>
+            {
+                Vector3 now = target.localScale;
+                still = (now - last).sqrMagnitude < 1e-10f ? still + 1 : 0;
+                last = now;
+                return still >= 10;
+            }, $"the scale of '{what}' to settle", 10f);
+        }
+
+        /// <summary>
+        /// A finger that presses a button, holds it past the whole punch, slides off it and lets go (no click): the press stays
+        /// a press and the button must end at its designed scale. Real pointer events, the way the EventSystem sends them.
+        /// </summary>
+        public static IEnumerator PressHoldSlideOff(Button button, float holdSeconds)
+        {
+            var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
+            ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerEnterHandler);
+            ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerDownHandler);
+            float start = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - start < holdSeconds) yield return null;
+            ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerExitHandler);
+            ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerUpHandler);
+            yield return null;
+        }
+
+        /// <summary>One quick tap without waiting for anything to hold still: enter, down, up, click in one frame.</summary>
+        public static void QuickTap(GameObject target)
+        {
+            var pointer = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left, clickCount = 1 };
+            ExecuteEvents.Execute(target, pointer, ExecuteEvents.pointerEnterHandler);
+            ExecuteEvents.Execute(target, pointer, ExecuteEvents.pointerDownHandler);
+            ExecuteEvents.Execute(target, pointer, ExecuteEvents.pointerUpHandler);
+            ExecuteEvents.Execute(target, pointer, ExecuteEvents.pointerClickHandler);
+        }
+
         public static IEnumerator WaitOpen(Component panel, string what)
         {
             yield return WaitUntil(() => panel.gameObject.activeInHierarchy, $"{what} to open");

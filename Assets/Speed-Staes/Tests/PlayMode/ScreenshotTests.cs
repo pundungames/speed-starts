@@ -97,7 +97,6 @@ namespace SpeedStars.PlayTests
                 yield return ShootPremiumTheme(dir, home, container);
                 yield return ShootScreen(dir, home, "editRacerButton", "cosmeticsScreen", "Home_costume");
                 yield return ShootScreen(dir, home, "highScoresButton", "highScoresScreen", "Home_leaderboard");
-                yield return ShootScreen(dir, home, "emoteButton", "emoteScreen", "Home_emote");
 
                 // Settings is a popup over Home (Home stays open behind its dimscreen).
                 UiPopup settings = RequireField<UiPopup>(home, "settingsPopup");
@@ -164,6 +163,12 @@ namespace SpeedStars.PlayTests
                     yield return WaitUntil(() => results != null && results.gameObject.activeInHierarchy, "results screen");
                     yield return Settle();
                     yield return Capture(dir, "Race_results");
+
+                    // Cash breakdown: a sample reward (finish, difficulty, opponents; 2 of 5 rivals beaten) so the block shows.
+                    results.ShowCashReward(new RaceCashReward(10, 10, 7, 2, 5));
+                    yield return Settle();
+                    yield return Settle();
+                    yield return Capture(dir, "Race_results_cash");
 
                     // Analysis: Stats on the results screen opens it (a force-finish at ~0 m shows the empty state, not a crash).
                     AnalysisScreenView analysis = RequireField<AnalysisScreenView>(results, "analysisScreen");
@@ -239,10 +244,46 @@ namespace SpeedStars.PlayTests
                 yield return ShootStart(dir, view, "Race_start_04_hold", RaceStartPhase.Set, compress + config.HoldCycleSeconds * 1.25f);
                 yield return ShootStart(dir, view, "Race_start_05_release", RaceStartPhase.Go, go * 0.27f);
                 yield return ShootStart(dir, view, "Race_start_06_clear", RaceStartPhase.Go, go * 0.93f);
+                yield return ShootStart(dir, view, "Race_start_07_false_start", RaceStartPhase.FalseStart, compress);
             }
             finally
             {
                 Time.timeScale = previousScale;
+                saveFiles.Restore();
+            }
+        }
+
+        /// <summary>The real thing, not a preview: a press before GO, then the slowed fall under FAIL at two moments.</summary>
+        [UnityTest]
+        public IEnumerator Shot_FalseStartFall()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            try
+            {
+                yield return LoadScene(RaceScene);
+                MonoBehaviour session = null;
+                IRaceStartSignal signal = null;
+                foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>(true))
+                    if (behaviour is IRaceStartSignal found) { session = behaviour; signal = found; break; }
+                Assert.IsNotNull(signal, "No IRaceStartSignal in the Race scene.");
+                yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.Ready || signal.StartPhase == RaceStartPhase.Set, "the countdown");
+
+                object body = session.GetType().GetProperty("PlayerBody").GetValue(session);
+                object input = body.GetType().GetField("input").GetValue(body);
+                input.GetType().GetMethod("Inject").Invoke(input, new object[] { 0, true, Time.timeAsDouble });
+                yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.FalseStart, "FAIL");
+
+                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Capture(dir, "Race_false_start_1");
+                yield return new WaitForSecondsRealtime(0.6f);
+                yield return Capture(dir, "Race_false_start_2");
+            }
+            finally
+            {
                 saveFiles.Restore();
             }
         }
@@ -385,6 +426,15 @@ namespace SpeedStars.PlayTests
                 yield return Capture(dir, "Home_costume_presets");
 
                 yield return Tap(RequireField<Button>(dropdown, "bar"), "preset bar (close)");
+
+                CostumeTabView emoteTab = null;
+                foreach (CostumeTabView view in RequireField<CostumeTabView[]>(screen, "tabs"))
+                    if (view != null && view.Tab == CostumeTab.Emote) emoteTab = view;
+                Assert.IsNotNull(emoteTab, "Emote tab view is not bound");
+                yield return Tap(RequireField<Button>(emoteTab, "button"), "Emote tab");
+                yield return Settle();
+                yield return Capture(dir, "Home_costume_emote");
+
                 yield return Tap(CloseButtonOf(screen), "cosmeticsScreen Back");
                 yield return WaitClosed(screen, "cosmeticsScreen");
             }

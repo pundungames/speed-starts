@@ -1,7 +1,7 @@
 ---
 id: T-104
 title: Kostum magazasi - kilitli kartta fiyat, normal kiyafet Nakit ile satin alinabilsin
-status: todo
+status: merged
 owner: ui-agent
 depends_on: [T-084]
 owns_paths:
@@ -12,16 +12,20 @@ owns_paths:
   - "Assets/Speed-Staes/Tests/PlayMode/**"
 touches_scene: false
 branch: agent/T-104-kiyafet-fiyat
-commits: []
-tests: []
+commits: [78fff8fb, f5a98ffe, a83fdf89]
+tests:
+  - Assets/Speed-Staes/Tests/EditMode/UI/Costume/CostumeEditorModelTests.cs
+  - Assets/Speed-Staes/Tests/EditMode/UI/Costume/PremiumCardStateTests.cs
+  - Assets/Speed-Staes/Tests/EditMode/UI/Builders/CostumePricePrefabTests.cs
+  - Assets/Speed-Staes/Tests/PlayMode/CostumePriceSmokeTests.cs
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "Yama metodu kopyada kosulacak: CostumeItemCard.prefab + CosmeticsScreen.prefab (fiyat ve para birimi ikonlari); supervizor kosar ve alir"
-started:
-finished:
+    durum: closed
+    not: "Yama metodu kopyada kosulacak: CostumeItemCard.prefab + CosmeticsScreen.prefab (fiyat ve para birimi ikonlari); supervizor kosar ve alir -> kopyada tek kosu, ikinci kosuda bayt farki yok, prefab'lar dalda"
+started: 2026-11-04
+finished: 2026-11-04
 blocked_reason:
 ---
 
@@ -64,3 +68,8 @@ KAMERA  : yok
 - Fiyat sayilari (degismez). Emote ve tema ekrani (fiyatlari zaten gorunuyor). Kaydet akisi. Premium sanati. Yeni para birimi. Kart yerlesiminde kullanicinin ayarlarini degistirmek.
 
 ## Calisma notu
+- Yapilan: model premium sartini birakti (`IsLocked && IsForSale`); kart fiyat seridi + para birimi ikonlari (`PremiumCardLayers` fiyat alanlari); Purchase dugmesinde Nakit/gem ikonu secili ogeye gore; builder + yama metodu.
+- Yama: `SpeedStars.Tools.Builders.UiCostumePrefabs.PatchCostumePricePrefabs` (CostumeItemCard.prefab + CosmeticsScreen.prefab; var olani degistirmez, ikinci kosuda kaydetmez, sonra TMP donusumu). Kopyada kosulacak (SCENE needs acik).
+- Fiyat karti: sol alt serit (kilit sag alt kosede, cakisma yok): solda ikon, sagda sayi; Purchase'taki mevcut "Icon" gem ikonu olarak baglanir, yanina "CashIcon" (Costume/diamond_icon) eklenir.
+- Testler: EditMode model + katman + prefab baglama (yama kosulana kadar kirmizi), PlayMode gercek dokunma (Nakit satin alma, yetersiz Nakit, premium gem, sahip olunan kartta fiyat yok). Hicbiri kosulmadi.
+- Emin degilim: fiyat seridi yerlesimi/boyutu (ekran goruntusuyle bakilmadi), premium kartin altin cercevesiyle sol alt serit ortusmesi; yeni .cs: CostumePricePrefabTests.cs, CostumePriceSmokeTests.cs (.meta yok).

@@ -27,6 +27,14 @@ namespace SpeedStars.Core.Race
         [Min(0.01f)]
         [SerializeField] private float maxFrameSeconds = 0.1f;
 
+        [Tooltip("How long FAIL stays up (real seconds, whatever the game speed) while the runner falls, before the countdown starts over.")]
+        [Min(0.1f)]
+        [SerializeField] private float falseStartSeconds = 2.2f;
+
+        [Tooltip("Game speed while FAIL is up, so the fall plays in slow motion (1 = normal speed).")]
+        [Range(0.05f, 1f)]
+        [SerializeField] private float falseStartTimeScale = 0.45f;
+
         [Header("READY")]
         [Tooltip("READY slides in from above and settles (seconds).")]
         [Min(0.01f)]
@@ -151,6 +159,8 @@ namespace SpeedStars.Core.Race
         public float SetWaitMinSeconds => setWaitMinSeconds;
         public float SetWaitMaxSeconds => setWaitMaxSeconds;
         public float MaxFrameSeconds => maxFrameSeconds;
+        public float FalseStartSeconds => falseStartSeconds;
+        public float FalseStartTimeScale => falseStartTimeScale;
         public float ReadyEnterSeconds => readyEnterSeconds;
         public float ReadyEnterOffsetY => readyEnterOffsetY;
         public float ReboundSeconds => reboundSeconds;

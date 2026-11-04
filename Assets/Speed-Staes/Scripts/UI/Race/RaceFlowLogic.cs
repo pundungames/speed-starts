@@ -34,6 +34,7 @@ namespace SpeedStars.UI.Race
         private readonly IRaceCashRewardResolver _cashRewards; // optional: without it no Cash is paid for a race
         private readonly IRaceOfTheDay _daily; // optional: without it Race of the Day runs the catalog distance and reads like any event
         private readonly Func<RaceEventId, bool> _isPractice; // optional: without it every event ends with Results
+        private readonly Func<RaceEventId> _findPracticeEvent; // optional: without it the Results Practice button stays off
         private readonly List<DayBestRecord> _dayScratch = new List<DayBestRecord>();
 
         private RaceEventInfo _current;
@@ -54,8 +55,10 @@ namespace SpeedStars.UI.Race
             ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, IEntryGatePrompt prompt,
             IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null,
             IDayBestSource dayBests = null, IClock clock = null, IRaceTraces traces = null,
-            IRaceCashRewardResolver cashRewards = null, IRaceOfTheDay raceOfTheDay = null, Func<RaceEventId, bool> isPractice = null)
+            IRaceCashRewardResolver cashRewards = null, IRaceOfTheDay raceOfTheDay = null, Func<RaceEventId, bool> isPractice = null,
+            Func<RaceEventId> findPracticeEvent = null)
         {
+            _findPracticeEvent = findPracticeEvent;
             _isPractice = isPractice;
             _daily = raceOfTheDay;
             _cashRewards = cashRewards;
@@ -92,6 +95,11 @@ namespace SpeedStars.UI.Race
             _session.Finished += OnFinished;
             _results.RaceAgainRequested += OnRaceAgain;
             _results.MainMenuRequested += OnMainMenu;
+            if (_results is IResultsPracticeView practiceView)
+            {
+                practiceView.PracticeRequested += OnPractice;
+                practiceView.SetPracticeAvailable(!FindPracticeEvent().IsEmpty);
+            }
             if (_traces != null) _traces.TracesChanged += OnTracesChanged;
 
             RaceEventId id;
@@ -115,6 +123,7 @@ namespace SpeedStars.UI.Race
             _session.Finished -= OnFinished;
             _results.RaceAgainRequested -= OnRaceAgain;
             _results.MainMenuRequested -= OnMainMenu;
+            if (_results is IResultsPracticeView practiceView) practiceView.PracticeRequested -= OnPractice;
             if (_traces != null) _traces.TracesChanged -= OnTracesChanged;
         }
 
@@ -340,6 +349,41 @@ namespace SpeedStars.UI.Race
                 default:
                     if (_resultsOpen) _results.NotifyDenied();
                     UnityEngine.Debug.LogWarning($"[RaceFlow] Entry to '{_current.Id}' refused: {result}.");
+                    break;
+            }
+        }
+
+        private RaceEventId FindPracticeEvent() => _findPracticeEvent != null ? _findPracticeEvent() : default;
+
+        /// <summary>
+        /// Results Practice: enters the Practice event through the gate (free, no ticket) and reopens the Race scene, the
+        /// same road as the Home Play button. The scene is reloaded because the bots are built when it opens; the confirmed
+        /// entry stays pending for the new scene's Start (it is not taken here).
+        /// </summary>
+        private void OnPractice()
+        {
+            if (!_resultsOpen || _sceneFlow.IsTransitioning) return;
+
+            RaceEventId id = FindPracticeEvent();
+            if (id.IsEmpty)
+            {
+                _results.NotifyDenied();
+                return;
+            }
+
+            EntryResult result = _gate.Enter(id);
+            switch (result)
+            {
+                case EntryResult.EnteredFree:
+                case EntryResult.EnteredWithTicket:
+                case EntryResult.EnteredWithTimedAccess:
+                    _selection.Select(id);
+                    _sceneFlow.GoTo(GameScene.Race);
+                    break;
+
+                default:
+                    _results.NotifyDenied();
+                    UnityEngine.Debug.LogWarning($"[RaceFlow] Entry to Practice '{id}' refused: {result}.");
                     break;
             }
         }

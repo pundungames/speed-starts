@@ -125,6 +125,28 @@ namespace SpeedStars.PlayTests
         }
 
         [UnityTest]
+        public IEnumerator ResultsPracticeButton_ReopensTheRaceAsPractice_WithThePanelUp()
+        {
+            yield return EnterFreeRace(withOpponents: true);
+            IRaceSession session = Object.FindObjectOfType<SceneContext>().Container.Resolve<IRaceSession>();
+            System.Reflection.MethodInfo finish = session.GetType().GetMethod("DevForceFinish");
+            if (finish == null) Assert.Ignore("RaceSessionAdapter.DevForceFinish is not compiled in (non-dev build): no way to finish the race from a test.");
+            ResultsScreenView results = Require<ResultsScreenView>();
+
+            finish.Invoke(session, null);
+            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results to open");
+            Button practice = RequireField<Button>(results, "practiceButton");
+            yield return WaitUntil(() => practice.interactable, "the Practice button to open (the catalog has a Practice event)");
+
+            yield return Tap(practice, "Results Practice");
+            yield return WaitUntil(() => !Container.Resolve<SceneFlow>().IsTransitioning, "the Race scene to reopen", 15f);
+            PracticePanelView panel = Require<PracticePanelView>();
+            yield return WaitUntil(() => RequireField<GameObject>(panel, "content").activeInHierarchy, "the Practice panel to show");
+
+            Assert.IsFalse(Require<ResultsScreenView>().gameObject.activeInHierarchy, "the new run starts without Results");
+        }
+
+        [UnityTest]
         public IEnumerator NormalEvent_HasNoPracticePanel()
         {
             yield return EnterFreeRace(withOpponents: true);

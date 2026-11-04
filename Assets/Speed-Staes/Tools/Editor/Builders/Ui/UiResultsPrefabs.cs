@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using TMPro;
 using SpeedStars.UI.Race;
 using SpeedStars.UI.Rewards;
 using UnityEditor;
@@ -19,7 +20,7 @@ namespace SpeedStars.Tools.Builders
     /// column from the left edge. The table row is its own prefab (ResultsTableRow) the view creates under "Rows".
     /// Text slots are fractions of the art, read off the approved design. Never runs in the game.
     /// </summary>
-    internal static class UiResultsPrefabs
+    public static class UiResultsPrefabs
     {
         public const string ArtFolder = UiArt.ArtRoot + "/Results";
         public const string RowPath = UiPrefabPaths.Root + "/Rows/ResultsTableRow.prefab";
@@ -39,12 +40,19 @@ namespace SpeedStars.Tools.Builders
         private const float DailyHeaderSize = 38f;
         private const float DailyRowSize = 42f;
         private const float GemSize = 40f;
+        // Cash breakdown (T-106), all in canvas units (2400x1080): the box is the free area right of the Cash box, left of the
+        // top cards (x 789) and above Race Again (y 210). Total + three lines (66 + 3 x 34 = 168) must fit its height.
+        // The box sits on the same card art as the TopCards beside it; padding keeps the texts inside the frame:
+        // 48 + 3 x 31 = 141 = 173 - 2 x 16.
         private const float BreakdownTotalSize = 46f;
-        private const float BreakdownLineSize = 26f;
-        private const float BreakdownTotalHeight = 54f; // canvas units: the total, then three lines must fit the box beside the Cash box
-        private const float BreakdownLineHeight = 32f;
-        // Reference-pixel box of the Cash breakdown: right of the Cash box (x 43..292), left of the top cards (x 482..).
-        private static readonly int[] BreakdownRect = { 302, 49, 172, 140 };
+        private const float BreakdownTotalMinSize = 36f;
+        private const float BreakdownLineSize = 30f;
+        private const float BreakdownLineMinSize = 24f;
+        private const float BreakdownTotalHeight = 48f;
+        private const float BreakdownLineHeight = 31f;
+        private const float BreakdownLeft = 348f, BreakdownTop = 29f, BreakdownWidth = 430f, BreakdownHeight = 173f;
+        private const int BreakdownPadX = 36, BreakdownPadY = 16;
+        private static readonly string[] BreakdownLineNames = { "Line1", "Line2", "Line3" };
 
         private static readonly Color White = new Color(1f, 1f, 1f, 1f);
 
@@ -164,6 +172,8 @@ namespace SpeedStars.Tools.Builders
             UiArt.Slot(percentCard, "Title", "PERCENTILE", CardTitleSize, PercentTitleMin, PercentTitleMax);
             Text percentValue = UiArt.Slot(percentCard, "Value", "--", CardValueSize, PercentValueMin, PercentValueMax);
 
+            ApplyBreakdownLayout(breakdown.transform as RectTransform); // same numbers as the prefab patch
+
             // ---- right column, hanging from the right edge: results table, best of the day, gem line
             Vector4 columnBounds = layout.Bounds("results_panel", "daily_best_panel");
             const float gemGap = 11f;
@@ -282,10 +292,7 @@ namespace SpeedStars.Tools.Builders
         /// </summary>
         private static CashBreakdownView BuildCashBreakdown(RectTransform root, UiArt.Layout layout, Text counter, RectTransform counterBox)
         {
-            RectTransform container = Place(root, "CashBreakdown", layout, new UiArt.LayoutComponent
-            {
-                name = "cash_breakdown", rect = BreakdownRect, pivot = new[] { 0.5f, 0.5f }
-            });
+            RectTransform container = Kit.Node(root, "CashBreakdown");
             var view = container.gameObject.AddComponent<CashBreakdownView>();
 
             RectTransform block = Kit.Stretch(Kit.Node(container, "Block"));
@@ -297,12 +304,12 @@ namespace SpeedStars.Tools.Builders
             stack.childForceExpandHeight = false;
             stack.spacing = 0f;
 
-            CanvasGroup total = BreakdownRow(block, "Total", "+30", BreakdownTotalSize, BreakdownTotalHeight * layout.Scale, Kit.HighlightColor, out _);
+            CanvasGroup total = BreakdownRow(block, "Total", "+30", BreakdownTotalSize, BreakdownTotalHeight, Kit.HighlightColor, out _);
             var lineGroups = new CanvasGroup[CashBreakdown.LineCount];
             var lineTexts = new Text[CashBreakdown.LineCount];
             string[] samples = { "Finished race +10", "Difficulty bonus +10", "Rivals beaten +10" };
             for (int i = 0; i < lineGroups.Length; i++)
-                lineGroups[i] = BreakdownRow(block, "Line" + (i + 1), samples[i], BreakdownLineSize, BreakdownLineHeight * layout.Scale, White, out lineTexts[i]);
+                lineGroups[i] = BreakdownRow(block, "Line" + (i + 1), samples[i], BreakdownLineSize, BreakdownLineHeight, White, out lineTexts[i]);
 
             Text totalText = total.transform.Find("Value").GetComponent<Text>();
             block.gameObject.SetActive(false); // the view shows it only when the race paid Cash
@@ -316,7 +323,176 @@ namespace SpeedStars.Tools.Builders
             BindArray(so, "lineGroups", lineGroups);
             BindArray(so, "lineTexts", lineTexts);
             so.ApplyModifiedPropertiesWithoutUndo();
-            return view;
+            return view; // BuildScreen applies the shared layout once the cards exist (the box copies their art and ink)
+        }
+
+        /// <summary>
+        /// T-106: opens the existing prefab and widens only the CashBreakdown box and its four texts (sizes, row heights), so the
+        /// total and the three lines read at a glance. Nothing else in the prefab is touched (the user hand-edits it). Idempotent:
+        /// it saves only when a value differs, so a second run leaves the file byte for byte as it is.
+        /// Run: -executeMethod SpeedStars.Tools.Builders.UiResultsPrefabs.PatchResultsCashBreakdown
+        /// </summary>
+        [MenuItem("Tools/Speed Stars/Build/Results - widen the Cash breakdown in the prefab")]
+        public static void PatchResultsCashBreakdown()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(UiPrefabPaths.ResultsScreen);
+            try
+            {
+                Transform container = root.transform.Find("CashBreakdown");
+                if (container == null) throw new InvalidOperationException($"UiResultsPrefabs: '{UiPrefabPaths.ResultsScreen}' has no 'CashBreakdown' node to patch.");
+                if (ApplyBreakdownLayout((RectTransform)container)) HandEditGuard.SavePatchedPrefab(root, UiPrefabPaths.ResultsScreen);
+                else UnityEngine.Debug.Log("UiResultsPrefabs: the Cash breakdown already has the T-106 layout; nothing written.");
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+            HandEditGuard.ConvertPending();
+        }
+
+        /// <summary>Writes the breakdown box, row heights and text size ranges; true when anything differed. Text may be TMP or legacy.</summary>
+        internal static bool ApplyBreakdownLayout(RectTransform container)
+        {
+            bool changed = false;
+
+            var topLeft = new Vector2(0f, 1f);
+            var half = new Vector2(0.5f, 0.5f);
+            var size = new Vector2(BreakdownWidth, BreakdownHeight);
+            var position = new Vector2(BreakdownLeft + BreakdownWidth * 0.5f, -(BreakdownTop + BreakdownHeight * 0.5f));
+            if (container.anchorMin != topLeft || container.anchorMax != topLeft || container.pivot != half
+                || container.sizeDelta != size || container.anchoredPosition != position)
+            {
+                container.anchorMin = topLeft;
+                container.anchorMax = topLeft;
+                container.pivot = half;
+                container.sizeDelta = size;
+                container.anchoredPosition = position;
+                changed = true;
+            }
+
+            Transform block = container.Find("Block");
+            if (block == null) throw new InvalidOperationException("UiResultsPrefabs: 'CashBreakdown' has no 'Block' child.");
+
+            // The card ground and ink come from the TopCards beside it (PersonalBest art and its Value text), nothing invented here.
+            Transform card = container.parent != null ? container.parent.Find("TopCards/PersonalBest") : null;
+            var cardImage = card != null ? card.GetComponent<Image>() : null;
+            Transform cardValue = card != null ? card.Find("Value") : null;
+            if (cardImage == null || cardValue == null)
+                throw new InvalidOperationException("UiResultsPrefabs: 'TopCards/PersonalBest' (Image and Value) is needed as the style of the Cash box.");
+            Color ink = TextColor(cardValue);
+
+            changed |= StyleGround(block.gameObject, cardImage);
+            var stack = block.GetComponent<VerticalLayoutGroup>();
+            if (stack != null && (stack.padding.left != BreakdownPadX || stack.padding.right != BreakdownPadX
+                || stack.padding.top != BreakdownPadY || stack.padding.bottom != BreakdownPadY))
+            {
+                stack.padding = new RectOffset(BreakdownPadX, BreakdownPadX, BreakdownPadY, BreakdownPadY);
+                changed = true;
+            }
+
+            changed |= FitRow(block.Find("Total"), BreakdownTotalHeight, BreakdownTotalMinSize, BreakdownTotalSize, ink);
+            foreach (string line in BreakdownLineNames)
+                changed |= FitRow(block.Find(line), BreakdownLineHeight, BreakdownLineMinSize, BreakdownLineSize, ink);
+            return changed;
+        }
+
+        private static Color TextColor(Transform node)
+        {
+            var tmp = node.GetComponent<TMP_Text>();
+            if (tmp != null) return tmp.color;
+            var legacy = node.GetComponent<Text>();
+            if (legacy != null) return legacy.color;
+            throw new InvalidOperationException($"UiResultsPrefabs: '{node.name}' has no text to read the ink from.");
+        }
+
+        /// <summary>The Block wears the card's sprite and 9-slice settings; it never catches taps.</summary>
+        private static bool StyleGround(GameObject block, Image card)
+        {
+            bool changed = false;
+            var image = block.GetComponent<Image>();
+            if (image == null)
+            {
+                image = block.AddComponent<Image>();
+                changed = true;
+            }
+            if (image.sprite != card.sprite || image.type != card.type || !Mathf.Approximately(image.pixelsPerUnitMultiplier, card.pixelsPerUnitMultiplier)
+                || image.preserveAspect != card.preserveAspect || image.fillCenter != card.fillCenter || image.color != card.color || image.raycastTarget)
+            {
+                image.sprite = card.sprite;
+                image.type = card.type;
+                image.pixelsPerUnitMultiplier = card.pixelsPerUnitMultiplier;
+                image.preserveAspect = card.preserveAspect;
+                image.fillCenter = card.fillCenter;
+                image.color = card.color;
+                image.raycastTarget = false;
+                changed = true;
+            }
+            return changed;
+        }
+
+        private static bool FitRow(Transform row, float height, float minSize, float maxSize, Color ink)
+        {
+            if (row == null) throw new InvalidOperationException("UiResultsPrefabs: a Cash breakdown row is missing.");
+            bool changed = false;
+
+            var element = row.GetComponent<LayoutElement>();
+            if (element == null) throw new InvalidOperationException($"UiResultsPrefabs: '{row.name}' has no LayoutElement.");
+            if (!Mathf.Approximately(element.preferredHeight, height))
+            {
+                element.preferredHeight = height;
+                changed = true;
+            }
+
+            Transform value = row.Find("Value");
+            if (value == null) throw new InvalidOperationException($"UiResultsPrefabs: '{row.name}' has no 'Value' text.");
+            var tmp = value.GetComponent<TMP_Text>();
+            if (tmp != null)
+            {
+                // Serialized fields: m_fontSize is rewritten by auto size at run time, so base / min / max decide "changed".
+                var so = new SerializedObject(tmp);
+                SerializedProperty min = so.FindProperty("m_fontSizeMin");
+                SerializedProperty max = so.FindProperty("m_fontSizeMax");
+                SerializedProperty auto = so.FindProperty("m_enableAutoSizing");
+                SerializedProperty baseSize = so.FindProperty("m_fontSizeBase");
+                if (!Mathf.Approximately(min.floatValue, minSize) || !Mathf.Approximately(max.floatValue, maxSize)
+                    || !auto.boolValue || !Mathf.Approximately(baseSize.floatValue, maxSize))
+                {
+                    min.floatValue = minSize;
+                    max.floatValue = maxSize;
+                    auto.boolValue = true;
+                    baseSize.floatValue = maxSize;
+                    so.FindProperty("m_fontSize").floatValue = maxSize;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    changed = true;
+                }
+
+                // Plain base material (no outline preset), card ink, one line without wrapping.
+                var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(UiFontPaths.AmericanCaptainSdf);
+                if (font == null) throw new InvalidOperationException($"UiResultsPrefabs: font asset '{UiFontPaths.AmericanCaptainSdf}' not found.");
+                if (tmp.font != font) { tmp.font = font; changed = true; }
+                if (tmp.fontSharedMaterial != font.material) { tmp.fontSharedMaterial = font.material; changed = true; }
+                if (tmp.color != ink) { tmp.color = ink; changed = true; }
+                if (tmp.enableWordWrapping) { tmp.enableWordWrapping = false; changed = true; }
+                return changed;
+            }
+
+            var legacy = value.GetComponent<Text>();
+            if (legacy == null) throw new InvalidOperationException($"UiResultsPrefabs: '{row.name}/Value' has neither TMP_Text nor Text.");
+            if (legacy.resizeTextMinSize != Mathf.RoundToInt(minSize) || legacy.resizeTextMaxSize != Mathf.RoundToInt(maxSize) || !legacy.resizeTextForBestFit)
+            {
+                legacy.resizeTextForBestFit = true;
+                legacy.resizeTextMinSize = Mathf.RoundToInt(minSize);
+                legacy.resizeTextMaxSize = Mathf.RoundToInt(maxSize);
+                legacy.fontSize = Mathf.RoundToInt(maxSize);
+                changed = true;
+            }
+            if (legacy.color != ink) { legacy.color = ink; changed = true; }
+            foreach (Outline outline in value.GetComponents<Outline>()) // the card ground replaces the outline; the converter would make a thick material of it
+            {
+                UnityEngine.Object.DestroyImmediate(outline);
+                changed = true;
+            }
+            return changed;
         }
 
         private static CanvasGroup BreakdownRow(Transform parent, string name, string sample, float size, float height, Color color, out Text text)
@@ -328,8 +504,7 @@ namespace SpeedStars.Tools.Builders
             CanvasGroup group = node.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
             text = UiArt.Slot(node, "Value", sample, size, Vector2.zero, Vector2.one, TextAnchor.MiddleLeft, color);
-            Kit.Frame(text.gameObject, 3f); // light text over the scenery: navy outline keeps it readable
-            return group;
+            return group; // ink and ground are set by ApplyBreakdownLayout (card style)
         }
 
         private static void BuildCashFlight(RectTransform root, CashBreakdownView breakdown)

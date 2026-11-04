@@ -27,6 +27,8 @@ namespace SpeedStars.Tests.UI.Race
         private ScreenNavigator _navigator;
         private FakeScreen _hud;
         private SceneFlow _sceneFlow;
+        private FakeLoader _loader;
+        private FakeSelection _selection;
 
         [SetUp]
         public void SetUp()
@@ -42,17 +44,83 @@ namespace SpeedStars.Tests.UI.Race
             _hud = new FakeScreen();
             _navigator = new ScreenNavigator();
             _navigator.Push(_hud);
-            _sceneFlow = new SceneFlow(new FakeLoader(), new SceneFlowScenes("TestHome", "TestRace"));
+            _loader = new FakeLoader();
+            _selection = new FakeSelection();
+            _sceneFlow = new SceneFlow(_loader, new SceneFlowScenes("TestHome", "TestRace"));
         }
 
-        private RaceFlowLogic Start(RaceEventId id, bool withPracticeRule = true)
+        private RaceFlowLogic Start(RaceEventId id, bool withPracticeRule = true, bool withPracticeEvent = false)
         {
             _gate.Pending = id;
             _gate.HasPendingEntry = true;
-            var flow = new RaceFlowLogic(_session, _gate, new FakeSelection(), _lookup, _navigator, _sceneFlow, _results, _rewards, null,
-                _records, isPractice: withPracticeRule ? (Func<RaceEventId, bool>)(e => e == Practice) : null);
+            var flow = new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow, _results, _rewards, null,
+                _records, isPractice: withPracticeRule ? (Func<RaceEventId, bool>)(e => e == Practice) : null,
+                findPracticeEvent: withPracticeEvent ? (Func<RaceEventId>)(() => Practice) : null);
             flow.Start();
             return flow;
+        }
+
+        [Test]
+        public void ResultsPracticeButton_IsAvailableOnlyWhenThereIsAPracticeEvent()
+        {
+            Start(Normal, withPracticeEvent: true);
+            Assert.IsTrue(_results.PracticeAvailable);
+
+            _results.PracticeAvailable = false;
+            Start(Normal, withPracticeEvent: false);
+            Assert.IsFalse(_results.PracticeAvailable, "no Practice event in the catalog: the button stays off");
+        }
+
+        [Test]
+        public void ResultsPractice_EntersThePracticeEventThroughTheGate_AndReopensTheRaceScene()
+        {
+            Start(Normal, withPracticeEvent: true);
+            _session.Finish(Outcome(Normal));
+
+            _results.RaisePractice();
+
+            Assert.AreEqual(1, _gate.EnterCalls, "the entry goes through the gate");
+            Assert.AreEqual(Practice, _gate.LastEntered);
+            Assert.AreEqual(Practice, _selection.Selected, "the scene that opens starts the selected event");
+            CollectionAssert.AreEqual(new[] { "TestRace" }, _loader.Loaded, "the Race scene is reopened (bots are built when it opens)");
+            Assert.AreEqual(0, _results.DeniedCount);
+        }
+
+        [Test]
+        public void ResultsPractice_RefusedEntry_ShakesAndStaysOnResults()
+        {
+            Start(Normal, withPracticeEvent: true);
+            _session.Finish(Outcome(Normal));
+            _gate.Result = EntryResult.NoTicket;
+
+            _results.RaisePractice();
+
+            Assert.AreEqual(1, _results.DeniedCount);
+            Assert.IsEmpty(_loader.Loaded);
+        }
+
+        [Test]
+        public void ResultsPractice_WithoutAPracticeEvent_DoesNothingButDeny()
+        {
+            Start(Normal, withPracticeEvent: false);
+            _session.Finish(Outcome(Normal));
+
+            _results.RaisePractice();
+
+            Assert.AreEqual(0, _gate.EnterCalls);
+            Assert.AreEqual(1, _results.DeniedCount);
+            Assert.IsEmpty(_loader.Loaded);
+        }
+
+        [Test]
+        public void ResultsPractice_BeforeAnyResults_IsIgnored()
+        {
+            Start(Normal, withPracticeEvent: true);
+
+            _results.RaisePractice();
+
+            Assert.AreEqual(0, _gate.EnterCalls);
+            Assert.IsEmpty(_loader.Loaded);
         }
 
         private static RaceOutcome Outcome(RaceEventId id) => new RaceOutcome(id, 9.5d, 100f, 1, 1);
@@ -142,11 +210,14 @@ namespace SpeedStars.Tests.UI.Race
         {
             public RaceEventId Pending;
             public int EnterCalls;
+            public RaceEventId LastEntered;
+            public EntryResult Result = EntryResult.EnteredFree;
             public bool HasPendingEntry { get; set; }
             public EntryResult Enter(RaceEventId id)
             {
                 EnterCalls++;
-                return EntryResult.EnteredFree;
+                LastEntered = id;
+                return Result;
             }
 
             public bool TryTakePending(out RaceEventId id)
@@ -206,16 +277,28 @@ namespace SpeedStars.Tests.UI.Race
 
         private sealed class FakeLoader : ISceneLoader
         {
-            public bool Load(string sceneName, Action onLoaded) => true;
+            public readonly List<string> Loaded = new List<string>();
+
+            // The move never completes, so a second request in one test is refused like in the game.
+            public bool Load(string sceneName, Action onLoaded)
+            {
+                Loaded.Add(sceneName);
+                return true;
+            }
         }
 
-        private sealed class FakeResults : IResultsView
+        private sealed class FakeResults : IResultsView, IResultsPracticeView
         {
             public int PresentCount;
+            public int DeniedCount;
+            public bool PracticeAvailable;
             public event Action RaceAgainRequested { add { } remove { } }
             public event Action MainMenuRequested { add { } remove { } }
+            public event Action PracticeRequested;
+            public void RaisePractice() => PracticeRequested?.Invoke();
+            public void SetPracticeAvailable(bool available) => PracticeAvailable = available;
             public void Present(ResultsData data) => PresentCount++;
-            public void NotifyDenied() { }
+            public void NotifyDenied() => DeniedCount++;
             public void Show() { }
             public void Hide() { }
         }

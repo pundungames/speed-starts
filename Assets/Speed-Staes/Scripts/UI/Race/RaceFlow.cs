@@ -24,7 +24,19 @@ namespace SpeedStars.UI.Race
             [InjectOptional] IRaceCashRewardResolver cashRewards, [InjectOptional] IRaceOfTheDay raceOfTheDay,
             [InjectOptional] RaceEventCatalog catalog)
         {
-            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings, dayBests, clock, traces, cashRewards, raceOfTheDay, IsPracticeIn(catalog));
+            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings, dayBests, clock, traces, cashRewards, raceOfTheDay, IsPracticeIn(catalog), FindPracticeIn(catalog));
+        }
+
+        /// <summary>The first playable, free event without opponents (the rule of the Practice panel); empty id when the catalog has none.</summary>
+        private static Func<RaceEventId> FindPracticeIn(RaceEventCatalog catalog)
+        {
+            if (catalog == null) return null;
+            return () =>
+            {
+                foreach (RaceEventDefinition definition in catalog.GetEvents())
+                    if (definition.IsPlayable && !definition.RequiresTicket && !definition.HasOpponents) return definition.Id;
+                return default;
+            };
         }
 
         /// <summary>Practice = an event with no opponents (the same rule as the Practice panel); no catalog = no event is Practice.</summary>

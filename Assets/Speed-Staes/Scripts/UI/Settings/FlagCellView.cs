@@ -1,6 +1,7 @@
 using System;
 using DG.Tweening;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.UI.Framework;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -55,8 +56,7 @@ namespace SpeedStars.UI.Settings
         {
             CaptureScale();
             KillPunch();
-            transform.localScale = _baseScale;
-            _punch = transform.DOPunchScale(_baseScale * scale, seconds, vibrato).SetUpdate(true).SetLink(gameObject);
+            _punch = UiPunch.Play(transform, _baseScale, scale, seconds, vibrato, gameObject);
         }
 
         private void Awake()

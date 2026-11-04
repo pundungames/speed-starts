@@ -34,6 +34,8 @@ namespace SpeedStars.Tools.Builders
         private const float PriceEdge = 0.94f;
         private const float ActionLabelEdge = 0.86f; // keeps "Equipped" inside the button's thick border
         private const float LockGap = 0.02f;
+        private const float PriceIconWidth = 38f; // of the diamond you see; the art has empty margins around it
+        private const float PriceIconGap = 4f;
 
         // Text slots as fractions of their art (min, max; y from the bottom). The card's bottom-right corner belongs to the lock:
         // the name sits above it (full width) and the price beside it, both computed from the lock art in Card().
@@ -80,6 +82,7 @@ namespace SpeedStars.Tools.Builders
             Text nameText = UiArt.Slot(root, "Name", "Emote", NameSize, new Vector2(0.04f, nameBottom), new Vector2(0.96f, nameBottom + NameHeight));
             Text priceText = UiArt.Slot(root, "Price", "0", PriceSize, new Vector2(0.06f, PriceBottom), new Vector2(lockBounds.x - LockGap, lockBounds.w),
                 TextAnchor.MiddleLeft);
+            AddPriceIcon(priceText.rectTransform);
             priceText.gameObject.SetActive(false);
 
             var so = new SerializedObject(view);
@@ -91,6 +94,40 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "nameText", nameText);
             Ref(so, "priceText", priceText);
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>The Cash diamond left of the price: a child of the Price text, so it shows and hides with it (emotes are always paid in Cash).</summary>
+        private static void AddPriceIcon(RectTransform price)
+        {
+            string art = ArtPath("diamond_icon");
+            Vector4 visible = UiArt.AlphaBounds(art); // x, y, x2, y2 of the diamond on its canvas
+            UiArt.ReadPngSize(art, out int artWidth, out int artHeight);
+            float width = PriceIconWidth / (visible.z - visible.x);
+
+            RectTransform icon = Kit.Node(price, "CashIcon");
+            icon.anchorMin = icon.anchorMax = new Vector2(0f, 0.5f);
+            icon.pivot = new Vector2((visible.x + visible.z) * 0.5f, (visible.y + visible.w) * 0.5f); // the diamond's centre
+            icon.anchoredPosition = new Vector2(-(PriceIconGap + PriceIconWidth * 0.5f), 0f);
+            icon.sizeDelta = new Vector2(width, width * artHeight / artWidth);
+            UiArt.Paint(icon.gameObject, Art("diamond_icon"), raycast: false);
+            price.offsetMin += new Vector2(PriceIconWidth + PriceIconGap, 0f);
+        }
+
+        /// <summary>Adds the Cash diamond to the EXISTING card; the rest stays as designed, a second run changes nothing.</summary>
+        internal static void AddPriceIconToCard()
+        {
+            GameObject root = PrefabUtility.LoadPrefabContents(EmoteCardPath);
+            try
+            {
+                var price = root.transform.Find("Price") as RectTransform;
+                if (price == null || price.Find("CashIcon") != null) return;
+                AddPriceIcon(price);
+                HandEditGuard.SavePatchedPrefab(root, EmoteCardPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
         }
 
         // ---------------------------------------------------------------- screen

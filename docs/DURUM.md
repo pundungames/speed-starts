@@ -1,14 +1,14 @@
-MOD: süpervizör
+MOD: hızlı
 # DURUM — Speed Stars (speed-starts)
 
 > Oturum başı ilk okunan dosya. En fazla 60 satır; her checkpoint'te BAŞTAN yazılır (eklenmez).
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-11-03 gün sonu · main 02b5c13f (origin'den 1 önde) · checkpoint `docs/checkpoints/2026-11-03.md`
-**YARIN İLK İŞ:** T-103 (Edit modda çentik önizlemesi + Tools → Speed Stars → Notch Preview aç/kapa) dalda bekliyor: worktree
-`D:\Pundun\speed-starts-t103`, 44e78be3, DOĞRULANMADI → kopyada derleme + EditMode (`SafeAreaEditPreviewTests`, kayıt testi KANIT) +
-PlayMode `SafeAreaPlayTests`, .cs.meta'ları kopyadan al, ff → kullanıcı Home'da aç/kapa + kaydet → sahnede diff yok mu. (D:\Pundun\speed-starts-t093 klasörü git'e bağlı değil, silinebilir.)
+Son güncelleme: 2026-11-04 · main 1b5902cb (push kullanıcıda)
+**Kullanıcı 04.11: hızlı mod. Küçük iş agent + worktree + kopya olmadan, doğrudan ana klasörde.** MCP bu oturumda yoktu: prefab/sahne için oturumu yeniden aç.
+**Bugün main'e girenler (kopyada EditMode 1238, PlayMode 58 + 7 görüntü testi atlandı):** T-103 Edit modda çentik önizlemesi (Tools → Speed Stars → Notch Preview) · T-104 kostüm kartında fiyat, normal kıyafet Nakit ile alınır · T-105 düğme küçük kalma ve kart şişme (`UiPunch`) · T-106 Results Practice çalışır, Nakit kartı okunur, "Antrenman Alanı" → "Practice".
+**04.11 ek:** tema fiyatları (kullanıcı onayı): Egypt 2.500, Rome 5.000, Pirate Sea 7.500 Nakit, Sky Islands 50 Mor Mücevher, Standard City bedava · GO'dan önce basış = FAIL: oyun yavaşlar, koşucu düşer, geri sayım baştan; bilet yanmaz (kullanıcı) · düğmede başlayan parmak adım sayılmaz (`RunnerPressGate`) · Ayarlar'dan Music, Language, Privacy, Terms, Support kalktı (mağaza öncesi Privacy adresi gerekecek) · `Tools → Speed Stars → Delete Save`.
 
 ## Faz 8 (cila) — bugün main'e girenler (son kopya koşusu yeşil: EditMode 1198, PlayMode 52 + 7 atlanan, Zenject)
 - T-081..T-090: ok tuşları, regresyon, ekonomi v2 (ADR `ADR-2026-11-03-ekonomi-v2-referans.md`), 200m/400m/60mH/400mH, ayarlar v2,
@@ -47,14 +47,14 @@ PlayMode `SafeAreaPlayTests`, .cs.meta'ları kopyadan al, ff → kullanıcı Hom
 - PowerShell'de `git` bozuk (system32 gölgesi): git Bash'ten. Kancada `git commit` + "main" aynı komutta olmaz.
 
 <!-- OTOMATIK:BASLA -->
-_tur-sonu.ps1 2026-11-03 17:55 - otomatik blok, elle yazilan bu blokta kaybolur._
+_tur-sonu.ps1 2026-11-04 11:14 - otomatik blok, elle yazilan bu blokta kaybolur._
 
 - **KAPI TEMIZ (cikis 0)**
 - Acik needs: 3 (DECISION 3)
 - Review kuyrugu: 0
-- Goz bekleyen (merged): 94 - T-102, T-100, T-101, T-099, T-097, T-098, T-095, T-093
+- Goz bekleyen (merged): 98 - T-106, T-105, T-104, T-103, T-102, T-100, T-101, T-099
 - in-progress: 0 / blocked: 0
 - Uyari: govde-needs 0, test 4, analytics 0 (kapsam: status in-progress/review/merged)
-- GIT: 2 calisma agaci (ana: main); ana agacta commit'siz .prefab/.unity/.asset: 0
+- GIT: 1 calisma agaci (ana: main); ana agacta commit'siz .prefab/.unity/.asset: 1
 - KOPYALAR: 2 (kopya.ps1 -Liste -Json)
 <!-- OTOMATIK:BITIR -->

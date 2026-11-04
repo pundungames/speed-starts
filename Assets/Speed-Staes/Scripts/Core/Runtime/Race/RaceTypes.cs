@@ -38,7 +38,10 @@ namespace SpeedStars.Core.Race
         Idle,
         Ready,
         Set,
-        Go
+        Go,
+
+        /// <summary>A press before GO: the countdown stands here until the session begins it again.</summary>
+        FalseStart
     }
 
     /// <summary>What the meta side asks the race to be: which event and how long. Tickets are settled before this.</summary>

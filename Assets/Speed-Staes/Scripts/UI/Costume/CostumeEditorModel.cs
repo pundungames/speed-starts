@@ -216,8 +216,8 @@ namespace SpeedStars.UI.Costume
         }
 
         /// <summary>
-        /// The worn item of the selected category when it is a premium item the player can buy (locked and priced); the
-        /// purchase button shows only then.
+        /// The worn item of the selected category when the player can buy it (locked and priced, any currency: Cash for normal
+        /// items, Purple Gems for premium ones); the purchase button shows only then. A free item is owned, never locked.
         /// </summary>
         public bool TryGetBuyableItem(out CosmeticItemInfo item)
         {
@@ -225,7 +225,7 @@ namespace SpeedStars.UI.Costume
             if (SkinMode) return false;
             CosmeticSlot slot = SelectedSlot;
             if (slot.IsEmpty || !_service.TryGetItem(slot.CosmeticId, out item)) return false;
-            return item.IsPremium && item.IsLocked && item.IsForSale;
+            return item.IsLocked && item.IsForSale;
         }
 
         /// <summary>Buys the buyable item of the selected category. <see cref="CosmeticPurchaseResult.UnknownItem"/> when there is none.</summary>

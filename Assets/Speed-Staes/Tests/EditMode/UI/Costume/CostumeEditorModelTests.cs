@@ -13,6 +13,7 @@ namespace SpeedStars.Tests.UI.Costume
         private const string HatA = "hat-a";
         private const string HatB = "hat-b";
         private const string HatPremium = "hat-premium";
+        private const string HatCash = "hat-cash";
         private const string TopA = "top-a";
         private const string Red = "FF0000";
         private const string Blue = "0000FF";
@@ -282,16 +283,58 @@ namespace SpeedStars.Tests.UI.Costume
         }
 
         [Test]
-        public void OnlyALockedPremiumItemOffersAPurchase()
+        public void OnlyALockedPricedItemOffersAPurchase()
         {
             _model.TapItem(HatA);
-            Assert.IsFalse(_model.TryGetBuyableItem(out _), "a normal item is not for sale here");
+            Assert.IsFalse(_model.TryGetBuyableItem(out _), "a free item is owned: nothing to buy");
 
             _model.TapItem(HatA); // off
             _model.TapItem(HatPremium);
 
             Assert.IsTrue(_model.TryGetBuyableItem(out CosmeticItemInfo item));
             Assert.AreEqual(HatPremium, item.Id);
+        }
+
+        [Test]
+        public void ALockedNormalItemWithAPriceOffersAPurchaseInCash()
+        {
+            _model.TapItem(HatCash);
+
+            Assert.IsTrue(_model.TryGetBuyableItem(out CosmeticItemInfo item));
+            Assert.AreEqual(HatCash, item.Id);
+            Assert.AreEqual(CosmeticCurrency.Cash, item.Currency);
+            Assert.AreEqual(FakeCosmeticService.CashItemPrice, item.Price);
+        }
+
+        [Test]
+        public void ANormalItemIsBoughtWithCashAndNotWithGems()
+        {
+            _service.Cash = FakeCosmeticService.CashItemPrice + 7;
+            _service.Gems = 5;
+            _model.TapItem(HatCash);
+
+            CosmeticPurchaseResult result = _model.Purchase();
+
+            Assert.AreEqual(CosmeticPurchaseResult.Purchased, result);
+            Assert.AreEqual(7, _service.Cash, "the price was charged once, in cash");
+            Assert.AreEqual(5, _service.Gems);
+            Assert.IsFalse(_model.HasLockedItem);
+            Assert.IsTrue(_model.CanSave);
+            Assert.IsFalse(_model.TryGetBuyableItem(out _), "an owned item is no longer offered");
+        }
+
+        [Test]
+        public void ANormalItemWithTooLittleCashChangesNothing()
+        {
+            _service.Cash = FakeCosmeticService.CashItemPrice - 1;
+            _model.TapItem(HatCash);
+
+            CosmeticPurchaseResult result = _model.Purchase();
+
+            Assert.AreEqual(CosmeticPurchaseResult.NotEnough, result);
+            Assert.IsTrue(_model.HasLockedItem);
+            Assert.IsFalse(_model.CanSave);
+            Assert.AreEqual(FakeCosmeticService.CashItemPrice - 1, _service.Cash);
         }
 
         [Test]
@@ -602,6 +645,7 @@ namespace SpeedStars.Tests.UI.Costume
         private sealed class FakeCosmeticService : ICosmeticService
         {
             public const int PremiumPrice = 12;
+            public const int CashItemPrice = 30;
 
             // HatA has two colour channels with these default colours; every other item is left without channel information.
             public const int HatAChannels = 2;
@@ -611,6 +655,7 @@ namespace SpeedStars.Tests.UI.Costume
                 new List<(string, CosmeticCategory, bool, int)>
                 {
                     (HatPremium, CosmeticCategory.Headwear, true, PremiumPrice),
+                    (HatCash, CosmeticCategory.Headwear, false, CashItemPrice),
                     (HatA, CosmeticCategory.Headwear, false, 0),
                     (HatB, CosmeticCategory.Headwear, false, 0),
                     (TopA, CosmeticCategory.Tops, false, 0),
@@ -622,6 +667,7 @@ namespace SpeedStars.Tests.UI.Costume
             /// <summary>Saved outfit per preset; every preset starts bare.</summary>
             public readonly CosmeticOutfit[] Saved = { CosmeticOutfit.Empty, CosmeticOutfit.Empty, CosmeticOutfit.Empty };
             public int Gems;
+            public int Cash;
             public int SaveCalls;
             public int PurchaseCalls;
             public int RandomCalls;
@@ -693,8 +739,9 @@ namespace SpeedStars.Tests.UI.Costume
                 if (!TryGetItem(cosmeticId, out CosmeticItemInfo item)) return CosmeticPurchaseResult.UnknownItem;
                 if (item.IsOwned) return CosmeticPurchaseResult.AlreadyOwned;
                 if (!item.IsForSale) return CosmeticPurchaseResult.NotForSale;
-                if (Gems < item.Price) return CosmeticPurchaseResult.NotEnough;
-                Gems -= item.Price;
+                bool inCash = item.Currency == CosmeticCurrency.Cash;
+                if ((inCash ? Cash : Gems) < item.Price) return CosmeticPurchaseResult.NotEnough;
+                if (inCash) Cash -= item.Price; else Gems -= item.Price;
                 _bought.Add(cosmeticId);
                 Changed?.Invoke();
                 return CosmeticPurchaseResult.Purchased;
@@ -710,8 +757,10 @@ namespace SpeedStars.Tests.UI.Costume
 
             private CosmeticItemInfo Info((string id, CosmeticCategory category, bool premium, int price) entry)
             {
-                bool owned = !entry.premium || _bought.Contains(entry.id);
-                return new CosmeticItemInfo(entry.id, entry.category, entry.id, entry.premium, entry.price, CosmeticCurrency.PurpleGem, owned,
+                // Free normal items are owned from the start; a priced item (premium or not) is owned once bought.
+                bool owned = (!entry.premium && entry.price == 0) || _bought.Contains(entry.id);
+                CosmeticCurrency currency = entry.premium ? CosmeticCurrency.PurpleGem : CosmeticCurrency.Cash;
+                return new CosmeticItemInfo(entry.id, entry.category, entry.id, entry.premium, entry.price, currency, owned,
                     entry.id == HatA ? HatADefaults : entry.id == HatB ? new[] { "C0C0C0" } : null);
             }
         }

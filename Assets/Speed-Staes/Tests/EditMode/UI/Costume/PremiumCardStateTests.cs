@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using SpeedStars.Meta.Config;
 using SpeedStars.UI.Costume;
 
 namespace SpeedStars.Tests.UI.Costume
@@ -94,6 +95,42 @@ namespace SpeedStars.Tests.UI.Costume
             Assert.IsFalse(PremiumCardLayers.Resolve(true, false, true, false).PremiumDisabledOverlay);
             Assert.IsTrue(PremiumCardLayers.Resolve(true, false, false, true).PremiumDisabledOverlay);
             Assert.IsFalse(PremiumCardLayers.Resolve(false, false, false, true).PremiumDisabledOverlay);
+        }
+
+        [Test]
+        public void PriceShowsOnlyOnALockedCardThatIsForSale_WithTheIconOfItsCurrency()
+        {
+            foreach (bool premium in new[] { false, true })
+            foreach (bool selected in new[] { false, true })
+            foreach (CosmeticCurrency currency in new[] { CosmeticCurrency.Cash, CosmeticCurrency.PurpleGem })
+            {
+                PremiumCardLayers locked = PremiumCardLayers.Resolve(premium, selected, true, false, true, currency);
+                Assert.IsTrue(locked.PriceVisible);
+                Assert.AreEqual(currency == CosmeticCurrency.Cash, locked.PriceCashIcon);
+                Assert.AreEqual(currency == CosmeticCurrency.PurpleGem, locked.PriceGemIcon);
+
+                PremiumCardLayers owned = PremiumCardLayers.Resolve(premium, selected, false, false, true, currency);
+                Assert.IsFalse(owned.PriceVisible || owned.PriceCashIcon || owned.PriceGemIcon, "an owned card shows no price");
+
+                PremiumCardLayers free = PremiumCardLayers.Resolve(premium, selected, true, false, false, currency);
+                Assert.IsFalse(free.PriceVisible || free.PriceCashIcon || free.PriceGemIcon, "a card with no price shows none");
+            }
+        }
+
+        [Test]
+        public void ThePriceNeverChangesTheOtherLayers()
+        {
+            foreach (bool premium in new[] { false, true })
+            foreach (bool selected in new[] { false, true })
+            foreach (bool locked in new[] { false, true })
+            {
+                PremiumCardLayers without = PremiumCardLayers.Resolve(premium, selected, locked, false);
+                PremiumCardLayers with = PremiumCardLayers.Resolve(premium, selected, locked, false, true, CosmeticCurrency.Cash);
+                Assert.AreEqual(without.NormalLock, with.NormalLock);
+                Assert.AreEqual(without.PremiumLock, with.PremiumLock);
+                Assert.AreEqual(without.PremiumCheck, with.PremiumCheck);
+                Assert.AreEqual(without.NormalCheck, with.NormalCheck);
+            }
         }
     }
 }

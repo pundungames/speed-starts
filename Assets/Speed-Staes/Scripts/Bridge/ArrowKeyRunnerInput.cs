@@ -65,7 +65,8 @@ namespace SpeedStars.Bridge
             if (_session == null) return;
             RunnerBody body = _session.PlayerBody;
             if (body == null || body.input == null) return;
-            if (!RunnerTapTranslator.ShouldForward(pressed, body.acceptInput)) return;
+            // During the countdown a press goes in too: RunnerPressGate calls it a false start, as it does for N/M and touch.
+            if (!RunnerTapTranslator.ShouldForward(pressed, body.acceptInput || _session.IsCountingDown)) return;
             double gameTime = RunnerTapTranslator.ToGameTime(eventRealtime, Time.realtimeSinceStartupAsDouble, Time.timeAsDouble);
             body.input.Inject(leg, pressed, gameTime);
         }

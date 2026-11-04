@@ -1,22 +1,23 @@
 ---
 id: T-103
 title: Centik korumasi Edit modda da gorunsun - SafeAreaFitter onizlemesi (surulen anchor, sahneye/prefab'a YAZILMAZ)
-status: todo
+status: merged
 owner: ui-agent
 depends_on: [T-099]
 owns_paths:
   - "Assets/Speed-Staes/Scripts/UI/Framework/SafeAreaFitter.cs"
+  - "Assets/Speed-Staes/Tools/Editor/SafeAreaPreviewMenu.cs"
   - "Assets/Speed-Staes/Tests/EditMode/UI/Framework/SafeAreaEditPreviewTests.cs"
 touches_scene: false
 branch: agent/T-103-centik-onizleme
-commits: []
+commits: [c8030362, 4012bef1, 83745600]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/UI/Framework/SafeAreaEditPreviewTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-03
+finished: 2026-11-03
 blocked_reason:
 ---
 
@@ -45,3 +46,8 @@ Prefab/sahne/asset dosyasina YAZMA (testin gecici dosyasi haric); Unity/test CAL
 - Prefab modunda (prefab stage) onizleme; dikey kenarlar
 
 ## Calisma notu
+- Olcum sonrasi duzeltme: Unity surulen anchor'i dosyaya (0,0) yazar; bu yuzden onizleme kayittan (OnWillSaveAssets) ve Play girisinden (playModeStateChanged ExitingEditMode, SafeAreaPreviewPlayGuard) once birakilir, geri gelisi EnteredEditMode/delayCall.
+- Edit modda surulmuyorken her uygulamadan once anchor'lar yeniden toplanir (elle duzenleme kaybolmaz); durum alanlari [NonSerialized]; IsDriving canli rect yoksa false.
+- Prefab stage / onizleme sahnesinde onizleme kapali; tercih EditorUserSettings (proje basina, varsayilan acik, anahtar ayni); ReleaseDriven once tasarimi yazar sonra tracker'i birakir; Start/StopRecordingUndo reflection ile (gorunurluk surume gore degisir).
+- Testler SafeAreaEditPreviewTests (13: dosya metni, sahne kaydi, Play girisi, elle duzenleme, domain reload, dirty, preview scene). Calistirilmadi.
+- Suphe: SaveAsPrefabAsset kodla kayitta OnWillSaveAssets'i tetiklemeyebilir (prefab testi kirmizi olabilir); Start/StopRecordingUndo gercekten Undo girisini engelliyor mu olculmedi.

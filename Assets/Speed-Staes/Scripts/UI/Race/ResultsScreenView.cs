@@ -15,11 +15,11 @@ namespace SpeedStars.UI.Race
     /// <summary>
     /// Post-race results screen (Oyun_Bitis_UI_v1): Cash, the Personal Best / World Position / Percentile cards, the
     /// results table (one row prefab under a content parent), the Best of the day panel and the left button column.
-    /// Race Again, Main Menu, Stats (opens the Analysis screen) and Watch Replay (once the race is recorded) work; Practice has no feature
-    /// behind it yet and starts disabled. The prefab holds every object; this only binds and fills them. On open the cards and panels
+    /// Race Again, Main Menu, Stats (opens the Analysis screen) and Watch Replay (once the race is recorded) and Practice (reopens the Race scene as a
+    /// Practice run when the catalog has one) work. The prefab holds every object; this only binds and fills them. On open the cards and panels
     /// reveal one after another (UiMotionConfig stagger) and a new record punches its card.
     /// </summary>
-    public sealed class ResultsScreenView : UiScreen, IResultsView, IGemRewardView, IRaceCashRewardView, IAnalysisSink
+    public sealed class ResultsScreenView : UiScreen, IResultsView, IGemRewardView, IRaceCashRewardView, IAnalysisSink, IResultsPracticeView
     {
         [Header("Cash")]
         [Tooltip("Diamond/Value: the player's Cash.")]
@@ -109,7 +109,7 @@ namespace SpeedStars.UI.Race
         [Tooltip("Nav/Stats: opens the Analysis screen; disabled while no Analysis screen is assigned.")]
         [SerializeField] private Button statsButton;
 
-        [Tooltip("Nav/Practice: disabled, the training event is not playable yet.")]
+        [Tooltip("Nav/Practice: starts a Practice run (no opponents, no ticket, no Results). Works while the catalog has a Practice event; the flow switches it.")]
         [SerializeField] private Button practiceButton;
 
         [Header("Analysis")]
@@ -137,7 +137,9 @@ namespace SpeedStars.UI.Race
         private Vector3 _deniedBase;
         private bool _punchRecord;
         private bool _punchGems;
+        private bool _practiceAvailable;
 
+        public event Action PracticeRequested;
         public event Action RaceAgainRequested;
         public event Action MainMenuRequested;
 
@@ -209,7 +211,11 @@ namespace SpeedStars.UI.Race
                 statsButton.interactable = analysisScreen != null;
                 statsButton.onClick.AddListener(OnStatsClicked);
             }
-            if (practiceButton != null) practiceButton.interactable = false;
+            if (practiceButton != null)
+            {
+                practiceButton.interactable = _practiceAvailable; // the flow opens it when the catalog has a Practice event
+                practiceButton.onClick.AddListener(OnPracticeClicked);
+            }
             if (raceAgainButton != null) raceAgainButton.onClick.AddListener(OnRaceAgainClicked);
             if (mainMenuButton != null) mainMenuButton.onClick.AddListener(OnMainMenuClicked);
         }
@@ -240,6 +246,7 @@ namespace SpeedStars.UI.Race
             KillDenied();
             KillReveal();
             if (highScoresButton != null) highScoresButton.onClick.RemoveListener(OnHighScoresClicked);
+            if (practiceButton != null) practiceButton.onClick.RemoveListener(OnPracticeClicked);
             if (raceAgainButton != null) raceAgainButton.onClick.RemoveListener(OnRaceAgainClicked);
             if (mainMenuButton != null) mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
             if (statsButton != null) statsButton.onClick.RemoveListener(OnStatsClicked);
@@ -493,6 +500,14 @@ namespace SpeedStars.UI.Race
                 revealItems[i].transform.localScale = _baseScales[i];
             }
         }
+
+        public void SetPracticeAvailable(bool available)
+        {
+            _practiceAvailable = available;
+            if (practiceButton != null) practiceButton.interactable = available;
+        }
+
+        private void OnPracticeClicked() => PracticeRequested?.Invoke();
 
         private void OnRaceAgainClicked() => RaceAgainRequested?.Invoke();
 

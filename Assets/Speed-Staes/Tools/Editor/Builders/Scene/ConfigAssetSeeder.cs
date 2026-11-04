@@ -46,7 +46,7 @@ namespace SpeedStars.Tools.Builders
         /// </summary>
         private static readonly EventSeed[] Events =
         {
-            new EventSeed("training", "Antrenman Alanı", 100f, ticket: false, gems: false, playable: true),
+            new EventSeed("training", "Practice", 100f, ticket: false, gems: false, playable: true),
             new EventSeed("race_of_the_day", "Race of the Day", 0f, ticket: false, gems: false, playable: true), // T-087: open, free; length and outfit come from RaceOfTheDayConfig
             new EventSeed("100m", "100m", 100f, ticket: false, gems: false, playable: true),
             new EventSeed("200m", "200m", 200f, ticket: true, gems: false, playable: true),
@@ -239,6 +239,34 @@ namespace SpeedStars.Tools.Builders
             else Warn(Source, $"'{EmoteCatalogSeed.CatalogPath}' is missing; emote prices not written.");
 
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// T-106: writes the Practice event's display name from the seed table into the EXISTING asset (seeding skips existing
+        /// assets). Touches that one field of that one asset and saves only when the name differs, so a second run changes nothing.
+        /// </summary>
+        [MenuItem("Tools/Speed Stars/Build/Apply theme prices")]
+        public static void ApplyThemePrices() => ThemeCatalogSeed.ApplyPrices(ThemeCatalogPath);
+
+        [MenuItem("Tools/Speed Stars/Build/Apply Practice event name")]
+        public static void ApplyPracticeEventName()
+        {
+            string path = $"{EventsFolder}/{PracticeEventId}.asset";
+            var definition = AssetDatabase.LoadAssetAtPath<RaceEventDefinition>(path);
+            if (definition == null) { Warn(Source, $"'{path}' is missing; Practice name not written."); return; }
+
+            string name = null;
+            foreach (var seed in Events)
+                if (seed.Id == PracticeEventId) name = seed.DisplayName;
+            if (name == null) { Warn(Source, $"No '{PracticeEventId}' row in the seed table; Practice name not written."); return; }
+
+            var so = new SerializedObject(definition);
+            SerializedProperty property = Prop(so, "displayName");
+            if (property.stringValue == name) return;
+            property.stringValue = name;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(definition);
+            AssetDatabase.SaveAssetIfDirty(definition);
         }
 
         /// <summary>

@@ -11,8 +11,8 @@ namespace SpeedStars.Tools.Builders
 {
     /// <summary>
     /// Settings window prefabs dressed with the designer's art (UI/Art/Settings, package Settings_Moduler_UI_v1):
-    /// SettingsRow (icon + label + control slot, copied for every setting), LanguageRow, FlagCell and the SettingsPopup
-    /// that nests four SettingsRow instances (Music, Language, Flag, Player Name) and holds the two list windows on its own
+    /// SettingsRow (icon + label + control slot, copied for every setting), FlagCell and the SettingsPopup
+    /// that nests SettingsRow instances (Camera, Flag, Player Name and the v2 sections) and holds the flag window on its own
     /// top layer. Sizes are the art's native pixels times <see cref="Scale"/> (the approved reference was drawn for a
     /// 937 px tall screen; the canvas is 1080 tall). 9-slice borders are import settings written here from the package's
     /// manifest.json. Never runs in the game.
@@ -181,11 +181,9 @@ namespace SpeedStars.Tools.Builders
         {
             EnsureArt();
             GameObject row = build(UiPrefabPaths.SettingsRow, BuildRow);
-            GameObject languageRow = build(UiPrefabPaths.LanguageRow, BuildLanguageRow);
             GameObject flagCell = build(UiPrefabPaths.FlagCell, BuildFlagCell);
-            var languageView = UiViewBinder.RowComponent<LanguageRowView>(languageRow, UiPrefabPaths.LanguageRow);
             var flagView = UiViewBinder.RowComponent<FlagCellView>(flagCell, UiPrefabPaths.FlagCell);
-            build(UiPrefabPaths.SettingsPopup, root => BuildPopup(root, row, languageView, flagView, scene));
+            build(UiPrefabPaths.SettingsPopup, root => BuildPopup(root, row, flagView, scene));
         }
 
         // ---------------------------------------------------------------- row prefabs
@@ -201,28 +199,6 @@ namespace SpeedStars.Tools.Builders
 
             RectTransform slot = Kit.Node(root, "ControlSlot");
             Kit.Anchor(slot, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-P(SlotRight), 0f), V(SlotWidth, SlotHeight));
-        }
-
-        private static void BuildLanguageRow(RectTransform root)
-        {
-            Kit.PreferredHeight(root.gameObject, P(ListRowHeight));
-            var view = root.gameObject.AddComponent<LanguageRowView>();
-            Image background = UiArt.Paint(root.gameObject, Art("list_row_normal"), raycast: true);
-            Button button = Clickable(root.gameObject, background);
-
-            Text label = Label(root, "Label", "English", 30f, TextAnchor.MiddleLeft);
-            Kit.Span(label.rectTransform, new Vector2(0.07f, 0f), new Vector2(0.80f, 1f));
-            Image check = UiArt.Layer(root, "Check", Art("list_selected_check"));
-            check.gameObject.SetActive(false);
-
-            var so = new SerializedObject(view);
-            Ref(so, "button", button);
-            Ref(so, "background", background);
-            Ref(so, "label", label);
-            Ref(so, "checkMark", check.gameObject);
-            Ref(so, "normalSprite", Art("list_row_normal"));
-            Ref(so, "selectedSprite", Art("list_row_selected"));
-            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void BuildFlagCell(RectTransform root)
@@ -249,8 +225,8 @@ namespace SpeedStars.Tools.Builders
 
         // ---------------------------------------------------------------- popup
 
-        private static void BuildPopup(RectTransform root, GameObject rowPrefab, LanguageRowView languageRowPrefab,
-            FlagCellView flagCellPrefab, UnityEngine.SceneManagement.Scene scene)
+        private static void BuildPopup(RectTransform root, GameObject rowPrefab, FlagCellView flagCellPrefab,
+            UnityEngine.SceneManagement.Scene scene)
         {
             var view = root.gameObject.AddComponent<SettingsPopupView>();
 
@@ -292,20 +268,12 @@ namespace SpeedStars.Tools.Builders
             layout.childForceExpandHeight = false;
             AddScrollbar(body, scroll);
 
-            RectTransform musicRow = Row(rowPrefab, content, "MusicRow", "row_music_icon", "Music", scene);
-            RectTransform languageRow = Row(rowPrefab, content, "LanguageRow", "row_language_icon", "Language", scene);
             RectTransform flagRow = Row(rowPrefab, content, "FlagRow", "row_flag_icon", "Flag", scene);
             RectTransform nameRow = Row(rowPrefab, content, "NameRow", "row_player_icon", "Player Name", scene);
 
-            SettingsActionRowView privacyRow = ActionRow(rowPrefab, content, "PrivacyRow", "row_language_icon", SettingsTexts.PrivacyPolicy, scene);
-            SettingsActionRowView termsRow = ActionRow(rowPrefab, content, "TermsRow", "row_language_icon", SettingsTexts.TermsOfUse, scene);
-            SettingsActionRowView supportRow = ActionRow(rowPrefab, content, "SupportRow", "row_language_icon", SettingsTexts.Support, scene);
             SettingsActionRowView resetBestsRow = ActionRow(rowPrefab, content, "ResetBestsRow", "row_player_icon", SettingsTexts.ResetPersonalBests, scene);
             SettingsActionRowView resetAllRow = ActionRow(rowPrefab, content, "ResetAllRow", "row_player_icon", SettingsTexts.ResetAllProgress, scene);
 
-            SettingsToggleView toggle = BuildToggle(Slot(musicRow));
-            BuildDropdownField(Slot(languageRow), "LanguageField", withFlag: false, out Button languageButton, out Text languageValue,
-                out Image languageArrow, out _);
             BuildDropdownField(Slot(flagRow), "FlagField", withFlag: true, out Button flagButton, out _, out Image flagArrow, out Image flagValue);
             BuildNameField(Slot(nameRow), out InputField input, out Image inputImage, out Text placeholder, out RectTransform inputRect);
 
@@ -332,31 +300,19 @@ namespace SpeedStars.Tools.Builders
             doneLabel.color = Color.white;
             Kit.Margin(doneLabel, 16f, 8f, 16f, 12f);
 
-            // ---- the two list windows on their own top layer (never clipped by the body's viewport)
+            // ---- the flag window on its own top layer (never clipped by the body's viewport)
             RectTransform layer = Kit.Stretch(Kit.Node(root, "PopupLayer"));
-            BuildLanguageWindow(layer, panelHeight, out GameObject languageWindow, out Button languageCatcher,
-                out RectTransform languageContent);
             BuildFlagWindow(layer, out GameObject flagWindow, out Button flagCatcher, out RectTransform flagContent);
-            ConfirmDialogView confirmDialog = BuildConfirmDialog(layer); // last child: above both list windows
+            ConfirmDialogView confirmDialog = BuildConfirmDialog(layer); // last child: above the flag window
 
             var so = new SerializedObject(view);
             Ref(so, "titleText", title);
-            Ref(so, "musicLabel", musicRow.Find("Label").GetComponent<Text>());
-            Ref(so, "languageLabel", languageRow.Find("Label").GetComponent<Text>());
             Ref(so, "flagLabel", flagRow.Find("Label").GetComponent<Text>());
             Ref(so, "nameLabel", nameRow.Find("Label").GetComponent<Text>());
             Ref(so, "doneLabel", doneLabel);
-            Ref(so, "musicToggle", toggle);
-            AddCameraRow(rowPrefab, musicRow, so, scene);
+            AddCameraRow(rowPrefab, content, so, scene);
             AddExtraSections(rowPrefab, content, so, scene);
             OrderRows(content);
-            Ref(so, "languageButton", languageButton);
-            Ref(so, "languageValueText", languageValue);
-            Ref(so, "languageArrow", languageArrow);
-            Ref(so, "languageWindow", languageWindow);
-            Ref(so, "languageCatcher", languageCatcher);
-            Ref(so, "languageContent", languageContent);
-            Ref(so, "languageRowPrefab", languageRowPrefab);
             Ref(so, "flagButton", flagButton);
             Ref(so, "flagValueImage", flagValue);
             Ref(so, "flagArrow", flagArrow);
@@ -375,9 +331,6 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "nameFocusedSprite", Art("field_focused"));
             Ref(so, "nameErrorSprite", Art("field_error"));
             Ref(so, "doneButton", doneButton);
-            Ref(so, "privacyRow", privacyRow);
-            Ref(so, "termsRow", termsRow);
-            Ref(so, "supportRow", supportRow);
             Ref(so, "resetBestsRow", resetBestsRow);
             Ref(so, "resetAllRow", resetAllRow);
             Ref(so, "confirmDialog", confirmDialog);
@@ -486,11 +439,11 @@ namespace SpeedStars.Tools.Builders
 
         private static RectTransform Slot(RectTransform row) => (RectTransform)row.Find("ControlSlot");
 
-        /// <summary>The Camera row right under the Music row, wired to the view: a thin line with a small round handle.</summary>
-        private static void AddCameraRow(GameObject rowPrefab, RectTransform musicRow, SerializedObject so, UnityEngine.SceneManagement.Scene scene)
+        /// <summary>The Camera row at the top of the list, wired to the view: a thin line with a small round handle.</summary>
+        private static void AddCameraRow(GameObject rowPrefab, RectTransform content, SerializedObject so, UnityEngine.SceneManagement.Scene scene)
         {
-            RectTransform row = Row(rowPrefab, musicRow.parent, "CameraRow", "row_camera_icon", SettingsTexts.CameraDistance, scene);
-            row.SetSiblingIndex(musicRow.GetSiblingIndex() + 1);
+            RectTransform row = Row(rowPrefab, content, "CameraRow", "row_camera_icon", SettingsTexts.CameraDistance, scene);
+            row.SetAsFirstSibling();
 
             Slider slider = BuildSlider(Slot(row), "CameraDistanceSlider");
 
@@ -591,13 +544,12 @@ namespace SpeedStars.Tools.Builders
             Ref(popupSo, "extraSections", view);
         }
 
-        /// <summary>The order of the window's rows: the new sections after the name, the reset rows before the links.</summary>
+        /// <summary>The order of the window's rows: the v2 sections after the name, the reset rows last.</summary>
         private static void OrderRows(RectTransform content)
         {
             string[] order =
             {
-                "MusicRow", "CameraRow", "LanguageRow", "FlagRow", "NameRow", "ExtraSections",
-                "ResetBestsRow", "ResetAllRow", "PrivacyRow", "TermsRow", "SupportRow"
+                "CameraRow", "FlagRow", "NameRow", "ExtraSections", "ResetBestsRow", "ResetAllRow"
             };
             int next = 0;
             foreach (string name in order)
@@ -675,7 +627,7 @@ namespace SpeedStars.Tools.Builders
                 var so = new SerializedObject(view);
                 GameObject rowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(UiPrefabPaths.SettingsRow);
                 RectTransform[] rects = root.GetComponentsInChildren<RectTransform>(true);
-                RectTransform content = (RectTransform)rects.First(t => t.name == "MusicRow").parent;
+                RectTransform content = (RectTransform)rects.First(t => t.name == "FlagRow").parent;
                 if (rects.Any(t => t.name == "ExtraSections"))
                 {
                     UnityEngine.Debug.Log($"UiSettingsPrefabs: '{UiPrefabPaths.SettingsPopup}' already has ExtraSections; left as it is.");
@@ -685,6 +637,33 @@ namespace SpeedStars.Tools.Builders
                 OrderRows(content);
                 so.ApplyModifiedPropertiesWithoutUndo();
                 HandEditGuard.SavePatchedPrefab(root, UiPrefabPaths.SettingsPopup);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+                HandEditGuard.ConvertPending();
+            }
+        }
+
+        /// <summary>
+        /// Takes the rows that do nothing out of the EXISTING popup prefab: music (no clip in the game), language (one language, no
+        /// translations), the three links (no addresses yet). Everything else stays as designed; a second run changes nothing.
+        /// </summary>
+        internal static void RemoveDeadRowsFromPrefab()
+        {
+            string[] dead = { "MusicRow", "LanguageRow", "PrivacyRow", "TermsRow", "SupportRow", "LanguagePopup" };
+            GameObject root = PrefabUtility.LoadPrefabContents(UiPrefabPaths.SettingsPopup);
+            try
+            {
+                bool changed = false;
+                foreach (string name in dead)
+                {
+                    Transform node = root.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == name);
+                    if (node == null) continue;
+                    UnityEngine.Object.DestroyImmediate(node.gameObject);
+                    changed = true;
+                }
+                if (changed) HandEditGuard.SavePatchedPrefab(root, UiPrefabPaths.SettingsPopup);
             }
             finally
             {
@@ -717,13 +696,13 @@ namespace SpeedStars.Tools.Builders
                 var so = new SerializedObject(view);
                 GameObject rowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(UiPrefabPaths.SettingsRow);
                 RectTransform[] rects = root.GetComponentsInChildren<RectTransform>(true);
-                RectTransform musicRow = rects.First(t => t.name == "MusicRow");
+                RectTransform content = (RectTransform)rects.First(t => t.name == "FlagRow").parent;
                 if (rects.Any(t => t.name == "CameraRow"))
                 {
                     UnityEngine.Debug.Log($"UiSettingsPrefabs: '{UiPrefabPaths.SettingsPopup}' already has CameraRow; left as it is.");
                     return;
                 }
-                AddCameraRow(rowPrefab, musicRow, so, root.scene);
+                AddCameraRow(rowPrefab, content, so, root.scene);
                 so.ApplyModifiedPropertiesWithoutUndo();
                 HandEditGuard.SavePatchedPrefab(root, UiPrefabPaths.SettingsPopup);
             }
@@ -736,7 +715,7 @@ namespace SpeedStars.Tools.Builders
 
         // ---------------------------------------------------------------- controls
 
-        private static SettingsToggleView BuildToggle(RectTransform slot, string name = "MusicToggle")
+        private static SettingsToggleView BuildToggle(RectTransform slot, string name)
         {
             RectTransform node = Kit.Node(slot, name);
             Kit.Anchor(node, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), Vector2.zero, V(ToggleWidth, ToggleHeight));
@@ -821,31 +800,6 @@ namespace SpeedStars.Tools.Builders
         }
 
         // ---------------------------------------------------------------- list windows
-
-        private static void BuildLanguageWindow(RectTransform layer, float panelHeight,
-            out GameObject window, out Button catcher, out RectTransform content)
-        {
-            RectTransform root = Catcher(layer, "LanguagePopup", out catcher);
-            window = root.gameObject;
-
-            // Under the Language field: the field's centre is 152 art px right of the panel centre, its bottom edge 356 px below the panel top.
-            float fieldCentre = ViewportLeft + RowWidth - SlotRight - SlotWidth * 0.5f - PanelWidth * 0.5f;
-            float below = HeaderHeight + RowSpacing + (RowHeight + RowSpacing) + (RowHeight + FieldHeight) * 0.5f + 4f;
-            RectTransform win = Kit.Node(root, "Window");
-            Kit.Anchor(win, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1f), new Vector2(P(fieldCentre), P(panelHeight * 0.5f - below)), V(400f, 336f));
-            UiArt.Paint(win.gameObject, Art("language_popup_background"), raycast: true);
-
-            ScrollArea(win, "Scroll", out RectTransform viewport, out content, out _);
-            Kit.Stretch(viewport, P(16f), P(16f), P(16f), P(16f));
-            VerticalLayoutGroup list = content.gameObject.AddComponent<VerticalLayoutGroup>();
-            list.spacing = P(RowSpacing);
-            list.childAlignment = TextAnchor.UpperCenter;
-            list.childControlWidth = true;
-            list.childControlHeight = true;
-            list.childForceExpandWidth = true;
-            list.childForceExpandHeight = false;
-            root.gameObject.SetActive(false);
-        }
 
         private static void BuildFlagWindow(RectTransform layer, out GameObject window, out Button catcher, out RectTransform content)
         {
@@ -984,6 +938,22 @@ namespace SpeedStars.Tools.Builders
     public static class SettingsV2Rebuild
     {
         public const string OkMarker = "SETTINGS_V2_REBUILD_OK";
+
+        /// <summary><c>-executeMethod SpeedStars.Tools.Builders.SettingsV2Rebuild.AddEmotePriceIcon</c>: the Cash diamond on the emote card.</summary>
+        [UnityEditor.MenuItem("Tools/Speed Stars/Build/Emote card - add the Cash icon to the price")]
+        public static void AddEmotePriceIcon()
+        {
+            UiEmotePrefabs.AddPriceIconToCard();
+            UnityEditor.AssetDatabase.SaveAssets();
+        }
+
+        /// <summary><c>-executeMethod SpeedStars.Tools.Builders.SettingsV2Rebuild.RemoveDeadRows</c>: see <see cref="UiSettingsPrefabs.RemoveDeadRowsFromPrefab"/>.</summary>
+        [UnityEditor.MenuItem("Tools/Speed Stars/Build/Settings - remove the rows that do nothing")]
+        public static void RemoveDeadRows()
+        {
+            UiSettingsPrefabs.RemoveDeadRowsFromPrefab();
+            UnityEditor.AssetDatabase.SaveAssets();
+        }
 
         [UnityEditor.MenuItem("Tools/Speed Stars/Build/Settings v2 - add sections to the Settings popup prefab")]
         public static void Run()

@@ -41,7 +41,8 @@ namespace SpeedStars.UI.Race
             switch (phase)
             {
                 case RaceStartPhase.Ready: return Ready(seconds);
-                case RaceStartPhase.Set: return Set(seconds);
+                case RaceStartPhase.Set:
+                case RaceStartPhase.FalseStart: return Set(seconds);
                 case RaceStartPhase.Go: return Go(seconds);
                 default: return new RaceStartPose();
             }
