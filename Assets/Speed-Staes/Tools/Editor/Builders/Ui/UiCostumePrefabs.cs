@@ -262,6 +262,11 @@ namespace SpeedStars.Tools.Builders
             PatchItemCardPrefab();
             PatchScreenPrefab();
             HandEditGuard.ConvertPending();
+            // The new price text was made as legacy Text: a TMP_Text field refuses it, so priceText stays empty until the
+            // converter has turned it into TextMeshPro. Second pass (idempotent: binds only empty fields) finishes it in ONE run.
+            PatchItemCardPrefab();
+            PatchScreenPrefab();
+            HandEditGuard.ConvertPending();
         }
 
         private static void PatchItemCardPrefab()
