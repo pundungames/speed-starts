@@ -97,7 +97,6 @@ namespace SpeedStars.PlayTests
                 yield return ShootPremiumTheme(dir, home, container);
                 yield return ShootScreen(dir, home, "editRacerButton", "cosmeticsScreen", "Home_costume");
                 yield return ShootScreen(dir, home, "highScoresButton", "highScoresScreen", "Home_leaderboard");
-                yield return ShootScreen(dir, home, "emoteButton", "emoteScreen", "Home_emote");
 
                 // Settings is a popup over Home (Home stays open behind its dimscreen).
                 UiPopup settings = RequireField<UiPopup>(home, "settingsPopup");
@@ -164,6 +163,12 @@ namespace SpeedStars.PlayTests
                     yield return WaitUntil(() => results != null && results.gameObject.activeInHierarchy, "results screen");
                     yield return Settle();
                     yield return Capture(dir, "Race_results");
+
+                    // Cash breakdown: a sample reward (finish, difficulty, opponents; 2 of 5 rivals beaten) so the block shows.
+                    results.ShowCashReward(new RaceCashReward(10, 10, 7, 2, 5));
+                    yield return Settle();
+                    yield return Settle();
+                    yield return Capture(dir, "Race_results_cash");
 
                     // Analysis: Stats on the results screen opens it (a force-finish at ~0 m shows the empty state, not a crash).
                     AnalysisScreenView analysis = RequireField<AnalysisScreenView>(results, "analysisScreen");
