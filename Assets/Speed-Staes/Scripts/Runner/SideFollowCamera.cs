@@ -19,6 +19,8 @@ namespace SpeedStars.Runner
         public float distance = 4.5f;
         [Tooltip("How far the camera looks down at the runner (deg). The height follows from it, so the angle stays the same at any distance or zoom.")]
         public float pitch = 8f;
+        [Tooltip("Turns the camera round the runner toward the runner's front (deg), so the near and far leg and arm can be told apart. 0 is exactly side-on. The follow stays on the run axis.")]
+        public float sideYaw = 12f;
         [Tooltip("Frame the runner slightly left so more track ahead is visible.")]
         public float leadAhead = 0.6f;
         [Tooltip("Height the camera looks at (m).")]
@@ -125,17 +127,23 @@ namespace SpeedStars.Runner
             transform.rotation = Facing();
         }
 
+        /// <summary>Unit direction from the runner to the camera on the ground: the right side turned toward the front by <see cref="sideYaw"/>.</summary>
+        Vector3 Side() => Quaternion.AngleAxis(-sideYaw, Vector3.up) * target.right;
+
         Vector3 Desired()
         {
             float back = distance * distanceScale * Mathf.Lerp(1f, zoomDistance, _zoom);
             float up = lookHeight + back * Mathf.Tan(pitch * Mathf.Deg2Rad);
-            return target.position + target.forward * leadAhead + target.right * back + Vector3.up * up;
+            Vector3 side = Side();
+            // The lead is taken along the picture's own horizontal, so the runner sits the same share of the frame left at any yaw.
+            Vector3 screenRight = Vector3.Cross(Vector3.up, -side);
+            return target.position + screenRight * leadAhead + side * back + Vector3.up * up;
         }
 
         /// <summary>Camera height standing still at the normal distance (m).</summary>
         public float StandingHeight => lookHeight + distance * Mathf.Tan(pitch * Mathf.Deg2Rad);
 
-        Quaternion Facing() => Quaternion.LookRotation(-target.right, Vector3.up) * Quaternion.Euler(pitch, 0f, 0f);
+        Quaternion Facing() => Quaternion.LookRotation(-Side(), Vector3.up) * Quaternion.Euler(pitch, 0f, 0f);
 
         void LateUpdate()
         {
