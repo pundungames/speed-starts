@@ -49,10 +49,13 @@ namespace SpeedStars.Physical
     ///      forward the head is, airTip, past level) and comes down head first: the dive, no special case. Head, pelvis, knees and
     ///      feet never go into the ground: the body stops on the first that touches. Letting go, the legs come
     ///      back under and lift it (softly from low down, ~0.5 s). See UpdateBodyHeight / KeepAboveGround.
-    /// One key moves one leg and one arm (right key: right leg + left arm): the arm follows that leg's thigh
-    /// going back (its push, its hold, its way home) and stays at rest while the leg reaches forward; no lag.
-    /// Arms, knees' twist, ankles and toes are posed in LateUpdate after the rig.
-    /// The body only pitches around X; Y and Z rotations stay 0.
+    /// Running (gait weight: speed, a key down, no hold, on the ground) the arms pump with the opposite leg's
+    /// thigh in both directions, wider and with a more closed elbow the faster and the cleaner the running (the
+    /// sim's Form); standing or held they keep the pose's rest and the armBack hold (StepArm). Arms, knees'
+    /// twist, ankles and toes are posed in LateUpdate after the rig.
+    /// The body pitches around X; on top of that the running gait turns the pelvis about the vertical axis with
+    /// the thigh difference and the chest the other way, rolls it a little toward the swinging leg's side, and
+    /// leans it forward by speed and acceleration (UpdateGaitLean / UpdateTrunk); all of it is 0 at rest and held.
     /// </summary>
     [DefaultExecutionOrder(-50)]
     public sealed class RunnerPoseDriver : MonoBehaviour
@@ -426,6 +429,56 @@ namespace SpeedStars.Physical
         [Tooltip("Shoulder (clavicle) follows the arm swing (deg at full swing).")]
         public float shoulderFollow = 12f;
 
+        [Header("Gait: the running body answers the legs (all of it fades out at rest, held and in the air)")]
+        [Tooltip("Speed (m/s) where the gait starts (x) and is fully in (y): twist, roll, gait lean and the arm pump grow between.")]
+        public Vector2 gaitSpeed = new Vector2(1f, 6f);
+        [Tooltip("Pelvis turn about the vertical (deg) at full gait with the legs a full stride apart: the hip of the leg " +
+                 "that is forward goes forward, so the step also gets longer.")]
+        public float pelvisTwist = 9f;
+        [Tooltip("The chest turns the other way by this much (deg) at full gait.")]
+        public float chestTwist = 12f;
+        [Tooltip("Thigh difference (deg) that counts as a full stride for the twist.")]
+        public float twistThighRange = 90f;
+        [Tooltip("Pelvis roll (deg) at full gait: the hip drops on the side of the leg that is swinging forward.")]
+        public float pelvisRoll = 3.5f;
+        [Tooltip("The chest rolls the other way by this much (deg) at full gait.")]
+        public float chestRoll = 3f;
+        [Tooltip("Lowest share of the gait that bad running (the sim's Form 0) keeps: twist, roll, lean and arm width " +
+                 "scale between this and 1 with Form.")]
+        [Range(0f, 1f)] public float formFloor = 0.5f;
+        [Tooltip("Forward lean of the trunk (deg) at full gait speed, on top of what the head asks for.")]
+        public float gaitLean = 13f;
+        [Tooltip("More forward lean (deg) per m/s² of acceleration (smoothed, only speeding up).")]
+        public float accelLean = 2.5f;
+        [Tooltip("Head-led lean (deg) at which the gait lean has faded out: mashing (the head far forward) and the dive " +
+                 "are not leaned on top. Leaning back fades it too, so sitting back is unchanged.")]
+        public float gaitLeanFade = 30f;
+        [Tooltip("Share of the gait lean the head follows (0 = the head keeps its world angle, the neck bends back).")]
+        [Range(0f, 1f)] public float gaitHeadShare = 0.5f;
+        [Tooltip("The gait lean follows its target through this spring (damping 1: no swing).")]
+        public SpringSettings gaitLeanSpring = new SpringSettings(2.5f, 1f);
+        [Tooltip("Each press pitches the trunk forward by up to this much (deg, times that press's efficiency), then " +
+                 "it settles back through pressKickSpring.")]
+        public float pressKick = 2.5f;
+        [Tooltip("The press pitch settles through this spring (damping 1: no swing).")]
+        public SpringSettings pressKickSpring = new SpringSettings(6f, 1f);
+
+        [Header("Arm pump (deg, + = forward): the arm follows the opposite leg's thigh both ways")]
+        [Tooltip("Upper arm with the opposite leg all the way back, at full speed and Form.")]
+        public float armRunBack = -50f;
+        [Tooltip("Upper arm with the opposite leg forward, at full speed and Form.")]
+        public float armRunFront = 45f;
+        [Tooltip("Opposite leg's thigh (deg, from straight down) for the arm all the way back (x) and all the way forward (y).")]
+        public Vector2 armThighRange = new Vector2(-35f, 50f);
+        [Tooltip("Share of the swing width that slow running keeps (0..1).")]
+        [Range(0f, 1f)] public float armSlowAmp = 0.35f;
+        [Tooltip("Elbow bend (deg) at full speed and Form: about a right angle.")]
+        public float armElbowRun = 90f;
+        [Tooltip("Elbow bend (deg) slow or untidy: loose and open.")]
+        public float armElbowLoose = 40f;
+        [Tooltip("The elbow closes this much more (deg) with the arm all the way forward.")]
+        public float armElbowFront = 15f;
+
         [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
         [Tooltip("The leg going over first: thigh and knee over the bar (knee 180 = straight).")]
         public float jumpLeadThigh = 97f;
@@ -475,6 +528,20 @@ namespace SpeedStars.Physical
         const float JumpAnkleFade = 10f;       // after a jump the ankles go back to the run's angles this fast (1/s)
         const float FollowRate = 6f;           // a leg changes between turning with the hips and keeping to the ground this fast (1/s)
 
+        const float GaitBlend = 8f;            // the gait weight follows its target this fast (1/s)
+        const float AccelBlend = 6f;           // the acceleration is smoothed this fast (1/s)
+        const float AccelMax = 4f;             // acceleration (m/s²) that gives the full accelLean
+        const float TwistBlend = 18f;          // twist and roll follow the legs this fast (1/s): no jitter from the leg curve
+        const float RollRate = 300f;           // thigh speed (deg/s) that counts as swinging for the roll
+        const float HoldGaitFrom = 0.35f;      // hold weight where the gait starts to fade ...
+        const float HoldGaitTo = 0.95f;        // ... and is gone (a tap's weight stays below the first)
+        const float SitFadeRange = 6f;         // leaning back this far (deg) takes the gait lean off
+
+        float _gaitW, _speedCurve, _accel, _lastSpeed, _gaitHead;   // gait weight 0..1; speed curve 0..1; trunk's share of head lean
+        Spring _gait, _kick;                       // gait lean and the press pitch (deg, trunk)
+        int _lastPresses;
+        float _twist, _roll, _lastThighL, _lastThighR, _chestYaw, _chestRoll;
+        bool _trunkInit;
         bool _wasInJump;                           // last frame in a jump: this frame's landing
         Vector3 _restHip;
         Quaternion _restHipRot, _restSpineRoot, _restSpineTip;
@@ -695,6 +762,7 @@ namespace SpeedStars.Physical
             _hipsLean.Reset();
             _tip.Reset();
             _settle.Reset();
+            ResetGait();
             _carried = true;
             _wasInJump = false;
             leftLeg.sideOut = rightLeg.sideOut = leftLeg.jumpW = rightLeg.jumpW = 0f;
@@ -989,6 +1057,7 @@ namespace SpeedStars.Physical
             if (!preview)
             {
                 lean = UpdateLean(dt, out baseBend, out bend, out legLean);
+                UpdateGaitLean(sim, dt, ref lean, ref baseBend, ref bend, ref legLean);
                 tip = UpdateTip(dt, pelvisPitchRange.y - p.pelvisPitch - lean);
                 lean += tip + jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
                 // The head on the ground with no foot carrying lets the body settle after it: the waist opens.
@@ -1011,6 +1080,7 @@ namespace SpeedStars.Physical
             UpdateLeg(rightLeg, now, dt, legTurn, _holdR, _holdL);
             FollowHips(leftLeg, rightLeg, legTurn, hipPitch + legLean, dt);
             FollowHips(rightLeg, leftLeg, legTurn, hipPitch + legLean, dt);
+            UpdateTrunk(sim, dt, hipPitch, ref pelvisTilt);
             if (!preview) PoseJump(sim);
             Vector3 hip = _restHip + new Vector3(0f, 0f, p.pelvis.x);
             LegFK(leftLeg, hip, pelvisTilt, p.width);
@@ -1040,14 +1110,14 @@ namespace SpeedStars.Physical
             // Leaning back the head keeps looking ahead: it takes only headKeep of the lean, the neck bends the rest.
             WriteHead(hipPitch + backLean + waistAngle - _restWaist + waistTopAngle + bend,
                 p.pelvisPitch + waistAngle - _restWaist,
-                _headAngle + tip - backLean, backLean, p.headDown, Mathf.Clamp01(_settle.Value), rootRot);
+                _headAngle + tip - backLean + _gaitHead, backLean, p.headDown, Mathf.Clamp01(_settle.Value), rootRot);
             WriteLeg(leftLeg);
             WriteLeg(rightLeg);
 
             // Arms: one key, one leg, one arm (the right key's press sends the right leg back and the left arm
             // with it); a leg held back keeps its arm back.
-            StepArm(leftArm, p.leftArm, LegBack(rightLeg));
-            StepArm(rightArm, p.rightArm, LegBack(leftLeg));
+            StepArm(leftArm, p.leftArm, LegBack(rightLeg), rightLeg);
+            StepArm(rightArm, p.rightArm, LegBack(leftLeg), leftLeg);
         }
 
         /// <summary>How much of the jump's pose is on: in over the wind-up, out over the last quarter of the air.</summary>
@@ -1152,7 +1222,7 @@ namespace SpeedStars.Physical
             lead = Mathf.Lerp(lead, -settleHeadUp, settle);   // settling on the ground the head comes up, looking ahead
             float pitch = Mathf.Clamp(follow + head + sit * headKeep, trunk - neckMax + body.Sim.T.headBack, trunk + lead);
             float neck = Mathf.Clamp(pitch - trunk, -neckMax, neckMax) * NeckShare;
-            spineTipTarget.rotation = rootRot * Quaternion.Euler(trunk + neck, 0f, 0f) * _restSpineTip;
+            spineTipTarget.rotation = rootRot * Quaternion.Euler(trunk + neck, _chestYaw, _chestRoll) * _restSpineTip;
             if (!_headAim || !_headBone || !_lookTarget) return;
 
             _headAim.weight = 1f;
@@ -1352,17 +1422,121 @@ namespace SpeedStars.Physical
             => Mathf.Lerp(curve(accelProfile).Evaluate(s), curve(maxSpeedProfile).Evaluate(s), _profileW);
 
         /// <summary>
-        /// One key moves one leg and one arm: the arm follows the opposite leg's thigh exactly (no spring), but only
-        /// the way that leg's own key sends it — back of home (its push, its hold, its way home). The leg reaching
-        /// forward because the other key was pressed leaves the arm at rest. The forearm goes back with the upper
-        /// arm as one chain (the elbow opens), stays so while held, closes coming home. All the way back the arm is
-        /// at armBack / elbowBack whatever the speed or key pose: only its rest comes from the pose.
+        /// Standing, starting off and held: the arm follows the opposite leg's thigh exactly (no spring) back of home
+        /// (its push, its hold, its way home) and rests at the pose's angles otherwise; all the way back it is at
+        /// armBack / elbowBack whatever the speed or key pose. Running (gait weight) it pumps instead: the opposite
+        /// leg's thigh, back or forward, gives the swing, between armRunBack and armRunFront; the width and the
+        /// elbow's closing grow with speed and the sim's Form (slow or untidy: small and loose).
         /// </summary>
-        void StepArm(Arm arm, ArmPose pose, float legBack)
+        void StepArm(Arm arm, ArmPose pose, float legBack, Leg opposite)
         {
             float back = preview ? 0f : legBack;
-            arm.swing = Mathf.Lerp(pose.swing, armBack, back);
-            arm.elbow = Mathf.Lerp(pose.elbow, elbowBack, back);
+            float swing = Mathf.Lerp(pose.swing, armBack, back);
+            float elbow = Mathf.Lerp(pose.elbow, elbowBack, back);
+            if (!preview && _gaitW > 0.001f && body && body.Sim != null)
+            {
+                float form = Mathf.Lerp(formFloor, 1f, body.Sim.Form);
+                float amp = Mathf.Lerp(armSlowAmp, 1f, _speedCurve) * form;
+                float t = Mathf.Clamp(Mathf.InverseLerp(armThighRange.x, armThighRange.y, opposite.thighWorld), -0.1f, 1.1f);
+                float mid = 0.5f * (armRunBack + armRunFront);
+                float pump = mid + (Mathf.LerpUnclamped(armRunBack, armRunFront, t) - mid) * amp;
+                float bend = Mathf.Lerp(armElbowLoose, armElbowRun, _speedCurve * form) + armElbowFront * Mathf.Clamp01(t);
+                swing = Mathf.Lerp(swing, pump, _gaitW);
+                elbow = Mathf.Lerp(elbow, bend, _gaitW);
+            }
+            arm.swing = swing;
+            arm.elbow = elbow;
+        }
+
+        void ResetGait()
+        {
+            _gait.Reset();
+            _kick.Reset();
+            _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = 0f;
+            _lastPresses = 0;
+            _twist = _roll = _chestYaw = _chestRoll = 0f;
+            _trunkInit = false;
+        }
+
+        /// <summary>
+        /// The gait weight (0..1) and the forward lean it brings: gaitLean by speed, accelLean while speeding up and a
+        /// small pitch per press (pressKick × its efficiency), spread down the chain like the head's lean (the chest
+        /// ends up with the lean itself). All of it fades with the head-led lean (mashing, the dive), with a lean back,
+        /// a hold, a jump, the air and settling: dive, sit-back and the hold poses stay what they were. The head follows
+        /// part of it (gaitHeadShare) so it keeps looking ahead.
+        /// </summary>
+        void UpdateGaitLean(RunnerSim sim, float dt, ref float lean, ref float baseBend, ref float bend, ref float legLean)
+        {
+            _speedCurve = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(gaitSpeed.x, Mathf.Max(gaitSpeed.x + 0.01f, gaitSpeed.y), sim.Speed));
+            float holdW = Mathf.Max(_holdL, _holdR);
+            float gate = _stepping * (_carried ? 1f : 0f) * (sim.InJump ? 0f : 1f) * (1f - Mathf.Clamp01(_settle.Value)) *
+                         (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(HoldGaitFrom, HoldGaitTo, holdW)));
+            _gaitW = Mathf.Lerp(_gaitW, _speedCurve * gate, 1f - Mathf.Exp(-GaitBlend * dt));
+
+            float a = dt > 0f ? Mathf.Clamp((sim.Speed - _lastSpeed) / dt, -10f, 10f) : 0f;
+            _lastSpeed = sim.Speed;
+            _accel = Mathf.Lerp(_accel, a, 1f - Mathf.Exp(-AccelBlend * dt));
+
+            float full = _hipsLean.Value;
+            float fade = Mathf.Clamp01(1f - Mathf.Max(0f, full) / Mathf.Max(1f, gaitLeanFade)) *
+                         Mathf.Clamp01(1f + Mathf.Min(0f, full) / SitFadeRange);
+            float form = Mathf.Lerp(formFloor, 1f, sim.Form);
+            float target = (gaitLean * form * _speedCurve + accelLean * Mathf.Clamp(_accel, 0f, AccelMax)) * gate * fade;
+            _gait.Step(target, gaitLeanSpring.frequency, gaitLeanSpring.damping, dt);
+
+            if (sim.Presses != _lastPresses)
+            {
+                // The impulse that peaks at pressKick × efficiency for a critically damped spring (peak = v / (w·e)).
+                if (sim.Presses > _lastPresses)
+                    _kick.Velocity += sim.LastEfficiency * pressKick * 2f * Mathf.PI * pressKickSpring.frequency * 2.71828f * gate * fade;
+                _lastPresses = sim.Presses;
+            }
+            _kick.Step(0f, pressKickSpring.frequency, pressKickSpring.damping, dt);
+
+            float extra = (_gait.Value + _kick.Value) / Mathf.Max(0.5f, hipShare + waistBaseShare + waistTopShare);
+            lean += extra * hipShare;
+            legLean += extra * (1f - hipShare);
+            baseBend += extra * waistBaseShare;
+            bend += extra * (waistBaseShare + waistTopShare);
+            _gaitHead = (_gait.Value + _kick.Value) * gaitHeadShare;
+        }
+
+        /// <summary>
+        /// Twist and roll of the running pelvis and chest, from the legs this frame (thighWorld, after FollowHips):
+        /// the leg that is forward brings its hip forward (yaw from the thigh difference), the chest turns the other
+        /// way; the hip of the leg swinging forward drops a little (roll from the thighs' speeds), the chest the other
+        /// way. Smoothed, scaled by the gait weight and Form, so rest, hold, the air and the finish give 0. The head
+        /// is not turned: it looks ahead through its look target.
+        /// </summary>
+        void UpdateTrunk(RunnerSim sim, float dt, float hipPitch, ref Quaternion pelvisTilt)
+        {
+            float lt = leftLeg.thighWorld, rt = rightLeg.thighWorld;
+            float rateL = 0f, rateR = 0f;
+            if (_trunkInit && dt > 0f)
+            {
+                rateL = (lt - _lastThighL) / dt;
+                rateR = (rt - _lastThighR) / dt;
+            }
+            _lastThighL = lt;
+            _lastThighR = rt;
+            _trunkInit = true;
+            if (preview)
+            {
+                _gaitHead = 0f;
+                _chestYaw = _chestRoll = 0f;
+                return;
+            }
+
+            float k = 1f - Mathf.Exp(-TwistBlend * dt);
+            _twist = Mathf.Lerp(_twist, Mathf.Clamp((rt - lt) / Mathf.Max(1f, twistThighRange), -1f, 1f), k);
+            _roll = Mathf.Lerp(_roll, Mathf.Clamp((rateL - rateR) / (2f * RollRate), -1f, 1f), k);
+            float amp = _gaitW * Mathf.Lerp(formFloor, 1f, sim.Form);
+            // + yaw takes the right hip back, so the forward right leg (rt > lt) asks for a negative one.
+            float yaw = -pelvisTwist * _twist * amp;
+            float roll = pelvisRoll * _roll * amp;   // + roll drops the left hip
+            pelvisTilt = Quaternion.Euler(hipPitch, yaw, roll);
+            _chestYaw = chestTwist * _twist * amp;
+            _chestRoll = -chestRoll * _roll * amp;
         }
 
         // Arms, knees, ankles and toes are posed after the Animator/rig has written the skeleton this frame.
