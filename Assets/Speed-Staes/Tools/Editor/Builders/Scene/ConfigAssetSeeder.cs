@@ -242,6 +242,31 @@ namespace SpeedStars.Tools.Builders
         }
 
         /// <summary>
+        /// T-106: writes the Practice event's display name from the seed table into the EXISTING asset (seeding skips existing
+        /// assets). Touches that one field of that one asset and saves only when the name differs, so a second run changes nothing.
+        /// </summary>
+        [MenuItem("Tools/Speed Stars/Build/Apply Practice event name")]
+        public static void ApplyPracticeEventName()
+        {
+            string path = $"{EventsFolder}/{PracticeEventId}.asset";
+            var definition = AssetDatabase.LoadAssetAtPath<RaceEventDefinition>(path);
+            if (definition == null) { Warn(Source, $"'{path}' is missing; Practice name not written."); return; }
+
+            string name = null;
+            foreach (var seed in Events)
+                if (seed.Id == PracticeEventId) name = seed.DisplayName;
+            if (name == null) { Warn(Source, $"No '{PracticeEventId}' row in the seed table; Practice name not written."); return; }
+
+            var so = new SerializedObject(definition);
+            SerializedProperty property = Prop(so, "displayName");
+            if (property.stringValue == name) return;
+            property.stringValue = name;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(definition);
+            AssetDatabase.SaveAssetIfDirty(definition);
+        }
+
+        /// <summary>
         /// Event access as in the reference game: 100m, Race of the Day and Practice are free and unlimited; the other events
         /// need a ticket (Timed Ticket). The flag per id comes from the seed table <c>Events</c>; an event of the catalog
         /// that is not in the table is left as it is. requiresTicket and isPlayable are written from the table (200m, 400m, 60mH, 400mH and Race of the Day are open; 4x100m, Medley stay closed).
