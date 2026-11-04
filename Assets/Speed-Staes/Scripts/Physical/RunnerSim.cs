@@ -76,6 +76,8 @@ namespace SpeedStars.Physical
         public Vector2 legReadyExt = new Vector2(0.25f, 0.85f);
         [Tooltip("Same leg twice in a row within a second.")]
         [Range(0f, 1f)] public float sameLegFactor = 0.4f;
+        [Tooltip("Same leg again: its push is scaled by gap / hopFullGap below this gap (s), so tapping one key faster than this gains nothing.")]
+        [Range(0.01f, 1f)] public float hopFullGap = 0.25f;
 
         [Header("Hold")]
         [Tooltip("A press shorter than this still makes a full stride; longer is a hold (s).")]
@@ -364,9 +366,16 @@ namespace SpeedStars.Physical
             PressResult result;
             float eff;
             bool nearLanding = false;
+            bool repeat = LastLeg == leg && sinceLast < 1f;
             if (Speed < 0.3f && !Airborne && !launchPending)
             {
                 result = PressResult.Start;
+                eff = 1f;
+            }
+            else if (repeat && (Airborne || launchPending))
+            {
+                // A hop has no stride to land from: the press in flight is on time (its rate is limited by hopFullGap below).
+                result = PressResult.Good;
                 eff = 1f;
             }
             else if (Airborne || (launchPending && !together))
@@ -388,10 +397,16 @@ namespace SpeedStars.Physical
             }
 
             // The pressed leg must be back under the body to push again.
-            eff *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T.legReadyExt.x, T.legReadyExt.y, l.Ext.Value));
+            float ready = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T.legReadyExt.x, T.legReadyExt.y, l.Ext.Value));
+            // A hop (the same leg again) never left the ground, so "back under the body" does not apply to it by the hop bias
+            // it is building (sameLegFactor is its penalty): no speed cliff at the gap where Ext just stays high.
+            if (repeat) ready = Mathf.Lerp(ready, 1f, _hopBias + (1f - _hopBias) * T.hopBiasFollow);
+            eff *= ready;
             // The head's kick follows the timing without this: a hop (same leg again) is not a wasted press, the head must not be thrown.
             float kickTiming = Mathf.Clamp01(eff);
-            if (LastLeg == leg && sinceLast < 1f) eff *= T.sameLegFactor;
+            if (repeat) eff *= T.sameLegFactor;
+            // Tapping one key faster than hopFullGap gains nothing: the push per second stays what it is at that gap.
+            float pushScale = repeat ? Mathf.Min(1f, sinceLast / Mathf.Max(0.01f, T.hopFullGap)) : 1f;
             // The press's own quality, before the body's state (energy, head) scales the push: it is what the head's
             // first kick and Form follow, so a press on time keeps the head low and a wasted one throws it forward.
             float timing = Mathf.Clamp01(eff);
@@ -404,7 +419,7 @@ namespace SpeedStars.Physical
             _head.Velocity += T.headNod * share;
             l.Kick = T.headKick * Mathf.Lerp(T.goodKickShare, T.wasteKickShare, 1f - kickTiming) * share;
 
-            _pending += T.pushGain * eff * share;
+            _pending += T.pushGain * eff * share * pushScale;
 
             LeanSpring.Velocity += T.leanKick * (1f + T.stumbleKick * (1f - eff)) * share;
             if (!pairSecond) _form += (timing - _form) * T.formFollow;

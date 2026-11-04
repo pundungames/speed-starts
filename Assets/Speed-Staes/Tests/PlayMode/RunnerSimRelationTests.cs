@@ -328,5 +328,44 @@ namespace SpeedStars.PlayTests
             Assert.Greater(running, 0.5f, "a good rhythm builds Form");
             Assert.Less(s.Form, running * 0.5f, "Form fades with no presses");
         }
+
+        /// <summary>Speed (m/s) after seconds of tapping one key by a fixed gap.</summary>
+        private static float OneKeySpeed(object tuning, float gap, float seconds = 8f)
+        {
+            var s = new Sim(tuning);
+            double next = 0.2, release = -1, t = 0;
+            while (t < seconds)
+            {
+                if (t >= next) { s.Press(1); release = t + KeyHold; next += gap; }
+                if (release >= 0 && t >= release) { s.Release(1); release = -1; }
+                s.Advance(Step);
+                t += Step;
+            }
+            return s.Speed;
+        }
+
+        [Test]
+        public void RepeatingOneKeyDoesNotStopTheRunnerWhereAnAlmostSlowerGapMovesIt()
+        {
+            object tuning = NewTuning();
+            // The pressed leg of a hop never left the body, and a press in flight has no stride to be early for: no step to
+            // standstill between neighbouring gaps.
+            for (float gap = 0.16f; gap < 0.34f; gap += 0.01f)
+            {
+                float here = OneKeySpeed(tuning, gap), next = OneKeySpeed(tuning, gap + 0.01f);
+                if (next >= 1f) Assert.Greater(here, 0.3f * next, $"gap {gap:0.00} stops where {gap + 0.01f:0.00} runs");
+                if (here >= 1f) Assert.Greater(next, 0.3f * here, $"gap {gap + 0.01f:0.00} stops where {gap:0.00} runs");
+            }
+        }
+
+        [Test]
+        public void TappingOneKeyFasterThanHopFullGapIsNotFasterThanAtThatGap()
+        {
+            object tuning = NewTuning();
+            float full = (float)TuningType.GetField("hopFullGap").GetValue(tuning);
+            float atFull = OneKeySpeed(tuning, full);
+            for (float gap = full - 0.01f; gap >= 0.14f; gap -= 0.02f)
+                Assert.LessOrEqual(OneKeySpeed(tuning, gap), atFull + 0.2f, $"gap {gap:0.00} beats hopFullGap");
+        }
     }
 }
