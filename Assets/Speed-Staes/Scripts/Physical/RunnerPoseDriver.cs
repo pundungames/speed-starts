@@ -365,6 +365,9 @@ namespace SpeedStars.Physical
         [Tooltip("Fastest the pelvis may go down while running (m/s). A press that lands on a foot still in the air would " +
                  "otherwise pull the body to the foot's stance height in one frame. Not used in the dive, over hurdles or getting up.")]
         [Min(0.1f)] public float maxDropSpeed = 1.5f;
+        [Tooltip("Fastest the pelvis may go up while running (m/s): a leg's height ask that jumps (mashing) cannot throw the body " +
+                 "up in one frame. Not used in the dive, over hurdles or getting up.")]
+        [Min(0.1f)] public float maxRiseSpeed = 2f;
         [Tooltip("Getting up from low down (the body more than liftBelow under its standing height, fully so liftRange " +
                  "further down): the height goes through this softer spring instead (~0.5 s up off the ground). Running and " +
                  "the crouch stay above liftBelow and keep heightSpring.")]
@@ -1715,6 +1718,8 @@ namespace SpeedStars.Physical
             float lead = Mathf.Lerp(Mathf.Min(neckMax, headLead), neckMax, Mathf.Clamp01(-sit / 10f));
             lead = Mathf.Lerp(lead, -settleHeadUp, settle);   // settling on the ground the head comes up, looking ahead
             float pitch = Mathf.Clamp(follow + head + sit * headKeep, trunk - neckMax + body.Sim.T.headBack, trunk + lead);
+            // Hopping on one key the head looks ahead (world pitch toward level) whatever the trunk does; alternating keys, pairs and dives have 0 here.
+            pitch = Mathf.Lerp(pitch, 0f, _hop * (1f - _pair) * (1f - settle));
             float neck = Mathf.Clamp(pitch - trunk, -neckMax, neckMax) * NeckShare;
             spineTipTarget.rotation = rootRot * Quaternion.Euler(trunk + neck, _chestYaw, _chestRoll) * _restSpineTip;
             if (!_headAim || !_headBone || !_lookTarget) return;
@@ -1779,7 +1784,8 @@ namespace SpeedStars.Physical
             if (leftLeg.carry || rightLeg.carry)
             {
                 // A dive's or a jump's landing, or a settled body, may come down as fast as it falls.
-                bool limitDrop = !_ballistic && _carried && !_jumping && _settle.Value <= 0f;
+                // _ballistic still holds last frame's value here, so the first carried frame after a dive stays exempt.
+                bool limitDrop = !_ballistic && !_jumping && _settle.Value <= 0f;
                 float prevY = _bodyY.Value;
                 float need = float.MinValue, cap = float.MaxValue;
                 bool planted = false;
@@ -1813,11 +1819,7 @@ namespace SpeedStars.Physical
                     _bodyY.Value = cap;
                     _bodyY.Velocity = Mathf.Min(0f, _bodyY.Velocity);
                 }
-                if (limitDrop && _bodyY.Value < prevY - maxDropSpeed * dt)
-                {
-                    _bodyY.Value = prevY - maxDropSpeed * dt;
-                    _bodyY.Velocity = Mathf.Max(_bodyY.Velocity, -maxDropSpeed);
-                }
+                if (limitDrop) LimitHeightSpeed(prevY, dt);
                 _carried = true;
                 _ballistic = false;
                 _flightT = 0f;
@@ -1831,6 +1833,8 @@ namespace SpeedStars.Physical
             }
             _carried = false;
             _flightT += dt;
+            bool wasBallistic = _ballistic;
+            float flightPrevY = _bodyY.Value;
             if (TryIncoming(out Leg incoming, out float remaining))
             {
                 // The run between two steps: an arc from where the last foot left to where the next touches down.
@@ -1845,6 +1849,7 @@ namespace SpeedStars.Physical
                 float target = Mathf.Lerp(_offY, landY, Mathf.SmoothStep(0f, 1f, w)) + rise * 4f * w * (1f - w);
                 if (incoming.phase == LegPhase.Land) target += landHover;
                 _bodyY.Step(target, flightSpring.frequency, flightSpring.damping, dt);
+                if (!wasBallistic && !_jumping && _settle.Value <= 0f) LimitHeightSpeed(flightPrevY, dt);
                 return _bodyY.Value;
             }
 
@@ -1854,6 +1859,15 @@ namespace SpeedStars.Physical
             _bodyY.Velocity -= sim.T.gravity * dt;
             _bodyY.Value += _bodyY.Velocity * dt;
             return _bodyY.Value;
+        }
+
+        /// <summary>Keeps this frame's body height step within maxDropSpeed down and maxRiseSpeed up (running only).</summary>
+        void LimitHeightSpeed(float prevY, float dt)
+        {
+            float y = Mathf.Clamp(_bodyY.Value, prevY - maxDropSpeed * dt, prevY + maxRiseSpeed * dt);
+            if (y == _bodyY.Value) return;
+            _bodyY.Value = y;
+            _bodyY.Velocity = Mathf.Clamp(_bodyY.Velocity, -maxDropSpeed, maxRiseSpeed);
         }
 
         /// <summary>
