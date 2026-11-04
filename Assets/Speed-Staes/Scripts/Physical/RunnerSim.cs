@@ -74,10 +74,20 @@ namespace SpeedStars.Physical
         public float lateSpeed = 3f;
         [Tooltip("The pressed leg's extension: below x it is back under the body (full), above y it is still out (0).")]
         public Vector2 legReadyExt = new Vector2(0.25f, 0.85f);
+        [Tooltip("Below this speed (m/s) every tap pushes at least tapFloorGain, whatever its timing or the head: mashing never leaves the runner standing.")]
+        public float tapFloorSpeed = 3.2f;
+        [Tooltip("Least push (m/s) of a tap while the runner is below tapFloorSpeed.")]
+        public float tapFloorGain = 0.6f;
         [Tooltip("Same leg twice in a row within a second.")]
         [Range(0f, 1f)] public float sameLegFactor = 0.4f;
+        [Tooltip("Same leg again when standing still or slow: there is no stride to repeat yet, so each tap pushes at this factor instead, blending to sameLegFactor by sameLegStartSpeed.")]
+        [Range(0f, 1f)] public float sameLegStartFactor = 0.75f;
+        [Tooltip("Speed (m/s) at which a repeated key has only sameLegFactor.")]
+        public float sameLegStartSpeed = 3f;
         [Tooltip("Same leg again: its push is scaled by gap / hopFullGap below this gap (s), so tapping one key faster than this gains nothing.")]
         [Range(0.01f, 1f)] public float hopFullGap = 0.25f;
+        [Tooltip("Keys in turn: a press's push is scaled by gap / pressFullGap below this gap (s), so tapping faster than a runner can step gains no more.")]
+        [Range(0.01f, 1f)] public float pressFullGap = 0.15f;
 
         [Header("Hold")]
         [Tooltip("A press shorter than this still makes a full stride; longer is a hold (s).")]
@@ -131,7 +141,7 @@ namespace SpeedStars.Physical
         [Range(0f, 2f)] public float goodKickShare = 0.2f;
         [Tooltip("Share of headKick a wasted press (efficiency 0: in the air, very late, leg not back) takes. In between " +
                  "it follows the press's timing efficiency, so bad presses pile the head up and good ones keep it low.")]
-        [Range(0f, 5f)] public float wasteKickShare = 3.5f;
+        [Range(0f, 5f)] public float wasteKickShare = 0.5f;
         [Tooltip("Key still down: the head goes on forward at this rate (deg/s × the key's hold weight; both keys = twice).")]
         public float holdPush = 70f;
         [Tooltip("No key down: the head comes back to headBack through this spring. Presses before it is back pile it up.")]
@@ -154,6 +164,18 @@ namespace SpeedStars.Physical
         public SpringSettings holdIn = new SpringSettings(2f, 1f);
         [Tooltip("How fast a key's hold weight goes away after the key comes up.")]
         public SpringSettings holdOut = new SpringSettings(4.5f, 1f);
+
+        [Header("Strain: wasted presses build it slowly, on-time presses and rest wear it off; it leans the head forward (over seconds)")]
+        [Tooltip("Strain (0..1) each wasted press adds, × (1 − the press's timing): over-tapping takes seconds to lean the runner, not one press.")]
+        public float strainGain = 0.045f;
+        [Tooltip("Strain each on-time press takes away, × its timing^8 (a wasted press takes none): back on the rhythm the head comes up within a couple of seconds.")]
+        public float strainRelief = 0.2f;
+        [Tooltip("Strain lost per second whatever happens (1/s).")]
+        public float strainLeak = 0.05f;
+        [Tooltip("Extra leak (× strainLeak) when no press has come for about 0.5 s: keys up, the runner gets his breath.")]
+        public float strainRest = 8f;
+        [Tooltip("Share of headForwardMax a full strain leans the head to.")]
+        [Range(0f, 1f)] public float strainHead = 1f;
 
         [Header("Head → speed: the further forward the head, the less a press gives and the more the runner loses")]
         [Tooltip("Head angle (deg) at which a press gives nothing; upright or back a press gives all. In between it " +
@@ -279,6 +301,8 @@ namespace SpeedStars.Physical
         public float Lean => LeanSpring.Value;
         /// <summary>The head angle (deg, + = forward).</summary>
         public float HeadAngle => _head.Value;
+        /// <summary>0..1: how much over-tapping has built up (slow); it leans the head.</summary>
+        public float Strain { get; private set; }
         /// <summary>How well the runner has been running (0..1): the moving average of the presses' timing efficiency
         /// (before head and energy), fading when no press comes. For the visual; it changes no speed.</summary>
         public float Form => _form;
@@ -336,6 +360,7 @@ namespace SpeedStars.Physical
             _landTime = -10.0;
             LeanSpring.Reset();
             _head.Reset();
+            Strain = 0f;
             _headFwd.Reset();
             _keyUpTime = -1000.0;
             PoseLean = 0f;
@@ -404,9 +429,10 @@ namespace SpeedStars.Physical
             eff *= ready;
             // The head's kick follows the timing without this: a hop (same leg again) is not a wasted press, the head must not be thrown.
             float kickTiming = Mathf.Clamp01(eff);
-            if (repeat) eff *= T.sameLegFactor;
+            if (repeat) eff *= Mathf.Lerp(T.sameLegStartFactor, T.sameLegFactor, Mathf.SmoothStep(0f, 1f, Speed / Mathf.Max(0.1f, T.sameLegStartSpeed)));
             // Tapping one key faster than hopFullGap gains nothing: the push per second stays what it is at that gap.
-            float pushScale = repeat ? Mathf.Min(1f, sinceLast / Mathf.Max(0.01f, T.hopFullGap)) : 1f;
+            float pushScale = Mathf.Min(1f, sinceLast / Mathf.Max(0.01f, repeat ? T.hopFullGap : T.pressFullGap));
+            if (together) pushScale = 1f;   // a pair's second key is judged by togetherPush
             // The press's own quality, before the body's state (energy, head) scales the push: it is what the head's
             // first kick and Form follow, so a press on time keeps the head low and a wasted one throws it forward.
             float timing = Mathf.Clamp01(eff);
@@ -417,9 +443,15 @@ namespace SpeedStars.Physical
             // A head that is down spoils the push: it comes back in full only as the head comes up.
             eff *= HeadUpright;
             _head.Velocity += T.headNod * share;
+            // Wasted presses pile strain up a little each; on-time ones wear it off (no threshold between them).
+            Strain = Mathf.Clamp01(Strain + (T.strainGain * (1f - kickTiming) - T.strainRelief * Mathf.Pow(kickTiming, 8f)) * share);
             l.Kick = T.headKick * Mathf.Lerp(T.goodKickShare, T.wasteKickShare, 1f - kickTiming) * share;
 
-            _pending += T.pushGain * eff * share * pushScale;
+            float gain = T.pushGain * eff * share * pushScale;
+            // Below a floor speed a tap always pushes a little (slow, limping), whatever its timing or the head: never stuck.
+            if (!pairSecond && Speed + _pending < T.tapFloorSpeed)
+                gain = Mathf.Max(gain, Mathf.Min(T.tapFloorGain, T.tapFloorSpeed - Speed - _pending));
+            _pending += gain;
 
             LeanSpring.Velocity += T.leanKick * (1f + T.stumbleKick * (1f - eff)) * share;
             if (!pairSecond) _form += (timing - _form) * T.formFollow;
@@ -521,7 +553,11 @@ namespace SpeedStars.Physical
                 _headFwd.Value = T.headForwardMax;
                 _headFwd.Velocity = Mathf.Min(0f, _headFwd.Velocity);
             }
-            _head.Step(_headFwd.Value, T.headSpring.frequency, T.headSpring.damping, h);
+            // Strain: a slow build from wasted presses, worn off by on-time ones and by rest; it adds to where the head is led.
+            float quiet = Mathf.SmoothStep(0f, 1f, ((float)(Time - LastPressTime) - 0.15f) / 0.35f);
+            Strain = Mathf.Max(0f, Strain - T.strainLeak * (1f + T.strainRest * quiet) * h);
+            float lead = Mathf.Min(T.headForwardMax, _headFwd.Value + Strain * T.strainHead * T.headForwardMax);
+            _head.Step(lead, T.headSpring.frequency, T.headSpring.damping, h);
         }
 
         float EnergyFactor() =>

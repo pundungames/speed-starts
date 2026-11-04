@@ -324,26 +324,26 @@ namespace SpeedStars.Physical
 
         [Header("Hops: one key again and again (one leg hops, the other held out), two keys together (a sack hop)")]
         [Tooltip("One-key hop (blended in by the hop weight): toe-off, how far back the pressed leg goes with the foot down.")]
-        public LegAngles hopPushEnd = new LegAngles(5f, 150f);
+        public LegAngles hopPushEnd = new LegAngles(-30f, 165f);
         [Tooltip("One-key hop swing, first key: the leg flexes under the body, no heel kick.")]
-        public LegAngles hopRecover = new LegAngles(8f, 115f);
+        public LegAngles hopRecover = new LegAngles(-25f, 120f);
         [Tooltip("One-key hop swing, second key: the deepest flex, thigh and knee both small.")]
-        public LegAngles hopMid = new LegAngles(16f, 110f);
+        public LegAngles hopMid = new LegAngles(5f, 105f);
         [Tooltip("One-key hop swing, third key: the leg opens again going down.")]
-        public LegAngles hopKneeDrive = new LegAngles(24f, 130f);
+        public LegAngles hopKneeDrive = new LegAngles(22f, 130f);
         [Tooltip("One-key hop touchdown: the foot lands under the hips, the leg nearly straight.")]
-        public LegAngles hopContact = new LegAngles(25f, 165f);
+        public LegAngles hopContact = new LegAngles(20f, 165f);
         [Tooltip("The balance leg's thigh sways this many degrees (forward while the body rises) with the one-key hop, so it does not look frozen.")]
         public float hopSway = 6f;
         [Tooltip("The leg the hops leave out (not the one pressed again and again): held out in front, nearly straight, in the " +
                  "air, balancing; it carries nothing. Blended in by the sim's HopBias.")]
-        public LegAngles balanceLeg = new LegAngles(40f, 175f);
+        public LegAngles balanceLeg = new LegAngles(28f, 177f);
         [Tooltip("The trunk sits back by this much (deg) on one-leg hops: the head-led lean and the gait lean fade out as the " +
                  "hop bias rises.")]
         public float hopBackLean = 30f;
         [Tooltip("The body's extra rise between two steps (m) at full hop bias, and with two keys pressed together (the legs " +
                  "in step): one leg hopping, or both legs bouncing the body like a sack.")]
-        public float hopRise = 0.1f;
+        public float hopRise = 0.05f;
 
         [Header("Leg timing (s)")]
         [Tooltip("A key down longer than this is a hold: the pushing leg goes on to the hold angles and the other leg reaches " +
@@ -576,6 +576,16 @@ namespace SpeedStars.Physical
         [Tooltip("The elbow closes this much more (deg) with the arm all the way forward.")]
         public float armElbowFront = 15f;
 
+        [Header("One-key hop arms (deg, + = forward): both arms throw the body up with each press")]
+        [Tooltip("Upper arm at the top of the throw (right after a press): up and forward.")]
+        public float armHopUp = 60f;
+        [Tooltip("Upper arm as the body comes down: down and back.")]
+        public float armHopDown = -45f;
+        [Tooltip("Elbow bend (deg) in the hop: about a right angle, the forearms up in front of the chest.")]
+        public float armHopElbow = 90f;
+        [Tooltip("How fast the throw falls back after the press's snap (1/s): the attack is instant, the return soft.")]
+        public float armHopReturn = 6f;
+
         [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
         [Tooltip("The leg going over first: thigh and knee over the bar (knee 180 = straight).")]
         public float jumpLeadThigh = 97f;
@@ -652,7 +662,8 @@ namespace SpeedStars.Physical
 
         float _gaitW, _speedCurve, _accel, _lastSpeed, _gaitHead;   // gait weight 0..1; speed curve 0..1; trunk's share of head lean
         Spring _gait, _kick;                       // gait lean and the press pitch (deg, trunk)
-        int _lastPresses;
+        int _lastPresses, _armPresses;
+        float _armKick;                            // 1 right after a press, falling back: the hop's arm throw
         readonly float[] _sitW = new float[2];       // each leg's share in the sit-back pivot (blends over sitPivotBlend)
         float _hop, _pair, _dive;                   // one-leg hop weight, two-keys-together weight, hold weight (dive) 0..1
         float _twist, _roll, _lastThighL, _lastThighR, _chestYaw, _chestRoll;
@@ -1585,6 +1596,14 @@ namespace SpeedStars.Physical
             }
             leftLeg.rock = rightLeg.rock = 0f;
             if (backLean < 0f) SitBack(ref hip, backLean);
+            // Sitting back turns the legs that do not carry about the heels, below the ground: nothing stays under it
+            // (the heel, and the ball of a foot pitched toes down or rocked back).
+            if (backLean < 0f)
+                for (int i = 0; i < 2; i++)
+                {
+                    Leg leg = Legs(i);
+                    leg.ankle.y = Mathf.Max(leg.ankle.y, AnkleGround(leg));
+                }
 
             // Write the rig. The waist base sits at waistAngle plus its bend on the hips; the chain (TwistChain)
             // fills the chest in between it and the top, whose angle the neck and head work from (0 = the rig's rest).
@@ -1613,6 +1632,8 @@ namespace SpeedStars.Physical
         /// </summary>
         void UpdateHop(RunnerSim sim, double now, float dt)
         {
+            if (sim.Presses != _armPresses) { _armPresses = sim.Presses; _armKick = 1f; }
+            else _armKick *= Mathf.Exp(-armHopReturn * dt);
             float k = 1f - Mathf.Exp(-HopBlend * dt);
             bool off = preview || sim.InJump;
             _hop = Mathf.Lerp(_hop, off ? 0f : Mathf.SmoothStep(0f, 1f, sim.HopBias), k);
@@ -2040,6 +2061,13 @@ namespace SpeedStars.Physical
                 swing = Mathf.Lerp(swing, pump, _gaitW);
                 elbow = Mathf.Lerp(elbow, bend, _gaitW);
             }
+            // One-key hop: both arms throw up and forward with the press, down and back as the body comes down.
+            float hw = preview ? 0f : _hop * (1f - _pair);
+            if (hw > 0.001f)
+            {
+                swing = Mathf.Lerp(swing, Mathf.Lerp(armHopDown, armHopUp, _armKick), hw);
+                elbow = Mathf.Lerp(elbow, armHopElbow, hw);
+            }
             arm.swing = swing;
             arm.elbow = elbow;
         }
@@ -2050,6 +2078,7 @@ namespace SpeedStars.Physical
             _kick.Reset();
             _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = 0f;
             _sitW[0] = _sitW[1] = 0f;
+            _armKick = 0f;
             _lastPresses = 0;
             _twist = _roll = _chestYaw = _chestRoll = 0f;
             _trunkInit = false;

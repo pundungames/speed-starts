@@ -367,5 +367,54 @@ namespace SpeedStars.PlayTests
             for (float gap = full - 0.01f; gap >= 0.14f; gap -= 0.02f)
                 Assert.LessOrEqual(OneKeySpeed(tuning, gap), atFull + 0.2f, $"gap {gap:0.00} beats hopFullGap");
         }
+
+        /// <summary>Speed (m/s) after seconds of alternating taps by a fixed gap and hold.</summary>
+        private static float AlternatingSpeed(object tuning, float gap, float hold, float seconds)
+        {
+            var s = new Sim(tuning);
+            double next = 0.2, release = -1, t = 0;
+            int leg = 0, relLeg = 0;
+            while (t < seconds)
+            {
+                if (t >= next) { s.Press(leg); relLeg = leg; release = t + hold; leg = 1 - leg; next += gap; }
+                if (release >= 0 && t >= release) { s.Release(relLeg); release = -1; }
+                s.Advance(Step);
+                t += Step;
+            }
+            return s.Speed;
+        }
+
+        [Test]
+        public void SustainedMashingKeepsMovingAndIsSlowerThanASlowRhythm()
+        {
+            object tuning = NewTuning();
+            float slow = AlternatingSpeed(tuning, 0.5f, KeyHold, 10f);
+            foreach (float gap in new[] { 0.08f, 0.10f, 0.12f, 0.14f })
+            {
+                float mash = AlternatingSpeed(tuning, gap, 0.04f, 10f);
+                Assert.Greater(mash, 0.5f, $"mashing at {gap:0.00} must not leave the runner standing");
+                Assert.Less(mash, slow, $"mashing at {gap:0.00} must not beat a slow rhythm");
+            }
+        }
+
+        [Test]
+        public void MashingBuildsLeanOverSecondsNotInOneSecond()
+        {
+            object tuning = NewTuning();
+            var s = new Sim(tuning);
+            double next = 0.2, release = -1, t = 0;
+            int leg = 0, relLeg = 0;
+            float headAt1 = 0f, headAt6 = 0f;
+            while (t < 6f)
+            {
+                if (t >= next) { s.Press(leg); relLeg = leg; release = t + 0.04; leg = 1 - leg; next += 0.11; }
+                if (release >= 0 && t >= release) { s.Release(relLeg); release = -1; }
+                s.Advance(Step);
+                t += Step;
+                if (t < 1f) headAt1 = s.Head;
+            }
+            headAt6 = s.Head;
+            Assert.Less(headAt1, 0.5f * headAt6, "the head must go forward gradually under sustained mashing");
+        }
     }
 }
