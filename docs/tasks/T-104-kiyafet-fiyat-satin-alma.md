@@ -22,8 +22,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "Yama metodu kopyada kosulacak: CostumeItemCard.prefab + CosmeticsScreen.prefab (fiyat ve para birimi ikonlari); supervizor kosar ve alir"
+    durum: closed
+    not: "Yama metodu kopyada kosulacak: CostumeItemCard.prefab + CosmeticsScreen.prefab (fiyat ve para birimi ikonlari); supervizor kosar ve alir -> kopyada tek kosu, ikinci kosuda bayt farki yok, prefab'lar dalda"
 started: 2026-11-04
 finished: 2026-11-04
 blocked_reason:
