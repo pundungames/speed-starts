@@ -389,6 +389,8 @@ namespace SpeedStars.Physical
 
             // The pressed leg must be back under the body to push again.
             eff *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T.legReadyExt.x, T.legReadyExt.y, l.Ext.Value));
+            // The head's kick follows the timing without this: a hop (same leg again) is not a wasted press, the head must not be thrown.
+            float kickTiming = Mathf.Clamp01(eff);
             if (LastLeg == leg && sinceLast < 1f) eff *= T.sameLegFactor;
             // The press's own quality, before the body's state (energy, head) scales the push: it is what the head's
             // first kick and Form follow, so a press on time keeps the head low and a wasted one throws it forward.
@@ -400,7 +402,7 @@ namespace SpeedStars.Physical
             // A head that is down spoils the push: it comes back in full only as the head comes up.
             eff *= HeadUpright;
             _head.Velocity += T.headNod * share;
-            l.Kick = T.headKick * Mathf.Lerp(T.goodKickShare, T.wasteKickShare, 1f - timing) * share;
+            l.Kick = T.headKick * Mathf.Lerp(T.goodKickShare, T.wasteKickShare, 1f - kickTiming) * share;
 
             _pending += T.pushGain * eff * share;
 

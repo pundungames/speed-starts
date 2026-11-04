@@ -362,6 +362,9 @@ namespace SpeedStars.Physical
                  "softer spring instead, so the front foot reaches the ground a moment before the body settles onto it. " +
                  "Going up stays on heightSpring (a foot never goes into the ground).")]
         public SpringSettings dropSpring = new SpringSettings(3f, 0.6f);
+        [Tooltip("Fastest the pelvis may go down while running (m/s). A press that lands on a foot still in the air would " +
+                 "otherwise pull the body to the foot's stance height in one frame. Not used in the dive, over hurdles or getting up.")]
+        [Min(0.1f)] public float maxDropSpeed = 1.5f;
         [Tooltip("Getting up from low down (the body more than liftBelow under its standing height, fully so liftRange " +
                  "further down): the height goes through this softer spring instead (~0.5 s up off the ground). Running and " +
                  "the crouch stay above liftBelow and keep heightSpring.")]
@@ -882,8 +885,10 @@ namespace SpeedStars.Physical
             EnsureBuffers(leg);
             LegAngles c = Stride(contact);
             // Already there (the touchdown pose, or the foot on the ground past the fold): nothing to catch, plant it now.
-            // A catch of even a few frames would slide the foot along the ground at the body's speed.
-            if ((Mathf.Abs(c.thigh - leg.angles.thigh) < LockThigh && Mathf.Abs(c.knee - leg.angles.knee) < LockKnee) || Touching(leg))
+            // A catch of even a few frames would slide the foot along the ground at the body's speed. A foot still in the
+            // air is not down: it is caught and planted when it touches, or the body would drop to it in one frame.
+            bool near = Mathf.Abs(c.thigh - leg.angles.thigh) < LockThigh && Mathf.Abs(c.knee - leg.angles.knee) < LockKnee;
+            if ((near && leg.ankle.y - AnkleGround(leg) <= TouchHeight) || Touching(leg))
             {
                 Enter(leg, LegPhase.Push, time, 0f);
                 leg.grounded = leg.needLock = true;
@@ -1773,6 +1778,9 @@ namespace SpeedStars.Physical
             }
             if (leftLeg.carry || rightLeg.carry)
             {
+                // A dive's or a jump's landing, or a settled body, may come down as fast as it falls.
+                bool limitDrop = !_ballistic && _carried && !_jumping && _settle.Value <= 0f;
+                float prevY = _bodyY.Value;
                 float need = float.MinValue, cap = float.MaxValue;
                 bool planted = false;
                 for (int i = 0; i < 2; i++)
@@ -1804,6 +1812,11 @@ namespace SpeedStars.Physical
                 {
                     _bodyY.Value = cap;
                     _bodyY.Velocity = Mathf.Min(0f, _bodyY.Velocity);
+                }
+                if (limitDrop && _bodyY.Value < prevY - maxDropSpeed * dt)
+                {
+                    _bodyY.Value = prevY - maxDropSpeed * dt;
+                    _bodyY.Velocity = Mathf.Max(_bodyY.Velocity, -maxDropSpeed);
                 }
                 _carried = true;
                 _ballistic = false;
