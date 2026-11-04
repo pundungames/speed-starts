@@ -121,6 +121,10 @@ namespace SpeedStars.UI.Framework
             _initialized = true;
             _group = GetComponent<CanvasGroup>();
             _baseScale = transform.localScale; // the designer's scale, captured before any animation touches it
+
+            // Buttons below read their designed scale now: a reveal that shrinks them in OnEnable runs before their own Awake.
+            foreach (ButtonFeedback feedback in GetComponentsInChildren<ButtonFeedback>(true))
+                feedback.Initialize();
         }
 
         private void PlayOpen(bool fromCurrent)

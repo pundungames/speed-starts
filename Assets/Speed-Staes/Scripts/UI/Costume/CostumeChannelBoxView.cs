@@ -67,11 +67,7 @@ namespace SpeedStars.UI.Costume
             if (motion == null || !isActiveAndEnabled) return;
             RememberScale();
             KillPunch();
-            transform.localScale = _baseScale;
-            Tween punch = transform
-                .DOPunchScale(_baseScale * motion.ButtonPunchScale, motion.ButtonPunchDuration, motion.ButtonPunchVibrato)
-                .SetUpdate(true)
-                .SetLink(gameObject);
+            Tween punch = UiPunch.Play(transform, _baseScale, motion, gameObject);
             punch.OnKill(() => { if (_punch == punch) _punch = null; });
             _punch = punch;
         }

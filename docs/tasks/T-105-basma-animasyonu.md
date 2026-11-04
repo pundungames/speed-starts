@@ -1,7 +1,7 @@
 ---
 id: T-105
 title: Basma animasyonu - sonuc ekraninda dugme kucuk kaliyor, kartta hizli dokunusta olcek sisiyor
-status: todo
+status: review
 owner: ui-agent
 depends_on: []
 owns_paths:
@@ -18,12 +18,15 @@ owns_paths:
 touches_scene: false
 branch: agent/T-105-basma-animasyonu
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/PlayMode/WatchReplaySmokeTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/EmoteScreenSmokeTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/PlaySmokeSupport.cs"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-04
+finished: 2026-11-04
 blocked_reason:
 ---
 
@@ -58,3 +61,15 @@ KAMERA  : yok
 - Punch sayilari (`UiMotionConfig`). Prefab/sahne degisikligi. SpriteSwap sanati. Navigation modu (backlog).
 
 ## Calisma notu
+1. `UiPunch` (yeni, Framework): DOKill + tasarim olcegi + ForceInit + OnComplete'te tasarim olcegi; ButtonFeedback, Emote/CostumeItem/SkinSwatch/ChannelBox/RewardDay kartlari ve FlagCell bunu kullanir (her sahibin kendi _punch/OnKill kalibi korundu).
+2. `ButtonFeedback.Initialize` public; `UiPanel.Initialize` altindaki tum ButtonFeedback'leri baslatir (kokun Awake'i, reveal'dan once).
+3. Reveal suren dugme: punch bitince tasarim olcegi, reveal de ayni degerde biter; reveal Sequence icindeki tween DOKill'e takilmaz (cocuk tween), cakisma yok.
+4. Testler (kopyada kosulmadi): Results nav dugmeleri basili-tut-kaydir, Emote karti 10 hizli dokunus. Reveal ortasinda basma testi yazilmadi (o anda grup interactable degil, dugme Denied olur).
+5. Zorlanma: yok; yeni UiPunch.cs.meta'yi Unity uretir.
+Tarama kararlari (DOPunchScale/DOScale):
+- ButtonFeedback.cs:90 -> UiPunch. EmoteCardView, CostumeItemCardView, CostumeSkinSwatchView, CostumeChannelBoxView, RewardDayCardView, FlagCellView -> UiPunch.
+- UiPanel.cs:148/176 (panel acilis/kapanis DOScale): dokunulmadi, panel kokunde ButtonFeedback yok.
+- ResultsScreenView.cs:457 (reveal DOScale) ve 464/466 (PB karti, gem koku DOPunchScale): dokunulmadi, etiket/kart, tek sahip, dugme degil.
+- ResultsTableRowView.cs:96/127, CashBreakdownView.cs:141/183: dokunulmadi, satir/rozet/kutu, tek sahip.
+- ThemeSelectScreenView.cs:297 (durum etiketi), EntryGateModalView.cs:416/429 (bilet ikonlari), CashOfferModalView.cs:240 (bakiye kutusu), AnalysisScreenView.cs:354 (balon), TicketFlightView.cs:106, RaceHudView.cs:219: dokunulmadi, ayni transform'da ikinci sahip yok (ThemeSelect yorumu ayni noktayi belirtiyor).
+- ConfirmDialogView.cs:96 (panel DOScale pop): dokunulmadi, dugme degil.

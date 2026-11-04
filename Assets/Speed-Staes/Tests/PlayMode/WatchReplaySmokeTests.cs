@@ -8,6 +8,7 @@ using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Flow;
+using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Race;
 using TMPro;
@@ -119,6 +120,43 @@ namespace SpeedStars.PlayTests
             yield return AssertFreshCountdown(session);
             Assert.AreEqual(cashAfterFinish, wallet.Cash, "Race Again must not pay the finished race a second time");
             yield return WaitUntil(() => !results.gameObject.activeInHierarchy, "Results to close for the new race");
+        }
+
+        /// <summary>
+        /// T-105: the Results open with a reveal that shrinks every item. A nav button pressed, held and slid off (no click, the screen
+        /// stays) must come back to the scale it has once the reveal is over, never stay at the reveal's small start scale.
+        /// The designed scale is read from the button itself after the reveal; the punch length from UiMotionConfig.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Results_NavButtons_HeldAndSlidOff_ReturnToTheirDesignedScale()
+        {
+            yield return EnterRace(Pick100m());
+            yield return RunToTheLine(Session());
+
+            ResultsScreenView results = Require<ResultsScreenView>();
+            yield return WaitUntil(() => results.gameObject.activeInHierarchy, "Results screen to open after the finish");
+
+            string[] names = { "raceAgainButton", "mainMenuButton", "watchReplayButton", "highScoresButton", "statsButton" };
+            int checkedCount = 0;
+            foreach (string field in names)
+            {
+                Button button = Field<Button>(results, field);
+                if (button == null) continue;
+                ButtonFeedback feedback = button.GetComponent<ButtonFeedback>();
+                if (feedback == null) continue;
+
+                yield return WaitScaleSettled(button.transform, field);
+                if (!button.IsInteractable()) continue; // a grey button only reports Denied, it does not punch
+
+                Vector3 designed = button.transform.localScale;
+                float hold = MotionOf(feedback).ButtonPunchDuration + 0.15f;
+                yield return PressHoldSlideOff(button, hold);
+
+                Vector3 after = button.transform.localScale;
+                Assert.Less((after - designed).magnitude, 1e-3f, $"{field}: held and slid off must end at the designed scale {designed}, was {after}");
+                checkedCount++;
+            }
+            Assert.Greater(checkedCount, 0, "at least one Results nav button with ButtonFeedback must have been checked");
         }
 
         [UnityTest]

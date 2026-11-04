@@ -62,7 +62,12 @@ namespace SpeedStars.UI.Framework
             if (_initialized) punchTarget.localScale = _baseScale;
         }
 
-        private void Initialize()
+        /// <summary>
+        /// Reads the designed scale. Idempotent. The owning UiPanel calls it from its own Awake, before any open/reveal
+        /// animation shrinks the button; otherwise a button first enabled by an animating parent would record the
+        /// shrunk scale as its design and snap back to it on every press.
+        /// </summary>
+        public void Initialize()
         {
             if (_initialized) return;
             _initialized = true;
@@ -85,11 +90,7 @@ namespace SpeedStars.UI.Framework
 
             // A new press restarts the punch from the designed scale; stacking punches would drift the size.
             KillPunch();
-            punchTarget.localScale = _baseScale;
-            Tween punch = punchTarget
-                .DOPunchScale(_baseScale * _motion.ButtonPunchScale, _motion.ButtonPunchDuration, _motion.ButtonPunchVibrato)
-                .SetUpdate(true)
-                .SetLink(gameObject);
+            Tween punch = UiPunch.Play(punchTarget, _baseScale, _motion, gameObject);
             punch.OnKill(() => { if (_punch == punch) _punch = null; }); // a late kill of an old punch must not drop the new one
             _punch = punch;
         }
