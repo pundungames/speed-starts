@@ -55,6 +55,10 @@ namespace SpeedStars.Physical
         [Tooltip("A press this soon (s) after the other foot's is not early: the two push together. Later in " +
                  "the other foot's stance it is early. (Fast runs in the videos press 0.05–0.08 s apart.)")]
         public float togetherWindow = 0.08f;
+        [Tooltip("Share of a push the second key of a pair gets, when it comes within togetherWindow of the other foot's: " +
+                 "two keys together are one push, not two (0 = the second gives nothing, 1 = it pushes in full). " +
+                 "The pair's head kick, nod and lean kick are scaled the same way.")]
+        [Range(0f, 1f)] public float togetherPush = 0f;
         [Tooltip("Efficiency of a press in the air or while the other foot is still pushing.")]
         [Range(0f, 1f)] public float earlyEfficiency = 0.15f;
         [Tooltip("A press this long (s) before the landing is not wasted: it counts from the landing, its push growing from " +
@@ -118,9 +122,14 @@ namespace SpeedStars.Physical
         public float headBack = -15f;
         [Tooltip("Speed (m/s) from which the head rests at headBack (x: upright below, y: fully at headBack).")]
         public Vector2 headBackSpeed = new Vector2(0.5f, 3f);
-        [Tooltip("How far the first moment of a key down takes the head forward (deg, all of it within ~0.1 s), " +
-                 "whatever the press, from wherever the head is.")]
+        [Tooltip("How far the first moment of a key down takes the head forward at most (deg, all of it within ~0.1 s), " +
+                 "from wherever the head is. How much of it a press takes comes from its timing: see goodKickShare and wasteKickShare.")]
         public float headKick = 12f;
+        [Tooltip("Share of headKick a press with perfect timing takes (a press on time barely throws the head forward).")]
+        [Range(0f, 2f)] public float goodKickShare = 0.2f;
+        [Tooltip("Share of headKick a wasted press (efficiency 0: in the air, very late, leg not back) takes. In between " +
+                 "it follows the press's timing efficiency, so bad presses pile the head up and good ones keep it low.")]
+        [Range(0f, 5f)] public float wasteKickShare = 3.5f;
         [Tooltip("Key still down: the head goes on forward at this rate (deg/s × the key's hold weight; both keys = twice).")]
         public float holdPush = 70f;
         [Tooltip("No key down: the head comes back to headBack through this spring. Presses before it is back pile it up.")]
@@ -152,6 +161,14 @@ namespace SpeedStars.Physical
         public float headSpoilPower = 1.1f;
         [Tooltip("Extra loss with the head all the way forward (m/s² at headForwardMax, in proportion below).")]
         public float headDrag = 0.8f;
+
+        [Header("Form (how well the runner has been running; read by the visual, no effect on speed)")]
+        [Tooltip("Each press moves Form this share of the way to that press's timing efficiency (moving average; 1 = only the last press counts).")]
+        [Range(0f, 1f)] public float formFollow = 0.3f;
+        [Tooltip("With no press for formHoldTime, Form fades toward 0 at this rate (1/s).")]
+        public float formDecay = 1.5f;
+        [Tooltip("How long after the last press Form stays as it is before it starts to fade (s).")]
+        public float formHoldTime = 0.5f;
 
         [Header("Hurdle jump")]
         [Tooltip("Before leaving the ground the leading leg comes up with the other foot still planted (s), standing (x) and at max speed (y).")]
@@ -200,10 +217,13 @@ namespace SpeedStars.Physical
         public float ExtValue => Mathf.Clamp01(Ext.Value);
         public float HoldValue => Mathf.Clamp01(Hold.Value);
         public float WeightValue => Mathf.Clamp01(Weight.Value);
+        /// <summary>Head kick (deg) of this key's last press: set from the press's timing in <see cref="RunnerSim.Press"/>.</summary>
+        public float Kick;
 
         public void Reset()
         {
             Pressed = Holding = Swinging = false;
+            Kick = 0f;
             PressTime = -10.0;
             Ext.Reset();
             Hold.Reset();
@@ -220,7 +240,10 @@ namespace SpeedStars.Physical
     /// The head angle lives here too (the visual draws it): every key down takes it forward, no key down
     /// brings it back; the further forward it is, the less a press gives (HeadUpright) and the more the
     /// runner loses (headDrag) — so mashing spoils itself and the presses get their full push back only as
-    /// the head comes up again. No threshold anywhere.
+    /// the head comes up again. How hard a key down first throws the head forward comes from the press's timing
+    /// (a press on time barely does, a wasted one does hard), so good and bad running look different, and
+    /// <see cref="Form"/> keeps the running average of that timing for the visual. Two keys within togetherWindow
+    /// are one push (togetherPush), not two. No threshold anywhere.
     /// Pure C#: no scene, no input, steps itself in small fixed sub-steps.
     /// </summary>
     public sealed class RunnerSim
@@ -247,6 +270,9 @@ namespace SpeedStars.Physical
         public float Lean => LeanSpring.Value;
         /// <summary>The head angle (deg, + = forward).</summary>
         public float HeadAngle => _head.Value;
+        /// <summary>How well the runner has been running (0..1): the moving average of the presses' timing efficiency
+        /// (before head and energy), fading when no press comes. For the visual; it changes no speed.</summary>
+        public float Form => _form;
         /// <summary>Where the head rests with no key down (deg): headBack while running, upright standing.</summary>
         public float HeadRest => T.headBack * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T.headBackSpeed.x, T.headBackSpeed.y, Speed));
         /// <summary>How much of its push a press gets at this head angle (1 upright or back, 0 at headSpoil).</summary>
@@ -272,7 +298,7 @@ namespace SpeedStars.Physical
         public float StepTime => Mathf.Lerp(T.stepTime.x, T.stepTime.y, Speed / T.maxSpeed);
         public int HoldingCount => (Legs[0].Holding ? 1 : 0) + (Legs[1].Holding ? 1 : 0);
 
-        float _pending, _hopVelocity, _launchVelocity;
+        float _pending, _hopVelocity, _launchVelocity, _form;
         Spring _head, _headFwd;   // the head angle; where the keys have taken it, coming back with no key down
         double _keyUpTime;        // sim time the last key down came up
         double _launchTime, _landTime;
@@ -287,7 +313,7 @@ namespace SpeedStars.Physical
         public void Reset()
         {
             Time = 0.0;
-            Speed = Distance = HopY = _hopVelocity = _pending = 0f;
+            Speed = Distance = HopY = _hopVelocity = _pending = _form = 0f;
             _windupLeft = _jumpLeft = _hitLeft = 0f;
             Energy = T.energyMax;
             Presses = 0;
@@ -355,14 +381,22 @@ namespace SpeedStars.Physical
             // The pressed leg must be back under the body to push again.
             eff *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T.legReadyExt.x, T.legReadyExt.y, l.Ext.Value));
             if (LastLeg == leg && sinceLast < 1f) eff *= T.sameLegFactor;
+            // The press's own quality, before the body's state (energy, head) scales the push: it is what the head's
+            // first kick and Form follow, so a press on time keeps the head low and a wasted one throws it forward.
+            float timing = Mathf.Clamp01(eff);
+            // The second key of a pair is part of the first's push, not a push of its own.
+            bool pairSecond = together && launchPending;
+            float share = pairSecond ? T.togetherPush : 1f;
             eff *= EnergyFactor();
             // A head that is down spoils the push: it comes back in full only as the head comes up.
             eff *= HeadUpright;
-            _head.Velocity += T.headNod;
+            _head.Velocity += T.headNod * share;
+            l.Kick = T.headKick * Mathf.Lerp(T.goodKickShare, T.wasteKickShare, 1f - timing) * share;
 
-            _pending += T.pushGain * eff;
+            _pending += T.pushGain * eff * share;
 
-            LeanSpring.Velocity += T.leanKick * (1f + T.stumbleKick * (1f - eff));
+            LeanSpring.Velocity += T.leanKick * (1f + T.stumbleKick * (1f - eff)) * share;
+            if (!pairSecond) _form += (timing - _form) * T.formFollow;
 
             if (result == PressResult.Start || result == PressResult.Good || result == PressResult.Late || nearLanding)
             {
@@ -377,8 +411,12 @@ namespace SpeedStars.Physical
             l.PressTime = Time;
             LastLeg = leg;
             LastPressTime = Time;
-            LastResult = result;
-            LastEfficiency = eff;
+            // A pair is one step: the feedback keeps what the first key got.
+            if (!pairSecond)
+            {
+                LastResult = result;
+                LastEfficiency = eff;
+            }
             Presses++;
         }
 
@@ -418,7 +456,7 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
-        /// The head angle: while a key is down it goes forward — headKick at once (within ~0.1 s), then on at
+        /// The head angle: while a key is down it goes forward — the press's kick at once (within ~0.1 s), then on at
         /// holdPush × the key's hold weight — and does not come back; with no key down it comes back to
         /// HeadRest through headReturnSpring and past it through the softer headSettleSpring. A tap is a short
         /// hold; presses before it is back pile it up. The head follows through its own spring.
@@ -434,7 +472,7 @@ namespace SpeedStars.Physical
                 if (!l.Pressed) continue;
                 down = true;
                 float t = (float)(Time - l.PressTime), t0 = Mathf.Max(0f, t - h);
-                push += T.headKick * (Mathf.Exp(-t0 / PressBurst) - Mathf.Exp(-t / PressBurst)) + T.holdPush * l.WeightValue * h;
+                push += l.Kick * (Mathf.Exp(-t0 / PressBurst) - Mathf.Exp(-t / PressBurst)) + T.holdPush * l.WeightValue * h;
             }
             if (down)
             {
@@ -527,6 +565,7 @@ namespace SpeedStars.Physical
             }
 
             StepHead(h);
+            if (Time - LastPressTime > T.formHoldTime) _form *= Mathf.Exp(-T.formDecay * h);
 
             // Speed. Every held foot pushes: both held push twice, no special case.
             float applied = _pending * (1f - Mathf.Exp(-3f * h / Mathf.Max(0.001f, T.pushTime)));
