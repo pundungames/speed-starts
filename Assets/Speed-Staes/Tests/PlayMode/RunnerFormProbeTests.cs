@@ -19,7 +19,7 @@ using static SpeedStars.PlayTests.PlaySmokeSupport;
 namespace SpeedStars.PlayTests
 {
     /// <summary>
-    /// T-107 measuring rig for the runner's form (not a pass/fail test): the real Race scene, the real prefab and pose driver, eight
+    /// T-107 measuring rig for the runner's form (not a pass/fail test): the real Race scene, the real prefab and pose driver, eleven
     /// scripted press scenarios fed through RunnerInput.Inject, every frame written to a csv and 12 frames of the steady part drawn
     /// from a close side camera into one contact sheet. Run it before and after a change and compare the files; it asserts nothing
     /// about balance, only that the scenarios ran and the files exist.
@@ -27,7 +27,7 @@ namespace SpeedStars.PlayTests
     /// Output in -shotDir (never Temp/, Unity empties it on exit), per scenario S:
     ///   form_S.csv (a row per frame), form_S_sheet.png (4x3, left to right and top to bottom, times in form_S_sheet.txt),
     ///   form_S_game.png (the game's own SideFollowCamera, same moment as cell 7), and form_summary.csv (one row per scenario).
-    /// Scenarios: perfect rhythm26 late50 mash12 both30 same30 holdOne holdBoth (see <see cref="Scenarios"/>).
+    /// Scenarios: perfect rhythm26 late50 mash12 both30 same30 holdOne holdBoth tap012 tap016 human (see <see cref="Scenarios"/>).
     ///
     /// Run it in a verification copy WITHOUT -nographics (the shots need a renderer); unity-verify.ps1 only runs EditMode, so call
     /// Unity directly after kopya.ps1 -Al / -Senkron -HeadOnly (the file must be committed first):
@@ -86,6 +86,10 @@ namespace SpeedStars.PlayTests
         /// <summary>The share of frames, by split size, that counts as "wide" (top) and "passing" (bottom).</summary>
         private const float SplitEdgeShare = 0.2f;
 
+        /// <summary>The first-seconds speed step is the largest gain in any window of <see cref="StepWindowSeconds"/> within this many seconds.</summary>
+        private const float FirstSecondsWindow = 2f;
+        private const float StepWindowSeconds = 0.1f;
+
         private enum Mode { Alternate, SameLeg, Both, Perfect, HoldOne, HoldBoth }
 
         private sealed class Scenario
@@ -94,6 +98,9 @@ namespace SpeedStars.PlayTests
             public Mode Mode;
             public float Period;          // seconds between presses (not for Perfect / holds)
             public float Hold = 0.07f;    // key down time
+            public float HoldMin, HoldMax; // both > 0: each press draws its own key down time from this range (seeded)
+            public float PeriodJitter;    // gap between presses is Period +- this, drawn from the seeded generator
+            public int Seed = 20261104;
             public float Duration = 6f;
             public float SummaryFrom = 3f;
             public float ShotFrom = 4f;
@@ -108,8 +115,15 @@ namespace SpeedStars.PlayTests
             new Scenario { Name = "mash012", Mode = Mode.Alternate, Period = 0.125f, Hold = 0.04f },
             new Scenario { Name = "both030", Mode = Mode.Both, Period = 0.30f },
             new Scenario { Name = "same030", Mode = Mode.SameLeg, Period = 0.30f },
+            new Scenario { Name = "same020", Mode = Mode.SameLeg, Period = 0.20f },
+            new Scenario { Name = "same025", Mode = Mode.SameLeg, Period = 0.25f },
             new Scenario { Name = "holdOne", Mode = Mode.HoldOne, SummaryFrom = 0.5f, ShotFrom = 0.5f, ShotWindow = 3f },
             new Scenario { Name = "holdBoth", Mode = Mode.HoldBoth, SummaryFrom = 0.5f, ShotFrom = 0.5f, ShotWindow = 3f },
+            // A person holds the key longer than 0.07 s and unevenly; PushTime (~0.11 s at speed) may be crossed by a normal tap.
+            // Alternating legs: a key's next press is at least two gaps (0.46 s) away, always after its release (hold <= 0.16 s).
+            new Scenario { Name = "tap012", Mode = Mode.Alternate, Period = 0.26f, Hold = 0.12f },
+            new Scenario { Name = "tap016", Mode = Mode.Alternate, Period = 0.28f, Hold = 0.16f },
+            new Scenario { Name = "human", Mode = Mode.Alternate, Period = 0.27f, PeriodJitter = 0.04f, HoldMin = 0.06f, HoldMax = 0.16f },
         };
 
         private const string SummaryHeader =
@@ -118,7 +132,8 @@ namespace SpeedStars.PlayTests
             "stutters,stutterThresholdDegPerSec,hipYMin,hipYMax,kneeYMin," +
             "armL_swingMin,armL_swingMax,armR_swingMin,armR_swingMax," +
             "hipsYawRange,hipsRollRange,chestYawRange,chestRollRange,shots," +
-            "holdShare,swapShare,corrHipSplit,hipAtWide,hipAtPass,passKnee,flightShare,footSlide,steppingAvg";
+            "holdShare,swapShare,corrHipSplit,hipAtWide,hipAtPass,passKnee,flightShare,footSlide,steppingAvg," +
+            "holdFrames,speedRipple,firstSecondSpeedSteps";
 
         [UnityTest]
         [Explicit("Measuring rig: run on request with -shotDir (see the class summary).")]
@@ -400,7 +415,8 @@ namespace SpeedStars.PlayTests
         private struct Fr
         {
             public float t, speed, trunk, thL, thR, twL, twR, hipY, kneeL, kneeR, armL, armR, hipsYaw, hipsRoll, chestYaw, chestRoll;
-            public float kneeAngL, kneeAngR, toeL, toeR, footL, footR, fzL, fzR, stepping;
+            public float kneeAngL, kneeAngR, toeL, toeR, footL, footR, fzL, fzR, stepping, heldL, heldR;
+            public bool holdPhase; // either leg's phase is Hold
         }
 
         /// <summary>One scenario's state: scripted input, per-frame samples and the contact sheet cells.</summary>
@@ -420,6 +436,8 @@ namespace SpeedStars.PlayTests
             private readonly FieldInfo _stepping;
             private float _restToeL, _restToeR, _restFootL, _restFootR;
             private readonly object _legL, _legR, _armL, _armR;
+            private readonly System.Random _rng;
+            private readonly FieldInfo _held;
             private readonly FieldInfo _phase, _angles, _thighWorld, _legKnee, _legAnkle, _angThigh, _angKnee, _swing, _elbow;
             private readonly PropertyInfo _speed, _head, _hop, _airborne, _lastResult, _lastEff;
             private readonly float _groundY;
@@ -443,7 +461,7 @@ namespace SpeedStars.PlayTests
             public Run(Scenario sc, Component body, Component driver, object bodyObject, object input, MethodInfo inject,
                 Camera probe, Camera game, List<Renderer> others, float side)
             {
-                _sc = sc; _body = body; _driver = driver; _input = input; _inject = inject;
+                _sc = sc; _rng = new System.Random(sc.Seed); _body = body; _driver = driver; _input = input; _inject = inject;
                 _probe = probe; _game = game; _others = others; _side = side;
                 _othersWere = new bool[others.Count];
                 _sim = bodyObject.GetType().GetProperty("Sim").GetValue(bodyObject);
@@ -457,6 +475,8 @@ namespace SpeedStars.PlayTests
                 _armL = d.GetField("leftArm").GetValue(driver); _armR = d.GetField("rightArm").GetValue(driver);
                 _hipTarget = (Transform)d.GetField("hipTarget").GetValue(driver);
                 Type leg = _legL.GetType();
+                _held = leg.GetField("held", Any);
+                Assert.IsNotNull(_held, "RunnerPoseDriver leg field 'held' is gone; L_held/R_held cannot be read.");
                 _phase = leg.GetField("phase"); _angles = leg.GetField("angles"); _thighWorld = leg.GetField("thighWorld");
                 _legKnee = leg.GetField("knee"); _legAnkle = leg.GetField("ankle");
                 Type ang = _angles.FieldType;
@@ -487,11 +507,20 @@ namespace SpeedStars.PlayTests
                 _csv.Add("t,speed,head,hopY,lastResult,lastEfficiency," + LegColumns("L") + "," + LegColumns("R") +
                          ",hipY,hipPitch,trunkLean,hips_yaw,hips_roll,hips_pitch,chest_yaw,chest_roll,chest_pitch," +
                          "armL_swing,armL_elbow,armR_swing,armR_elbow," +
-                         "L_ankleZ,R_ankleZ,L_toeY,R_toeY,L_footY,R_footY,L_footWorldZ,R_footWorldZ,stepping");
+                         "L_ankleZ,R_ankleZ,L_toeY,R_toeY,L_footY,R_footY,L_footWorldZ,R_footWorldZ,stepping,L_held,R_held");
             }
 
             /// <summary>World Y of a bone minus the runner root's Y.</summary>
             private float RelY(Transform bone) => bone.position.y - _runner.position.y;
+
+            /// <summary>Leg.held as a number (a bool reads 1 or 0), NaN when it cannot be converted.</summary>
+            private float ReadHeld(object leg)
+            {
+                object v = _held.GetValue(leg);
+                if (v is bool b) return b ? 1f : 0f;
+                try { return Convert.ToSingle(v, CultureInfo.InvariantCulture); }
+                catch (Exception) { return float.NaN; }
+            }
 
             private float ReadStepping()
             {
@@ -517,10 +546,13 @@ namespace SpeedStars.PlayTests
 
             private void Press(double t, params int[] legs)
             {
+                float hold = _sc.HoldMin > 0f && _sc.HoldMax > 0f
+                    ? _sc.HoldMin + (float)_rng.NextDouble() * (_sc.HoldMax - _sc.HoldMin)
+                    : _sc.Hold;
                 foreach (int leg in legs)
                 {
                     Send(leg, true);
-                    _releases.Add((t + _sc.Hold, leg));
+                    _releases.Add((t + hold, leg));
                 }
                 _pressTimes.Add(t);
                 _lastPress = t;
@@ -547,7 +579,7 @@ namespace SpeedStars.PlayTests
                             int n = _pressTimes.Count;
                             if (_sc.Mode == Mode.Both) Press(t, 0, 1);
                             else Press(t, _sc.Mode == Mode.SameLeg ? 0 : n % 2);
-                            _nextPress += _sc.Period;
+                            _nextPress += _sc.Period + (_sc.PeriodJitter > 0f ? ((float)_rng.NextDouble() * 2f - 1f) * _sc.PeriodJitter : 0f);
                         }
                         break;
 
@@ -617,8 +649,8 @@ namespace SpeedStars.PlayTests
                 Vector3 hipLocal = _runner.InverseTransformPoint(_hipTarget.position);
                 float hipPitch = Wrap((runnerInv * _hipTarget.rotation).eulerAngles.x);
 
-                string legL = ReadLeg(_legL, out float thL, out float twL, out float kneeL, out float kaL, out float azL);
-                string legR = ReadLeg(_legR, out float thR, out float twR, out float kneeR, out float kaR, out float azR);
+                string legL = ReadLeg(_legL, out float thL, out float twL, out float kneeL, out float kaL, out float azL, out float heldL, out bool holdL);
+                string legR = ReadLeg(_legR, out float thR, out float twR, out float kneeR, out float kaR, out float azR, out float heldR, out bool holdR);
                 Vector3 forward = _runner.forward;
                 float toeLy = RelY(_toeL), toeRy = RelY(_toeR), footLy = RelY(_footL), footRy = RelY(_footR);
                 float fzL = Vector3.Dot(_footL.position, forward), fzR = Vector3.Dot(_footR.position, forward);
@@ -632,7 +664,7 @@ namespace SpeedStars.PlayTests
                     kneeL = kneeL, kneeR = kneeR, armL = aLs, armR = aRs,
                     hipsYaw = hipsYaw, hipsRoll = hipsRoll, chestYaw = chestYaw, chestRoll = chestRoll,
                     kneeAngL = kaL, kneeAngR = kaR, toeL = toeLy, toeR = toeRy, footL = footLy, footR = footRy,
-                    fzL = fzL, fzR = fzR, stepping = stepping,
+                    fzL = fzL, fzR = fzR, stepping = stepping, heldL = heldL, heldR = heldR, holdPhase = holdL || holdR,
                 };
                 _frames.Add(fr);
 
@@ -646,14 +678,17 @@ namespace SpeedStars.PlayTests
                   .Append(F(aLs)).Append(',').Append(F(aLe)).Append(',').Append(F(aRs)).Append(',').Append(F(aRe)).Append(',')
                   .Append(F(azL)).Append(',').Append(F(azR)).Append(',').Append(F(toeLy)).Append(',').Append(F(toeRy)).Append(',')
                   .Append(F(footLy)).Append(',').Append(F(footRy)).Append(',').Append(F(fzL)).Append(',').Append(F(fzR)).Append(',')
-                  .Append(F(stepping));
+                  .Append(F(stepping)).Append(',').Append(F(heldL)).Append(',').Append(F(heldR));
                 _csv.Add(sb.ToString());
 
                 TakeShotIfDue((float)t);
             }
 
-            private string ReadLeg(object leg, out float thigh, out float thighWorld, out float kneeY, out float kneeAngle, out float ankleZ)
+            private string ReadLeg(object leg, out float thigh, out float thighWorld, out float kneeY, out float kneeAngle, out float ankleZ,
+                out float held, out bool inHold)
             {
+                held = ReadHeld(leg);
+                inHold = _phase.GetValue(leg).ToString() == "Hold";
                 object angles = _angles.GetValue(leg);
                 thigh = (float)_angThigh.GetValue(angles);
                 kneeAngle = (float)_angKnee.GetValue(angles);
@@ -799,7 +834,43 @@ namespace SpeedStars.PlayTests
                 return string.Join(",", _sc.Name, PressCount, _fallbacks, w.Count, F(speedSum / n), F(speedPeak), F(trunkSum / n), F(trunkMax),
                     F(lMin), F(lMax), F(rMin), F(rMax), F(split), F(omegaMax), stutters, F(StutterJumpDegPerSec), F(hipMin), F(hipMax), F(kneeMin),
                     F(alMin), F(alMax), F(arMin), F(arMax), F(hyMax - hyMin), F(hrMax - hrMin), F(cyMax - cyMin), F(crMax - crMin), ShotsTaken)
-                    + "," + ExtraMetrics(w);
+                    + "," + ExtraMetrics(w) + "," + TimingMetrics(w);
+            }
+
+            /// <summary>holdFrames, speedRipple, firstSecondSpeedSteps (empty = not defined).</summary>
+            private string TimingMetrics(List<Fr> w)
+            {
+                // Share of steady frames where either leg is in its Hold phase.
+                int holdCount = 0;
+                foreach (Fr f in w) if (f.holdPhase) holdCount++;
+                float holdFrames = w.Count > 0 ? (float)holdCount / w.Count : float.NaN;
+
+                // Mean of (max - min) of the speed inside consecutive windows of 2 presses, steady part only.
+                var starts = new List<double>();
+                foreach (double p in _pressTimes) if (p >= _sc.SummaryFrom) starts.Add(p);
+                float rippleSum = 0f;
+                int rippleN = 0;
+                for (int k = 0; k + 2 < starts.Count; k += 2)
+                {
+                    float lo = float.MaxValue, hi = float.MinValue;
+                    foreach (Fr f in w)
+                    {
+                        if (f.t < starts[k] || f.t >= starts[k + 2]) continue;
+                        lo = Mathf.Min(lo, f.speed); hi = Mathf.Max(hi, f.speed);
+                    }
+                    if (hi < lo) continue;
+                    rippleSum += hi - lo;
+                    rippleN++;
+                }
+                float ripple = rippleN > 0 ? rippleSum / rippleN : float.NaN;
+
+                // Largest speed gain between a frame and any later frame within 0.1 s, during the first 2 s.
+                float step = 0f;
+                for (int i = 0; i < _frames.Count && _frames[i].t <= FirstSecondsWindow; i++)
+                    for (int j = i + 1; j < _frames.Count && _frames[j].t <= FirstSecondsWindow && _frames[j].t - _frames[i].t <= StepWindowSeconds + 1e-4f; j++)
+                        step = Mathf.Max(step, _frames[j].speed - _frames[i].speed);
+
+                return string.Join(",", FE(holdFrames), FE(ripple), F(step));
             }
 
             private static bool Touches(float toeY, float restToe, float footY, float restFoot) =>
