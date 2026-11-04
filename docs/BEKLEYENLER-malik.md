@@ -10,6 +10,7 @@ Her madde `main`'deki koda bakılarak kontrol edildi. Play'de denenmedi.
 | 1 | Engel teması | Kodu yazıldı (03.11), denenmedi | Bacakların bar altından geçmesine bakılıyor |
 | 2 | 4×100m ve Medley | 4×100m NPC'lerle oynanır (03.11), Medley açık | Dört bacağı da NPC koşuyor; oyuncu girdisi karakter dönünce |
 | 3 | UI'a dokunmanın adım sayılmaması | Bizde çözüldü (04.11) | `RunnerInput`'a dokunulmadı: `Scripts/Bridge/RunnerPressGate.cs` kuyruğu süzüyor; Malik isterse kendi girdisine taşır |
+| 3b | Bitişte başa dönmeme, bitiş olayı | Bizde çözüldü (04.11) | `RaceController`'a dokunulmadı: `Scripts/Bridge/RaceFinishGate.cs` çizgiyi önce görür, kontrolcüyü boş bir `RunnerBody` üzerinde bitirir (kayıt için `LastRaceTime` gerek). Malik gerçek bitiş olayı verirse bu sınıf kalkar |
 | 4 | Practice: enerji kilitleme ve ayakta çıkış | Açık | API yok; paneldeki satırlar gri bekliyor |
 | 5 | Ayak kilidi: ayak yerde kayıyor mu? | Kilit yok | Yerdeki ayak dünyaya sabitlenmiyor; kayma ölçülmedi |
 

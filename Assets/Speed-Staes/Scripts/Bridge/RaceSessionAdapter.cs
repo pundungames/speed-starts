@@ -144,6 +144,15 @@ namespace SpeedStars.Bridge
         /// <summary>The replay of this race; null until the RaceController's Start has added it.</summary>
         public RacePlayback Playback => race ? race.GetComponent<RacePlayback>() : null;
 
+        /// <summary>While set, a press this says no to is no step at all (RunnerPressGate): the tutorial asks for one side at a time.</summary>
+        public Func<int, bool> PressFilter { get; set; }
+
+        /// <summary>The current race is a relay: the player's own runner does not run.</summary>
+        public bool IsRelay => Relay;
+
+        /// <summary>The race ends now, before anybody hears Finished: whoever holds the game speed gives it back here.</summary>
+        public event Action Completing;
+
         /// <summary>A new race is about to reset the runner: what the finish took over goes back first.</summary>
         public event Action Restarting;
 
@@ -303,6 +312,7 @@ namespace SpeedStars.Bridge
 
         void Complete(double seconds)
         {
+            Completing?.Invoke();
             _state = RaceSessionState.Finished;
             int rank = 1;
             int runnerCount = 1;

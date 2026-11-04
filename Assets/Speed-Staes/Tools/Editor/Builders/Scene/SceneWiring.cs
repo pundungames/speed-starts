@@ -138,6 +138,7 @@ namespace SpeedStars.Tools.Builders
             WireAnalysis(scene, results);
             RaceStartWiring.Wire(scene, adapter, raceHud.transform.parent); // T-039: adapter config + start words over the HUD
             RaceFinishConfigSeed.Wire(adapter);
+            UiRaceTutorialPrefabs.Place(scene); // over the HUD and the start words placed just above
         }
 
         /// <summary>

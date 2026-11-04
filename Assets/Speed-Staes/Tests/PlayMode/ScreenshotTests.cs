@@ -395,6 +395,54 @@ namespace SpeedStars.PlayTests
             }
         }
 
+        /// <summary>The first race's tutorial step by step on a real run.</summary>
+        [UnityTest]
+        public IEnumerator Shot_RaceTutorial()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: screenshot test only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            const float PressSeconds = 0.13f;
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            try
+            {
+                yield return LoadScene(RaceScene, tutorialSeen: false);
+                MonoBehaviour adapter = null;
+                foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>(true))
+                    if (behaviour is IRaceSession) { adapter = behaviour; break; }
+                Assert.IsNotNull(adapter, "No IRaceSession in the Race scene.");
+                var signal = (IRaceStartSignal)adapter;
+                object body = adapter.GetType().GetProperty("PlayerBody").GetValue(adapter);
+                object input = body.GetType().GetField("input").GetValue(body);
+                System.Reflection.MethodInfo inject = input.GetType().GetMethod("Inject");
+
+                yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.Ready || signal.StartPhase == RaceStartPhase.Set, "the countdown");
+                yield return Capture(dir, "Race_tutorial_0_wait");
+                yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.Go, "GO", 15f);
+
+                var prompts = new[] { "1_left", "2_right", "3_left", "4_right" };
+                for (int i = 0; i < prompts.Length; i++)
+                {
+                    int leg = i % 2;
+                    yield return new WaitForSecondsRealtime(0.6f); // the game has slowed down by now
+                    yield return Capture(dir, "Race_tutorial_" + prompts[i]);
+                    Assert.Less(Time.timeScale, 0.5f, $"prompt {i}: the game must wait for the tap");
+                    inject.Invoke(input, new object[] { leg, true, Time.timeAsDouble });
+                    yield return new WaitForSecondsRealtime(PressSeconds);
+                    inject.Invoke(input, new object[] { leg, false, Time.timeAsDouble });
+                }
+                yield return new WaitForSecondsRealtime(0.5f);
+                Assert.AreEqual(1f, Time.timeScale, 0.001f, "the prompts are over: normal speed");
+                yield return Capture(dir, "Race_tutorial_5_keep_going");
+            }
+            finally
+            {
+                Time.timeScale = 1f;
+                saveFiles.Restore();
+            }
+        }
+
         private static IEnumerator ShootStart(string dir, RaceStartView view, string name, RaceStartPhase phase, float seconds)
         {
             view.PreviewAt(phase, seconds);

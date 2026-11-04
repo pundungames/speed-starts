@@ -5,10 +5,11 @@ MOD: hızlı
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-11-04 · main 1b5902cb (push kullanıcıda)
+Son güncelleme: 2026-11-04 (push kullanıcıda)
 **Kullanıcı 04.11: hızlı mod. Küçük iş agent + worktree + kopya olmadan, doğrudan ana klasörde.** MCP bu oturumda yoktu: prefab/sahne için oturumu yeniden aç.
 **Bugün main'e girenler (kopyada EditMode 1238, PlayMode 58 + 7 görüntü testi atlandı):** T-103 Edit modda çentik önizlemesi (Tools → Speed Stars → Notch Preview) · T-104 kostüm kartında fiyat, normal kıyafet Nakit ile alınır · T-105 düğme küçük kalma ve kart şişme (`UiPunch`) · T-106 Results Practice çalışır, Nakit kartı okunur, "Antrenman Alanı" → "Practice".
 **04.11 ek:** tema fiyatları (kullanıcı onayı): Egypt 2.500, Rome 5.000, Pirate Sea 7.500 Nakit, Sky Islands 50 Mor Mücevher, Standard City bedava · GO'dan önce basış = FAIL: oyun yavaşlar, koşucu düşer, geri sayım baştan; bilet yanmaz (kullanıcı) · düğmede başlayan parmak adım sayılmaz (`RunnerPressGate`) · Ayarlar'dan Music, Language, Privacy, Terms, Support kalktı (mağaza öncesi Privacy adresi gerekecek) · `Tools → Speed Stars → Delete Save`.
+**04.11 ek 2 (kopyada EditMode 1281, PlayMode 62 + 12 görüntü testi atlandı, görüntü testleri ayrıca geçti):** bitiş sekansı: yavaş çekim + `1ST!`, koşucu yavaşlar, ayağa kalkar, kamera önüne döner, emote (yoksa kazanınca kollar havada, kaybedince eğilir), sonra Results; dokunuş atlatır; koşucu sonraki yarışa kadar çizginin ötesinde (`RaceFinishGate`, `RunnerCooldown`, `RaceFinishSequence`, ayarlar `Data/Config/RaceFinishConfig`) · "Emote myself" varsayılan açık · ilk yarışta tutorial: WAIT FOR GO, 4 adım tek tek (oyun neredeyse durur, yalnız istenen taraf sayılır), 2 ipucu; kayda işlenir (`RaceTutorial`, `UI/Widgets/RaceTutorial.prefab`, `Data/Config/RaceTutorialConfig`); `Delete Save` ile tekrar görülür.
 
 ## Faz 8 (cila) — bugün main'e girenler (son kopya koşusu yeşil: EditMode 1198, PlayMode 52 + 7 atlanan, Zenject)
 - T-081..T-090: ok tuşları, regresyon, ekonomi v2 (ADR `ADR-2026-11-03-ekonomi-v2-referans.md`), 200m/400m/60mH/400mH, ayarlar v2,

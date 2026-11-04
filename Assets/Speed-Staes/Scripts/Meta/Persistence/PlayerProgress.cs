@@ -84,6 +84,7 @@ namespace SpeedStars.Meta.Persistence
         public List<DayBestEntry> DayBests => dayBests;
         [SerializeField] private List<string> ownedEmoteIds = new List<string>();
         [SerializeField] private string equippedEmoteId = string.Empty;
+        [SerializeField] private bool raceTutorialDone;
 
         /// <summary>Music switch the player set; Default = never touched (the settings config decides). Added with the settings window, no schema bump: older saves open as Default.</summary>
         public SettingChoice MusicChoice { get => musicChoice; set => musicChoice = value; }
@@ -102,6 +103,9 @@ namespace SpeedStars.Meta.Persistence
 
         /// <summary>Ids of bought emotes (free emotes are owned without being listed). Added with the emote feature; older saves open with an empty list.</summary>
         public List<string> OwnedEmoteIds => ownedEmoteIds;
+
+        /// <summary>The first race's tutorial has been seen. No schema bump: an older save opens as not seen.</summary>
+        public bool RaceTutorialDone { get => raceTutorialDone; set => raceTutorialDone = value; }
 
         /// <summary>Id of the equipped emote. Empty = never chosen (the catalog's default applies).</summary>
         public string EquippedEmoteId { get => equippedEmoteId; set => equippedEmoteId = value ?? string.Empty; }

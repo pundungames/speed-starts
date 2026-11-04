@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
+using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Rewards;
 using UnityEngine;
@@ -67,8 +68,10 @@ namespace SpeedStars.PlayTests
         /// swallow every tap of a test that is about something else: by default it is put away again (without claiming) once Home is up.
         /// A test about the gift itself passes <paramref name="dismissDailyGift"/> = false.
         /// </summary>
-        public static IEnumerator LoadScene(string sceneName, bool dismissDailyGift = true)
+        public static IEnumerator LoadScene(string sceneName, bool dismissDailyGift = true, bool tutorialSeen = true)
         {
+            // The tutorial would hold the game at the first GO; only its own test asks for it.
+            ProjectContext.Instance.Container.Resolve<ProgressRepository>().Current.RaceTutorialDone = tutorialSeen;
             AsyncOperation load = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
             Assert.IsNotNull(load, $"Scene '{sceneName}' could not be loaded (is it in Build Settings?).");
             while (!load.isDone) yield return null;
