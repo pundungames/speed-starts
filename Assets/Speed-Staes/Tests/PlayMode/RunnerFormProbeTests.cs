@@ -10,6 +10,7 @@ using SpeedStars.Core.Race;
 using SpeedStars.Core.Services;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Persistence;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Zenject;
@@ -76,8 +77,10 @@ namespace SpeedStars.PlayTests
         private const float SwapRateDegPerSec = 600f;
         /// <summary>A leg whose world thigh is within this many degrees of straight down is passing the other one.</summary>
         private const float PassThighDeg = 15f;
-        /// <summary>A foot touches the ground when its toe or foot bone is this close (m) to its height at rest.</summary>
+        /// <summary>A foot touches the ground when its toe bone is this close (m) to its height at rest...</summary>
         private const float TouchToleranceMeters = 0.02f;
+        /// <summary>...or its foot bone is this close (m) to its height at rest: a foot landing on the heel has its toe in the air.</summary>
+        private const float FootTouchToleranceMeters = 0.035f;
         /// <summary>Below this largest split (deg) the hip-versus-split figures are left empty (the legs never open).</summary>
         private const float SplitMinDeg = 1f;
         /// <summary>The share of frames, by split size, that counts as "wide" (top) and "passing" (bottom).</summary>
@@ -154,14 +157,61 @@ namespace SpeedStars.PlayTests
             Assert.IsTrue(File.Exists(Path.Combine(dir, "form_summary.csv")), "form_summary.csv was not written");
         }
 
-        /// <summary>A flat, no-relay event (hurdles would change the run); one without opponents when there is one, so nothing stands in the shot.</summary>
-        private static void PickFlatEvent(DiContainer container, IRaceSelection selection)
+        /// <summary>
+        /// The player's runner in the nearest lane, then in the farthest one, from the race camera (a farther lane makes it back off).
+        /// Writes form_lane_near_game.png and form_lane_far_game.png (plus the usual csv and sheet under the same names) and a CAMERA_OK line each.
+        /// </summary>
+        [UnityTest]
+        [Explicit("Measuring rig: run on request with -shotDir (see the class summary).")]
+        [Category("RunnerProbe")]
+        public IEnumerator RaceCamera_FarLanes_WriteShots()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: the measuring rig only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            int previousFps = Time.captureFramerate;
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            DiContainer container = ProjectContext.Instance.Container;
+            IRaceSelection selection = container.Resolve<IRaceSelection>();
+            RaceEventId selectedBefore = selection.Selected;
+            PlayerProgress progress = container.Resolve<ProgressRepository>().Current;
+            int laneBefore = progress.LanePreference;
+            var summary = new List<string> { SummaryHeader };
+            try
+            {
+                Time.captureFramerate = Fps;
+                // 1 = nearest lane; a preference past the last lane is the last lane (BotLanes.PlayerSlot), so 99 is the farthest.
+                foreach ((string name, int lane) in new[] { ("lane_near", 1), ("lane_far", 99) })
+                {
+                    PickFlatEvent(container, selection, true); // lanes only differ when there is a field around the runner
+                    progress.LanePreference = lane;
+                    var scenario = new Scenario { Name = name, Mode = Mode.Alternate, Period = 0.26f, Duration = 3f, SummaryFrom = 1.5f, ShotFrom = 2f };
+                    yield return RunScenario(dir, scenario, summary);
+                    Assert.IsTrue(File.Exists(Path.Combine(dir, $"form_{name}_game.png")), $"form_{name}_game.png was not written");
+                }
+            }
+            finally
+            {
+                Time.captureFramerate = previousFps;
+                progress.LanePreference = laneBefore;
+                if (!selectedBefore.IsEmpty) selection.Select(selectedBefore);
+                saveFiles.Restore();
+            }
+        }
+
+        /// <summary>
+        /// A flat, no-relay event (hurdles would change the run); one without opponents when there is one, so nothing stands in the shot
+        /// (or, with <paramref name="withOpponents"/>, one that has them).
+        /// </summary>
+        private static void PickFlatEvent(DiContainer container, IRaceSelection selection, bool withOpponents = false)
         {
             RaceEventDefinition best = null;
             foreach (RaceEventDefinition definition in container.Resolve<RaceEventCatalog>().GetEvents())
             {
                 if (!definition.IsPlayable || definition.HurdleCount != 0 || definition.IsRelay) continue;
-                if (best == null || (best.HasOpponents && !definition.HasOpponents)) best = definition;
+                if (best == null) best = definition;
+                else if (withOpponents ? (!best.HasOpponents && definition.HasOpponents) : (best.HasOpponents && !definition.HasOpponents)) best = definition;
             }
             if (best != null) selection.Select(best.Id);
         }
@@ -180,6 +230,11 @@ namespace SpeedStars.PlayTests
             // A press before GO is a false start (FAIL), so everything waits for GO and the running state first.
             yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.Go, "GO", 60f);
             yield return WaitUntil(() => session.State == RaceSessionState.Running, "the race to run after GO", 20f);
+
+            // The intro swing runs on unscaled time, so under captureFramerate it would still be turning during the scenario: end it, the
+            // race camera underneath renders (OnDisable restores the field of view). Found by name: the test assembly cannot see it.
+            foreach (MonoBehaviour behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>(true))
+                if (behaviour.GetType().Name == "RaceStartCamera") behaviour.enabled = false;
 
             Component race = RequireField<Component>(session, "race");
             FieldInfo length = race.GetType().GetField("raceDistance");
@@ -642,7 +697,21 @@ namespace SpeedStars.PlayTests
                 SetOthersVisible(true);
                 _cellTimes.Add(t);
 
-                if (_cells.Count - 1 == GameShotCell) _gamePixels = Grab(_game, GameW, GameH);
+                if (_cells.Count - 1 == GameShotCell)
+                {
+                    _gamePixels = Grab(_game, GameW, GameH);
+                    LogCamera();
+                }
+            }
+
+            /// <summary>The game camera's angles as numbers: yaw on the ground from the runner's right (+ toward its front), pitch downward.</summary>
+            private void LogCamera()
+            {
+                Transform runner = _body.transform;
+                Vector3 toCamera = Vector3.ProjectOnPlane(_game.transform.position - runner.position, Vector3.up);
+                float yaw = Mathf.Atan2(Vector3.Dot(toCamera, runner.forward), Vector3.Dot(toCamera, runner.right)) * Mathf.Rad2Deg;
+                float pitch = Mathf.Asin(Mathf.Clamp(-_game.transform.forward.y, -1f, 1f)) * Mathf.Rad2Deg;
+                UnityEngine.Debug.Log($"CAMERA_OK {_sc.Name} yawDeg={F(yaw)} pitchDeg={F(pitch)} fov={F(_game.fieldOfView)}");
             }
 
             private Color32[] _gamePixels;
@@ -734,7 +803,7 @@ namespace SpeedStars.PlayTests
             }
 
             private static bool Touches(float toeY, float restToe, float footY, float restFoot) =>
-                Mathf.Abs(toeY - restToe) <= TouchToleranceMeters || Mathf.Abs(footY - restFoot) <= TouchToleranceMeters;
+                Mathf.Abs(toeY - restToe) <= TouchToleranceMeters || Mathf.Abs(footY - restFoot) <= FootTouchToleranceMeters;
 
             /// <summary>holdShare, swapShare, corrHipSplit, hipAtWide, hipAtPass, passKnee, flightShare, footSlide, steppingAvg (empty = not defined).</summary>
             private string ExtraMetrics(List<Fr> w)
