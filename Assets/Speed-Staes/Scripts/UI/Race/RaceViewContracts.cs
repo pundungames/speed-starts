@@ -21,6 +21,19 @@ namespace SpeedStars.UI.Race
         void NotifyDenied();
     }
 
+    /// <summary>
+    /// Optional side of the Results screen: the Practice button. The flow tells whether a Practice event exists and hears the press.
+    /// A separate interface so a view without the button (or a test fake) needs nothing.
+    /// </summary>
+    public interface IResultsPracticeView
+    {
+        /// <summary>"Practice" was pressed.</summary>
+        event Action PracticeRequested;
+
+        /// <summary>The button works only while the catalog has an event to practise on.</summary>
+        void SetPracticeAvailable(bool available);
+    }
+
     /// <summary>Opens the Entry Gate modal of the Race scene for an event (the player may get a ticket there). Optional.</summary>
     public interface IEntryGatePrompt
     {

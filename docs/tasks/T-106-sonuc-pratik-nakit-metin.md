@@ -1,7 +1,7 @@
 ---
 id: T-106
 title: Sonuc ekrani - Practice dugmesi calissin, kazanilan Nakit okunur olsun; Antrenman Alani adi Ingilizce
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-090]
 owns_paths:
@@ -18,15 +18,18 @@ owns_paths:
 touches_scene: false
 branch: agent/T-106-sonuc-pratik-nakit
 commits: []
-tests: []
+tests:
+  - "Assets/Speed-Staes/Tests/EditMode/UI/Race/RaceFlowPracticeTests.cs"
+  - "Assets/Speed-Staes/Tests/EditMode/Meta/Config/RaceEventCatalogTests.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/PracticePanelSmokeTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
     durum: open
     not: "Yama metodu kopyada kosulacak: ResultsScreen.prefab CashBreakdown genisligi ve yazi boylari; training.asset displayName -> Practice. Supervizor kosar ve alir"
-started:
-finished:
+started: 2026-11-04
+finished: 2026-11-04
 blocked_reason:
 ---
 
@@ -62,3 +65,8 @@ KAMERA  : yok
 - Mor Mucevher satiri, odul sayilari, Malik'in `RunnerBodyHUD`'u. Sonuc ekraninin diger yerlesimi.
 
 ## Calisma notu
+- Practice: yeni `IResultsPracticeView` (olay + SetPracticeAvailable); `RaceFlowLogic.OnPractice` Practice etkinligini (RaceFlow katalogdan: oynanabilir, biletsiz, rakipsiz) gate.Enter ile girer, secer, `SceneFlow.GoTo(Race)` ile sahneyi YENIDEN ACAR (SceneFlow ayni sahneyi yeniden yukleyebiliyor, UnitySceneLoader single mode). Pending giris alinmaz, yeni sahne Start'ta alir.
+- Nakit: `UiResultsPrefabs.PatchResultsCashBreakdown` (public static, idempotent: yalniz fark varsa kaydeder). Prefab'taki yazilar TMP; yama TMP ve legacy Text'i ikisini de isler, builder de ayni `ApplyBreakdownLayout`i kullanir.
+- Kutu 430x171 (x348 y29), toplam 66 yuk / 64..40 pt, satir 34 yuk / 34..24 pt; 66+3x34=168 <= 171.
+- Ad: seeder "Practice"; asset (training.asset) yazilmadi, katalog testi asset degisene dek kirmizi olur. Yeni dosya yok (.meta gerekmedi).
+- Bilinmeyen: m_fontSize auto-size ile TMP'de degisebilir; kontrol yalnizca base/min/max'a bakar. Gorsel dogrulama (ekran goruntusu) supervizorde.

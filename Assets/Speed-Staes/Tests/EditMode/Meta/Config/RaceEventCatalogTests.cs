@@ -124,5 +124,17 @@ namespace SpeedStars.Tests.Meta.Config
 
             CollectionAssert.IsEmpty(catalog.FindDuplicateIds());
         }
+
+        /// <summary>T-106: the event select screen is English; a Turkish letter in a shipped event name is a leftover.</summary>
+        [Test]
+        public void ShippedCatalog_NamesHaveNoTurkishLetters()
+        {
+            var shipped = UnityEditor.AssetDatabase.LoadAssetAtPath<RaceEventCatalog>("Assets/Speed-Staes/Data/Config/RaceEventCatalog.asset");
+            Assert.IsNotNull(shipped, "the shipped event catalog must exist");
+            const string turkish = "çÇğĞıİöÖşŞüÜ";
+
+            foreach (RaceEventDefinition definition in shipped.GetEvents())
+                Assert.AreEqual(-1, definition.DisplayName.IndexOfAny(turkish.ToCharArray()), $"'{definition.DisplayName}' ({definition.Id.Value}) has a Turkish letter");
+        }
     }
 }

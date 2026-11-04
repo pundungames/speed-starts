@@ -46,7 +46,7 @@ namespace SpeedStars.Tools.Builders
         /// </summary>
         private static readonly EventSeed[] Events =
         {
-            new EventSeed("training", "Antrenman Alanı", 100f, ticket: false, gems: false, playable: true),
+            new EventSeed("training", "Practice", 100f, ticket: false, gems: false, playable: true),
             new EventSeed("race_of_the_day", "Race of the Day", 0f, ticket: false, gems: false, playable: true), // T-087: open, free; length and outfit come from RaceOfTheDayConfig
             new EventSeed("100m", "100m", 100f, ticket: false, gems: false, playable: true),
             new EventSeed("200m", "200m", 200f, ticket: true, gems: false, playable: true),
