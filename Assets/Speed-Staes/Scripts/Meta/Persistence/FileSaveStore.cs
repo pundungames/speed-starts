@@ -20,7 +20,7 @@ namespace SpeedStars.Meta.Persistence
         private const string FileExtension = ".json";
         private const string TempSuffix = ".tmp";
         private const string BackupSuffix = ".bak";
-        private const string DefaultFolderName = "Save";
+        public const string DefaultFolderName = "Save";
 
         // Format marker + space + 16 hex digits of the payload hash, then '\n', then the UTF-8 payload.
         private const string HeaderPrefix = "SSAVE1 ";
