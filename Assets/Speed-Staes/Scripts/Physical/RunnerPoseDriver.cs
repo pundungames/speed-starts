@@ -757,6 +757,9 @@ namespace SpeedStars.Physical
         public SpringSettings bounceChestSpring = new SpringSettings(6f, 0.55f);
         [Tooltip("Riding: the trunk leans forward this much (deg) as the body goes down and back as it comes up (full at 1.5 m/s of the body's height speed), one key or running.")]
         public float rideBob = 6f;
+        [Tooltip("The share of the run's and hop's trunk rock (and rideBob) left at the fastest rhythm, presses 0.2 s apart or less; " +
+                 "it grows to the whole at 0.4 s apart. A trunk cannot follow presses that fast: it only trembled.")]
+        [Range(0f, 1f)] public float rockFastShare = 0.3f;
 
         [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
         [Tooltip("The leg going over first: thigh and knee over the bar (knee 180 = straight).")]
@@ -837,7 +840,11 @@ namespace SpeedStars.Physical
         const float ArmIdle = 10f;             // the arm clock before any press (s): the throw is over
         const float ArmPeriodMin = 0.1f;       // the press-to-press time the arm's return follows lies within these (s)
         const float ArmPeriodMax = 0.5f;
-        const float ArmReturnShare = 0.85f;    // the arm is back down this share of the press-to-press time in (it waits for the next press)
+        const float RockRise = 0.06f;          // the trunk rock eases up to its target over this (s), not at once
+        const float RockFastPeriod = 0.2f;     // press-to-press time (s) at and under which the rock is down to rockFastShare ...
+        const float RockSlowPeriod = 0.4f;     // ... and at and over which it is whole
+        const float RideFilter = 10f;          // rideBob's height speed follows the body's this fast (1/s)
+        const float ArmReturnShare = 0.85f;   // the arm is back down this share of the press-to-press time in (it waits for the next press)
 
         const float GaitBlend = 8f;            // the gait weight follows its target this fast (1/s)
         const float AccelBlend = 6f;           // the acceleration is smoothed this fast (1/s)
@@ -862,7 +869,8 @@ namespace SpeedStars.Physical
         bool _poseSkippedOther;                     // the other key was pressed (and left to the sim) since the last taken press
         Spring _bounceChest;                       // the chest's lean in the bounce: follows _bounceLean a little behind (bounceChestSpring)
         Spring _bounceLean;                        // the trunk's lean in the bounce (deg), through bounceLeanSpring
-        float _rockKick;                           // 1 at a press, back to 0 over the press interval: the run's trunk rock
+        float _rockKick;                           // eases up to 1 at a press, back to 0 over the press interval: the run's trunk rock
+        float _rideVel;                            // the body height's speed, filtered (m/s): what rideBob reads
         float _armKick;                            // 1 right after a press, falling back: the hop's arm throw
         float _armClock = ArmIdle, _armPeriod = ArmPeriodMax;   // seconds since the last press; the last press-to-press time
         float _lastHipY;                           // last frame's final hip height (runner space), for the rise limit
@@ -2197,7 +2205,9 @@ namespace SpeedStars.Physical
             // It stays at the top for the first 0.35 of the fall, so the spring reaches the target even at a fast rhythm.
             float rockFall = Mathf.Max(0.1f, ArmReturnShare * _armPeriod);
             float rockU = Mathf.Clamp01((_armClock / rockFall - 0.35f) / 0.65f);
-            _rockKick = 1f - Mathf.SmoothStep(0f, 1f, rockU);
+            // It eases up over RockRise: a jump to 1 on a press was a step in the target at every press (trembling at a fast rhythm).
+            float rockTarget = 1f - Mathf.SmoothStep(0f, 1f, rockU);
+            _rockKick = Mathf.MoveTowards(_rockKick, rockTarget, dt / RockRise);
             bool off = preview || sim.InJump;
             // The hop target comes from the presses themselves (not the sim's slowly built bias, which keeps ~0.5 for a while after a
             // change of key): the same leg again within a second is 1, the other leg is 0, and a second without a press is 0.
@@ -2837,9 +2847,12 @@ namespace SpeedStars.Physical
         {
             float pw = _pair * (1f - _dive), hw = _hop * (1f - _pair) * (1f - _dive);
             float rw = _stepping * (1f - _hop) * (1f - _pair) * (1f - _dive);   // the run's rock does not wait for the gait: it is there at a slow run too
-            float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + hw * -hopRock * _rockKick +
-                           rw * -runRock * _rockKick;
-            target += rideBob * Mathf.Clamp(-_bodyY.Velocity / 1.5f, -1f, 1f) * (rw + hw);   // down: forward, up: back
+            // Presses too fast for a trunk to follow rock it less (the pair's throw is not a rhythm of single presses, so it keeps its size).
+            float rock = Mathf.Lerp(rockFastShare, 1f, Mathf.InverseLerp(RockFastPeriod, RockSlowPeriod, _armPeriod));
+            _rideVel += (_bodyY.Velocity - _rideVel) * (1f - Mathf.Exp(-RideFilter * dt));   // the raw height speed trembled with every step
+            float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + rock * hw * -hopRock * _rockKick +
+                           rock * rw * -runRock * _rockKick;
+            target += rock * rideBob * Mathf.Clamp(-_rideVel / 1.5f, -1f, 1f) * (rw + hw);   // down: forward, up: back
             _bounceLean.Step(target, bounceLeanSpring.frequency, bounceLeanSpring.damping, dt);
             _bounceChest.Step(_bounceLean.Value, bounceChestSpring.frequency, bounceChestSpring.damping, dt);
             // Only the waist and the chest move (baseBend, bend): the hips' lean and the legs' turn stay as they were, so the hip joint
@@ -2857,6 +2870,7 @@ namespace SpeedStars.Physical
             _gait.Reset();
             _kick.Reset();
             _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = _hopTarget = 0f;
+            _rideVel = 0f;
             _hopSpring.Reset();
             _pairSpring.Reset();
             _hopPrevLeg = -1;
