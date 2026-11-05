@@ -8,7 +8,7 @@ owns_paths:
   - "Assets/Speed-Staes/Scripts/Physical/RunnerPoseDriver.cs"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits: [b6123b34]
 tests:
   - "gerekmiyor: kullanici 05.11 'test etmeden yap'; gorsel, derleme + kullanicinin gozu"
 analytics:
