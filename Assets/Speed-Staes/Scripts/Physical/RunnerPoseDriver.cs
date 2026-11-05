@@ -129,7 +129,7 @@ namespace SpeedStars.Physical
             [Tooltip("Found by name if empty.")]
             public Transform toeBone;
 
-            [HideInInspector] public Vector3 restAnkle, ballOffset, toeInFoot, restHingeInThigh, restHingeInShin;
+            [HideInInspector] public Vector3 restAnkle, ballOffset, toeInFoot, tipInFoot, restHingeInThigh, restHingeInShin;
             [HideInInspector] public Vector3 hipJointFromHip;               // thigh joint from the hip target (runner space)
             [HideInInspector] public float thighLength, shinLength;
             [HideInInspector] public Quaternion restFootInShin, restFootRunner, restToeInFoot;
@@ -751,7 +751,7 @@ namespace SpeedStars.Physical
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
         const float HopBiasFrom = 0.2f;        // the sim's hop bias (one repeat gives 0.45, two 0.7) where the pose's hop begins: the 2nd repeat is half in...
         const float HopBiasTo = 0.7f;          // ...and the 3rd is full; one key every second settles at ~0.67 and keeps it. A single step gives 0.
-        const float PairWindow = 0.06f;        // two presses this close (s) are together (full), twice as far apart are not at all
+        const float PairWindow = 0.04f;        // two presses this close (s) are together (full), twice as far apart are not at all (the sim's togetherWindow)
         const float PressTwin = 0.06f;         // two presses closer than this (s) are one throw (two keys together)
         const float ArmIdle = 10f;             // the arm clock before any press (s): the throw is over
         const float ArmPeriodMin = 0.1f;       // the press-to-press time the arm's return follows lies within these (s)
@@ -889,6 +889,8 @@ namespace SpeedStars.Physical
             if (leg.toeBone)
             {
                 leg.toeInFoot = Quaternion.Inverse(leg.footBone.rotation) * (leg.toeBone.position - leg.footBone.position);
+                // The shoe's tip points level ahead in the rest pose (toeInFoot, ankle to ball, points down ~40 deg).
+                leg.tipInFoot = Quaternion.Inverse(leg.footBone.rotation) * transform.forward;
                 leg.restToeInFoot = Quaternion.Inverse(leg.footBone.rotation) * leg.toeBone.rotation;
             }
             leg.restHingeInThigh = Quaternion.Inverse(leg.shinBone.parent.rotation) * transform.right;
@@ -2693,7 +2695,7 @@ namespace SpeedStars.Physical
             float floorY = GroundY(leg) - 0.003f;
             for (int i = 0; i < 4; i++)
             {
-                Vector3 dir = transform.InverseTransformDirection(Quaternion.AngleAxis(bend, axis) * (leg.footBone.rotation * leg.toeInFoot)).normalized;
+                Vector3 dir = transform.InverseTransformDirection(Quaternion.AngleAxis(bend, axis) * (leg.footBone.rotation * leg.tipInFoot)).normalized;
                 Vector3 tip = Local(leg.toeBone) + dir * toeTipLength;
                 if (tip.y >= floorY) break;
                 float deficit = floorY - tip.y;
