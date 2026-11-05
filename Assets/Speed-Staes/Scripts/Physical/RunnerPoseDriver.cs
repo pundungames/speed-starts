@@ -228,7 +228,7 @@ namespace SpeedStars.Physical
 
         /// <summary>
         /// A limb angle that is only ever steered: a damped spring toward the target with a limit on its speed and on its
-        /// acceleration (a muscle). Input and phase changes move the TARGET; the shown angle and its speed go on from where they were.
+        /// acceleration when speeding up (a muscle); braking is the spring's, so the limb stops at its target. Input and phase changes move the TARGET; the shown angle and its speed go on from where they were.
         /// </summary>
         public struct Track
         {
@@ -251,7 +251,8 @@ namespace SpeedStars.Physical
                 for (int i = 0; i < steps; i++)
                 {
                     float a = w * w * (target - x) - 2f * spring.damping * w * v;
-                    a = Mathf.Clamp(a, -maxAccel, maxAccel);
+                    // The limit is a muscle's on speeding up. Braking stays free, or the limb sails far past its target.
+                    if (a * v >= 0f) a = Mathf.Clamp(a, -maxAccel, maxAccel);
                     v = Mathf.Clamp(v + a * h, -maxSpeed, maxSpeed);
                     x += v * h;
                 }
@@ -685,11 +686,11 @@ namespace SpeedStars.Physical
         [Tooltip("Fastest a free leg's thigh or knee turns (deg/s): a limit for the extreme case only, above the usual swing, so " +
                  "the speed never flattens at a constant (the look of linear motion).")]
         public float legMaxSpeed = 1800f;
-        [Tooltip("Hardest a free leg's thigh or knee speeds up or slows down (deg/s²).")]
+        [Tooltip("Hardest a free leg's thigh or knee speeds up (deg/s²). Slowing down is not limited: the spring stops the limb at its target.")]
         public float legMaxAccel = 19000f;
         [Tooltip("Fastest an arm's swing or elbow turns (deg/s): above the usual swing (see legMaxSpeed).")]
         public float armMaxSpeed = 1700f;
-        [Tooltip("Hardest an arm's swing or elbow speeds up or slows down (deg/s²).")]
+        [Tooltip("Hardest an arm's swing or elbow speeds up (deg/s²). Slowing down is not limited: the spring stops the limb at its target.")]
         public float armMaxAccel = 16000f;
 
         [Header("Arm pump (deg, + = forward): the arm follows the opposite leg's thigh both ways")]
