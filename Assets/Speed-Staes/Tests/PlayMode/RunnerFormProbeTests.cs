@@ -275,6 +275,8 @@ namespace SpeedStars.PlayTests
             s = new Script("longTapRun"); s.Alt(5f, 0.27f, 0.18f); s.Strips.Add(3.0f); list.Add(s.Build(0.5f));
             s = new Script("slowRun"); s.Alt(5f, 0.45f, Tap); s.Strips.Add(3.0f); list.Add(s.Build(0.5f));
             s = new Script("fastRun"); s.Alt(5f, 0.20f, Tap); s.Strips.Add(3.5f); list.Add(s.Build(0.5f));
+            // T-144: the rhythm the trunk chain is measured at (hips 16, waist 18, chest 16, neck 28 in the source's note).
+            s = new Script("rhythm032"); s.Alt(5f, 0.32f, Tap); s.Strips.Add(3.0f); list.Add(s.Build(0.5f));
             s = new Script("roughRun", 7); s.Alt(5f, 0.27f, 0f, -1, 0.06f, 0.05f, 0.18f); s.Strips.Add(3.0f); list.Add(s.Build(0.5f));
 
             s = new Script("holdOne"); s.Alt(2.5f, 0.27f, Tap, 0); double h = s.Held(1.2f, 0.27f, 1); s.Strip(h); s.Strip(h + 1.2); s.Alt(1.5f, 0.27f, Tap); list.Add(s.Build(0.5f));
