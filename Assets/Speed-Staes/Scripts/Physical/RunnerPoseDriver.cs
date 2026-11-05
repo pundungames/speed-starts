@@ -1080,9 +1080,9 @@ namespace SpeedStars.Physical
             _idleStock = false;   // a key is down: the legs are not on their way to the stock pose, not even for the rest of this frame
             // The pose takes only the presses a person's steps can follow. One that comes within PoseMinGap of the last one taken is
             // the sim's alone (it counts it all the same: speed and timing are the sim's): no new stance, no cycle, no throw of the arms, no
-            // hop count. A key pressed together with the first of a pair (a few ms, after a pause) is the pair's second key, taken.
+            // hop count. A key pressed together with the first of a pair (within the pair window PairWeight counts, after a pause) is the pair's second key, taken.
             double sinceTaken = time - _poseLastTime;
-            bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= PoseMinGap * 0.4 && _posePrevGap >= PoseMinGap * 1.5;
+            bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 2f * PairWindow && _posePrevGap >= PoseMinGap * 1.5;
             if (!_jumping && _poseLastTime > -5.0 && sinceTaken < PoseMinGap && !pairSecond)
             {
                 if (leg != _poseLastLeg) _poseSkippedOther = true;
@@ -2191,10 +2191,14 @@ namespace SpeedStars.Physical
                 double at = _poseLastTime;
                 float wasTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
                 bool within = leg >= 0 && at - _hopPrevTime < HopRepeatWindow;
-                bool same = within && leg == _hopPrevLeg;
+                // Both keys together are a pair, never a hop: neither the second key's change, nor the first key of a pair repeating the
+                // leg the last pair ended on (_pair is still the last frame's here: it is smoothed below).
+                bool together = leftLeg.lastPress >= 0.0 && rightLeg.lastPress >= 0.0 &&
+                                System.Math.Abs(leftLeg.lastPress - rightLeg.lastPress) < 2f * PairWindow;
+                bool same = within && leg == _hopPrevLeg && !together && _pair < 0.5f;
                 // A change of key in a hop is a hop on the other leg, not a step of a run: dropping the hop for one press brought both
                 // feet down and up together. Two changes in a row (the last press was itself a change) are a run.
-                bool swap = within && !same && _hopRepeated && wasTarget > 0.5f;
+                bool swap = within && !same && !together && _hopRepeated && wasTarget > 0.5f;
                 _hopTarget = same || swap ? 1f : 0f;
                 _hopRepeated = same;
                 // The hop opens (or changes leg): the other leg leaves the ground whatever phase it is in, so the switch from a run is the same every time
@@ -2211,12 +2215,13 @@ namespace SpeedStars.Physical
             }
             float hopTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
             hopTarget *= 1f - _heldNow;   // a real hold ends the hop: else the trunk sits back (hopBackLean) against the forward tip
+            hopTarget *= 1f - PairWeight(now);   // a pair gives way: the arms already read _pair, the legs and trunk must too
             _hop = Mathf.Lerp(_hop, off ? 0f : hopTarget, k);
             _pair = Mathf.Lerp(_pair, off ? 0f : PairWeight(now), k);
             for (int i = 0; i < 2; i++)
             {
                 Leg leg = Legs(i);
-                leg.idle = Mathf.MoveTowards(leg.idle, i != _poseLastLeg ? _hop : 0f, IdleRate * dt);
+                leg.idle = Mathf.MoveTowards(leg.idle, i != _poseLastLeg ? _hop * (1f - _pair) : 0f, IdleRate * dt);
             }
         }
 
