@@ -361,6 +361,9 @@ namespace SpeedStars.Physical
         [Tooltip("Where the swing's keys fall in its time (0..1): the heel kick (recover), the folded pass (mid), the " +
                  "knee drive (kneeDrive). The swing ends at the touchdown pose at 1, when the leg's next press is due.")]
         public Vector3 swingKeys = new Vector3(0.22f, 0.5f, 0.78f);
+        [Tooltip("Past the folded pass the knee opens later than the thigh comes forward: 1 = it keeps pace, higher = the leg drives " +
+                 "from the hip first and the knee opens late. The ends of the swing do not move.")]
+        [Range(1f, 4f)] public float kneeOpenDelay = 2f;
         [Tooltip("The swing never takes less than this (s).")]
         public float swingMin = 0.12f;
         [Tooltip("A press that comes while the leg is still swinging takes it down to the touchdown pose at up to this " +
@@ -1269,8 +1272,24 @@ namespace SpeedStars.Physical
             return (2f * u3 - 3f * u2 + 1f) * p0 + (u3 - 2f * u2 + u) * m0 + (-2f * u3 + 3f * u2) * p1 + (u3 - u2) * m1;
         }
 
-        /// <summary>The swing at this share (0..1) of its time: the Hermite segment between the two keys around it.</summary>
-        static LegAngles EvalSwing(Leg leg, float share)
+        /// <summary>
+        /// The swing at this share (0..1) of its time. The thigh keeps the share; past the folded pass the knee runs on a
+        /// delayed one, so the leg drives from the hip first and the knee opens late (both ends of the swing stay put).
+        /// </summary>
+        LegAngles EvalSwing(Leg leg, float share)
+        {
+            LegAngles at = SwingSegment(leg, share);
+            float from = leg.knots[2];   // the folded pass
+            if (share > from)
+            {
+                float u = (share - from) / Mathf.Max(1e-4f, 1f - from);
+                at.knee = SwingSegment(leg, from + (1f - from) * Mathf.Pow(u, kneeOpenDelay)).knee;
+            }
+            return at;
+        }
+
+        /// <summary>The Hermite segment between the two keys around this share.</summary>
+        static LegAngles SwingSegment(Leg leg, float share)
         {
             int i = 0;
             while (i < SwingKeyCount - 2 && share > leg.knots[i + 1]) i++;
@@ -1282,11 +1301,13 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>The catch: the curve from the angles the press found to the touchdown pose (s = 0..1 through it).</summary>
-        static LegAngles Catch(Leg leg, float s)
+        LegAngles Catch(Leg leg, float s)
         {
             LegAngles c = leg.keys[4], m0 = leg.slope[0], m1 = leg.slope[4];
+            // A knee that is opening comes late here too (same rule as the swing); a closing one is left alone.
+            float sk = c.knee > leg.from.knee ? Mathf.Pow(s, kneeOpenDelay) : s;
             return new LegAngles(Herm(leg.from.thigh, c.thigh, m0.thigh, m1.thigh, s),
-                Herm(leg.from.knee, c.knee, m0.knee, m1.knee, s));
+                Herm(leg.from.knee, c.knee, m0.knee, m1.knee, sk));
         }
 
         float SwingShare(Leg leg, double now) =>
