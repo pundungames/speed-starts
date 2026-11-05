@@ -658,9 +658,9 @@ namespace SpeedStars.Physical
 
         [Header("One-key hop arms (deg, + = forward): both arms throw the body up with each press")]
         [Tooltip("Upper arm at the top of the throw (right after a press): up and forward.")]
-        public float armHopUp = 85f;
+        public float armHopUp = 60f;
         [Tooltip("Upper arm as the body comes down: down and back.")]
-        public float armHopDown = -55f;
+        public float armHopDown = -68f;
         [Tooltip("Elbow bend (deg) in the hop: about a right angle, the forearms up in front of the chest.")]
         public float armHopElbow = 90f;
         [Tooltip("The hop's elbow bends this much less (deg) at the top of the throw (the hand stays below the face) and this much more coming down.")]
@@ -672,6 +672,8 @@ namespace SpeedStars.Physical
         [Header("Two keys together (the sack hop): both arms swing together, the trunk takes part")]
         [Tooltip("Both arms loading, back (deg, − = back): they go back this far before the push and are thrown up and forward (armHopUp) at it.")]
         public float armPairBack = -82f;
+        [Tooltip("Both arms thrown up and forward at the push of the two-key hop (deg): the one-key hop's armHopUp is lower.")]
+        public float armPairUp = 85f;
         [Tooltip("Elbow (deg) with the arms loaded back (open) and thrown up (bent), the two-key hop.")]
         public Vector2 armPairElbow = new Vector2(35f, 100f);
         [Tooltip("The trunk bends forward this much (deg) loading the push, two keys together.")]
@@ -2424,7 +2426,7 @@ namespace SpeedStars.Physical
             if (pw > 0.001f)
             {
                 // Both arms together, far back loading, up and forward at the push (the same clock as the hop's throw).
-                swing = Mathf.Lerp(swing, Mathf.Lerp(armPairBack, armHopUp, _armKick), pw);
+                swing = Mathf.Lerp(swing, Mathf.Lerp(armPairBack, armPairUp, _armKick), pw);
                 elbow = Mathf.Lerp(elbow, Mathf.Lerp(armPairElbow.x, armPairElbow.y, _armKick), pw);
             }
             if (!preview && dt > 0f)
