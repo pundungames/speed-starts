@@ -37,7 +37,7 @@ namespace SpeedStars.Physical
         [Tooltip("Stopping: once no key has been down for stopDelay (s) the runner has stopped running and brakes " +
                  "with its feet — a constant loss (m/s²) like real friction, coming in over stopRamp (s): speed falls " +
                  "in a straight line, faster and faster for what is left, and stops. Any key down takes it away.")]
-        public float stopBrake = 3.5f;
+        public float stopBrakeForce = 12f;
         public float stopDelay = 0.6f;
         public float stopRamp = 0.3f;
 
@@ -663,7 +663,7 @@ namespace SpeedStars.Physical
             float poseLean = PoseLean = T.lungeLean * (Legs[0].HoldValue + Legs[1].HoldValue);
             // No key down for a while: the runner has stopped running and brakes (constant, like friction).
             float idle = (float)(Time - _keyUpTime) - T.stopDelay;
-            float brake = T.stopBrake * Mathf.SmoothStep(0f, 1f, idle / Mathf.Max(0.001f, T.stopRamp));
+            float brake = T.stopBrakeForce * Mathf.SmoothStep(0f, 1f, idle / Mathf.Max(0.001f, T.stopRamp));
             float drag = T.dragConstant + T.dragLinear * Speed + T.dragQuadratic * Speed * Speed + brake + T.holdDrag * maxHold
                          + T.headDrag * Mathf.Clamp01(HeadAngle / Mathf.Max(1f, T.headForwardMax));
             if (JumpInAir) drag = 0f;
