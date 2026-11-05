@@ -335,7 +335,7 @@ namespace SpeedStars.Physical
         [Tooltip("One-key hop swing, third key: the leg opens again going down.")]
         public LegAngles hopKneeDrive = new LegAngles(22f, 130f);
         [Tooltip("One-key hop touchdown: the foot lands under the hips, the leg nearly straight.")]
-        public LegAngles hopContact = new LegAngles(20f, 165f);
+        public LegAngles hopContact = new LegAngles(10f, 165f);
         [Tooltip("The balance leg's thigh sways this many degrees (forward while the body rises) with the one-key hop, so it does not look frozen.")]
         public float hopSway = 6f;
         [Tooltip("The leg the hops leave out (not the one pressed again and again): held out in front, nearly straight, in the " +
@@ -1855,10 +1855,14 @@ namespace SpeedStars.Physical
             float step = _ballistic ? 1f : sitPivotBlend * Time.deltaTime;
             float sumW = 0f;
             Vector3 sum = Vector3.zero;
+            // Hopping on one key the trunk sits back about the hip, not the heel: the heel pivot moved the hip ~20 cm back over the
+            // planted foot, so the leg SHOWN was 15-20 deg more forward than the one SolveStance solved (the push never reached
+            // back on screen) and the foot jumped at the toe-off. The pivot's heel share fades with the hop weight.
+            float heelShare = 1f - _hop * (1f - _pair);
             for (int i = 0; i < 2; i++)
             {
                 Leg leg = Legs(i);
-                _sitW[i] = Mathf.MoveTowards(_sitW[i], leg.carry ? 1f : 0f, step);
+                _sitW[i] = Mathf.MoveTowards(_sitW[i], leg.carry ? heelShare : 0f, step);
                 if (_sitW[i] <= 0f) continue;
                 sum += Heel(leg) * _sitW[i];
                 sumW += _sitW[i];
