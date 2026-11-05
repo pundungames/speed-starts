@@ -405,7 +405,7 @@ namespace SpeedStars.Physical
         [Tooltip("At max speed pushTime and the legs' going home take this share of their time (1 = as slow as standing).")]
         [Range(0.2f, 1f)] public float animSpeedUp = 0.5f;
         [Tooltip("A leg in front (or landed with nothing more coming) goes home this slowly; quicker with speed.")]
-        public float frontHomeTime = 0.3f;
+        public float frontHomeTime = 0.2f;
         [Tooltip("A leg's cycle (its press to its next press) is never shorter than this (s).")]
         public float stepTimeMin = 0.2f;
         [Tooltip("Presses further apart than this (s) end the run stance and the swing is never longer: sparser presses " +
@@ -621,10 +621,10 @@ namespace SpeedStars.Physical
         [Tooltip("A free leg's thigh and an arm's swing (the first link of the chain) follow their targets through this spring. " +
                  "Damping a little under 1: the end of a move overshoots a hair and comes back, like a muscle. The speed rises and " +
                  "falls like a bell (the spring), it does not sit at a constant speed.")]
-        public SpringSettings limbSpring = new SpringSettings(12f, 0.8f);
+        public SpringSettings limbSpring = new SpringSettings(15f, 0.85f);
         [Tooltip("A free leg's knee and an arm's elbow (the second link) follow through this slower spring: the thigh leads, the " +
                  "knee comes after, the shoulder leads and the elbow trails.")]
-        public SpringSettings limbLag = new SpringSettings(8.5f, 0.8f);
+        public SpringSettings limbLag = new SpringSettings(11f, 0.85f);
         [Tooltip("Fastest a free leg's thigh or knee turns (deg/s): a limit for the extreme case only, above the usual swing, so " +
                  "the speed never flattens at a constant (the look of linear motion).")]
         public float legMaxSpeed = 1800f;
@@ -719,8 +719,8 @@ namespace SpeedStars.Physical
 
         const float NeckShare = 0.5f;          // share of the head angle the neck (spine tip) bends; the head aims the rest
         const float HintDistance = 0.4f;       // knee hint in front of the knee, across the thigh (m)
-        const float FootLag = 14f;             // the swing's ankle and toe curves are followed at this rate (1/s): the foot trails the knee
-        const float FootBlend = 18f;           // foot pitch / swing weight follow their phase's value (1/s)
+        const float FootLag = 20f;             // the swing's ankle and toe curves are followed at this rate (1/s): the foot trails the knee
+        const float FootBlend = 22f;           // foot pitch / swing weight follow their phase's value (1/s)
         const float HeelBehindAnkle = 0.05f;   // heel contact point behind the ankle joint (m)
         const float ToesUpFree = 5f;           // foot this far toes up (deg) keeps its toes in line instead of flat
         const float MinPelvis = 0.1f;          // the pelvis never goes lower than this above the ground (m)
