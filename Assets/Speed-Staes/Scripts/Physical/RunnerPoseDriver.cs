@@ -356,7 +356,7 @@ namespace SpeedStars.Physical
         [Range(0f, 1f)] public float strideMin = 0.25f;
         [Tooltip("How much of the stride (and the flight) comes from how well the runner has been running (the sim's " +
                  "Form: presses on time): 0 = speed alone, 1 = a runner with no form takes no stride.")]
-        [Range(0f, 1f)] public float formWeight = 0.4f;
+        [Range(0f, 1f)] public float formWeight = 0.8f;
         [Tooltip("A held key turns the leg into its hold angles over this time (s).")]
         public float holdTakeTime = 0.12f;
 
@@ -432,11 +432,11 @@ namespace SpeedStars.Physical
         [Min(0.1f)] public float maxDropSpeed = 1.5f;
         [Tooltip("Fastest the pelvis may go up while running (m/s): a leg's height ask that jumps (mashing) cannot throw the body " +
                  "up in one frame. Not used in the dive, over hurdles or getting up.")]
-        [Min(0.1f)] public float maxRiseSpeed = 2f;
+        [Min(0.1f)] public float maxRiseSpeed = 2.8f;
         [Tooltip("Fastest the hip's FINAL height may rise while running (m/s), after the sit-back and the floors: the hop's " +
                  "toe-off stacked them to 4-5 cm in a frame (the box-run look). 1.75 is 2.9 cm per frame at 60 fps. Not used in " +
                  "the dive, over hurdles or getting up.")]
-        [Min(0.1f)] public float hipRiseMax = 1.75f;
+        [Min(0.1f)] public float hipRiseMax = 2.5f;
         [Tooltip("Rate (1/s) at which the sitting-back pivot moves from the hip to the heels of the legs that carry (and between " +
                  "them): switching it at once moved the hip several cm in one frame. The dive switches at once.")]
         [Min(1f)] public float sitPivotBlend = 8f;
@@ -470,7 +470,7 @@ namespace SpeedStars.Physical
         public float stanceDip = 0.04f;
         [Tooltip("Running: the pelvis' rise between two steps, at the top of the flight (m, at speed and good form). " +
                  "None at a standstill.")]
-        public float flightRise = 0.09f;
+        public float flightRise = 0.15f;
         [Tooltip("Speed (m/s) from x on the flight starts rising, and at y it is flightRise.")]
         public Vector2 riseSpeed = new Vector2(4f, 9f);
         [Tooltip("The body follows the flight's arc through this spring.")]
