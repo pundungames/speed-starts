@@ -746,6 +746,7 @@ namespace SpeedStars.Physical
         const float RootSpeedBlend = 12f;      // the root's speed for the swing's end speed is smoothed at this rate (1/s)
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
         const float Overstretch = 0.985f;      // a planted leg this near its full length is at toe-off (the knee never locks)
+        const float PinStopSpeed = 0.3f;       // a runner slower than this (m/s) with no key is standing: a foot is pinned as usual
         const float PinExit = 1.8f;            // a pinned foot lets go when it is raised this many TouchHeights (hysteresis)
         const float PinMelt = 20f;             // a foot the pin let go of melts to its leg's place at this rate (1/s)
         const float PinLift = 0.06f;           // ...and stays up to this much (m) off the ground while it does
@@ -798,6 +799,7 @@ namespace SpeedStars.Physical
         float _ground, _sole, _profileW, _runHome;
         float _restWaist;                          // B-spine's bend on the hips at rest (deg)
         float _stepping;                           // 1 = running stance (presses keep coming), 0 = none: Ready crouch
+        bool _idleStock;                           // this frame: no key and no press lately: the legs go to the waiting stance, no step of their own
         bool _stepNow;                             // this frame: a key is down, a jump, or the last press is within stepTimeMax
         bool _jumping;                             // this frame: in a hurdle jump (wind-up included): the old rules, no planted feet
         double _lastPress = -1.0;                  // sim time of the last press
@@ -1274,6 +1276,14 @@ namespace SpeedStars.Physical
                         ToHold(leg, partner, time);
                         continue;
                     }
+                    // With no key and no press lately a swing, a reach or a catch is not finished: the leg goes from where it is to the stock pose
+                    // (Rest, through the limb springs), and the next press takes it from there.
+                    if (_idleStock && !leg.grounded && (leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid || leg.phase == LegPhase.Reach ||
+                                                        leg.phase == LegPhase.Front || leg.phase == LegPhase.Push))
+                    {
+                        Enter(leg, LegPhase.Rest, time, frontHomeTime * SpeedUp());
+                        continue;
+                    }
                     switch (leg.phase)
                     {
                         case LegPhase.Hold:
@@ -1288,7 +1298,11 @@ namespace SpeedStars.Physical
                                 bool low = leg.ankle.y - AnkleGround(leg) <= TouchHeight * 1.5f;
                                 if (Touching(leg) || (time >= leg.EndTime && (low || time >= leg.EndTime + CatchGrace))) leg.grounded = leg.needLock = true;
                             }
-                            else if (leg.toeOff) StartSwing(leg, time);
+                            else if (leg.toeOff)
+                            {
+                                if (_idleStock) Enter(leg, LegPhase.Rest, time, frontHomeTime * SpeedUp());   // no key: the stance ends at home, not in a swing
+                                else StartSwing(leg, time);
+                            }
                             break;
                         case LegPhase.Recover:
                         case LegPhase.Mid:
@@ -1757,6 +1771,8 @@ namespace SpeedStars.Physical
                 p = PoseData.Lerp(p, Get(stumble, RunnerPoseDefaults.Stumble), stumbleW);
                 lean = 0f;    // the head decides it below
             }
+            // No key and no press within stepTimeMax (a slow rhythm of 0.5 s is still running): the legs stop their plan and go to the stock pose.
+            _idleStock = !preview && !_stepNow;
             _holdL = preview ? 0f : sim.Legs[0].WeightValue;
             _holdR = preview ? 0f : sim.Legs[1].WeightValue;
             _dive = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(HoldGaitFrom, HoldGaitTo, Mathf.Max(_holdL, _holdR)));
@@ -2147,7 +2163,10 @@ namespace SpeedStars.Physical
                 Vector3 pinLocal = was ? transform.InverseTransformPoint(leg.pinPoint) : Vector3.zero;
                 bool phaseOk = leg.phase == LegPhase.Rest || leg.phase == LegPhase.Front || leg.phase == LegPhase.Reach || leg.phase == LegPhase.Land;
                 float gap = leg.ankle.y - AnkleGround(leg);
-                bool pin = allowed && !leg.grounded && phaseOk && (was ? gap <= TouchHeight * PinExit : gap <= TouchHeight && Mathf.Abs(leg.pinOffset) <= 0.002f);
+                // With no key a body that still glides does not nail a foot again and again (the pin lets go at the leg's length, the foot
+                // came forward and was pinned anew: a step of its own): the foot that let go stays with the body until it stops.
+                bool entry = gap <= TouchHeight && Mathf.Abs(leg.pinOffset) <= 0.002f && (!_idleStock || _rootSpeed < PinStopSpeed);
+                bool pin = allowed && !leg.grounded && phaseOk && (was ? gap <= TouchHeight * PinExit : entry);
                 if (pin && !was)
                 {
                     leg.pinPoint = transform.TransformPoint(leg.ankle);
