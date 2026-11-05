@@ -64,6 +64,7 @@ namespace SpeedStars.Physical
     ///      KeepAboveGround. A real hold is the hold weight past a tap's (HeldWeight): every hold effect (tip, the
     ///      leg's reach back, the front leg's support, the end of the hop) is scaled by it, so a tap's brief Hold
     ///      phase changes nothing.
+    /// Running, a planted foot stays put until the other foot comes down (or is about to), and a lifted foot does not go back in the air.
     /// Running (gait weight: speed, a key down, no hold, on the ground) the arms pump with the opposite leg's
     /// thigh in both directions, wider and with a more closed elbow the faster and the cleaner the running (the
     /// sim's Form); standing or held they keep the pose's rest and the armBack hold (StepArm). Arms, knees'
@@ -162,7 +163,9 @@ namespace SpeedStars.Physical
             // Run-cycle state: runtime only, not serialized.
             [System.NonSerialized] public bool grounded;    // stance: the ankle is nailed to the ground at footZ
             [System.NonSerialized] public bool needLock;    // the stance begins this frame: nail the ankle where it is
-            [System.NonSerialized] public bool toeOff;      // the stance has run out (pushEnd, leg length, stanceMax): swing next
+            [System.NonSerialized] public bool toeOff;      // the stance is over: swing next (running: the other foot took over, or the leg ran out of length; else pushEnd, stanceMax)
+            [System.NonSerialized] public double plantedAt = -1.0;   // when this stance began (not pressedAt: a landed foot's press time is rewritten)
+            [System.NonSerialized] public float swingBackLimit = float.MinValue;    // running: the lowest thigh angle this swing's recover key may take, so the foot does not go back in the air
             [System.NonSerialized] public bool carry;       // this frame the leg carries the body
             [System.NonSerialized] public float idle;       // 0..1: the leg the hops leave out (the other key's), held out in front, straight
             [System.NonSerialized] public float footZ;      // the planted ankle's z (runner space; goes back as the root moves on)
@@ -363,7 +366,8 @@ namespace SpeedStars.Physical
         [Tooltip("A press that comes while the leg is still swinging takes it down to the touchdown pose at up to this " +
                  "angular speed (deg/s): quick, but a short curve from its own angles and speed, never a snap.")]
         public float catchSpeed = 600f;
-        [Tooltip("A foot never stays down longer than this (s), however slowly the body goes over it.")]
+        [Tooltip("A foot never stays down longer than this (s), however slowly the body goes over it. Running it only counts " +
+                 "while the other leg is not on its way down: the foot waits for the other one.")]
         public float stanceMax = 0.4f;
         [Tooltip("The stride (how far the knee drives, how far the foot lands and pushes back) grows from strideMin at x m/s " +
                  "to the full keys at y m/s.")]
@@ -783,7 +787,8 @@ namespace SpeedStars.Physical
         const float MaxRootSpeed = 20f;        // ...and so is one faster than this (m/s)
         const float RootSpeedBlend = 12f;      // the root's speed for the swing's end speed is smoothed at this rate (1/s)
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
-        const float Overstretch = 0.985f;      // a planted leg this near its full length is at toe-off (the knee never locks)
+        const float HeelEndShare = 0.55f;      // running: the heel is fully up when the foot is this share of the leg's length behind the hip
+        const float Overstretch = 0.985f;     // a planted leg this near its full length is at toe-off (the knee never locks)
         const float PinStopSpeed = 0.3f;       // a runner slower than this (m/s) with no key is standing: a foot is pinned as usual
         const float PinExit = 1.8f;            // a pinned foot lets go when it is raised this many TouchHeights (hysteresis)
         const float PinMelt = 20f;             // a foot the pin let go of melts to its leg's place at this rate (1/s)
@@ -979,6 +984,8 @@ namespace SpeedStars.Physical
             leg.pinned = false;
             leg.pinOffset = 0f;
             leg.grounded = leg.needLock = leg.toeOff = leg.carry = false;
+            leg.plantedAt = -1.0;
+            leg.swingBackLimit = float.MinValue;
             leg.footZ = leg.dz0 = leg.stanceU = 0f;
             leg.cycle = 0f;
             leg.idle = 0f;
@@ -1149,6 +1156,20 @@ namespace SpeedStars.Physical
         bool Touching(Leg leg) =>
             leg.angles.thigh >= Key(mid, hopMid).thigh && leg.ankle.y - AnkleGround(leg) <= TouchHeight;
 
+        /// <summary>The other leg is in the air on its way down: its swing, its touchdown pose, or a press catching it.</summary>
+        static bool ComingDown(Leg leg) =>
+            leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid || leg.phase == LegPhase.Land ||
+            (leg.phase == LegPhase.Push && !leg.grounded);
+
+        /// <summary>
+        /// The other foot has come down after this one, or is about to (past the folded pass, within a touch and a half of the
+        /// ground): this foot's turn to lift. Read in TickLegs only, where the ankle is the last frame's final height.
+        /// </summary>
+        bool OtherTakesOver(Leg leg, Leg other) =>
+            (other.grounded && other.plantedAt > leg.plantedAt) ||
+            (ComingDown(other) && other.angles.thigh >= Key(mid, hopMid).thigh &&
+             other.ankle.y - AnkleGround(other) <= TouchHeight * 1.5f);
+
         /// <summary>
         /// Toe-off (or the release of a hold): the leg's swing to the touchdown pose, one Hermite curve from where it
         /// is and how fast it is going through recover, mid and kneeDrive, ending when its next press is due.
@@ -1167,15 +1188,17 @@ namespace SpeedStars.Physical
             LegAngles[] k = leg.keys, m = leg.slope;
             float[] n = leg.knots;
             k[0] = leg.angles;
-            k[1] = RecoverKey();
-            k[2] = Key(mid, hopMid);
-            k[3] = KneeDriveKey();
-            k[4] = Key(contact, hopContact);
             n[0] = 0f;
             n[1] = Mathf.Clamp(swingKeys.x, 0.02f, 0.9f);
             n[2] = Mathf.Clamp(swingKeys.y, n[1] + 0.02f, 0.95f);
             n[3] = Mathf.Clamp(swingKeys.z, n[2] + 0.02f, 0.98f);
             n[4] = 1f;
+            // Lifted, the foot does not travel back through the world: the thigh goes on back only as far as the body's own move carries it.
+            leg.swingBackLimit = k[0].thigh - Mathf.Rad2Deg * _rootSpeed * n[1] * len / Mathf.Max(MinExtent, _extent);
+            k[1] = RecoverKeyFor(leg);
+            k[2] = Key(mid, hopMid);
+            k[3] = KneeDriveKey();
+            k[4] = Key(contact, hopContact);
             for (int i = 1; i < SwingKeyCount - 1; i++)
             {
                 float span = n[i + 1] - n[i - 1];
@@ -1199,7 +1222,7 @@ namespace SpeedStars.Physical
             if (leg.keys == null) return;
             LegAngles[] k = leg.keys, m = leg.slope;
             float[] n = leg.knots;
-            k[1] = RecoverKey();
+            k[1] = RecoverKeyFor(leg);
             k[2] = Key(mid, hopMid);
             k[3] = KneeDriveKey();
             k[4] = Key(contact, hopContact);
@@ -1286,6 +1309,14 @@ namespace SpeedStars.Physical
 
         /// <summary>Heel-kick key: plain running opens it with speed; a hop or pair jump keeps recover.</summary>
         LegAngles RecoverKey() => Key(LegAngles.Lerp(recover, recoverFast, _fastW * _plainRun), hopRecover);
+
+        /// <summary>The recover key of this leg's swing: running, its thigh is held up to the swing's own back limit (a hop or pair jump: untouched).</summary>
+        LegAngles RecoverKeyFor(Leg leg)
+        {
+            LegAngles k = RecoverKey();
+            k.thigh = Mathf.Lerp(k.thigh, Mathf.Max(k.thigh, leg.swingBackLimit), _plainRun);
+            return k;
+        }
 
         /// <summary>Knee-drive key: plain running opens the shin forward (more at low speed); a hop or pair jump keeps kneeDrive.</summary>
         LegAngles KneeDriveKey() =>
@@ -1400,10 +1431,15 @@ namespace SpeedStars.Physical
                                 bool low = leg.ankle.y - AnkleGround(leg) <= TouchHeight * 1.5f;
                                 if (Touching(leg) || (time >= leg.EndTime && (low || time >= leg.EndTime + CatchGrace))) leg.grounded = leg.needLock = true;
                             }
-                            else if (leg.toeOff)
+                            else
                             {
-                                if (_idleStock) Enter(leg, LegPhase.Rest, time, stockReturnTime);   // no key: the stance ends at home, not in a swing
-                                else StartSwing(leg, time);
+                                // Running, this foot lifts as the other one comes down or has come down (read here: the ankle is final).
+                                if (_plainRun > 0.5f && !_idleStock && OtherTakesOver(leg, partner)) leg.toeOff = true;
+                                if (leg.toeOff)
+                                {
+                                    if (_idleStock) Enter(leg, LegPhase.Rest, time, stockReturnTime);   // no key: the stance ends at home, not in a swing
+                                    else StartSwing(leg, time);
+                                }
                             }
                             break;
                         case LegPhase.Recover:
@@ -1751,7 +1787,8 @@ namespace SpeedStars.Physical
         /// <summary>
         /// A planted foot: put down where the ankle is (needLock), then it goes back with the root's real move. How far
         /// it is through its stance (stanceU) comes from where it is behind the hip; at the end, or after stanceMax,
-        /// it is toe-off. SolveStance may call it earlier if the leg runs out of length.
+        /// it is toe-off. Running, a foot waits for the other one instead (TickLegs lifts it when that one comes down);
+        /// SolveStance and UpdateBodyHeight still lift a leg that runs out of length.
         /// </summary>
         void AdvanceStance(Leg leg, float rootStep, double now, Vector3 joint)
         {
@@ -1762,6 +1799,7 @@ namespace SpeedStars.Physical
                 leg.dz0 = joint.z - leg.footZ;
                 leg.lockBallZ = BallZ(leg, leg.pitch + leg.rock);
                 leg.needLock = false;
+                leg.plantedAt = now;
             }
             else leg.footZ -= rootStep;   // a planted foot is still in the world: it goes back with the root, all of it
             float behind = joint.z - leg.footZ;
@@ -1769,8 +1807,13 @@ namespace SpeedStars.Physical
             float endBehind = -(leg.thighLength * Mathf.Sin(end.thigh * Mathf.Deg2Rad) +
                                 leg.shinLength * Mathf.Sin((end.thigh - (180f - end.knee)) * Mathf.Deg2Rad));
             endBehind = Mathf.Max(endBehind, leg.dz0 + 0.05f);
-            leg.stanceU = Mathf.Clamp01(Mathf.InverseLerp(leg.dz0, endBehind, behind));
-            if (behind >= endBehind || now - leg.pressedAt > stanceMax) leg.toeOff = true;
+            // Running, a foot waiting behind stays on its toes longer: the heel is up (and the leg longer by the toe rise) before it runs out.
+            float heelEnd = Mathf.Lerp(endBehind, Mathf.Max(leg.dz0 + 0.05f, Mathf.Min(endBehind, HeelEndShare * MaxReach(leg))), _plainRun);
+            leg.stanceU = Mathf.Clamp01(Mathf.InverseLerp(leg.dz0, heelEnd, behind));
+            Leg other = leg == leftLeg ? rightLeg : leftLeg;
+            // Running, a foot stays until the other takes over (TickLegs); only a leg out of length lifts earlier (SolveStance, StanceCap).
+            bool waits = _plainRun > 0.5f && !_idleStock && (ComingDown(other) || other.grounded);
+            if (!waits && (behind >= endBehind || now - leg.pressedAt > stanceMax)) leg.toeOff = true;
         }
 
         /// <summary>
