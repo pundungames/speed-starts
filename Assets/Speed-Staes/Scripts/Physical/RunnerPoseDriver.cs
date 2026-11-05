@@ -755,6 +755,7 @@ namespace SpeedStars.Physical
         const float PinExit = 1.8f;            // a pinned foot lets go when it is raised this many TouchHeights (hysteresis)
         const float PinMelt = 20f;             // a foot the pin let go of melts to its leg's place at this rate (1/s)
         const float PinLift = 0.06f;           // ...and stays up to this much (m) off the ground while it does
+        const float ReachCarryExit = 0.12f;    // ...and stops carrying only above this (hysteresis)
         const float ReachCarryHeight = 0.08f;  // a reaching foot this near the ground (m) carries the body; higher it does not
         const float ReachKneeSpeed = 1.8f;     // the reaching knee opens this much faster than the thigh comes forward
         const float CatchGrace = 0.14f;        // a finished catch waits this long (s) for the foot to be down before it is planted anyway
@@ -1009,6 +1010,7 @@ namespace SpeedStars.Physical
                 return;
             }
             l.held = true;
+            _idleStock = false;   // a key is down: the legs are not on their way to the stock pose, not even for the rest of this frame
             // The pose takes only the presses a person's steps can follow. One that comes within PoseMinGap of the last one taken is
             // the sim's alone (it counts it all the same: speed and timing are the sim's): no new stance, no cycle, no throw of the arms, no
             // hop count. A key pressed together with the first of a pair (a few ms, after a pause) is the pair's second key, taken.
@@ -1731,7 +1733,7 @@ namespace SpeedStars.Physical
                     case LegPhase.Reach:
                         // A reaching foot carries the body once it is on the ground (or near it); in the air with its knee folded it does not: the
                         // body used to sink to it (hip 0.88 -> 0.78 on a late press). The hold (_dive) keeps the old rule.
-                        leg.carry = _dive > 0.3f || leg.ankle.y - AnkleGround(leg) <= ReachCarryHeight;
+                        leg.carry = _dive > 0.3f || leg.ankle.y - AnkleGround(leg) <= (leg.carry ? ReachCarryExit : ReachCarryHeight);   // with a margin: no flicker
                         break;
                     case LegPhase.Land: leg.carry = partner.phase == LegPhase.Hold; break;
                     default: leg.carry = false; break;
