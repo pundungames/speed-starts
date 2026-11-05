@@ -346,7 +346,7 @@ namespace SpeedStars.Physical
         [Tooltip("How much of the body's way the planted foot goes back with (1 = nailed to the ground). Slightly under 1 " +
                  "the foot creeps back a little, which keeps the leg's swing through the stance from being faster than " +
                  "it can look at top speed.")]
-        [Range(0.5f, 1f)] public float footGrip = 0.92f;
+        [Range(0.5f, 1f)] public float footGrip = 0.97f;
         [Tooltip("A foot never stays down longer than this (s), however slowly the body goes over it.")]
         public float stanceMax = 0.4f;
         [Tooltip("The stride (how far the knee drives, how far the foot lands and pushes back) grows from strideMin at x m/s " +
@@ -1982,7 +1982,7 @@ namespace SpeedStars.Physical
         {
             // The pivot's weights follow which legs carry through a short blend: switching it at once moved the hip
             // by several cm in one frame (the hip swings about the heels, whose place differs from the hip's own).
-            float step = _ballistic ? 1f : sitPivotBlend * Time.deltaTime;
+            float step = Mathf.Lerp(sitPivotBlend * Time.deltaTime, 1f, _ballistic ? _dive : 0f);   // only the dive switches the pivot at once
             float sumW = 0f;
             Vector3 sum = Vector3.zero;
             // Hopping on one key the trunk sits back about the hip, not the heel: the heel pivot moved the hip ~20 cm back over the
