@@ -17,7 +17,7 @@ owns_paths:
   - "docs/tasks/T-120-sesler.md"
 touches_scene: false
 branch: agent/T-120-sesler
-commits: []
+commits: [10d46cbb]
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Core/Audio/RaceSfxRulesTests.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/RaceSoundsPlayTests.cs"
