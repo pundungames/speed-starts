@@ -747,6 +747,8 @@ namespace SpeedStars.Physical
         const float PinExit = 1.8f;            // a pinned foot lets go when it is raised this many TouchHeights (hysteresis)
         const float PinMelt = 20f;             // a foot the pin let go of melts to its leg's place at this rate (1/s)
         const float PinLift = 0.06f;           // ...and stays up to this much (m) off the ground while it does
+        const float ReachCarryHeight = 0.08f;  // a reaching foot this near the ground (m) carries the body; higher it does not
+        const float ReachKneeSpeed = 1.8f;     // the reaching knee opens this much faster than the thigh comes forward
         const float CatchGrace = 0.14f;        // a finished catch waits this long (s) for the foot to be down before it is planted anyway
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
@@ -1370,9 +1372,14 @@ namespace SpeedStars.Physical
                     air = 1f;
                     break;
                 case LegPhase.Reach:
-                    leg.angles = LegAngles.Lerp(leg.from, Target(leg, ownHold, otherHold), ease);
+                {
+                    // The knee opens faster than the thigh comes forward: the foot reaches the ground before the body needs it.
+                    LegAngles want = Target(leg, ownHold, otherHold);
+                    float kneeEase = Mathf.SmoothStep(0f, 1f, Mathf.Min(1f, s * ReachKneeSpeed));
+                    leg.angles = new LegAngles(Mathf.Lerp(leg.from.thigh, want.thigh, ease), Mathf.Lerp(leg.from.knee, want.knee, kneeEase));
                     pitch = Mathf.Lerp(leg.fromPitch, FrontPitch(), ease);
                     break;
+                }
                 case LegPhase.Front:
                     leg.angles = LegAngles.Lerp(leg.from, Target(leg, ownHold, otherHold), ease);
                     pitch = FrontPitch();
@@ -1648,7 +1655,11 @@ namespace SpeedStars.Physical
                     case LegPhase.Push: leg.carry = leg.grounded; break;
                     case LegPhase.Rest: leg.carry = leg.idle < IdleCarry; break;
                     case LegPhase.Front:
-                    case LegPhase.Reach: leg.carry = true; break;
+                    case LegPhase.Reach:
+                        // A reaching foot carries the body once it is on the ground (or near it); in the air with its knee folded it does not: the
+                        // body used to sink to it (hip 0.88 -> 0.78 on a late press). The hold (_dive) keeps the old rule.
+                        leg.carry = _dive > 0.3f || leg.ankle.y - AnkleGround(leg) <= ReachCarryHeight;
+                        break;
                     case LegPhase.Land: leg.carry = partner.phase == LegPhase.Hold; break;
                     default: leg.carry = false; break;
                 }
@@ -1668,7 +1679,8 @@ namespace SpeedStars.Physical
                 {
                     case LegPhase.Recover:
                     case LegPhase.Mid: r = (float)(leg.swingT0 + leg.swingLen - _now); break;
-                    case LegPhase.Push: r = (float)(leg.EndTime - _now); break;
+                    case LegPhase.Push:
+                    case LegPhase.Reach: r = (float)(leg.EndTime - _now); break;
                     case LegPhase.Land: r = 0f; break;
                     default: continue;
                 }
