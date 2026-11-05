@@ -49,11 +49,9 @@ namespace SpeedStars.Tools.Builders
             group.blocksRaycasts = false;
 
             // Behind the words: the dim and the banner. A sibling BEFORE the Group (drawn under it), so the word never squashes them.
-            // Centre the complete banner on screen; place the word group in the banner's text area beside the flag.
+            // Centre horizontally between the flag and the panel's right inner edge; keep the banner's vertical centre.
             float bannerScale = config.BannerScale;
-            Vector2 areaCentreFromBannerCentre = new Vector2(
-                BannerTextArea.center.x - BannerCanvas.x * 0.5f,
-                BannerCanvas.y * 0.5f - BannerTextArea.center.y); // y up
+            Vector2 wordCentreOffset = new Vector2((BannerTextArea.center.x - BannerCanvas.x * 0.5f) * bannerScale, 0f);
             Vector2 anchor = new Vector2(0.5f, 1f - config.GroupCenterFromTopShare);
 
             RectTransform backdrop = Kit.Stretch(Kit.Node(root, "BackdropRoot"));
@@ -71,7 +69,7 @@ namespace SpeedStars.Tools.Builders
             // Centre at a share of the screen height from the top (config), so every aspect ratio puts it at the runner's head height.
             // The size carries the group scale (scale stays 1) so the word's font can be real-size and sharp.
             float scale = config.GroupScale;
-            Kit.Anchor(groupRt, anchor, new Vector2(0.5f, 0.5f), areaCentreFromBannerCentre * bannerScale, ArtCanvas * scale);
+            Kit.Anchor(groupRt, anchor, new Vector2(0.5f, 0.5f), wordCentreOffset, ArtCanvas * scale);
 
             RectTransform effects = Kit.Stretch(Kit.Node(groupRt, "EffectsRoot"));
             Image[] impact = Layers(effects, Impact);
@@ -124,6 +122,7 @@ namespace SpeedStars.Tools.Builders
             word.horizontalOverflow = HorizontalWrapMode.Overflow;
             word.verticalOverflow = VerticalWrapMode.Overflow;
             word.alignment = TextAnchor.MiddleCenter;
+            word.alignByGeometry = true;
         }
 
         /// <summary>One banner layer stretched over the banner's 864x184 rect (same rect for both PNGs, so they sit on each other as drawn).</summary>

@@ -74,13 +74,9 @@ namespace SpeedStars.Tools.Builders
         private const float TitleInset = 0.06f;
         private static readonly Color LabelWhite = Color.white;
 
-        // Colour boxes under the colour square (placeholder look until the designer draws a selected frame): up to three
-        // boxes (an item has 1-3 colour channels), side by side from the swatch frame's own spot; the selected one gets
-        // a ring of this colour (the red of the selected item card) that sticks out of the frame by HighlightMargin.
+        // Up to three colour boxes; selection swaps the normal plate for the matching red art.
         private const int ChannelBoxCount = CosmeticSlot.MaxChannels;
         private const float ChannelBoxGap = 0.03f;       // between boxes, fraction of the panel width
-        private const float HighlightMargin = 0.14f;     // ring thickness, fraction of the box
-        private static readonly Color HighlightColor = new Color32(255, 32, 45, 255);
 
         // Column order, top to bottom. The skin tab "Body" has no art of its own: it takes the Face tab's backgrounds and a
         // figure icon from the stats panel (BodyTabIcon), sized and placed like the Emote tab's icon. The old "Body" tab (the
@@ -600,13 +596,10 @@ namespace SpeedStars.Tools.Builders
             Image hit = HitArea(node.gameObject);
             Button button = UiArt.MakeButton(node.gameObject, hit, true, alphaHit: false);
 
-            RectTransform ring = Kit.Span(Kit.Node(node, "Selected"), new Vector2(-HighlightMargin, -HighlightMargin),
-                new Vector2(1f + HighlightMargin, 1f + HighlightMargin));
-            Kit.Fill(ring.gameObject, HighlightColor, raycast: false);
-            ring.gameObject.SetActive(false);
-
             // The frame art is a solid navy plate (not a ring): it goes UNDER the colour, which is smaller, or it hides it.
-            CanvasLayer(node, "Frame", Art("color_swatch_frame"), frame);
+            GameObject normalFrame = CanvasLayer(node, "Frame", Art("color_swatch_frame"), frame);
+            GameObject selectedFrame = CanvasLayer(node, "Selected", Art("color_swatch_frameRed"), frame);
+            selectedFrame.SetActive(false);
             RectTransform colorNode = Kit.Span(Kit.Node(node, "Color"), new Vector2((inner.x - frame.x) / w, (inner.y - frame.y) / h),
                 new Vector2((inner.z - frame.x) / w, (inner.w - frame.y) / h));
             Image color = Kit.Fill(colorNode.gameObject, Color.white, raycast: false);
@@ -614,7 +607,8 @@ namespace SpeedStars.Tools.Builders
             var so = new SerializedObject(view);
             Ref(so, "button", button);
             Ref(so, "colorImage", color);
-            Ref(so, "selectedHighlight", ring.gameObject);
+            Ref(so, "selectedHighlight", selectedFrame);
+            Ref(so, "normalFrame", normalFrame);
             so.ApplyModifiedPropertiesWithoutUndo();
             return view;
         }

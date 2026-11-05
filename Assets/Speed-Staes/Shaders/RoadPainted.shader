@@ -12,26 +12,13 @@ Shader "Speed Stars/Road Painted"
     {
         Tags { "RenderType"="Opaque" }
         CGPROGRAM
-        #pragma surface surf Painted vertex:vert fullforwardshadows addshadow noforwardadd noambient novertexlights
+        #pragma surface surf Painted fullforwardshadows addshadow noforwardadd noambient novertexlights
         #pragma target 3.0
         sampler2D _MainTex;
         fixed4 _Color;
         float _Asphalt, _Variation, _RepeatLength;
-        void vert(inout appdata_full v)
-        {
-            if(_Asphalt<0.5)
-            {
-                float3 palette=tex2Dlod(_MainTex,float4(v.texcoord.xy,0,0)).rgb;
-                float4 originalWorld=mul(unity_ObjectToWorld,v.vertex);
-                // Widen only painted ground markings, never yellow post bands.
-                if(abs(originalWorld.y)<0.025 && palette.r>0.35 && palette.r>palette.b*1.7 && palette.g>palette.b*1.5)
-                {
-                    float4 world=mul(unity_ObjectToWorld,v.vertex);
-                    world.x=-5.63+(world.x+5.63)*1.8;
-                    v.vertex=mul(unity_WorldToObject,world);
-                }
-            }
-        }
+        // Keep markings at their authored mesh positions and widths.
+        // World-space widening around a fixed x also displaced translated roads.
         struct Input { float2 uv_MainTex; float3 worldPos; float3 worldNormal; };
         float hash(float2 p) { return frac(sin(dot(p,float2(127.1,311.7)))*43758.5453); }
         half4 LightingPainted(SurfaceOutput s, half3 lightDir, half atten)
