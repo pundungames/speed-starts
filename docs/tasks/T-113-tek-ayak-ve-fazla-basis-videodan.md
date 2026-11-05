@@ -1,7 +1,7 @@
 ---
 id: T-113
 title: Oyun denemesi ve referans video - tek ayak gallop ve kollar, zemine girme, her tap ilerletsin, fazla basis yavas yavas
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-111]
 owns_paths:
@@ -17,7 +17,7 @@ analytics:
   - "yok: projede analytics yok"
 needs: []
 started: 2026-11-04
-finished:
+finished: 2026-11-05
 blocked_reason:
 ---
 
@@ -47,3 +47,5 @@ Videodan okunanlar:
 
 ## Çalışma notu
 - Kod yazıldı, `dd3b6fe0`. Unity'de derlenmedi, form ölçümü yok; simprobe: spam 3.0-3.1 m/s, baş 30° 2.4 sn, 60° ~6 sn, 80° ~7 sn, ritme dönünce 15° altı 1.2 sn; tek tuş 6.1-7.0 m/s, duruştan 0.25 sn'de 1/2/3 sn: 2.6/3.9/4.8. Spamde 3 sn'de hız −%25 (hedef −%15, bilerek). Kırılgan: `MashingShowsMoreHeadThanPressingEarlyThanARhythm`.
+- 05.11 ilk derleme ve ölçüm (`D:\Pundun\form-probe\t113\`): derleme temiz, ilişki testleri 15/17, iki kırmızı ezme testi; açık kalan kabuller T-114 (ezme, sim) ve T-115 (zemin, kollar, poz) ile kapanacak. İyi satırlar ±%2 tuttu.
+- 05.11 birleşme: `IKTest` `cb1763bf` (T-114, T-115 ile). Tam takım: PlayMode 98/102 (2 kırmızı `ReferenceUiReviewTests`, bilinen; 2 atlanan ölçüm testi), EditMode 1281/1285 (4 kırmızı UI builder, bilinen). Tek tuş görünümü T-116'da devam ediyor.
