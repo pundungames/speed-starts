@@ -43,3 +43,4 @@ Kullanici 05.11 (T-119 geciyor iken oynadi), kendi sozleriyle:
 - 4: footGrip 0.97 (ayak dunyada 0.5 m/s kayiyordu), _sitW ani gecis yalniz dalista, 7923e76c. Diger anlik atamalar tarandi, ek yol bulunmadi.
 - 5: limbSpring 15/0.85, limbLag 11, FootLag 20, FootBlend 22, frontHomeTime 0.2.
 - Olculmedi. Emin degilim: HopFrom/HopTo'nun gercek hop yuksekligine etkisi, pairLean 30 pelvisPitchRange'de kirpilir mi, footGrip'in max hizdaki salinim hizina etkisi.
+- Geri alma (T-121 oyunda iki kez sekti): T-119 hali + fc604097 (capraz kol, cift ayak kollar, UpdateBounceLean yalniz baseBend/bend, lean ve legLean'e yazmaz) + 66c5977c (yalniz liftKick * _dive). SoftFall, HopFrom/HopTo, footGrip, yay hizlari ve is 4/5 gelmedi.
