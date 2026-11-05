@@ -167,6 +167,10 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float stanceU;    // 0..1 through the stance (the foot's way)
             [System.NonSerialized] public float kneeRate;   // the knee's angular speed last frame (deg/s)
             [System.NonSerialized] public Track thighT, kneeT;   // a free leg's shown angles follow its phase's target through these
+            [System.NonSerialized] public float lockBallZ;   // where the ball was in front of the ankle when the foot was nailed (m)
+            [System.NonSerialized] public bool pinned;      // a foot that stands on the ground without being planted (rest, front, reach, land) is nailed in the world
+            [System.NonSerialized] public Vector3 pinPoint; // ...at this world point
+            [System.NonSerialized] public float pinOffset;  // after a pin lets go: how far behind the leg's own place the foot still is (m), melting away
             [System.NonSerialized] public float sitShiftZ;  // last frame: how far the sit-back moved this free leg's ankle along z (m)
             [System.NonSerialized] public LegAngles dispAngles;   // a planted leg's angles as shown (from the sat-back hip to the nailed ankle)
             [System.NonSerialized] public float dispThighWorld, dispW;   // ...its world thigh, and how much it differs from the solved one (0 = not sitting back)
@@ -343,10 +347,6 @@ namespace SpeedStars.Physical
         [Tooltip("A press that comes while the leg is still swinging takes it down to the touchdown pose at up to this " +
                  "angular speed (deg/s): quick, but a short curve from its own angles and speed, never a snap.")]
         public float catchSpeed = 600f;
-        [Tooltip("How much of the body's way the planted foot goes back with (1 = nailed to the ground). Slightly under 1 " +
-                 "the foot creeps back a little, which keeps the leg's swing through the stance from being faster than " +
-                 "it can look at top speed.")]
-        [Range(0.5f, 1f)] public float footGrip = 0.92f;
         [Tooltip("A foot never stays down longer than this (s), however slowly the body goes over it.")]
         public float stanceMax = 0.4f;
         [Tooltip("The stride (how far the knee drives, how far the foot lands and pushes back) grows from strideMin at x m/s " +
@@ -735,6 +735,9 @@ namespace SpeedStars.Physical
         const float RootSpeedBlend = 12f;      // the root's speed for the swing's end speed is smoothed at this rate (1/s)
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
         const float Overstretch = 0.985f;      // a planted leg this near its full length is at toe-off (the knee never locks)
+        const float PinExit = 1.8f;            // a pinned foot lets go when it is raised this many TouchHeights (hysteresis)
+        const float PinMelt = 20f;             // a foot the pin let go of melts to its leg's place at this rate (1/s)
+        const float PinLift = 0.06f;           // ...and stays up to this much (m) off the ground while it does
         const float CatchGrace = 0.14f;        // a finished catch waits this long (s) for the foot to be down before it is planted anyway
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
@@ -897,6 +900,8 @@ namespace SpeedStars.Physical
             leg.pitch = leg.swingW = leg.toeRoll = 0f;
             leg.thighRate = leg.kneeRate = 0f;
             leg.thighT.set = leg.kneeT.set = false;
+            leg.pinned = false;
+            leg.pinOffset = 0f;
             leg.grounded = leg.needLock = leg.toeOff = leg.carry = false;
             leg.footZ = leg.dz0 = leg.stanceU = 0f;
             leg.cycle = 0f;
@@ -1101,7 +1106,7 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>The thigh's angular speed the stance starts with (deg/s, − = going back): the root's own speed over the hip's height.</summary>
-        float StanceRate() => -Mathf.Rad2Deg * _rootSpeed * footGrip / Mathf.Max(MinExtent, _extent);
+        float StanceRate() => -Mathf.Rad2Deg * _rootSpeed / Mathf.Max(MinExtent, _extent);
 
         static float Herm(float p0, float p1, float m0, float m1, float u)
         {
@@ -1494,6 +1499,13 @@ namespace SpeedStars.Physical
             return Mathf.Sqrt(Mathf.Max(0f, l1 * l1 + l2 * l2 - 2f * l1 * l2 * Mathf.Cos(maxKnee * Mathf.Deg2Rad)));
         }
 
+        /// <summary>How far in front of the ankle the ball of the foot is (m, runner space) with the foot pitched this much (deg, + = toes down).</summary>
+        static float BallZ(Leg leg, float pitchDeg)
+        {
+            float a = pitchDeg * Mathf.Deg2Rad;
+            return leg.ballOffset.y * Mathf.Sin(a) + leg.ballOffset.z * Mathf.Cos(a);
+        }
+
         /// <summary>Where the planted ankle stands (runner space height): on the ground, raised by the heel coming up onto the ball.</summary>
         float AnkleGround(Leg leg) => _ground + HeelLift(leg) + ToeRise(leg);
 
@@ -1535,9 +1547,10 @@ namespace SpeedStars.Physical
                 // Sitting back, the free leg was shown moved by the sit-back (sitShiftZ): the nail goes where the foot was seen.
                 leg.footZ = leg.ankle.z + leg.sitShiftZ;
                 leg.dz0 = joint.z - leg.footZ;
+                leg.lockBallZ = BallZ(leg, leg.pitch + leg.rock);
                 leg.needLock = false;
             }
-            else leg.footZ -= rootStep * footGrip;
+            else leg.footZ -= rootStep;   // a planted foot is still in the world: it goes back with the root, all of it
             float behind = joint.z - leg.footZ;
             LegAngles end = Key(pushEnd, hopPushEnd);
             float endBehind = -(leg.thighLength * Mathf.Sin(end.thigh * Mathf.Deg2Rad) +
@@ -1555,14 +1568,16 @@ namespace SpeedStars.Physical
         void SolveStance(Leg leg, Vector3 hip, Quaternion pelvisTilt, float width, float bodyY, float legTurn, float dt)
         {
             Vector3 joint = Joint(leg, hip, pelvisTilt, width);
-            float dy = AnkleGround(leg) - bodyY - joint.y, dz = leg.footZ - joint.z;
+            // The heel coming up turns the foot about the ball: the ball stays where it was put, the ankle moves for it.
+            float ballShift = leg.lockBallZ - BallZ(leg, leg.pitch + leg.rock);
+            float dy = AnkleGround(leg) - bodyY - joint.y, dz = leg.footZ + ballShift - joint.z;
             float l1 = leg.thighLength, l2 = leg.shinLength;
             float reach = MaxReach(leg), shortest = Mathf.Abs(l1 - l2) + 0.02f;
             float d = Mathf.Sqrt(dy * dy + dz * dz);
             // Out of length with the foot behind the hip: toe-off. Looked at one frame ahead (the foot goes back with the root): the
             // frame that overstretched the leg turned the thigh 25 deg and the knee 30 deg in one step, so the swing now starts from
             // the last frame that was still a stance and goes on at its speed.
-            float stepBack = _rootSpeed * footGrip * Mathf.Max(0f, dt), dzNext = dz - stepBack;
+            float stepBack = _rootSpeed * Mathf.Max(0f, dt), dzNext = dz - stepBack;
             float dNext = Mathf.Sqrt(dy * dy + dzNext * dzNext);
             if (dz < 0f && (d >= reach * Overstretch || dNext >= reach * Overstretch)) leg.toeOff = true;
             float c = Mathf.Clamp(d, shortest, reach);
@@ -1787,6 +1802,7 @@ namespace SpeedStars.Physical
                 if (!preview && !leg.grounded && !leg.carry) leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + FreeFootRise(leg, Mathf.Min(0f, backLean)));
             }
             if (!preview) ShowPlantedAngles(hip, pelvisTilt, p.width, backLean, legTurn);
+            PinFeet(hip, backLean < 0f ? Quaternion.Euler(backLean, 0f, 0f) * pelvisTilt : pelvisTilt, p.width, dt);
 
             // Write the rig. The waist base sits at waistAngle plus its bend on the hips; the chain (TwistChain)
             // fills the chest in between it and the top, whose angle the neck and head work from (0 = the rig's rest).
@@ -2046,6 +2062,58 @@ namespace SpeedStars.Physical
             }
             _lastHipY = hip.y;
             _hipFree = free;
+        }
+
+        /// <summary>
+        /// The last layer, every leg in every phase that is not planted: a foot that stands on the ground stays where it is in the
+        /// world while the body moves on (the planted stance does it with footZ; resting, front, reaching and landed feet were
+        /// carried by their angles and slid). The pin is a world point, so the root's own move is used directly, no sum of steps.
+        /// When the leg runs out of length, or the foot is lifted, the pin lets go and the foot melts to where the leg puts it
+        /// (pinOffset), raised while it does: no snap, no slide. The dive, the settle, a jump and the hold's back leg are left to
+        /// their own rules (the pin fades with the hold weight).
+        /// </summary>
+        void PinFeet(Vector3 hip, Quaternion tilt, float width, float dt)
+        {
+            bool allowed = !preview && !_jumping && !_ballistic && _settle.Value <= 0f;
+            float strength = 1f - _dive;
+            for (int i = 0; i < 2; i++)
+            {
+                Leg leg = Legs(i);
+                bool was = leg.pinned;
+                Vector3 pinLocal = was ? transform.InverseTransformPoint(leg.pinPoint) : Vector3.zero;
+                bool phaseOk = leg.phase == LegPhase.Rest || leg.phase == LegPhase.Front || leg.phase == LegPhase.Reach || leg.phase == LegPhase.Land;
+                float gap = leg.ankle.y - AnkleGround(leg);
+                bool pin = allowed && !leg.grounded && phaseOk && (was ? gap <= TouchHeight * PinExit : gap <= TouchHeight && Mathf.Abs(leg.pinOffset) <= 0.002f);
+                if (pin && !was)
+                {
+                    leg.pinPoint = transform.TransformPoint(leg.ankle);
+                    pinLocal = leg.ankle;
+                }
+                if (pin)
+                {
+                    float targetZ = Mathf.Lerp(leg.ankle.z, pinLocal.z, strength);
+                    Vector3 joint = Joint(leg, hip, tilt, width);
+                    float dy = leg.ankle.y - joint.y, dz = targetZ - joint.z;
+                    if (Mathf.Sqrt(dy * dy + dz * dz) >= MaxReach(leg) * Overstretch) pin = false;   // out of length: the foot lets go
+                    else
+                    {
+                        leg.knee.z += (targetZ - leg.ankle.z) * 0.5f;
+                        leg.ankle.z = targetZ;
+                    }
+                }
+                // A planted leg took the pinned place as its nail (footZ), so nothing melts there; a lifted or released one melts from it.
+                if (leg.grounded) leg.pinOffset = 0f;
+                else if (!pin && was) leg.pinOffset = Mathf.Clamp(pinLocal.z - leg.ankle.z, -0.5f, 0.5f);
+                leg.pinned = pin;
+                if (!pin && leg.pinOffset != 0f)
+                {
+                    leg.pinOffset *= Mathf.Exp(-PinMelt * Mathf.Max(0f, dt));
+                    if (Mathf.Abs(leg.pinOffset) < 0.002f) leg.pinOffset = 0f;
+                    leg.ankle.z += leg.pinOffset;
+                    leg.knee.z += leg.pinOffset * 0.5f;
+                    leg.ankle.y += Mathf.Min(PinLift, Mathf.Abs(leg.pinOffset) * 0.6f);
+                }
+            }
         }
 
         /// <summary>
