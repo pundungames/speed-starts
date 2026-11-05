@@ -682,17 +682,15 @@ namespace SpeedStars.Physical
         public float pairLean = 30f;
         [Tooltip("The trunk opens back this much (deg) at the throw, two keys together.")]
         public float pairOpen = 10f;
-        [Tooltip("One key: the trunk goes back this much (deg) with each press and returns (the press clock, through the bounce spring).")]
-        public float hopRock = 8f;
-        [Tooltip("Running: the trunk goes back this much (deg) with each press and returns (the press clock, through the bounce spring), by the gait weight.")]
-        public float runRock = 8f;
-        [Tooltip("Running: the trunk leans forward this much (deg) speeding up and back slowing down (the smoothed acceleration, full at 4 m/s²).")]
-        public float accelRock = 10f;
+        [Tooltip("One key: the trunk goes back this much (deg) with each press at any speed and returns (the press clock, through the bounce spring).")]
+        public float hopRock = 14f;
+        [Tooltip("Running: the trunk goes back this much (deg) with each press at any speed and returns (the press clock, through the bounce spring), by the gait weight.")]
+        public float runRock = 16f;
         [Tooltip("Share of the run's trunk rock the pelvis takes (the rest is the waist and chest): the rock runs from the seat to the head. " +
                  "The legs do not turn with it.")]
-        [Range(0f, 1f)] public float pelvisRockShare = 0.3f;
+        [Range(0f, 1f)] public float pelvisRockShare = 0.4f;
         [Tooltip("The bounce lean follows its target through this spring: a press moves the target only.")]
-        public SpringSettings bounceLeanSpring = new SpringSettings(7f, 0.8f);
+        public SpringSettings bounceLeanSpring = new SpringSettings(9f, 0.8f);
 
         [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
         [Tooltip("The leg going over first: thigh and knee over the bar (knee 180 = straight).")]
@@ -1950,7 +1948,10 @@ namespace SpeedStars.Physical
             float armFall = Mathf.Min(1f / Mathf.Max(0.1f, armHopReturn), ArmReturnShare * _armPeriod);
             _armKick = 1f - Mathf.SmoothStep(0f, 1f, _armClock / armFall);
             // The run's rock comes back over the whole press interval (a slow rhythm: gently there and back), not in 0.17 s.
-            _rockKick = 1f - Mathf.SmoothStep(0f, 1f, _armClock / Mathf.Max(0.1f, ArmReturnShare * _armPeriod));
+            // It stays at the top for the first 0.35 of the fall, so the spring reaches the target even at a fast rhythm.
+            float rockFall = Mathf.Max(0.1f, ArmReturnShare * _armPeriod);
+            float rockU = Mathf.Clamp01((_armClock / rockFall - 0.35f) / 0.65f);
+            _rockKick = 1f - Mathf.SmoothStep(0f, 1f, rockU);
             float k = 1f - Mathf.Exp(-HopBlend * dt);
             bool off = preview || sim.InJump;
             // The hop target comes from the presses themselves (not the sim's slowly built bias, which keeps ~0.5 for a while after a
@@ -2559,15 +2560,15 @@ namespace SpeedStars.Physical
         {
             float pw = _pair * (1f - _dive), hw = _hop * (1f - _pair) * (1f - _dive);
             float rw = _stepping * (1f - _hop) * (1f - _pair) * (1f - _dive);   // the run's rock does not wait for the gait: it is there at a slow run too
-            float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + hw * -hopRock * _armKick +
-                           rw * (-runRock * _rockKick + accelRock * Mathf.Clamp(_accel / AccelMax, -1f, 1f));
+            float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + hw * -hopRock * _rockKick +
+                           rw * -runRock * _rockKick;
             _bounceLean.Step(target, bounceLeanSpring.frequency, bounceLeanSpring.damping, dt);
             // Only the waist and the chest move (baseBend, bend): the hips' lean and the legs' turn stay as they were, so the hip joint
             // and the feet do not move with the upper body.
             baseBend += _bounceLean.Value * 0.4f;
             bend += _bounceLean.Value;
             // The pelvis takes a small share in the run, so the rock goes from the seat to the head (the legs' turn, legLean, is not touched).
-            lean += _bounceLean.Value * pelvisRockShare * rw;
+            lean += _bounceLean.Value * pelvisRockShare * (rw + hw);
         }
 
         void ResetGait()
