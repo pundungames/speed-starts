@@ -147,6 +147,7 @@ namespace SpeedStars.Physical
             [HideInInspector] public float thighRate;   // the thigh's angular speed last frame (deg/s, + = forward)
             [System.NonSerialized] public bool grounded = true; // last frame its foot was down on the ground
             [System.NonSerialized] public double landStart = -1.0; // reached out: sim time it began coming down to land (− = not yet)
+            [System.NonSerialized] public bool stay;    // in front and staying there while the other key is pressed again
             [System.NonSerialized] public Spring kneeLag;   // the knee trailing its target in the air (kneeSpring)
             [System.NonSerialized] public float holdFromWorld, holdFromKnee; // where a hold began (thigh world, knee)
             public Vector3 RestBall => restAnkle + ballOffset;
@@ -378,6 +379,19 @@ namespace SpeedStars.Physical
         [Tooltip("A leg landed in front goes back toward home at the body's speed (the foot stays where it landed) but " +
                  "takes at most this long (s): slow, the legs stay apart longer.")]
         public float frontGroundMax = 0.5f;
+        [Tooltip("Between presses the leg that pushed folds up and comes in under the body to wait here for the next " +
+                 "press (the reference game: ~+10…+15° / ~85°, the foot under the hips).")]
+        public LegAngles waitPose = new LegAngles(12f, 85f);
+        [Tooltip("How long (s) the leg takes from its fold to waitPose.")]
+        public float returnTime = 0.18f;
+        [Tooltip("The same key pressed again with the other leg already in front: that leg stays in front at this pose " +
+                 "(the reference game: ~+40° / ~160°, nearly straight), going with the body (the foot slides a little).")]
+        public LegAngles frontStay = new LegAngles(40f, 160f);
+        [Tooltip("Slow (strideSpeed.x), while the other leg waits under the body, the staying front leg's knee gives to " +
+                 "this (deg); fast it stays at frontStay's knee.")]
+        public float frontStayBentKnee = 135f;
+        [Tooltip("How long (s) a leg takes to go from where it is into frontStay.")]
+        public float frontStayTime = 0.15f;
         [Tooltip("A leg's whole cycle (push + recover + mid + home) takes this many of the sim's steps (its StepTime, " +
                  "from the speed): 2 = one stride, the legs keep the body's pace however sparse the presses; a leg done " +
                  "early waits at home for the next press. Lower = quicker legs.")]
@@ -787,6 +801,12 @@ namespace SpeedStars.Physical
             // as it goes.
             if (other.phase == LegPhase.Push || other.phase == LegPhase.Recover) other.reachNext = true;
             else if (other.phase == LegPhase.Mid || other.phase == LegPhase.Wait) ReachOn(other, time);
+            // Already in front (the same key pressed again): it stays in front, it does not reach out anew.
+            else if (other.phase == LegPhase.Reach || other.phase == LegPhase.Front)
+            {
+                if (!other.stay) Enter(other, LegPhase.Front, time, frontStayTime);
+                other.stay = true;
+            }
             else Enter(other, LegPhase.Reach, time, PushTime());
         }
 
@@ -899,6 +919,7 @@ namespace SpeedStars.Physical
             leg.easeOut = false;
             leg.swing = false;
             leg.landStart = -1.0;
+            leg.stay = false;
         }
 
         /// <summary>
@@ -973,7 +994,7 @@ namespace SpeedStars.Physical
                         case LegPhase.Recover:
                             if (leg.reachNext) ReachOn(leg, end);
                             // Presses still coming: wait behind for the other key instead of drifting home.
-                            else if (end - _lastPress < openHoldTime) Enter(leg, LegPhase.Wait, end, 0f);
+                            else if (end - _lastPress < openHoldTime) Enter(leg, LegPhase.Wait, end, returnTime);
                             else if (leg.swing) EnterSwing(leg, LegPhase.Mid, end);
                             else Enter(leg, LegPhase.Mid, end, StepPart(midTime));
                             break;
@@ -1009,13 +1030,31 @@ namespace SpeedStars.Physical
         {
             switch (leg.phase)
             {
-                case LegPhase.Recover:
-                case LegPhase.Wait: return Recover();
+                case LegPhase.Recover: return Recover();
+                case LegPhase.Wait: return waitPose;
                 case LegPhase.Mid: return mid;
                 case LegPhase.Reach: return Reach();
                 case LegPhase.Front:
                 {
-                    LegAngles plain = LegAngles.Lerp(Home(), holdSupport, otherHold);
+                    // Staying in front (the other key pressed again): the leg keeps its place in front, nearly
+                    // straight, the knee giving a little at a slow run while the other waits under the body.
+                    // The knee does not give before the other leg has come in under the body: while it pushes and
+                    // returns the shin stays forward (a quick press does not pull it into the support either).
+                    LegAngles rest = Home();
+                    LegAngles plain;
+                    if (leg.stay)
+                    {
+                        var partner = leg == leftLeg ? rightLeg : leftLeg;
+                        rest = frontStay;
+                        float under = 0f;
+                        if (partner.phase == LegPhase.Wait && body && body.Sim != null)
+                            under = partner.duration > 0f
+                                ? Mathf.Clamp01((float)(body.Sim.Time - partner.phaseTime) / partner.duration) : 1f;
+                        float bent = Mathf.Lerp(frontStayBentKnee, frontStay.knee, Stride01());
+                        rest.knee = Mathf.Lerp(frontStay.knee, bent, under * under);
+                        plain = rest;
+                    }
+                    else plain = LegAngles.Lerp(rest, holdSupport, otherHold);
                     // The other leg really held (quick presses stay out of it): the support opens with the body's
                     // tip, from holdSupportStart upright to holdSupport at level.
                     float held = HeldWeight(otherHold);
