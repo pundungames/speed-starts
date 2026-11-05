@@ -282,17 +282,14 @@ namespace SpeedStars.PlayTests
         }
 
         [Test]
-        public void MashingAndPressingEarlyBothShowMuchMoreHeadThanARhythm()
+        public void MashingShowsMoreHeadThanPressingEarlyThanARhythm()
         {
-            // Pressing a little early (0.20) wastes about as many presses as mashing (0.14): both pile the head up until it
-            // sits near its limit, so the average no longer tells them apart - only from the rhythm.
             object tuning = NewTuning();
             float mash = Rhythm(tuning, 0.14f).HeadAverage;
             float early = Rhythm(tuning, 0.20f).HeadAverage;
             float rhythm = Rhythm(tuning, 0.26f).HeadAverage;
-            const float Margin = 20f;
-            Assert.Greater(mash, rhythm + Margin, "mashing must show the head far forward of the rhythm");
-            Assert.Greater(early, rhythm + Margin, "pressing early must show the head far forward of the rhythm");
+            Assert.Greater(mash, early, "mashing must show the head further forward than pressing early");
+            Assert.Greater(early, rhythm, "pressing early must show the head further forward than the rhythm");
         }
 
         [Test]
@@ -429,13 +426,12 @@ namespace SpeedStars.PlayTests
         [Test]
         public void NeighbouringMashGapsDoNotJumpInSpeed()
         {
-            // Gaps 0.01 apart, 0.08 up to 0.22. At 0.23 the beat is on time once the runner is fast, a different kind of run
-            // (a runner from the start cannot hold 0.22 but can hold 0.23): that edge is known and not asserted here.
+            // Gaps 0.01 apart from mashing up to a fast rhythm: the slope between them is continuous, no step to a crawl.
             object tuning = NewTuning();
             foreach (float hold in MashHolds)
             {
                 float prev = AlternatingSpeed(tuning, 0.08f, hold, 10f);
-                for (int i = 9; i <= 22; i++)
+                for (int i = 9; i <= 24; i++)
                 {
                     float now = AlternatingSpeed(tuning, i / 100f, hold, 10f);
                     Assert.LessOrEqual(Mathf.Max(now, prev) / Mathf.Max(0.05f, Mathf.Min(now, prev)), 1.6f, $"speed jumps between {(i - 1) / 100f:0.00} and {i / 100f:0.00} (key {hold:0.00})");
@@ -468,9 +464,10 @@ namespace SpeedStars.PlayTests
         {
             // The lean builds over seconds: 30 degrees takes a couple of seconds, 60 a few more, 80 later still; nothing lies down within a second.
             object tuning = NewTuning();
-            foreach (float gap in new[] { 0.12f, 0.13f, 0.14f })
+            foreach (float hold in MashHolds)
+                foreach (float gap in new[] { 0.12f, 0.13f, 0.14f })
             {
-                float[] t = HeadTimes(tuning, gap, 0.04f, 30f, 60f, 79f);
+                float[] t = HeadTimes(tuning, gap, hold, 30f, 60f, 79f);
                 Assert.Greater(t[0], 1f, $"{gap:0.00}: the head is at 30 degrees within a second");
                 Assert.Greater(t[1], t[0] + 1f, $"{gap:0.00}: 60 degrees comes too soon after 30");
                 Assert.Greater(t[2], t[1] + 0.5f, $"{gap:0.00}: 80 degrees comes too soon after 60");

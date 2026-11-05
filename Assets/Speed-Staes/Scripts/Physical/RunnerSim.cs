@@ -138,10 +138,10 @@ namespace SpeedStars.Physical
                  "from wherever the head is. How much of it a press takes comes from its timing: see goodKickShare and wasteKickShare.")]
         public float headKick = 12f;
         [Tooltip("Share of headKick a press with perfect timing takes (a press on time barely throws the head forward).")]
-        [Range(0f, 2f)] public float goodKickShare = 0.2f;
+        [Range(0f, 2f)] public float goodKickShare = 0.03f;
         [Tooltip("Share of headKick a wasted press (efficiency 0: in the air, very late, leg not back) takes. In between " +
                  "it follows the press's timing efficiency, so bad presses pile the head up and good ones keep it low.")]
-        [Range(0f, 5f)] public float wasteKickShare = 0.25f;
+        [Range(0f, 5f)] public float wasteKickShare = 0.03f;
         [Tooltip("Key still down: the head goes on forward at this rate (deg/s × the key's hold weight; both keys = twice).")]
         public float holdPush = 70f;
         [Tooltip("No key down: the head comes back to headBack through this spring. Presses before it is back pile it up.")]
@@ -166,16 +166,18 @@ namespace SpeedStars.Physical
         public SpringSettings holdOut = new SpringSettings(4.5f, 1f);
 
         [Header("Strain: wasted presses build it slowly, on-time presses and rest wear it off; it leans the head forward (over seconds)")]
-        [Tooltip("Strain (0..1) each wasted press adds, × (1 − the press's timing)^strainWastePower, and × the press's push scale squared: " +
+        [Tooltip("Strain (0..1) a press adds at most: × how early it comes (strainWastePower, strainWasteHalf) and × its push scale squared: " +
                  "over-tapping takes seconds to lean the runner, not one press, and tapping faster than a runner can step does not pile it up faster per second.")]
-        public float strainGain = 0.09f;
+        public float strainGain = 0.065f;
         [Tooltip("Strain each on-time press takes away, × its timing^8 (a wasted press takes none): back on the rhythm the head comes up within a couple of seconds.")]
         public float strainRelief = 0.2f;
         [Tooltip("An on-time press only wears strain off as far as the runner has been pressing on time lately: its relief is × Form^this. " +
                  "Mashing lands every other press on the beat by chance; without this the good ones wipe out what the wasted ones built. 0 = every on-time press relieves in full.")]
         public float strainReliefFormPower = 5f;
-        [Tooltip("Strain a press adds is × (1 − its timing)^this: above 1 a press only a little early adds much less than a fully wasted one, so a cadence a bit too fast bends the runner slowly and mashing quickly.")]
-        public float strainWastePower = 2f;
+        [Tooltip("Steepness of how early a press (the time to its landing, in step times) takes the strain it adds: high = a cadence only a little too fast adds almost none, mashing adds it all.")]
+        public float strainWastePower = 8f;
+        [Tooltip("How early a press (the time to its landing, in step times) takes half of the strain a wasted press adds: a cadence only a little too fast stays well below it, mashing is well above.")]
+        [Range(0.05f, 1f)] public float strainWasteHalf = 0.23f;
         [Tooltip("Strain lost per second whatever happens (1/s).")]
         public float strainLeak = 0.05f;
         [Tooltip("Extra leak (× strainLeak) when no press has come for about 0.5 s: keys up, the runner gets his breath.")]
@@ -397,6 +399,7 @@ namespace SpeedStars.Physical
             PressResult result;
             float eff;
             bool nearLanding = false;
+            float earliness = 0f;   // how far before the landing the press comes, in step times (0 on the ground and in a hop)
             bool repeat = LastLeg == leg && sinceLast < 1f;
             if (Speed < 0.3f && !Airborne && !launchPending)
             {
@@ -412,6 +415,8 @@ namespace SpeedStars.Physical
             else if (Airborne || (launchPending && !together))
             {
                 float toLand = TimeToLand();
+                if (launchPending) toLand += Mathf.Max(0f, (float)(_launchTime - Time)) + 2f * _launchVelocity / Mathf.Max(0.01f, T.gravity);
+                earliness = Mathf.Clamp01(toLand / Mathf.Max(0.05f, StepTime));
                 nearLanding = !launchPending && toLand < T.earlySoftTime;
                 eff = nearLanding
                     ? Mathf.Lerp(1f, T.earlyEfficiency, Mathf.SmoothStep(0f, 1f, toLand / Mathf.Max(0.001f, T.earlySoftTime)))
@@ -451,7 +456,7 @@ namespace SpeedStars.Physical
             _head.Velocity += T.headNod * share;
             // Wasted presses pile strain up a little each (a press cut short by the tapping speed less); on-time ones wear it off, as far
             // as the runner has been pressing on time lately (Form) - mashing hits the beat by chance every other press (no threshold).
-            Strain = Mathf.Clamp01(Strain + (T.strainGain * pushScale * pushScale * Mathf.Pow(1f - kickTiming, T.strainWastePower) - T.strainRelief * Mathf.Pow(kickTiming, 8f) * Mathf.Pow(_form, T.strainReliefFormPower)) * share);
+            Strain = Mathf.Clamp01(Strain + (T.strainGain * pushScale * pushScale * Wasted(earliness) - T.strainRelief * Mathf.Pow(kickTiming, 8f) * Mathf.Pow(_form, T.strainReliefFormPower)) * share);
             l.Kick = T.headKick * Mathf.Lerp(T.goodKickShare, T.wasteKickShare, 1f - kickTiming) * share;
 
             float gain = T.pushGain * eff * share * pushScale;
@@ -565,6 +570,13 @@ namespace SpeedStars.Physical
             Strain = Mathf.Max(0f, Strain - T.strainLeak * (1f + T.strainRest * quiet) * h);
             float lead = Mathf.Min(T.headForwardMax, _headFwd.Value + Strain * T.strainHead * T.headForwardMax);
             _head.Step(lead, T.headSpring.frequency, T.headSpring.damping, h);
+        }
+
+        /// <summary>How much of a press's strain it adds by how early it comes (0..1, rising smoothly): a little early costs almost nothing, far too early all of it.</summary>
+        float Wasted(float earliness)
+        {
+            float a = Mathf.Pow(earliness, T.strainWastePower), h = Mathf.Pow(Mathf.Max(0.01f, T.strainWasteHalf), T.strainWastePower);
+            return a / (a + h);
         }
 
         float EnergyFactor() =>

@@ -254,7 +254,7 @@ static class P
         var v10 = new Dictionary<string, float>();
         foreach (var hold in new[] { 0.04f, 0.07f })
         {
-            float prev = -1;
+            float prev = -1, t16 = 99f;
             for (int i = 8; i <= 24; i++)
             {
                 var r = SpamRun(i / 100f, hold);
@@ -267,7 +267,10 @@ static class P
                     if (r.T100 > 0 && r.T100 < 13f) bad.Add($"t100 {k}={r.T100:0.0}");
                 }
                 if (i >= 18 && i <= 22 && r.T100 > 0 && r.T100 <= 11.8f) bad.Add($"band {k}={r.T100:0.0}");
-                if (i >= 10 && i <= 14 && hold == 0.04f)
+                if (i == 22 && (r.V10 < 8f)) bad.Add($"v10 {k}={r.V10:0.0}");
+                if (i == 16) t16 = r.T100 < 0 ? 99f : r.T100;
+                if (i >= 18 && i <= 22 && (r.T100 < 0 ? 99f : r.T100) > t16 + 0.01f) bad.Add($"over16 {k}={r.T100:0.0}");
+                if (i >= 10 && i <= 14)
                 {
                     if (r.H30 < 0.5f || r.H30 > 3.5f) bad.Add($"b30 {k}={r.H30:0.0}");
                     if (r.H60 < 2.5f || r.H60 > 6.5f) bad.Add($"b60 {k}={r.H60:0.0}");
@@ -314,6 +317,61 @@ static class P
         Console.WriteLine(line);
     }
 
+    // Holds: key(s) down for 2 s from standing and from running (head / speed every 0.5 s) - must not change with the strain work.
+    static void HoldCheck()
+    {
+        foreach (var both in new[] { false, true })
+        foreach (var run in new[] { false, true })
+        {
+            var s = new RunnerSim(T()); double t = 0, next = 0.2, rel = -1; int leg = 0, rl = 0;
+            if (run) { while (t < 4) { if (t >= next) { s.Press(leg); rl = leg; rel = t + 0.07; leg = 1 - leg; next += 0.26; } if (rel >= 0 && t >= rel) { s.Release(rl); rel = -1; } s.Advance(1f / 240f); t += 1.0 / 240; } }
+            double t0 = t; s.Press(0); if (both) s.Press(1); string o = $"{(both ? "iki tus" : "tek tus")} {(run ? "kosudan" : "duruştan")}:";
+            double rep = 0.5;
+            while (t - t0 < 2.01) { s.Advance(1f / 240f); t += 1.0 / 240; if (t - t0 >= rep) { o += $" {rep:0.0}s={s.HeadAngle:0}/{s.Speed:0.0}"; rep += 0.5; } }
+            Console.WriteLine(o);
+        }
+    }
+
+    // Overtapping after a run, then back: 5 s at 0.26, 8 s at the gap, then 0.28. Speed / head at 2 s steps and when the head is back under 15.
+    static void Phased2(float gap, float tap)
+    {
+        var s = new RunnerSim(T()); double t = 0, next = 0.2, rel = -1; int leg = 0, rl = 0; double rep = 1, back = -1; string o = $"0.26 -> {gap:0.00}/{tap:0.00} -> 0.28:";
+        while (t < 21)
+        {
+            float g = t < 5 ? 0.26f : t < 13 ? gap : 0.28f, k = t < 5 || t >= 13 ? 0.07f : tap;
+            if (t >= next) { s.Press(leg); rl = leg; rel = t + k; leg = 1 - leg; next += g; }
+            if (rel >= 0 && t >= rel) { s.Release(rl); rel = -1; }
+            s.Advance(1f / 240f); t += 1.0 / 240;
+            if (t >= 13 && back < 0 && s.HeadAngle < 15f) back = t - 13;
+            if (t >= rep) { if (rep % 2 == 1 || rep >= 13 && rep <= 16) o += $" {rep:0}s={s.Speed:0.0}/{s.HeadAngle:0}"; rep += 1; }
+        }
+        Console.WriteLine(o + $" | baş<15 ritimden {back:0.0} sn sonra, son hiz {s.Speed:0.0}");
+    }
+
+    // Human-like: mean gap +- jitter (fixed seed), key time 0.06-0.16 random; 100 m time, mean of 5 seeds.
+    static float Human(float mean, float jitter, int seed, bool oneEarly)
+    {
+        var rnd = new Random(seed); var s = new RunnerSim(T()); double t = 0, next = 0.2, rel = -1; int leg = 0, rl = 0, n = 0;
+        while (t < 30 && s.Distance < 100f)
+        {
+            if (t >= next) { s.Press(leg); rl = leg; rel = t + 0.06 + rnd.NextDouble() * 0.10; leg = 1 - leg; n++; double j = (rnd.NextDouble() * 2 - 1) * jitter; if (oneEarly && n == 12) j = -mean * 0.5; next += mean + j; }
+            if (rel >= 0 && t >= rel) { s.Release(rl); rel = -1; }
+            s.Advance(1f / 240f); t += 1.0 / 240;
+        }
+        return s.Distance >= 100f ? (float)t : 30f;
+    }
+
+    static void HumanTable()
+    {
+        Console.WriteLine("insan gibi (5 tohum ortalama 100 m sn; sapmasiz satir; +-0.04 sapma; ayrica tek erken basis):");
+        foreach (var m in new[] { 0.22f, 0.24f, 0.26f, 0.28f })
+        {
+            float a = 0, b = 0, c = 0;
+            for (int sd = 1; sd <= 5; sd++) { a += Human(m, 0f, sd, false); b += Human(m, 0.04f, sd, false); c += Human(m, 0f, sd, true); }
+            Console.WriteLine($"  {m:0.00}: sapmasiz {a / 5:0.00}  +-0.04 {b / 5:0.00} ({(b / a - 1) * 100:+0;-0}%)  tek erken basis {c / 5:0.00} ({(c / a - 1) * 100:+0;-0}%)");
+        }
+    }
+
     static void Main(string[] args)
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
@@ -322,6 +380,9 @@ static class P
         if (args.Length > 0 && args[0] == "scan") { Scan(); return; }
         if (args.Length > 0 && args[0] == "grid") { Grid(); return; }
         if (args.Length > 0 && args[0] == "trace") { Trace(float.Parse(args[1]), args.Length > 2 ? float.Parse(args[2]) : 0.04f); return; }
+        if (args.Length > 0 && args[0] == "hold") { HoldCheck(); return; }
+        if (args.Length > 0 && args[0] == "human") { HumanTable(); return; }
+        if (args.Length > 0 && args[0] == "over") { foreach (var g in new[] { 0.22f, 0.20f, 0.18f, 0.16f, 0.12f }) { Phased2(g, 0.04f); Phased2(g, 0.07f); } return; }
         if (args.Length > 0 && args[0] == "start") { Start3(); return; }
         if (args.Length > 0 && args[0] == "cliff") { CliffSweep(); return; }
         if (args.Length > 0 && args[0] == "push") { PushSweep(); return; }
