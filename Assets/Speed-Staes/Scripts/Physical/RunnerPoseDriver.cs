@@ -2678,7 +2678,8 @@ namespace SpeedStars.Physical
             }
 
             // The last foot pushes off with nothing coming down: the body leaves the ground going up (never carried on down by the spring).
-            if (!_ballistic) _bodyY.Velocity = Mathf.Max(0f, _bodyY.Velocity) + liftKick * _dive;
+            // Capped: a pair jump's arc may already be rising, and the kick on top of it flew the body out of the camera.
+            if (!_ballistic) _bodyY.Velocity = Mathf.Min(Mathf.Max(0f, _bodyY.Velocity) + liftKick * _dive, liftKick);
             _ballistic = true;
             _bodyY.Velocity -= sim.T.gravity * dt;
             _bodyY.Value += _bodyY.Velocity * dt;
