@@ -392,6 +392,9 @@ namespace SpeedStars.Physical
         public float frontStayBentKnee = 135f;
         [Tooltip("How long (s) a leg takes to go from where it is into frontStay.")]
         public float frontStayTime = 0.15f;
+        [Tooltip("The other key held on this long (s) after its push counts as a real hold: the leg staying in front " +
+                 "in the air then comes down to take the body (quicker presses keep it in the air).")]
+        public float holdLandDelay = 0.1f;
         [Tooltip("A leg's whole cycle (push + recover + mid + home) takes this many of the sim's steps (its StepTime, " +
                  "from the speed): 2 = one stride, the legs keep the body's pace however sparse the presses; a leg done " +
                  "early waits at home for the next press. Lower = quicker legs.")]
@@ -632,6 +635,7 @@ namespace SpeedStars.Physical
         float _holdL, _holdR;                      // hold weights this frame
         bool _bound, _heightSet;
         bool _inFlight;                            // running with both feet in the air (not a dive)
+        float _flightFrom;                         // body height the running flight left the ground at
         float _lastBodyY;                          // last frame's body height (the head bone is last frame's too)
         bool _carried = true, _headDown;           // last frame: a leg carried the body / the head was on the ground
         float _pelvisNow;                          // this frame's pose pelvis pitch (deg): a held leg trails its line
@@ -931,6 +935,27 @@ namespace SpeedStars.Physical
             leg.phase == LegPhase.Reach && now >= leg.EndTime && leg.landStart < 0.0 &&
             (partner.phase == LegPhase.Recover || partner.phase == LegPhase.Wait);
 
+        /// <summary>How far (0…1) a leg waiting behind has come in under the body (0 while it is not waiting).</summary>
+        float UnderBody(Leg leg, double now)
+        {
+            if (leg.phase != LegPhase.Wait) return 0f;
+            return leg.duration > 0f ? Mathf.Clamp01((float)(now - leg.phaseTime) / leg.duration) : 1f;
+        }
+
+        /// <summary>A key held on past a quick press: held back for holdLandDelay after its push.</summary>
+        bool ReallyHeld(Leg leg) => leg.held && leg.phase == LegPhase.Hold && body && body.Sim != null &&
+                                    body.Sim.Time - leg.phaseTime >= holdLandDelay;
+
+        /// <summary>
+        /// A leg staying in front keeps in the air, the body gliding just over its foot, while the other pushes and
+        /// comes back in under the body — unless that one is really held: then something must take the body, the
+        /// front foot comes down.
+        /// </summary>
+        bool StayGlides(Leg leg, Leg partner, double now) =>
+            leg.phase == LegPhase.Front && leg.stay && !ReallyHeld(partner) &&
+            (partner.phase == LegPhase.Push || partner.phase == LegPhase.Hold || partner.phase == LegPhase.Recover ||
+             (partner.phase == LegPhase.Wait && UnderBody(partner, now) < 1f));
+
         /// <summary>Hand a swing on to its next phase (its share of the swing's time), still on the one curve.</summary>
         void EnterSwing(Leg leg, LegPhase phase, double time)
         {
@@ -965,6 +990,15 @@ namespace SpeedStars.Physical
                         partner.phase != LegPhase.Recover && partner.phase != LegPhase.Wait)
                     {
                         Enter(leg, LegPhase.Rest, time, StepPart(frontHomeTime));
+                        continue;
+                    }
+                    // Staying in front in the air: once the other is in under the body (or really held) it comes down —
+                    // landed, it is a front foot on the ground like any other (the body passes over it).
+                    if (leg.phase == LegPhase.Front && leg.stay && !StayGlides(leg, partner, time) &&
+                        (leg.grounded || ReallyHeld(partner)))
+                    {
+                        Enter(leg, LegPhase.Front, time, 0f);
+                        leg.duration = GroundTime(leg, Home(), Mathf.Max(PushTime(), frontGroundMax));
                         continue;
                     }
                     // Waiting behind: no press for openHoldTime, it comes on home by itself.
@@ -1046,10 +1080,7 @@ namespace SpeedStars.Physical
                     {
                         var partner = leg == leftLeg ? rightLeg : leftLeg;
                         rest = frontStay;
-                        float under = 0f;
-                        if (partner.phase == LegPhase.Wait && body && body.Sim != null)
-                            under = partner.duration > 0f
-                                ? Mathf.Clamp01((float)(body.Sim.Time - partner.phaseTime) / partner.duration) : 1f;
+                        float under = body && body.Sim != null ? UnderBody(partner, body.Sim.Time) : 0f;
                         float bent = Mathf.Lerp(frontStayBentKnee, frontStay.knee, Stride01());
                         rest.knee = Mathf.Lerp(frontStay.knee, bent, under * under);
                         plain = rest;
@@ -1195,7 +1226,7 @@ namespace SpeedStars.Physical
         /// </summary>
         void FollowHips(Leg leg, Leg partner, float legTurn, double now, float dt)
         {
-            bool planted = leg.phase == LegPhase.Rest || leg.phase == LegPhase.Front ||
+            bool planted = leg.phase == LegPhase.Rest || (leg.phase == LegPhase.Front && !leg.stay) ||
                            leg.phase == LegPhase.Push;
             leg.follow = Mathf.MoveTowards(leg.follow, planted ? 0f : 1f, FollowRate * dt);
             leg.thighWorld = leg.angles.thigh - legTurn * leg.follow;
@@ -1540,7 +1571,7 @@ namespace SpeedStars.Physical
             {
                 // Every hop leaves at flightLift: not the height spring's own speed (it may be catching the body
                 // sharply just then, and would throw it high).
-                if (!_inFlight) _bodyY.Velocity = flightLift;
+                if (!_inFlight) { _bodyY.Velocity = flightLift; _flightFrom = _bodyY.Value; }
                 _inFlight = true;
                 _bodyY.Velocity -= flightGravity * dt;
                 _bodyY.Value += _bodyY.Velocity * dt;
@@ -1549,6 +1580,10 @@ namespace SpeedStars.Physical
                 float glide = float.MinValue;
                 if (HoldsReach(leftLeg, rightLeg, sim.Time)) glide = Mathf.Max(glide, LegNeed(leftLeg) + GlideGap);
                 if (HoldsReach(rightLeg, leftLeg, sim.Time)) glide = Mathf.Max(glide, LegNeed(rightLeg) + GlideGap);
+                // A leg staying in front in the air: the body comes down no lower than it left (the push's lift
+                // goes up and back down) and no lower than just over that foot, until it lands.
+                if (StayGlides(leftLeg, rightLeg, sim.Time)) glide = Mathf.Max(glide, Mathf.Max(_flightFrom, LegNeed(leftLeg) + GlideGap));
+                if (StayGlides(rightLeg, leftLeg, sim.Time)) glide = Mathf.Max(glide, Mathf.Max(_flightFrom, LegNeed(rightLeg) + GlideGap));
                 if (_bodyY.Value < glide)
                 {
                     _bodyY.Value = glide;
@@ -1593,7 +1628,8 @@ namespace SpeedStars.Physical
         /// in the air on the ground, and never stays up on one either (it comes down onto it first).
         /// </summary>
         static bool Carries(Leg leg) =>
-            leg.grounded && (leg.phase == LegPhase.Rest || leg.phase == LegPhase.Front || leg.phase == LegPhase.Push);
+            leg.grounded && (leg.phase == LegPhase.Rest || (leg.phase == LegPhase.Front && !leg.stay) ||
+                             leg.phase == LegPhase.Push);
 
         /// <summary>
         /// Body height a carrying leg asks for: its foot on the ground, and its knee not in it (folding under the
