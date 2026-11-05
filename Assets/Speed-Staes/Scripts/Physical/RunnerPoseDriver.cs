@@ -2524,6 +2524,20 @@ namespace SpeedStars.Physical
                 leg.swingAnkle, leg.swingW * leg.strideW);
             bend = Mathf.Clamp(Mathf.Lerp(bend, leg.jumpAnkle, leg.jumpW), -ankleUpMax, ankleDownMax);
             leg.footBone.rotation = Quaternion.AngleAxis(bend, axis) * neutral;
+
+            // The last word on the floor is the foot as it is now posed: if the ball of it is under the ground (the predicted pitch,
+            // FreeFootRise, can be a few degrees off, and a reaching or resting leg is not raised by it at all) the foot turns up
+            // until it stands on it. The floor is the one thing nothing after this step moves.
+            if (preview || !leg.toeBone) return;
+            float floor = GroundY(leg) - 0.003f;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector3 ball = Local(leg.toeBone), ankle = Local(leg.footBone);
+                if (ball.y >= floor || bend <= -ankleUpMax) break;
+                float arm = Mathf.Max(0.06f, Mathf.Abs(ball.z - ankle.z));
+                bend = Mathf.Max(-ankleUpMax, bend - Mathf.Min(25f, Mathf.Rad2Deg * (floor - ball.y) / arm));
+                leg.footBone.rotation = Quaternion.AngleAxis(bend, axis) * neutral;
+            }
         }
 
         /// <summary>
