@@ -690,7 +690,11 @@ namespace SpeedStars.Physical
                  "The legs do not turn with it.")]
         [Range(0f, 1f)] public float pelvisRockShare = 0.4f;
         [Tooltip("The bounce lean follows its target through this spring: a press moves the target only.")]
-        public SpringSettings bounceLeanSpring = new SpringSettings(9f, 0.8f);
+        public SpringSettings bounceLeanSpring = new SpringSettings(5f, 0.5f);
+        [Tooltip("The chest and neck follow the pelvis's bounce lean through this spring (a little behind it): the seat goes first, the chest after, like a rider's trunk.")]
+        public SpringSettings bounceChestSpring = new SpringSettings(6f, 0.55f);
+        [Tooltip("Riding: the trunk leans forward this much (deg) as the body goes down and back as it comes up (full at 1.5 m/s of the body's height speed), one key or running.")]
+        public float rideBob = 6f;
 
         [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
         [Tooltip("The leg going over first: thigh and knee over the bar (knee 180 = straight).")]
@@ -790,6 +794,7 @@ namespace SpeedStars.Physical
         double _poseLastTime = -10.0;
         float _posePrevGap = 10f;                   // time between the last taken press and the one before (s)
         bool _poseSkippedOther;                     // the other key was pressed (and left to the sim) since the last taken press
+        Spring _bounceChest;                       // the chest's lean in the bounce: follows _bounceLean a little behind (bounceChestSpring)
         Spring _bounceLean;                        // the trunk's lean in the bounce (deg), through bounceLeanSpring
         float _rockKick;                           // 1 at a press, back to 0 over the press interval: the run's trunk rock
         float _armKick;                            // 1 right after a press, falling back: the hop's arm throw
@@ -2575,11 +2580,13 @@ namespace SpeedStars.Physical
             float rw = _stepping * (1f - _hop) * (1f - _pair) * (1f - _dive);   // the run's rock does not wait for the gait: it is there at a slow run too
             float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + hw * -hopRock * _rockKick +
                            rw * -runRock * _rockKick;
+            target += rideBob * Mathf.Clamp(-_bodyY.Velocity / 1.5f, -1f, 1f) * (rw + hw);   // down: forward, up: back
             _bounceLean.Step(target, bounceLeanSpring.frequency, bounceLeanSpring.damping, dt);
+            _bounceChest.Step(_bounceLean.Value, bounceChestSpring.frequency, bounceChestSpring.damping, dt);
             // Only the waist and the chest move (baseBend, bend): the hips' lean and the legs' turn stay as they were, so the hip joint
             // and the feet do not move with the upper body.
             baseBend += _bounceLean.Value * 0.4f;
-            bend += _bounceLean.Value;
+            bend += _bounceChest.Value;
             // The pelvis takes a small share in the run, so the rock goes from the seat to the head (the legs' turn, legLean, is not touched).
             lean += _bounceLean.Value * pelvisRockShare * (rw + hw);
         }
@@ -2587,6 +2594,7 @@ namespace SpeedStars.Physical
         void ResetGait()
         {
             _bounceLean.Reset();
+            _bounceChest.Reset();
             _gait.Reset();
             _kick.Reset();
             _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = _hopTarget = 0f;
