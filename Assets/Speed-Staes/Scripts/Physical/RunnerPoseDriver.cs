@@ -660,7 +660,7 @@ namespace SpeedStars.Physical
         [Tooltip("Upper arm at the top of the throw (right after a press): up and forward.")]
         public float armHopUp = 85f;
         [Tooltip("Upper arm as the body comes down: down and back.")]
-        public float armHopDown = -65f;
+        public float armHopDown = -55f;
         [Tooltip("Elbow bend (deg) in the hop: about a right angle, the forearms up in front of the chest.")]
         public float armHopElbow = 90f;
         [Tooltip("The hop's elbow bends this much less (deg) at the top of the throw (the hand stays below the face) and this much more coming down.")]
@@ -671,7 +671,7 @@ namespace SpeedStars.Physical
 
         [Header("Two keys together (the sack hop): both arms swing together, the trunk takes part")]
         [Tooltip("Both arms loading, back (deg, − = back): they go back this far before the push and are thrown up and forward (armHopUp) at it.")]
-        public float armPairBack = -92f;
+        public float armPairBack = -82f;
         [Tooltip("Elbow (deg) with the arms loaded back (open) and thrown up (bent), the two-key hop.")]
         public Vector2 armPairElbow = new Vector2(35f, 100f);
         [Tooltip("The trunk bends forward this much (deg) loading the push, two keys together.")]
@@ -679,9 +679,13 @@ namespace SpeedStars.Physical
         [Tooltip("The trunk opens back this much (deg) at the throw, two keys together.")]
         public float pairOpen = 10f;
         [Tooltip("One key: the trunk rocks forward this much (deg) at the push and back as the body comes down.")]
-        public float hopRock = 7f;
+        public float hopRock = 12f;
+        [Tooltip("Running: the trunk rocks forward this much (deg) at each push and back in the stride (the press clock), by the gait weight.")]
+        public float runRock = 8f;
+        [Tooltip("Running: the trunk leans forward this much (deg) speeding up and back slowing down (the smoothed acceleration, full at 4 m/s²).")]
+        public float accelRock = 10f;
         [Tooltip("The bounce lean follows its target through this spring: a press moves the target only.")]
-        public SpringSettings bounceLeanSpring = new SpringSettings(5f, 0.8f);
+        public SpringSettings bounceLeanSpring = new SpringSettings(7f, 0.8f);
 
         [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
         [Tooltip("The leg going over first: thigh and knee over the bar (knee 180 = straight).")]
@@ -2446,7 +2450,9 @@ namespace SpeedStars.Physical
         void UpdateBounceLean(float dt, ref float baseBend, ref float bend)
         {
             float pw = _pair * (1f - _dive), hw = _hop * (1f - _pair) * (1f - _dive);
-            float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + hw * hopRock * (2f * _armKick - 1f);
+            float rw = _gaitW * (1f - _hop) * (1f - _pair) * (1f - _dive);
+            float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + hw * hopRock * (2f * _armKick - 1f) +
+                           rw * (runRock * (2f * _armKick - 1f) + accelRock * Mathf.Clamp(_accel / AccelMax, -1f, 1f));
             _bounceLean.Step(target, bounceLeanSpring.frequency, bounceLeanSpring.damping, dt);
             // Only the waist and the chest move (baseBend, bend): the hips' lean and the legs' turn stay as they were, so the hip joint
             // and the feet do not move with the upper body.
