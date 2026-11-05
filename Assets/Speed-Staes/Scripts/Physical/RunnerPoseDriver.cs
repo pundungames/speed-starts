@@ -725,6 +725,9 @@ namespace SpeedStars.Physical
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
         const float LockKnee = 15f;
+        const float SoftFall = 0.35f;          // share of gravity a body with nothing under it falls with when no key is held (not a dive)
+        const float HopFrom = 0.4f;            // the sim's hop bias where the one-key hop starts (one step alone gives ~0.45: no hop)...
+        const float HopTo = 0.85f;             // ...and where it is full (the same key again and again)
         const float HopBlend = 4f;             // the hop and pair weights follow their targets this fast (1/s)
         const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
         const float IdleRate = 4f;             // a leg turns into the balance leg (and back) this fast (1/s)
@@ -1811,7 +1814,7 @@ namespace SpeedStars.Physical
             _armKick = 1f - Mathf.SmoothStep(0f, 1f, _armClock / armFall);
             float k = 1f - Mathf.Exp(-HopBlend * dt);
             bool off = preview || sim.InJump;
-            _hop = Mathf.Lerp(_hop, off ? 0f : Mathf.SmoothStep(0f, 1f, sim.HopBias), k);
+            _hop = Mathf.Lerp(_hop, off ? 0f : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((sim.HopBias - HopFrom) / (HopTo - HopFrom))), k);
             _pair = Mathf.Lerp(_pair, off ? 0f : PairWeight(now), k);
             for (int i = 0; i < 2; i++)
             {
@@ -2147,9 +2150,11 @@ namespace SpeedStars.Physical
             }
 
             // The last foot pushes off with nothing coming down: the body leaves the ground going up (never carried on down by the spring).
-            if (!_ballistic) _bodyY.Velocity = Mathf.Max(0f, _bodyY.Velocity) + liftKick;
+            // The kick and the full fall are the dive's (by the hold weight, continuous): a single step ends without a hop, the body
+            // sinks softly to where the legs ask for it.
+            if (!_ballistic) _bodyY.Velocity = Mathf.Max(0f, _bodyY.Velocity) + liftKick * _dive;
             _ballistic = true;
-            _bodyY.Velocity -= sim.T.gravity * dt;
+            _bodyY.Velocity -= sim.T.gravity * Mathf.Lerp(SoftFall, 1f, _dive) * dt;
             _bodyY.Value += _bodyY.Velocity * dt;
             return _bodyY.Value;
         }
