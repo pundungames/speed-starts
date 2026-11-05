@@ -612,14 +612,20 @@ namespace SpeedStars.Physical
         public SpringSettings pressKickSpring = new SpringSettings(6f, 1f);
 
         [Header("Limb muscles: what is shown follows the target (input only moves the target, nothing snaps)")]
-        [Tooltip("A free leg's thigh, knee and an arm's swing and elbow follow their targets through this spring.")]
-        public SpringSettings limbSpring = new SpringSettings(11f, 0.9f);
-        [Tooltip("Fastest a free leg's thigh or knee turns (deg/s).")]
-        public float legMaxSpeed = 1100f;
+        [Tooltip("A free leg's thigh and an arm's swing (the first link of the chain) follow their targets through this spring. " +
+                 "Damping a little under 1: the end of a move overshoots a hair and comes back, like a muscle. The speed rises and " +
+                 "falls like a bell (the spring), it does not sit at a constant speed.")]
+        public SpringSettings limbSpring = new SpringSettings(12f, 0.8f);
+        [Tooltip("A free leg's knee and an arm's elbow (the second link) follow through this slower spring: the thigh leads, the " +
+                 "knee comes after, the shoulder leads and the elbow trails.")]
+        public SpringSettings limbLag = new SpringSettings(8.5f, 0.8f);
+        [Tooltip("Fastest a free leg's thigh or knee turns (deg/s): a limit for the extreme case only, above the usual swing, so " +
+                 "the speed never flattens at a constant (the look of linear motion).")]
+        public float legMaxSpeed = 1800f;
         [Tooltip("Hardest a free leg's thigh or knee speeds up or slows down (deg/s²).")]
         public float legMaxAccel = 19000f;
-        [Tooltip("Fastest an arm's swing or elbow turns (deg/s).")]
-        public float armMaxSpeed = 1000f;
+        [Tooltip("Fastest an arm's swing or elbow turns (deg/s): above the usual swing (see legMaxSpeed).")]
+        public float armMaxSpeed = 1700f;
         [Tooltip("Hardest an arm's swing or elbow speeds up or slows down (deg/s²).")]
         public float armMaxAccel = 16000f;
 
@@ -1333,7 +1339,7 @@ namespace SpeedStars.Physical
                     leg.kneeT.Seed(lastKnee, leg.kneeRate);
                 }
                 leg.angles.thigh = leg.thighT.Step(leg.angles.thigh, dt, limbSpring, legMaxSpeed, legMaxAccel);
-                leg.angles.knee = Mathf.Min(leg.kneeT.Step(leg.angles.knee, dt, limbSpring, legMaxSpeed, legMaxAccel), maxKnee);
+                leg.angles.knee = Mathf.Min(leg.kneeT.Step(leg.angles.knee, dt, limbLag, legMaxSpeed, legMaxAccel), maxKnee);
             }
             if (!leg.grounded)
             {
@@ -2293,7 +2299,7 @@ namespace SpeedStars.Physical
                     arm.elbowT.Seed(elbow, 0f);
                 }
                 swing = arm.swingT.Step(swing, dt, limbSpring, armMaxSpeed, armMaxAccel);
-                elbow = arm.elbowT.Step(elbow, dt, limbSpring, armMaxSpeed, armMaxAccel);
+                elbow = arm.elbowT.Step(elbow, dt, limbLag, armMaxSpeed, armMaxAccel);
             }
             arm.swing = swing;
             arm.elbow = elbow;
