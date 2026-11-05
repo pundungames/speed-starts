@@ -1083,6 +1083,13 @@ namespace SpeedStars.Physical
             if (use != leg) l.pressedAt = time;
             var used = Legs(use);
             NoteCycle(used, Legs(1 - use), time);
+            if (pairSecond)
+            {
+                Leg first = Legs(1 - use);
+                // The same swing time for both, so a pair lands together.
+                if (used.cycle > 0f && first.cycle > 0f) used.cycle = first.cycle = Mathf.Min(used.cycle, first.cycle);
+                first.pressedAt = time;
+            }
             _lastPress = time;
             if (!_jumping) BeginStance(used, time);
         }
@@ -1435,6 +1442,9 @@ namespace SpeedStars.Physical
                             {
                                 // Running, this foot lifts as the other one comes down or has come down (read here: the ankle is final).
                                 if (_plainRun > 0.5f && !_idleStock && OtherTakesOver(leg, partner)) leg.toeOff = true;
+                                // Both keys together: the feet leave the ground in the same frame. One still down, or still being caught, holds the other until it is done too.
+                                if (leg.toeOff && _pair > 0.5f && !_idleStock && !partner.toeOff && partner.phase == LegPhase.Push)
+                                    leg.toeOff = false;
                                 if (leg.toeOff)
                                 {
                                     if (_idleStock) Enter(leg, LegPhase.Rest, time, stockReturnTime);   // no key: the stance ends at home, not in a swing
