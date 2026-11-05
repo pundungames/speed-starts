@@ -514,6 +514,9 @@ namespace SpeedStars.Physical
         [Header("Toes")]
         [Tooltip("Toe joint (ball) → toe tip (m).")]
         public float toeLength = 0.06f;
+        [Tooltip("Toe joint (ball) → the shoe's tip (m): the floor is kept under the tip too, not only the ball and the heel. The toes bend up " +
+                 "first, and if that is not enough the foot turns up.")]
+        public float toeTipLength = 0.08f;
         [Tooltip("Max toes-up bend at the ball joint (deg).")]
         public float toeUpMax = 55f;
         [Tooltip("Max toes-down bend at the ball joint (deg).")]
@@ -2683,6 +2686,26 @@ namespace SpeedStars.Physical
             float bend = Mathf.Lerp(-leg.swingToe * leg.strideW * leg.swingW, leg.toeRoll * leg.strideW - footPitch, onGround); // + = toes down
             bend = Mathf.Clamp(Mathf.Lerp(bend, 0f, leg.jumpW), -toeUpMax, toeDownMax);
             leg.toeBone.rotation = Quaternion.AngleAxis(bend, axis) * (leg.footBone.rotation * leg.restToeInFoot);
+
+            // The floor under the shoe's tip as well (the toe bone is the ball): toes down put the tip ~8 cm past it into the ground. The
+            // toes bend up first (the tip level), and what that cannot do the foot turns up. The last step on the foot.
+            if (preview) return;
+            float floorY = GroundY(leg) - 0.003f;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector3 dir = transform.InverseTransformDirection(Quaternion.AngleAxis(bend, axis) * (leg.footBone.rotation * leg.toeInFoot)).normalized;
+                Vector3 tip = Local(leg.toeBone) + dir * toeTipLength;
+                if (tip.y >= floorY) break;
+                float deficit = floorY - tip.y;
+                if (bend > -toeUpMax + 0.5f)
+                    bend = Mathf.Max(-toeUpMax, bend - Mathf.Min(40f, Mathf.Rad2Deg * deficit / Mathf.Max(0.03f, toeTipLength)));
+                else
+                {
+                    float arm = Mathf.Max(0.1f, Mathf.Abs(tip.z - Local(leg.footBone).z));
+                    leg.footBone.rotation = Quaternion.AngleAxis(-Mathf.Min(20f, Mathf.Rad2Deg * deficit / arm), axis) * leg.footBone.rotation;
+                }
+                leg.toeBone.rotation = Quaternion.AngleAxis(bend, axis) * (leg.footBone.rotation * leg.restToeInFoot);
+            }
         }
 
         void OnDrawGizmos()
