@@ -720,7 +720,6 @@ namespace SpeedStars.Physical
         const float RootSpeedBlend = 12f;      // the root's speed for the swing's end speed is smoothed at this rate (1/s)
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
         const float Overstretch = 0.985f;      // a planted leg this near its full length is at toe-off (the knee never locks)
-        const float HopPlant = 0.5f;           // one-key hop weight above which a landed foot is planted without waiting for the press
         const float CatchGrace = 0.14f;        // a finished catch waits this long (s) for the foot to be down before it is planted anyway
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
@@ -1254,10 +1253,11 @@ namespace SpeedStars.Physical
                             break;
                         case LegPhase.Land:
                             if (!_stepNow) Enter(leg, LegPhase.Rest, time, frontHomeTime * SpeedUp());
-                            else if (_hop * (1f - _pair) > HopPlant && leg.ankle.y - AnkleGround(leg) <= TouchHeight * 1.5f)
+                            else if (partner.phase != LegPhase.Hold && partner.phase != LegPhase.Reach && leg.ankle.y - AnkleGround(leg) <= TouchHeight * 1.5f)
                             {
-                                // Hopping on one key the foot is down before the press comes (the swing ends hopLead early): it is planted
-                                // where it landed, so the press finds it on the ground and only extends the stance; a late press waits on it.
+                                // A foot that lands before its press (a hop's swing ends hopLead early, or any late press) is planted
+                                // where it came down, so the press finds it on the ground and only extends the stance; a late press
+                                // waits on it and it never slides. No weight, no mode: only a held partner (dive, hold) keeps the old hover.
                                 leg.pressedAt = time;
                                 Enter(leg, LegPhase.Push, time, 0f);
                                 leg.grounded = leg.needLock = true;
