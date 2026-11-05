@@ -695,11 +695,13 @@ namespace SpeedStars.Physical
         [Tooltip("Elbow bend (deg) slow or untidy: loose and open.")]
         public float armElbowLoose = 60f;
         [Tooltip("The elbow bends this much more (deg; negative = opens) with the arm all the way forward: opening keeps the hand at the chin, off the face and the cap.")]
-        public float armElbowFront = 10f;
+        public float armElbowFront = 35f;
+        [Tooltip("Plain running: the elbow finishes closing when the arm has come this far (0..1) toward its front. High = the forearm keeps rising as the shoulder comes forward.")]
+        [Range(0.1f, 1f)] public float armElbowCloseAt = 0.8f;
         [Tooltip("Elbow bend (deg) at full speed with the arm all the way back: the arm opens at the elbow as it goes back (the front arm keeps armElbowRun).")]
         public float armElbowRunBack = 15f;
         [Tooltip("Share of the full-speed elbow bend that even the slowest run keeps (0..1): the elbow works at a jog, not only at a sprint.")]
-        [Range(0f, 1f)] public float armElbowMinShare = 0.6f;
+        [Range(0f, 1f)] public float armElbowMinShare = 0.85f;
 
         [Header("One-key hop arms (deg, + = forward): both arms throw the body up with each press")]
         [Tooltip("Upper arm at the top of the throw (right after a press): up and forward.")]
@@ -2730,7 +2732,7 @@ namespace SpeedStars.Physical
                 float mid = 0.5f * (armRunBack + armRunFront);
                 float pump = mid + (Mathf.LerpUnclamped(armRunBack, armRunFront, t) - mid) * amp;
                 // The arm going back opens at the elbow too (the back half of the swing), the forward one stays bent with the hand at the chin.
-                float open = 1f - Mathf.SmoothStep(0f, 0.45f, Mathf.Clamp01(t));
+                float open = 1f - Mathf.SmoothStep(0f, armElbowCloseAt, Mathf.Clamp01(t));
                 float bend = Mathf.Lerp(armElbowLoose, Mathf.Lerp(armElbowRun + armElbowFront, armElbowRunBack, open),
                     Mathf.Lerp(armElbowMinShare, 1f, _speedCurve * form));
                 swing = Mathf.Lerp(swing, pump, _gaitW);
