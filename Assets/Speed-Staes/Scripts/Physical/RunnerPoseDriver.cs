@@ -970,7 +970,10 @@ namespace SpeedStars.Physical
             leg.pressedAt = time;
             leg.toeOff = false;
             if (leg.phase == LegPhase.Push) return;
-            if (leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid)
+            // A foot still in the air (a swing, a reach, a hover) is caught on its way down, never put on the ground in one frame.
+            bool inAir = leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid ||
+                         (!leg.grounded && leg.ankle.y - AnkleGround(leg) > TouchHeight * 1.5f);
+            if (inAir)
             {
                 StartCatch(leg, time);
                 return;
