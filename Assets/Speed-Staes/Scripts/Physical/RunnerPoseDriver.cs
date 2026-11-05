@@ -1039,13 +1039,6 @@ namespace SpeedStars.Physical
             float elapsed = Mathf.Min((float)(time - leg.pressedAt), leg.cycle * 0.5f);
             float lead = hopLead * _hop * (1f - _pair);   // one-key hop: the foot lands this much before the press is due
             float len = Mathf.Clamp(leg.cycle - elapsed - lead, swingMin, Mathf.Max(swingMin, stepTimeMax));
-            // Lifting off a planted foot while sitting back: from the angles it was shown with (continuous foot), not the solved ones.
-            if (leg.dispW > 0f)
-            {
-                leg.angles = LegAngles.Lerp(leg.angles, leg.dispAngles, leg.dispW);
-                leg.thighWorld = Mathf.Lerp(leg.thighWorld, leg.dispThighWorld, leg.dispW);
-                leg.dispW = 0f;
-            }
             Enter(leg, LegPhase.Recover, time, len);
             leg.swingT0 = time;
             leg.swingLen = len;
