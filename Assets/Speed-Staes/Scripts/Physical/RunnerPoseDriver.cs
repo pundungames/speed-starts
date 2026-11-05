@@ -680,9 +680,9 @@ namespace SpeedStars.Physical
 
         [Header("Arm pump (deg, + = forward): the arm follows the opposite leg's thigh both ways")]
         [Tooltip("Upper arm with the opposite leg all the way back, at full speed and Form.")]
-        public float armRunBack = -68f;
+        public float armRunBack = -48f;
         [Tooltip("Upper arm with the opposite leg forward, at full speed and Form.")]
-        public float armRunFront = 62f;
+        public float armRunFront = 44f;
         [Tooltip("Opposite leg's thigh (deg, from straight down) for the arm all the way back (x) and all the way forward (y).")]
         public Vector2 armThighRange = new Vector2(-45f, 55f);
         [Tooltip("Share of the swing width that slow running keeps (0..1).")]
@@ -692,9 +692,11 @@ namespace SpeedStars.Physical
         [Tooltip("Elbow bend (deg) slow or untidy: loose and open.")]
         public float armElbowLoose = 60f;
         [Tooltip("The elbow bends this much more (deg; negative = opens) with the arm all the way forward: opening keeps the hand at the chin, off the face and the cap.")]
-        public float armElbowFront = -10f;
+        public float armElbowFront = 10f;
         [Tooltip("Elbow bend (deg) at full speed with the arm all the way back: the arm opens at the elbow as it goes back (the front arm keeps armElbowRun).")]
-        public float armElbowRunBack = 28f;
+        public float armElbowRunBack = 15f;
+        [Tooltip("Share of the full-speed elbow bend that even the slowest run keeps (0..1): the elbow works at a jog, not only at a sprint.")]
+        [Range(0f, 1f)] public float armElbowMinShare = 0.6f;
 
         [Header("One-key hop arms (deg, + = forward): both arms throw the body up with each press")]
         [Tooltip("Upper arm at the top of the throw (right after a press): up and forward.")]
@@ -2708,7 +2710,8 @@ namespace SpeedStars.Physical
                 float pump = mid + (Mathf.LerpUnclamped(armRunBack, armRunFront, t) - mid) * amp;
                 // The arm going back opens at the elbow too (the back half of the swing), the forward one stays bent with the hand at the chin.
                 float open = 1f - Mathf.SmoothStep(0f, 0.45f, Mathf.Clamp01(t));
-                float bend = Mathf.Lerp(armElbowLoose, Mathf.Lerp(armElbowRun + armElbowFront, armElbowRunBack, open), _speedCurve * form);
+                float bend = Mathf.Lerp(armElbowLoose, Mathf.Lerp(armElbowRun + armElbowFront, armElbowRunBack, open),
+                    Mathf.Lerp(armElbowMinShare, 1f, _speedCurve * form));
                 swing = Mathf.Lerp(swing, pump, _gaitW);
                 elbow = Mathf.Lerp(elbow, bend, _gaitW);
             }
