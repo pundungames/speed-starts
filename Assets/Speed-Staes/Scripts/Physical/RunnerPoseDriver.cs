@@ -761,6 +761,7 @@ namespace SpeedStars.Physical
         const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
         const float IdleRate = 12f;             // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
+        const double PoseMinGap = 0.13;        // a press this soon after the last one the pose took is the sim's alone (about 7.7 steps a second)
         const float PairWindow = 0.04f;        // two presses this close (s) are together (full), twice as far apart are not at all (the sim's togetherWindow)
         const float PressTwin = 0.06f;         // two presses closer than this (s) are one throw (two keys together)
         const float ArmIdle = 10f;             // the arm clock before any press (s): the throw is over
@@ -781,6 +782,10 @@ namespace SpeedStars.Physical
         float _gaitW, _speedCurve, _accel, _lastSpeed, _gaitHead;   // gait weight 0..1; speed curve 0..1; trunk's share of head lean
         Spring _gait, _kick;                       // gait lean and the press pitch (deg, trunk)
         int _lastPresses, _armPresses;
+        int _posePresses, _poseLastLeg = -1;        // the presses the pose took (OnTapped, PoseMinGap), and the leg of the last one
+        double _poseLastTime = -10.0;
+        float _posePrevGap = 10f;                   // time between the last taken press and the one before (s)
+        bool _poseSkippedOther;                     // the other key was pressed (and left to the sim) since the last taken press
         Spring _bounceLean;                        // the trunk's lean in the bounce (deg), through bounceLeanSpring
         float _armKick;                            // 1 right after a press, falling back: the hop's arm throw
         float _armClock = ArmIdle, _armPeriod = ArmPeriodMax;   // seconds since the last press; the last press-to-press time
@@ -998,9 +1003,31 @@ namespace SpeedStars.Physical
                 return;
             }
             l.held = true;
-            NoteCycle(l, Legs(1 - leg), time);
+            // The pose takes only the presses a person's steps can follow. One that comes within PoseMinGap of the last one taken is
+            // the sim's alone (it counts it all the same: speed and timing are the sim's): no new stance, no cycle, no throw of the arms, no
+            // hop count. A key pressed together with the first of a pair (a few ms, after a pause) is the pair's second key, taken.
+            double sinceTaken = time - _poseLastTime;
+            bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= PoseMinGap * 0.4 && _posePrevGap >= PoseMinGap * 1.5;
+            if (!_jumping && _poseLastTime > -5.0 && sinceTaken < PoseMinGap && !pairSecond)
+            {
+                if (leg != _poseLastLeg) _poseSkippedOther = true;
+                l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
+                return;
+            }
+            // Keys in turn pressed faster than that: the step that is taken is the other leg's of the one before (L R L R every 0.08 s is
+            // still a run, not one leg hopping); one key pressed again and again stays one leg.
+            int use = leg;
+            if (_poseSkippedOther && leg == _poseLastLeg) use = 1 - leg;
+            _poseSkippedOther = false;
+            _posePrevGap = (float)System.Math.Min(10.0, sinceTaken);
+            _poseLastTime = time;
+            _poseLastLeg = use;
+            _posePresses++;
+            if (use != leg) l.pressedAt = time;
+            var used = Legs(use);
+            NoteCycle(used, Legs(1 - use), time);
             _lastPress = time;
-            if (!_jumping) BeginStance(l, time);
+            if (!_jumping) BeginStance(used, time);
         }
 
         /// <summary>
@@ -1902,9 +1929,9 @@ namespace SpeedStars.Physical
             // The arm's throw is a function of the time since the press, and its fall takes the shorter of 1/armHopReturn and
             // most of the last press-to-press time: an exponential fall never got there inside a 0.25 s tap (22% of the way left).
             _armClock += dt;
-            if (sim.Presses != _armPresses)
+            if (_posePresses != _armPresses)
             {
-                _armPresses = sim.Presses;
+                _armPresses = _posePresses;
                 // The second key of a pair, a few ms after the first, is the same throw: it neither restarts the clock nor sets the period.
                 if (_armClock >= PressTwin)
                 {
@@ -1918,11 +1945,11 @@ namespace SpeedStars.Physical
             bool off = preview || sim.InJump;
             // The hop target comes from the presses themselves (not the sim's slowly built bias, which keeps ~0.5 for a while after a
             // change of key): the same leg again within a second is 1, the other leg is 0, and a second without a press is 0.
-            if (sim.Presses != _hopPresses)
+            if (_posePresses != _hopPresses)
             {
-                _hopPresses = sim.Presses;
-                int leg = sim.LastLeg;
-                double at = sim.LastPressTime;
+                _hopPresses = _posePresses;
+                int leg = _poseLastLeg;
+                double at = _poseLastTime;
                 _hopTarget = leg >= 0 && leg == _hopPrevLeg && at - _hopPrevTime < HopRepeatWindow ? 1f : 0f;
                 _hopPrevLeg = leg;
                 _hopPrevTime = at;
@@ -2539,6 +2566,11 @@ namespace SpeedStars.Physical
             _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = _hopTarget = 0f;
             _hopPrevLeg = -1;
             _hopPrevTime = -10.0;
+            _posePresses = _armPresses = _hopPresses = 0;
+            _poseLastLeg = -1;
+            _poseLastTime = -10.0;
+            _posePrevGap = 10f;
+            _poseSkippedOther = false;
             _sitW[0] = _sitW[1] = 0f;
             _armKick = 0f;
             _armClock = ArmIdle;
