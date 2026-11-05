@@ -1863,7 +1863,11 @@ namespace SpeedStars.Physical
             if (leg.needLock)
             {
                 // Sitting back, the free leg was shown moved by the sit-back (sitShiftZ): the nail goes where the foot was seen.
-                leg.footZ = leg.ankle.z + leg.sitShiftZ;
+                // The ankle read here is LegFK's, before PinFeet (which runs later): a foot that was pinned or melting was shown elsewhere,
+                // and nailing the unpinned place threw it 46-81 cm in the frame it was pressed. Take the place it was drawn at.
+                float drawnZ = leg.ankle.z + leg.sitShiftZ + leg.pinOffset;   // melting after a pin: still shown moved by pinOffset
+                if (leg.pinned) drawnZ = Mathf.Lerp(drawnZ, transform.InverseTransformPoint(leg.pinPoint).z, 1f - _dive);   // as PinFeet drew it
+                leg.footZ = drawnZ;
                 leg.dz0 = joint.z - leg.footZ;
                 leg.lockBallZ = BallZ(leg, leg.pitch + leg.rock);
                 leg.needLock = false;
