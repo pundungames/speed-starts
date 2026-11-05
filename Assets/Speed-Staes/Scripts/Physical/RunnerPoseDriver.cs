@@ -2168,7 +2168,7 @@ namespace SpeedStars.Physical
             }
 
             // The last foot pushes off with nothing coming down: the body leaves the ground going up (never carried on down by the spring).
-            if (!_ballistic) _bodyY.Velocity = Mathf.Max(0f, _bodyY.Velocity) + liftKick;
+            if (!_ballistic) _bodyY.Velocity = Mathf.Max(0f, _bodyY.Velocity) + liftKick * _dive;
             _ballistic = true;
             _bodyY.Velocity -= sim.T.gravity * dt;
             _bodyY.Value += _bodyY.Velocity * dt;
