@@ -406,6 +406,8 @@ namespace SpeedStars.Physical
         [Range(0.2f, 1f)] public float animSpeedUp = 0.5f;
         [Tooltip("A leg in front (or landed with nothing more coming) goes home this slowly; quicker with speed.")]
         public float frontHomeTime = 0.3f;
+        [Tooltip("With no key the legs go to the waiting stance in this time (s): the way home after a push, quicker than the front foot's way home (frontHomeTime).")]
+        public float stockReturnTime = 0.16f;
         [Tooltip("A leg's cycle (its press to its next press) is never shorter than this (s).")]
         public float stepTimeMin = 0.2f;
         [Tooltip("Presses further apart than this (s) end the run stance and the swing is never longer: sparser presses " +
@@ -624,10 +626,10 @@ namespace SpeedStars.Physical
         [Tooltip("A free leg's thigh and an arm's swing (the first link of the chain) follow their targets through this spring. " +
                  "Damping a little under 1: the end of a move overshoots a hair and comes back, like a muscle. The speed rises and " +
                  "falls like a bell (the spring), it does not sit at a constant speed.")]
-        public SpringSettings limbSpring = new SpringSettings(12f, 0.8f);
+        public SpringSettings limbSpring = new SpringSettings(14f, 0.85f);
         [Tooltip("A free leg's knee and an arm's elbow (the second link) follow through this slower spring: the thigh leads, the " +
                  "knee comes after, the shoulder leads and the elbow trails.")]
-        public SpringSettings limbLag = new SpringSettings(8.5f, 0.8f);
+        public SpringSettings limbLag = new SpringSettings(10f, 0.8f);
         [Tooltip("Fastest a free leg's thigh or knee turns (deg/s): a limit for the extreme case only, above the usual swing, so " +
                  "the speed never flattens at a constant (the look of linear motion).")]
         public float legMaxSpeed = 1800f;
@@ -1312,7 +1314,7 @@ namespace SpeedStars.Physical
                     if (_idleStock && !leg.grounded && (leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid || leg.phase == LegPhase.Reach ||
                                                         leg.phase == LegPhase.Front || leg.phase == LegPhase.Push))
                     {
-                        Enter(leg, LegPhase.Rest, time, frontHomeTime * SpeedUp());
+                        Enter(leg, LegPhase.Rest, time, stockReturnTime);
                         continue;
                     }
                     switch (leg.phase)
@@ -1331,7 +1333,7 @@ namespace SpeedStars.Physical
                             }
                             else if (leg.toeOff)
                             {
-                                if (_idleStock) Enter(leg, LegPhase.Rest, time, frontHomeTime * SpeedUp());   // no key: the stance ends at home, not in a swing
+                                if (_idleStock) Enter(leg, LegPhase.Rest, time, stockReturnTime);   // no key: the stance ends at home, not in a swing
                                 else StartSwing(leg, time);
                             }
                             break;
