@@ -664,6 +664,20 @@ namespace SpeedStars.Physical
                  "down before the next one): the attack is instant, the return soft.")]
         public float armHopReturn = 6f;
 
+        [Header("Two keys together (the sack hop): both arms swing together, the trunk takes part")]
+        [Tooltip("Both arms loading, back (deg, − = back): they go back this far before the push and are thrown up and forward (armHopUp) at it.")]
+        public float armPairBack = -92f;
+        [Tooltip("Elbow (deg) with the arms loaded back (open) and thrown up (bent), the two-key hop.")]
+        public Vector2 armPairElbow = new Vector2(35f, 100f);
+        [Tooltip("The trunk bends forward this much (deg) loading the push, two keys together.")]
+        public float pairLean = 30f;
+        [Tooltip("The trunk opens back this much (deg) at the throw, two keys together.")]
+        public float pairOpen = 10f;
+        [Tooltip("One key: the trunk rocks forward this much (deg) at the push and back as the body comes down.")]
+        public float hopRock = 7f;
+        [Tooltip("The bounce lean follows its target through this spring: a press moves the target only.")]
+        public SpringSettings bounceLeanSpring = new SpringSettings(5f, 0.8f);
+
         [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
         [Tooltip("The leg going over first: thigh and knee over the bar (knee 180 = straight).")]
         public float jumpLeadThigh = 97f;
@@ -729,6 +743,7 @@ namespace SpeedStars.Physical
         const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
         const float IdleRate = 4f;             // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
+        const float PressTwin = 0.06f;         // two presses closer than this (s) are one throw (two keys together)
         const float ArmIdle = 10f;             // the arm clock before any press (s): the throw is over
         const float ArmPeriodMin = 0.1f;       // the press-to-press time the arm's return follows lies within these (s)
         const float ArmPeriodMax = 0.5f;
@@ -747,6 +762,7 @@ namespace SpeedStars.Physical
         float _gaitW, _speedCurve, _accel, _lastSpeed, _gaitHead;   // gait weight 0..1; speed curve 0..1; trunk's share of head lean
         Spring _gait, _kick;                       // gait lean and the press pitch (deg, trunk)
         int _lastPresses, _armPresses;
+        Spring _bounceLean;                        // the trunk's lean in the bounce (deg), through bounceLeanSpring
         float _armKick;                            // 1 right after a press, falling back: the hop's arm throw
         float _armClock = ArmIdle, _armPeriod = ArmPeriodMax;   // seconds since the last press; the last press-to-press time
         float _lastHipY;                           // last frame's final hip height (runner space), for the rise limit
@@ -1698,6 +1714,7 @@ namespace SpeedStars.Physical
             {
                 lean = UpdateLean(dt, out baseBend, out bend, out legLean);
                 UpdateGaitLean(sim, dt, ref lean, ref baseBend, ref bend, ref legLean);
+                UpdateBounceLean(dt, ref baseBend, ref bend);
                 lean -= hopBackLean * _hop;   // hopping on one leg the trunk sits back (SitBack below)
                 tip = UpdateTip(dt, pelvisPitchRange.y - p.pelvisPitch - lean);
                 lean += tip + jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
@@ -1804,8 +1821,12 @@ namespace SpeedStars.Physical
             if (sim.Presses != _armPresses)
             {
                 _armPresses = sim.Presses;
-                _armPeriod = Mathf.Clamp(_armClock, ArmPeriodMin, ArmPeriodMax);
-                _armClock = 0f;
+                // The second key of a pair, a few ms after the first, is the same throw: it neither restarts the clock nor sets the period.
+                if (_armClock >= PressTwin)
+                {
+                    _armPeriod = Mathf.Clamp(_armClock, ArmPeriodMin, ArmPeriodMax);
+                    _armClock = 0f;
+                }
             }
             float armFall = Mathf.Min(1f / Mathf.Max(0.1f, armHopReturn), ArmReturnShare * _armPeriod);
             _armKick = 1f - Mathf.SmoothStep(0f, 1f, _armClock / armFall);
@@ -2308,9 +2329,19 @@ namespace SpeedStars.Physical
             float hw = preview ? 0f : _hop * (1f - _pair);
             if (hw > 0.001f)
             {
-                swing = Mathf.Lerp(swing, Mathf.Lerp(armHopDown, armHopUp, _armKick), hw);
+                // Across, like a stride: the arm opposite the hopping leg (the leg that is not the balance leg) goes back as it pushes,
+                // the arm on its side goes forward; they change as the body comes down. By the balance leg's weight, continuous.
+                float kick = Mathf.Lerp(_armKick, 1f - _armKick, 1f - opposite.idle);
+                swing = Mathf.Lerp(swing, Mathf.Lerp(armHopDown, armHopUp, kick), hw);
                 // Thrown up the elbow closes to a right angle at most (the hand stays at the chin, never over the face), coming down it opens.
-                elbow = Mathf.Lerp(elbow, armHopElbow - armHopElbowSwing * (2f * _armKick - 1f), hw);
+                elbow = Mathf.Lerp(elbow, armHopElbow - armHopElbowSwing * (2f * kick - 1f), hw);
+            }
+            float pw = preview ? 0f : _pair;
+            if (pw > 0.001f)
+            {
+                // Both arms together, far back loading, up and forward at the push (the same clock as the hop's throw).
+                swing = Mathf.Lerp(swing, Mathf.Lerp(armPairBack, armHopUp, _armKick), pw);
+                elbow = Mathf.Lerp(elbow, Mathf.Lerp(armPairElbow.x, armPairElbow.y, _armKick), pw);
             }
             if (!preview && dt > 0f)
             {
@@ -2326,8 +2357,26 @@ namespace SpeedStars.Physical
             arm.elbow = elbow;
         }
 
+        /// <summary>
+        /// The upper body takes part in the bounce, through a spring so a press moves the target, not the pose: two keys together
+        /// (the sack hop) load forward before the push (pairLean), open back a little at the throw (pairOpen) and sit back in the air;
+        /// one key rocks the trunk a little with each hop (hopRock): forward at the push, back as it comes down. The chest, neck and
+        /// head follow as the lean spreads down the chain like the gait lean. The dive and the hold fade it.
+        /// </summary>
+        void UpdateBounceLean(float dt, ref float baseBend, ref float bend)
+        {
+            float pw = _pair * (1f - _dive), hw = _hop * (1f - _pair) * (1f - _dive);
+            float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + hw * hopRock * (2f * _armKick - 1f);
+            _bounceLean.Step(target, bounceLeanSpring.frequency, bounceLeanSpring.damping, dt);
+            // Only the waist and the chest move (baseBend, bend): the hips' lean and the legs' turn stay as they were, so the hip joint
+            // and the feet do not move with the upper body.
+            baseBend += _bounceLean.Value * 0.4f;
+            bend += _bounceLean.Value;
+        }
+
         void ResetGait()
         {
+            _bounceLean.Reset();
             _gait.Reset();
             _kick.Reset();
             _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = 0f;
