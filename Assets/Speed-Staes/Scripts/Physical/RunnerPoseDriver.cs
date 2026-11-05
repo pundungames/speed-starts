@@ -2313,9 +2313,12 @@ namespace SpeedStars.Physical
             float hw = preview ? 0f : _hop * (1f - _pair);
             if (hw > 0.001f)
             {
-                swing = Mathf.Lerp(swing, Mathf.Lerp(armHopDown, armHopUp, _armKick), hw);
+                // Across, like a stride: the arm opposite the hopping leg (the leg that is not the balance leg) goes back as it pushes,
+                // the arm on its side goes forward; they change as the body comes down. By the balance leg's weight, continuous.
+                float kick = Mathf.Lerp(_armKick, 1f - _armKick, 1f - opposite.idle);
+                swing = Mathf.Lerp(swing, Mathf.Lerp(armHopDown, armHopUp, kick), hw);
                 // Thrown up the elbow closes to a right angle at most (the hand stays at the chin, never over the face), coming down it opens.
-                elbow = Mathf.Lerp(elbow, armHopElbow - armHopElbowSwing * (2f * _armKick - 1f), hw);
+                elbow = Mathf.Lerp(elbow, armHopElbow - armHopElbowSwing * (2f * kick - 1f), hw);
             }
             if (!preview && dt > 0f)
             {
