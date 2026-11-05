@@ -705,7 +705,8 @@ namespace SpeedStars.Physical
 
         const float NeckShare = 0.5f;          // share of the head angle the neck (spine tip) bends; the head aims the rest
         const float HintDistance = 0.4f;       // knee hint in front of the knee, across the thigh (m)
-        const float FootBlend = 25f;           // foot pitch / swing weight follow their phase's value (1/s)
+        const float FootLag = 14f;             // the swing's ankle and toe curves are followed at this rate (1/s): the foot trails the knee
+        const float FootBlend = 18f;           // foot pitch / swing weight follow their phase's value (1/s)
         const float HeelBehindAnkle = 0.05f;   // heel contact point behind the ankle joint (m)
         const float ToesUpFree = 5f;           // foot this far toes up (deg) keeps its toes in line instead of flat
         const float MinPelvis = 0.1f;          // the pelvis never goes lower than this above the ground (m)
@@ -1367,8 +1368,10 @@ namespace SpeedStars.Physical
             if (air >= 0f)
             {
                 swingW = 1f;
-                leg.swingAnkle = Profile(pr => pr.swingAnkle, air);
-                leg.swingToe = Profile(pr => pr.swingToe, air);
+                // The foot is the last link of the chain (thigh, knee, foot): its swing curve is followed with a lag, so it trails the knee.
+                float kf = 1f - Mathf.Exp(-FootLag * Mathf.Max(0f, dt));
+                leg.swingAnkle = Mathf.Lerp(leg.swingAnkle, Profile(pr => pr.swingAnkle, air), kf);
+                leg.swingToe = Mathf.Lerp(leg.swingToe, Profile(pr => pr.swingToe, air), kf);
             }
             float k = 1f - Mathf.Exp(-FootBlend * dt);
             leg.pitch = Mathf.Lerp(leg.pitch, pitch, k);
