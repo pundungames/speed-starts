@@ -1516,7 +1516,12 @@ namespace SpeedStars.Physical
             float l1 = leg.thighLength, l2 = leg.shinLength;
             float reach = MaxReach(leg), shortest = Mathf.Abs(l1 - l2) + 0.02f;
             float d = Mathf.Sqrt(dy * dy + dz * dz);
-            if (d >= reach * Overstretch && dz < 0f) leg.toeOff = true;   // out of length with the foot behind the hip
+            // Out of length with the foot behind the hip: toe-off. Looked at one frame ahead (the foot goes back with the root): the
+            // frame that overstretched the leg turned the thigh 25 deg and the knee 30 deg in one step, so the swing now starts from
+            // the last frame that was still a stance and goes on at its speed.
+            float stepBack = _rootSpeed * footGrip * Mathf.Max(0f, dt), dzNext = dz - stepBack;
+            float dNext = Mathf.Sqrt(dy * dy + dzNext * dzNext);
+            if (dz < 0f && (d >= reach * Overstretch || dNext >= reach * Overstretch)) leg.toeOff = true;
             float c = Mathf.Clamp(d, shortest, reach);
             float knee = Mathf.Acos(Mathf.Clamp((l1 * l1 + l2 * l2 - c * c) / (2f * l1 * l2), -1f, 1f)) * Mathf.Rad2Deg;
             float bend = Mathf.Acos(Mathf.Clamp((l1 * l1 + c * c - l2 * l2) / (2f * l1 * c), -1f, 1f)) * Mathf.Rad2Deg;
