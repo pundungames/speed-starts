@@ -170,6 +170,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float idle;       // 0..1: the leg the hops leave out (the other key's), held out in front, straight
             [System.NonSerialized] public float footZ;      // the planted ankle's z (runner space; goes back as the root moves on)
             [System.NonSerialized] public float dz0;        // how far behind the hip joint the foot was put down (m)
+            [System.NonSerialized] public float plantGap;   // how far above the ground the ankle was when nailed (m); melts to 0 so the leg does not lengthen at once
             [System.NonSerialized] public float stanceU;    // 0..1 through the stance (the foot's way)
             [System.NonSerialized] public float kneeRate;   // the knee's angular speed last frame (deg/s)
             [System.NonSerialized] public Track thighT, kneeT;   // a free leg's shown angles follow its phase's target through these
@@ -814,7 +815,9 @@ namespace SpeedStars.Physical
         const float MaxCatch = 0.15f;
         const float KneeSpeedFactor = 1.5f;    // the knee may catch up this much faster than the thigh
         const float MaxRootStep = 1.5f;        // a root move longer than this (m) in a frame, or backwards, is a jump (reset, lane), not running
-        const float MaxRootSpeed = 20f;        // ...and so is one faster than this (m/s)
+        const float PlantMelt = 30f;           // a foot nailed above the ground comes down at this rate (1/s): the leg does not lengthen in one frame
+        const float PlantGapEnd = 0.001f;      // ...and is on the ground below this gap (m)
+        const float MaxRootSpeed = 20f;       // ...and so is one faster than this (m/s)
         const float RootSpeedBlend = 12f;      // the root's speed for the swing's end speed is smoothed at this rate (1/s)
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
         const float HeelEndShare = 0.55f;      // running: the heel is fully up when the foot is this share of the leg's length behind the hip
@@ -1020,6 +1023,7 @@ namespace SpeedStars.Physical
             leg.pinned = false;
             leg.pinOffset = 0f;
             leg.grounded = leg.needLock = leg.toeOff = leg.carry = false;
+            leg.plantGap = 0f;
             leg.plantedAt = -1.0;
             leg.swingBackLimit = float.MinValue;
             leg.footZ = leg.dz0 = leg.stanceU = 0f;
@@ -1453,6 +1457,7 @@ namespace SpeedStars.Physical
             leg.from = leg.angles;
             leg.fromPitch = leg.pitch;
             leg.grounded = leg.needLock = leg.toeOff = false;
+            leg.plantGap = 0f;
         }
 
         /// <summary>
@@ -1881,7 +1886,12 @@ namespace SpeedStars.Physical
                 // and nailing the unpinned place threw it 46-81 cm in the frame it was pressed. Take the place it was drawn at.
                 float drawnZ = leg.ankle.z + leg.sitShiftZ + leg.pinOffset;   // melting after a pin: still shown moved by pinOffset
                 if (leg.pinned) drawnZ = Mathf.Lerp(drawnZ, transform.InverseTransformPoint(leg.pinPoint).z, 1f - _dive);   // as PinFeet drew it
+                // A free foot drawn last frame follows the body, and the root has moved on since: LegFK's angles are frozen, so its place
+                // is this frame's by the hip. Where it was drawn in the world is rootStep behind (a pinned foot already is the world point).
+                if (!leg.pinned && leg.pinOffset == 0f) drawnZ -= rootStep;
                 leg.footZ = drawnZ;
+                // Nailed above the ground (the touch height, the catch's grace): the ankle comes down by melting, not by one longer leg.
+                leg.plantGap = Mathf.Max(0f, leg.ankle.y + _bodyY.Value - AnkleGround(leg));
                 leg.dz0 = joint.z - leg.footZ;
                 leg.lockBallZ = BallZ(leg, leg.pitch + leg.rock);
                 leg.needLock = false;
@@ -1912,7 +1922,8 @@ namespace SpeedStars.Physical
             Vector3 joint = Joint(leg, hip, pelvisTilt, width);
             // The heel coming up turns the foot about the ball: the ball stays where it was put, the ankle moves for it.
             float ballShift = leg.lockBallZ - BallZ(leg, leg.pitch + leg.rock);
-            float dy = AnkleGround(leg) - bodyY - joint.y, dz = leg.footZ + ballShift - joint.z;
+            float dy = AnkleGround(leg) + leg.plantGap - bodyY - joint.y, dz = leg.footZ + ballShift - joint.z;
+            leg.plantGap = leg.plantGap > PlantGapEnd ? leg.plantGap * Mathf.Exp(-PlantMelt * Mathf.Max(0f, dt)) : 0f;
             float l1 = leg.thighLength, l2 = leg.shinLength;
             float reach = MaxReach(leg), shortest = Mathf.Abs(l1 - l2) + 0.02f;
             float d = Mathf.Sqrt(dy * dy + dz * dz);
