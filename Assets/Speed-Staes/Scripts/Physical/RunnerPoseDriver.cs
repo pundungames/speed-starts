@@ -381,10 +381,13 @@ namespace SpeedStars.Physical
         public float hopBackLean = 42f;
         [Tooltip("The body's extra rise between two steps (m) at full hop bias, and with two keys pressed together (the legs " +
                  "in step): one leg hopping, or both legs bouncing the body like a sack.")]
-        public float hopRise = 0.22f;
+        public float hopRise = 0.26f;
         [Tooltip("The hopping leg's push: how far the pelvis rises (m, at full hop weight) through the push, up to the toe-off, so the " +
                  "bounce starts with the push; the flight's arc (hopRise) goes on from there. With it the stance's dip is gone.")]
-        public float hopPushRise = 0.04f;
+        public float hopPushRise = 0.07f;
+        [Tooltip("The hopping leg's stance: how far the pelvis sinks in the middle of it (m, at full hop weight): the body comes down " +
+                 "onto the foot (the leg bends, the push has room to reach back) and springs up out of it, a real jump.")]
+        public float hopStanceDip = 0.06f;
         [Tooltip("Fastest the hip may rise (m/s) at full one-key hop weight (both rise limits, maxRiseSpeed and hipRiseMax, blend to it): " +
                  "the bounce's arc is steeper than a run's and the run's limits flattened its top.")]
         [Min(0.1f)] public float hopHipRiseMax = 4.5f;
@@ -1540,7 +1543,7 @@ namespace SpeedStars.Physical
             // One key hopping the body does not sink into the stance (the dip fades with the hop weight) and rises through the push
             // instead, so the flight's arc starts from the push and the hop reads as a bounce, not a squat and a stretch.
             float hopW = _hop * (1f - _pair);
-            float extent = StanceExtent(leg) - stanceDip * _amp * Mathf.Sin(Mathf.PI * leg.stanceU) * (1f - hopW) +
+            float extent = StanceExtent(leg) - (stanceDip * _amp * (1f - hopW) + hopStanceDip * hopW) * Mathf.Sin(Mathf.PI * leg.stanceU) +
                            hopPushRise * hopW * Mathf.SmoothStep(0f, 1f, leg.stanceU);
             return extent + AnkleGround(leg) - joint.y;
         }
