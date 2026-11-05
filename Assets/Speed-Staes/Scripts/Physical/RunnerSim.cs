@@ -309,6 +309,12 @@ namespace SpeedStars.Physical
         public float Lean => LeanSpring.Value;
         /// <summary>The head angle (deg, + = forward).</summary>
         public float HeadAngle => _head.Value;
+        /// <summary>
+        /// A second head angle for the picture only (deg, + = forward): every press kicks it by the fixed headKick, with
+        /// no Strain, so the visual trunk chain moves in a good rhythm too (HeadAngle stays at its rest there, by design).
+        /// Nothing in the sim reads it: it changes no speed and no timing.
+        /// </summary>
+        public float ShownHeadAngle => _shown.Value;
         /// <summary>0..1: how much over-tapping has built up (slow); it leans the head.</summary>
         public float Strain { get; private set; }
         /// <summary>How well the runner has been running (0..1): the moving average of the presses' timing efficiency
@@ -343,6 +349,7 @@ namespace SpeedStars.Physical
 
         float _pending, _hopVelocity, _launchVelocity, _form, _hopBias;
         Spring _head, _headFwd;   // the head angle; where the keys have taken it, coming back with no key down
+        Spring _shown, _shownFwd; // the same for the picture (ShownHeadAngle): fixed kick, no strain; nothing reads them in the sim
         double _keyUpTime;        // sim time the last key down came up
         double _launchTime, _landTime;
         float _windupLeft, _windupTotal, _jumpLeft, _jumpTotal, _hitLeft;
@@ -370,6 +377,8 @@ namespace SpeedStars.Physical
             _head.Reset();
             Strain = 0f;
             _headFwd.Reset();
+            _shown.Reset();
+            _shownFwd.Reset();
             _keyUpTime = -1000.0;
             PoseLean = 0f;
             Legs[0].Reset();
@@ -454,6 +463,7 @@ namespace SpeedStars.Physical
             // A head that is down spoils the push: it comes back in full only as the head comes up.
             eff *= HeadUpright;
             _head.Velocity += T.headNod * share;
+            _shown.Velocity += T.headNod * share;
             // Wasted presses pile strain up a little each (a press cut short by the tapping speed less); on-time ones wear it off, as far
             // as the runner has been pressing on time lately (Form) - mashing hits the beat by chance every other press (no threshold).
             Strain = Mathf.Clamp01(Strain + (T.strainGain * pushScale * pushScale * Wasted(earliness) - T.strainRelief * Mathf.Pow(kickTiming, 8f) * Mathf.Pow(_form, T.strainReliefFormPower)) * share);
@@ -536,7 +546,7 @@ namespace SpeedStars.Physical
         /// </summary>
         void StepHead(float h)
         {
-            float push = 0f;
+            float push = 0f, shownPush = 0f;
             bool down = false;
             foreach (var l in Legs)
             {
@@ -545,11 +555,15 @@ namespace SpeedStars.Physical
                 if (!l.Pressed) continue;
                 down = true;
                 float t = (float)(Time - l.PressTime), t0 = Mathf.Max(0f, t - h);
-                push += l.Kick * (Mathf.Exp(-t0 / PressBurst) - Mathf.Exp(-t / PressBurst)) + T.holdPush * l.WeightValue * h;
+                float burst = Mathf.Exp(-t0 / PressBurst) - Mathf.Exp(-t / PressBurst), hold = T.holdPush * l.WeightValue * h;
+                push += l.Kick * burst + hold;
+                shownPush += T.headKick * burst + hold;
             }
             if (down)
             {
-                _headFwd.Velocity *= Mathf.Exp(-HeldStop * h);   // a key down stops the way back
+                float stop = Mathf.Exp(-HeldStop * h);
+                _headFwd.Velocity *= stop;   // a key down stops the way back
+                _shownFwd.Velocity *= stop;
                 _keyUpTime = Time;
             }
             else
@@ -559,6 +573,8 @@ namespace SpeedStars.Physical
                 float back = HeadRest;
                 var s = _headFwd.Value > back ? T.headReturnSpring : T.headSettleSpring;
                 _headFwd.Step(back, s.frequency * ramp, s.damping, h);
+                var ss = _shownFwd.Value > back ? T.headReturnSpring : T.headSettleSpring;
+                _shownFwd.Step(back, ss.frequency * ramp, ss.damping, h);
             }
             _headFwd.Value += push;
             if (_headFwd.Value > T.headForwardMax)
@@ -566,6 +582,13 @@ namespace SpeedStars.Physical
                 _headFwd.Value = T.headForwardMax;
                 _headFwd.Velocity = Mathf.Min(0f, _headFwd.Velocity);
             }
+            _shownFwd.Value += shownPush;
+            if (_shownFwd.Value > T.headForwardMax)
+            {
+                _shownFwd.Value = T.headForwardMax;
+                _shownFwd.Velocity = Mathf.Min(0f, _shownFwd.Velocity);
+            }
+            _shown.Step(_shownFwd.Value, T.headSpring.frequency, T.headSpring.damping, h);
             // Strain: a slow build from wasted presses, worn off by on-time ones and by rest; it adds to where the head is led.
             float quiet = Mathf.SmoothStep(0f, 1f, ((float)(Time - LastPressTime) - 0.15f) / 0.35f);
             Strain = Mathf.Max(0f, Strain - T.strainLeak * (1f + T.strainRest * quiet) * h);
