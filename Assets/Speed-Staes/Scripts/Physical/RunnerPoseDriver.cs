@@ -375,7 +375,7 @@ namespace SpeedStars.Physical
         public float hopSway = 12f;
         [Tooltip("The leg the hops leave out (not the one pressed again and again): held out in front, nearly straight, in the " +
                  "air, balancing; it carries nothing. Blended in by the sim's HopBias.")]
-        public LegAngles balanceLeg = new LegAngles(65f, 150f);
+        public LegAngles balanceLeg = new LegAngles(62f, 148f);
         [Tooltip("The trunk sits back by this much (deg) on one-leg hops: the head-led lean and the gait lean fade out as the " +
                  "hop bias rises.")]
         public float hopBackLean = 42f;
@@ -636,7 +636,7 @@ namespace SpeedStars.Physical
         [Tooltip("Upper arm with the opposite leg all the way back, at full speed and Form.")]
         public float armRunBack = -68f;
         [Tooltip("Upper arm with the opposite leg forward, at full speed and Form.")]
-        public float armRunFront = 72f;
+        public float armRunFront = 62f;
         [Tooltip("Opposite leg's thigh (deg, from straight down) for the arm all the way back (x) and all the way forward (y).")]
         public Vector2 armThighRange = new Vector2(-45f, 55f);
         [Tooltip("Share of the swing width that slow running keeps (0..1).")]
@@ -645,8 +645,8 @@ namespace SpeedStars.Physical
         public float armElbowRun = 95f;
         [Tooltip("Elbow bend (deg) slow or untidy: loose and open.")]
         public float armElbowLoose = 60f;
-        [Tooltip("The elbow closes this much more (deg) with the arm all the way forward.")]
-        public float armElbowFront = 25f;
+        [Tooltip("The elbow bends this much more (deg; negative = opens) with the arm all the way forward: opening keeps the hand at the chin, off the face and the cap.")]
+        public float armElbowFront = -20f;
 
         [Header("One-key hop arms (deg, + = forward): both arms throw the body up with each press")]
         [Tooltip("Upper arm at the top of the throw (right after a press): up and forward.")]
@@ -655,7 +655,7 @@ namespace SpeedStars.Physical
         public float armHopDown = -65f;
         [Tooltip("Elbow bend (deg) in the hop: about a right angle, the forearms up in front of the chest.")]
         public float armHopElbow = 90f;
-        [Tooltip("The hop's elbow bends this much more (deg) at the top of the throw and this much less coming down.")]
+        [Tooltip("The hop's elbow bends this much less (deg) at the top of the throw (the hand stays below the face) and this much more coming down.")]
         public float armHopElbowSwing = 30f;
         [Tooltip("The throw falls back after the press's snap in at most 1/x s (shorter when the presses come faster: it is " +
                  "down before the next one): the attack is instant, the return soft.")]
@@ -2309,8 +2309,8 @@ namespace SpeedStars.Physical
             if (hw > 0.001f)
             {
                 swing = Mathf.Lerp(swing, Mathf.Lerp(armHopDown, armHopUp, _armKick), hw);
-                // Thrown up the forearm folds in, coming down it opens: the arm is alive, not a log.
-                elbow = Mathf.Lerp(elbow, armHopElbow + armHopElbowSwing * (2f * _armKick - 1f), hw);
+                // Thrown up the elbow closes to a right angle at most (the hand stays at the chin, never over the face), coming down it opens.
+                elbow = Mathf.Lerp(elbow, armHopElbow - armHopElbowSwing * (2f * _armKick - 1f), hw);
             }
             if (!preview && dt > 0f)
             {
