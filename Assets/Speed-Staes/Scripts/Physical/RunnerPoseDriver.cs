@@ -705,7 +705,7 @@ namespace SpeedStars.Physical
         const float RootSpeedBlend = 12f;      // the root's speed for the swing's end speed is smoothed at this rate (1/s)
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
         const float Overstretch = 0.985f;      // a planted leg this near its full length is at toe-off (the knee never locks)
-        const float CatchGrace = 0.06f;        // a finished catch waits this long (s) for the foot to be down before it is planted anyway
+        const float CatchGrace = 0.14f;        // a finished catch waits this long (s) for the foot to be down before it is planted anyway
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
         const float LockKnee = 15f;
@@ -1202,7 +1202,7 @@ namespace SpeedStars.Physical
                                 // The catch ends and the foot is planted where it is SEEN touching: the planted leg is solved from the
                                 // ankle on the ground, so planting a foot still in the air (the shown leg lags its target) snapped
                                 // the knee and the foot down in one frame. It waits a moment for the foot to come down.
-                                bool low = leg.ankle.y - AnkleGround(leg) <= TouchHeight;
+                                bool low = leg.ankle.y - AnkleGround(leg) <= TouchHeight * 1.5f;
                                 if (Touching(leg) || (time >= leg.EndTime && (low || time >= leg.EndTime + CatchGrace))) leg.grounded = leg.needLock = true;
                             }
                             else if (leg.toeOff) StartSwing(leg, time);
