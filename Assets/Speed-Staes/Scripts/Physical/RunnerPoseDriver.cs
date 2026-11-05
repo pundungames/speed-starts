@@ -652,9 +652,9 @@ namespace SpeedStars.Physical
         [Tooltip("Elbow bend (deg) slow or untidy: loose and open.")]
         public float armElbowLoose = 60f;
         [Tooltip("The elbow bends this much more (deg; negative = opens) with the arm all the way forward: opening keeps the hand at the chin, off the face and the cap.")]
-        public float armElbowFront = -20f;
+        public float armElbowFront = -10f;
         [Tooltip("Elbow bend (deg) at full speed with the arm all the way back: the arm opens at the elbow as it goes back (the front arm keeps armElbowRun).")]
-        public float armElbowRunBack = 40f;
+        public float armElbowRunBack = 28f;
 
         [Header("One-key hop arms (deg, + = forward): both arms throw the body up with each press")]
         [Tooltip("Upper arm at the top of the throw (right after a press): up and forward.")]
@@ -663,8 +663,8 @@ namespace SpeedStars.Physical
         public float armHopDown = -68f;
         [Tooltip("Elbow bend (deg) in the hop: about a right angle, the forearms up in front of the chest.")]
         public float armHopElbow = 90f;
-        [Tooltip("The hop's elbow bends this much less (deg) at the top of the throw (the hand stays below the face) and this much more coming down.")]
-        public float armHopElbowSwing = 30f;
+        [Tooltip("The hop's elbow (deg) with the arm all the way back: open, the elbow straightens as the arm goes back.")]
+        public float armHopElbowBack = 28f;
         [Tooltip("The throw falls back after the press's snap in at most 1/x s (shorter when the presses come faster: it is " +
                  "down before the next one): the attack is instant, the return soft.")]
         public float armHopReturn = 6f;
@@ -675,14 +675,14 @@ namespace SpeedStars.Physical
         [Tooltip("Both arms thrown up and forward at the push of the two-key hop (deg): the one-key hop's armHopUp is lower.")]
         public float armPairUp = 85f;
         [Tooltip("Elbow (deg) with the arms loaded back (open) and thrown up (bent), the two-key hop.")]
-        public Vector2 armPairElbow = new Vector2(35f, 100f);
+        public Vector2 armPairElbow = new Vector2(25f, 105f);
         [Tooltip("The trunk bends forward this much (deg) loading the push, two keys together.")]
         public float pairLean = 30f;
         [Tooltip("The trunk opens back this much (deg) at the throw, two keys together.")]
         public float pairOpen = 10f;
-        [Tooltip("One key: the trunk rocks forward this much (deg) at the push and back as the body comes down.")]
-        public float hopRock = 12f;
-        [Tooltip("Running: the trunk rocks forward this much (deg) at each push and back in the stride (the press clock), by the gait weight.")]
+        [Tooltip("One key: the trunk goes back this much (deg) with each press and returns (the press clock, through the bounce spring).")]
+        public float hopRock = 8f;
+        [Tooltip("Running: the trunk goes back this much (deg) with each press and returns (the press clock, through the bounce spring), by the gait weight.")]
         public float runRock = 8f;
         [Tooltip("Running: the trunk leans forward this much (deg) speeding up and back slowing down (the smoothed acceleration, full at 4 m/s²).")]
         public float accelRock = 10f;
@@ -2468,7 +2468,9 @@ namespace SpeedStars.Physical
                 float kick = Mathf.Lerp(_armKick, 1f - _armKick, 1f - opposite.idle);
                 swing = Mathf.Lerp(swing, Mathf.Lerp(armHopDown, armHopUp, kick), hw);
                 // Thrown up the elbow closes to a right angle at most (the hand stays at the chin, never over the face), coming down it opens.
-                elbow = Mathf.Lerp(elbow, armHopElbow - armHopElbowSwing * (2f * kick - 1f), hw);
+                // The elbow opens with the arm going back and closes to a right angle as it comes up (like the run's open curve).
+                float hopOpen = 1f - Mathf.SmoothStep(0f, 0.45f, kick);
+                elbow = Mathf.Lerp(elbow, Mathf.Lerp(armHopElbow, armHopElbowBack, hopOpen), hw);
             }
             float pw = preview ? 0f : _pair;
             if (pw > 0.001f)
@@ -2501,8 +2503,8 @@ namespace SpeedStars.Physical
         {
             float pw = _pair * (1f - _dive), hw = _hop * (1f - _pair) * (1f - _dive);
             float rw = _gaitW * (1f - _hop) * (1f - _pair) * (1f - _dive);
-            float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + hw * hopRock * (2f * _armKick - 1f) +
-                           rw * (runRock * (2f * _armKick - 1f) + accelRock * Mathf.Clamp(_accel / AccelMax, -1f, 1f));
+            float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + hw * -hopRock * _armKick +
+                           rw * (-runRock * _armKick + accelRock * Mathf.Clamp(_accel / AccelMax, -1f, 1f));
             _bounceLean.Step(target, bounceLeanSpring.frequency, bounceLeanSpring.damping, dt);
             // Only the waist and the chest move (baseBend, bend): the hips' lean and the legs' turn stay as they were, so the hip joint
             // and the feet do not move with the upper body.
