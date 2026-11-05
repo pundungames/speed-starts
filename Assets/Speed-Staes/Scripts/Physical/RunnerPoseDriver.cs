@@ -929,7 +929,8 @@ namespace SpeedStars.Physical
         float _lastBodyY;                          // last frame's body height (the head bone is last frame's too)
         bool _carried = true, _headDown;           // last frame: a leg carried the body / the head was on the ground
         Spring _holdTip;                           // the lean a real hold has tipped the body over (deg)
-        float _heldNow, _bothHeld;                 // this frame: the strongest real hold of a leg in Hold (0..1), both keys' (0 unless both in Hold)
+        float _pairTargetLast;                     // PairWeight's last answer outside the wait for a pair's second key
+        float _heldNow, _bothHeld;                // this frame: the strongest real hold of a leg in Hold (0..1), both keys' (0 unless both in Hold)
         float _hipsNow, _holdHead, _legTurn;       // this frame: the hips' lean (deg), the hold's share of the head angle, the legs' turn with the hips
         MultiAimConstraint _headAim;
         Transform _headBone, _lookTarget, _neckBone;
@@ -2291,12 +2292,17 @@ namespace SpeedStars.Physical
         float PairWeight(double now)
         {
             Leg a = leftLeg, b = rightLeg;
-            if (a.lastPress < 0.0 || b.lastPress < 0.0) return 0f;
+            if (a.lastPress < 0.0 || b.lastPress < 0.0) return _pairTargetLast = 0f;
             float old = (float)(now - System.Math.Min(a.lastPress, b.lastPress));
             float recent = 1f - Mathf.SmoothStep(0f, 1f, (old - stepTimeMax) / Mathf.Max(0.01f, stepTimeMax));
             float gap = (float)System.Math.Abs(a.lastPress - b.lastPress);
             float together = 1f - Mathf.SmoothStep(0f, 1f, (gap - PairWindow) / PairWindow);
-            return together * recent;
+            // A pair's first key moves its lastPress and the gap is large until the second key comes: while that key can still come,
+            // the last answer stands (it is 0 in a run, so keys in turn read 0 all the same). Read twice a frame: the field only
+            // changes on the other returns, which give the same value for the same time.
+            float newest = (float)(now - System.Math.Max(a.lastPress, b.lastPress));
+            if (together < 1f && newest < 2f * PairWindow) return _pairTargetLast;
+            return _pairTargetLast = together * recent;
         }
 
         /// <summary>How much of the jump's pose is on: in over the wind-up, out over the last quarter of the air.</summary>
@@ -2903,7 +2909,7 @@ namespace SpeedStars.Physical
             _bounceChest.Reset();
             _gait.Reset();
             _kick.Reset();
-            _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = _hopTarget = 0f;
+            _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = _hopTarget = _pairTargetLast = 0f;
             _rideVel = 0f;
             _hopSpring.Reset();
             _pairSpring.Reset();
