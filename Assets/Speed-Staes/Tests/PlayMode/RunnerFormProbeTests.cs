@@ -90,7 +90,7 @@ namespace SpeedStars.PlayTests
         private const float FirstSecondsWindow = 2f;
         private const float StepWindowSeconds = 0.1f;
 
-        private enum Mode { Alternate, SameLeg, Both, Perfect, HoldOne, HoldBoth }
+        private enum Mode { Alternate, SameLeg, Both, Perfect, HoldOne, HoldBoth, Swap }
 
         private sealed class Scenario
         {
@@ -123,6 +123,10 @@ namespace SpeedStars.PlayTests
             // Alternating legs: a key's next press is at least two gaps (0.46 s) away, always after its release (hold <= 0.16 s).
             new Scenario { Name = "tap012", Mode = Mode.Alternate, Period = 0.26f, Hold = 0.12f },
             new Scenario { Name = "tap016", Mode = Mode.Alternate, Period = 0.28f, Hold = 0.16f },
+            new Scenario { Name = "rough", Mode = Mode.Alternate, Period = 0.30f, PeriodJitter = 0.10f, HoldMin = 0.05f, HoldMax = 0.18f, Seed = 7 },
+            new Scenario { Name = "hopRough", Mode = Mode.SameLeg, Period = 0.27f, PeriodJitter = 0.08f, HoldMin = 0.05f, HoldMax = 0.18f, Seed = 11 },
+            // One key for a few presses, then the keys in turn, and again: the legs change between a hop and a run with no mode.
+            new Scenario { Name = "swap", Mode = Mode.Swap, Period = 0.27f, PeriodJitter = 0.05f, HoldMin = 0.05f, HoldMax = 0.16f, Seed = 13 },
             new Scenario { Name = "human", Mode = Mode.Alternate, Period = 0.27f, PeriodJitter = 0.04f, HoldMin = 0.06f, HoldMax = 0.16f },
         };
 
@@ -574,10 +578,12 @@ namespace SpeedStars.PlayTests
                     case Mode.Alternate:
                     case Mode.SameLeg:
                     case Mode.Both:
+                    case Mode.Swap:
                         while (t >= _nextPress)
                         {
                             int n = _pressTimes.Count;
                             if (_sc.Mode == Mode.Both) Press(t, 0, 1);
+                            else if (_sc.Mode == Mode.Swap) Press(t, (n / 6) % 2 == 0 ? 0 : n % 2);
                             else Press(t, _sc.Mode == Mode.SameLeg ? 0 : n % 2);
                             _nextPress += _sc.Period + (_sc.PeriodJitter > 0f ? ((float)_rng.NextDouble() * 2f - 1f) * _sc.PeriodJitter : 0f);
                         }

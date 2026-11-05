@@ -166,6 +166,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float dz0;        // how far behind the hip joint the foot was put down (m)
             [System.NonSerialized] public float stanceU;    // 0..1 through the stance (the foot's way)
             [System.NonSerialized] public float kneeRate;   // the knee's angular speed last frame (deg/s)
+            [System.NonSerialized] public Track thighT, kneeT;   // a free leg's shown angles follow its phase's target through these
             [System.NonSerialized] public float sitShiftZ;  // last frame: how far the sit-back moved this free leg's ankle along z (m)
             [System.NonSerialized] public LegAngles dispAngles;   // a planted leg's angles as shown (from the sat-back hip to the nailed ankle)
             [System.NonSerialized] public float dispThighWorld, dispW;   // ...its world thigh, and how much it differs from the solved one (0 = not sitting back)
@@ -212,6 +213,39 @@ namespace SpeedStars.Physical
             return c;
         }
 
+        /// <summary>
+        /// A limb angle that is only ever steered: a damped spring toward the target with a limit on its speed and on its
+        /// acceleration (a muscle). Input and phase changes move the TARGET; the shown angle and its speed go on from where they were.
+        /// </summary>
+        public struct Track
+        {
+            public float x, v;
+            public bool set;
+
+            public void Seed(float angle, float speed)
+            {
+                x = angle;
+                v = speed;
+                set = true;
+            }
+
+            public float Step(float target, float dt, SpringSettings spring, float maxSpeed, float maxAccel)
+            {
+                if (dt <= 0f) return x;
+                float w = 2f * Mathf.PI * spring.frequency;
+                int steps = Mathf.Clamp(Mathf.CeilToInt(w * dt / 0.5f), 1, 16);
+                float h = dt / steps;
+                for (int i = 0; i < steps; i++)
+                {
+                    float a = w * w * (target - x) - 2f * spring.damping * w * v;
+                    a = Mathf.Clamp(a, -maxAccel, maxAccel);
+                    v = Mathf.Clamp(v + a * h, -maxSpeed, maxSpeed);
+                    x += v * h;
+                }
+                return x;
+            }
+        }
+
         [System.Serializable]
         public sealed class Arm
         {
@@ -227,6 +261,7 @@ namespace SpeedStars.Physical
             [HideInInspector] public Vector3 restDir;
             [HideInInspector] public float side;
             [HideInInspector] public float swing, elbow;   // this frame's pose (deg)
+            [System.NonSerialized] public Track swingT, elbowT;   // what is shown follows the pose's target through these
         }
 
         [Tooltip("The physics this draws (found on this object if empty). The visual never changes speed or timing.")]
@@ -270,14 +305,14 @@ namespace SpeedStars.Physical
         public LegAngles runHome = new LegAngles(10f, 160f);
         [Tooltip("Toe-off, the end of the stance: how far back the thigh goes with the foot on the ground before the foot " +
                  "lets go (the leg's length lets go earlier if it comes first). Also the first key of a held leg.")]
-        public LegAngles pushEnd = new LegAngles(-30f, 150f);
+        public LegAngles pushEnd = new LegAngles(-40f, 155f);
         [Tooltip("Swing, first key: the heel kicks up behind, the thigh stays back and the shin folds.")]
-        public LegAngles recover = new LegAngles(-40f, 100f);
+        public LegAngles recover = new LegAngles(-55f, 85f);
         [Tooltip("Swing, second key: the folded pass under the body, thigh about upright (knee ~60 or less: no straight " +
                  "leg swinging through like a walk).")]
-        public LegAngles mid = new LegAngles(15f, 55f);
+        public LegAngles mid = new LegAngles(15f, 38f);
         [Tooltip("Swing, third key: the knee driven up in front, the shin hanging down from it.")]
-        public LegAngles kneeDrive = new LegAngles(55f, 100f);
+        public LegAngles kneeDrive = new LegAngles(68f, 90f);
         [Tooltip("Swing end, touchdown: the foot swept down and back under the knee, the leg nearly (not fully) straight, " +
                  "the foot coming down under the body, not stretched out ahead of it.")]
         public LegAngles contact = new LegAngles(22f, 165f);
@@ -327,32 +362,32 @@ namespace SpeedStars.Physical
 
         [Header("Hops: one key again and again (one leg hops, the other held out), two keys together (a sack hop)")]
         [Tooltip("One-key hop (blended in by the hop weight): toe-off, how far back the pressed leg goes with the foot down.")]
-        public LegAngles hopPushEnd = new LegAngles(-30f, 165f);
+        public LegAngles hopPushEnd = new LegAngles(-45f, 172f);
         [Tooltip("One-key hop swing, first key: the leg flexes under the body, no heel kick.")]
-        public LegAngles hopRecover = new LegAngles(-25f, 120f);
+        public LegAngles hopRecover = new LegAngles(-35f, 70f);
         [Tooltip("One-key hop swing, second key: the deepest flex, thigh and knee both small.")]
-        public LegAngles hopMid = new LegAngles(5f, 105f);
+        public LegAngles hopMid = new LegAngles(15f, 70f);
         [Tooltip("One-key hop swing, third key: the leg opens again going down.")]
-        public LegAngles hopKneeDrive = new LegAngles(22f, 130f);
+        public LegAngles hopKneeDrive = new LegAngles(48f, 95f);
         [Tooltip("One-key hop touchdown: the foot lands under the hips, the leg nearly straight.")]
         public LegAngles hopContact = new LegAngles(10f, 165f);
         [Tooltip("The balance leg's thigh sways this many degrees (forward while the body rises) with the one-key hop, so it does not look frozen.")]
-        public float hopSway = 6f;
+        public float hopSway = 12f;
         [Tooltip("The leg the hops leave out (not the one pressed again and again): held out in front, nearly straight, in the " +
                  "air, balancing; it carries nothing. Blended in by the sim's HopBias.")]
-        public LegAngles balanceLeg = new LegAngles(28f, 177f);
+        public LegAngles balanceLeg = new LegAngles(65f, 150f);
         [Tooltip("The trunk sits back by this much (deg) on one-leg hops: the head-led lean and the gait lean fade out as the " +
                  "hop bias rises.")]
-        public float hopBackLean = 30f;
+        public float hopBackLean = 42f;
         [Tooltip("The body's extra rise between two steps (m) at full hop bias, and with two keys pressed together (the legs " +
                  "in step): one leg hopping, or both legs bouncing the body like a sack.")]
-        public float hopRise = 0.09f;
+        public float hopRise = 0.17f;
         [Tooltip("The hopping leg's push: how far the pelvis rises (m, at full hop weight) through the push, up to the toe-off, so the " +
                  "bounce starts with the push; the flight's arc (hopRise) goes on from there. With it the stance's dip is gone.")]
         public float hopPushRise = 0.04f;
         [Tooltip("Fastest the hip may rise (m/s) at full one-key hop weight (both rise limits, maxRiseSpeed and hipRiseMax, blend to it): " +
                  "the bounce's arc is steeper than a run's and the run's limits flattened its top.")]
-        [Min(0.1f)] public float hopHipRiseMax = 3f;
+        [Min(0.1f)] public float hopHipRiseMax = 4.5f;
 
         [Header("Leg timing (s)")]
         [Tooltip("A key down longer than this is a hold: the pushing leg goes on to the hold angles and the other leg reaches " +
@@ -543,14 +578,14 @@ namespace SpeedStars.Physical
         public Vector2 gaitSpeed = new Vector2(1f, 6f);
         [Tooltip("Pelvis turn about the vertical (deg) at full gait with the legs a full stride apart: the hip of the leg " +
                  "that is forward goes forward, so the step also gets longer.")]
-        public float pelvisTwist = 9f;
+        public float pelvisTwist = 22f;
         [Tooltip("The chest's tip turns the other way by this much (deg) at full gait. B-chest, in the middle of the " +
                  "twist chain, takes about 60% of the way from the pelvis's turn to this, so the chest itself turns less.")]
-        public float chestTwist = 16f;
+        public float chestTwist = 26f;
         [Tooltip("Thigh difference (deg) that counts as a full stride for the twist.")]
         public float twistThighRange = 90f;
         [Tooltip("Pelvis roll (deg) at full gait: the hip drops on the side of the leg that is swinging forward.")]
-        public float pelvisRoll = 3.5f;
+        public float pelvisRoll = 5f;
         [Tooltip("The chest rolls the other way by this much (deg) at full gait.")]
         public float chestRoll = 3f;
         [Tooltip("Lowest share of the gait that bad running (the sim's Form 0) keeps: twist, roll, lean and arm width " +
@@ -573,29 +608,43 @@ namespace SpeedStars.Physical
         [Tooltip("The press pitch settles through this spring (damping 1: no swing).")]
         public SpringSettings pressKickSpring = new SpringSettings(6f, 1f);
 
+        [Header("Limb muscles: what is shown follows the target (input only moves the target, nothing snaps)")]
+        [Tooltip("A free leg's thigh, knee and an arm's swing and elbow follow their targets through this spring.")]
+        public SpringSettings limbSpring = new SpringSettings(8f, 0.9f);
+        [Tooltip("Fastest a free leg's thigh or knee turns (deg/s).")]
+        public float legMaxSpeed = 1100f;
+        [Tooltip("Hardest a free leg's thigh or knee speeds up or slows down (deg/s²).")]
+        public float legMaxAccel = 19000f;
+        [Tooltip("Fastest an arm's swing or elbow turns (deg/s).")]
+        public float armMaxSpeed = 1000f;
+        [Tooltip("Hardest an arm's swing or elbow speeds up or slows down (deg/s²).")]
+        public float armMaxAccel = 16000f;
+
         [Header("Arm pump (deg, + = forward): the arm follows the opposite leg's thigh both ways")]
         [Tooltip("Upper arm with the opposite leg all the way back, at full speed and Form.")]
-        public float armRunBack = -50f;
+        public float armRunBack = -68f;
         [Tooltip("Upper arm with the opposite leg forward, at full speed and Form.")]
-        public float armRunFront = 45f;
+        public float armRunFront = 72f;
         [Tooltip("Opposite leg's thigh (deg, from straight down) for the arm all the way back (x) and all the way forward (y).")]
-        public Vector2 armThighRange = new Vector2(-35f, 50f);
+        public Vector2 armThighRange = new Vector2(-45f, 55f);
         [Tooltip("Share of the swing width that slow running keeps (0..1).")]
         [Range(0f, 1f)] public float armSlowAmp = 0.35f;
         [Tooltip("Elbow bend (deg) at full speed and Form: about a right angle.")]
-        public float armElbowRun = 90f;
+        public float armElbowRun = 95f;
         [Tooltip("Elbow bend (deg) slow or untidy: loose and open.")]
-        public float armElbowLoose = 40f;
+        public float armElbowLoose = 60f;
         [Tooltip("The elbow closes this much more (deg) with the arm all the way forward.")]
-        public float armElbowFront = 15f;
+        public float armElbowFront = 25f;
 
         [Header("One-key hop arms (deg, + = forward): both arms throw the body up with each press")]
         [Tooltip("Upper arm at the top of the throw (right after a press): up and forward.")]
-        public float armHopUp = 60f;
+        public float armHopUp = 85f;
         [Tooltip("Upper arm as the body comes down: down and back.")]
-        public float armHopDown = -45f;
+        public float armHopDown = -65f;
         [Tooltip("Elbow bend (deg) in the hop: about a right angle, the forearms up in front of the chest.")]
         public float armHopElbow = 90f;
+        [Tooltip("The hop's elbow bends this much more (deg) at the top of the throw and this much less coming down.")]
+        public float armHopElbowSwing = 30f;
         [Tooltip("The throw falls back after the press's snap in at most 1/x s (shorter when the presses come faster: it is " +
                  "down before the next one): the attack is instant, the return soft.")]
         public float armHopReturn = 6f;
@@ -814,6 +863,7 @@ namespace SpeedStars.Physical
             leg.angles = leg.from = crouch;
             leg.pitch = leg.swingW = leg.toeRoll = 0f;
             leg.thighRate = leg.kneeRate = 0f;
+            leg.thighT.set = leg.kneeT.set = false;
             leg.grounded = leg.needLock = leg.toeOff = leg.carry = false;
             leg.footZ = leg.dz0 = leg.stanceU = 0f;
             leg.cycle = 0f;
@@ -1262,6 +1312,18 @@ namespace SpeedStars.Physical
                     break;
             }
             leg.angles.knee = Mathf.Min(leg.angles.knee, maxKnee);
+            if (!leg.grounded && !preview && dt > 0f)
+            {
+                // The phases only make targets: the shown angles go on from where they were and how fast they went, whatever
+                // phase, press or release came (no reset on a press, an early or a late one alike).
+                if (!leg.thighT.set)
+                {
+                    leg.thighT.Seed(lastThigh, leg.thighRate);
+                    leg.kneeT.Seed(lastKnee, leg.kneeRate);
+                }
+                leg.angles.thigh = leg.thighT.Step(leg.angles.thigh, dt, limbSpring, legMaxSpeed, legMaxAccel);
+                leg.angles.knee = Mathf.Min(leg.kneeT.Step(leg.angles.knee, dt, limbSpring, legMaxSpeed, legMaxAccel), maxKnee);
+            }
             if (!leg.grounded)
             {
                 leg.thighRate = dt > 0f ? (leg.angles.thigh - lastThigh) / dt : 0f;
@@ -1455,6 +1517,7 @@ namespace SpeedStars.Physical
             leg.angles = new LegAngles(thigh + legTurn * leg.follow, knee);
             leg.thighRate = dt > 0f ? (leg.angles.thigh - lastThigh) / dt : 0f;
             leg.kneeRate = dt > 0f ? (knee - lastKnee) / dt : 0f;
+            leg.thighT.set = leg.kneeT.set = false;   // lifting off, the free leg goes on from these angles and their speed
 
             float th = thigh * Mathf.Deg2Rad, sh = (thigh - (180f - knee)) * Mathf.Deg2Rad;
             leg.knee = joint + new Vector3(0f, -Mathf.Cos(th), Mathf.Sin(th)) * l1;
@@ -1681,8 +1744,8 @@ namespace SpeedStars.Physical
 
             // Arms: one key, one leg, one arm (the right key's press sends the right leg back and the left arm
             // with it); a leg held back keeps its arm back.
-            StepArm(leftArm, p.leftArm, LegBack(rightLeg), rightLeg, leftLeg);
-            StepArm(rightArm, p.rightArm, LegBack(leftLeg), leftLeg, rightLeg);
+            StepArm(leftArm, p.leftArm, LegBack(rightLeg), rightLeg, leftLeg, dt);
+            StepArm(rightArm, p.rightArm, LegBack(leftLeg), leftLeg, rightLeg, dt);
         }
 
         /// <summary>
@@ -2180,7 +2243,7 @@ namespace SpeedStars.Physical
         /// leg's thigh, back or forward, gives the swing, between armRunBack and armRunFront; the width and the
         /// elbow's closing grow with speed and the sim's Form (slow or untidy: small and loose).
         /// </summary>
-        void StepArm(Arm arm, ArmPose pose, float legBack, Leg opposite, Leg own)
+        void StepArm(Arm arm, ArmPose pose, float legBack, Leg opposite, Leg own, float dt)
         {
             float back = preview ? 0f : legBack;
             float swing = Mathf.Lerp(pose.swing, armBack, back);
@@ -2203,7 +2266,18 @@ namespace SpeedStars.Physical
             if (hw > 0.001f)
             {
                 swing = Mathf.Lerp(swing, Mathf.Lerp(armHopDown, armHopUp, _armKick), hw);
-                elbow = Mathf.Lerp(elbow, armHopElbow, hw);
+                // Thrown up the forearm folds in, coming down it opens: the arm is alive, not a log.
+                elbow = Mathf.Lerp(elbow, armHopElbow + armHopElbowSwing * (2f * _armKick - 1f), hw);
+            }
+            if (!preview && dt > 0f)
+            {
+                if (!arm.swingT.set)
+                {
+                    arm.swingT.Seed(swing, 0f);
+                    arm.elbowT.Seed(elbow, 0f);
+                }
+                swing = arm.swingT.Step(swing, dt, limbSpring, armMaxSpeed, armMaxAccel);
+                elbow = arm.elbowT.Step(elbow, dt, limbSpring, armMaxSpeed, armMaxAccel);
             }
             arm.swing = swing;
             arm.elbow = elbow;
@@ -2217,6 +2291,7 @@ namespace SpeedStars.Physical
             _sitW[0] = _sitW[1] = 0f;
             _armKick = 0f;
             _armClock = ArmIdle;
+            leftArm.swingT.set = rightArm.swingT.set = false;
             _hipFree = false;
             _lastPresses = 0;
             _twist = _roll = _chestYaw = _chestRoll = 0f;
