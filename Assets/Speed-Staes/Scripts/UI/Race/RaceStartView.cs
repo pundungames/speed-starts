@@ -17,6 +17,7 @@ namespace SpeedStars.UI.Race
     /// objects. Nothing here catches taps: every graphic has raycast off and the CanvasGroup blocks nothing.
     /// Sound (T-052): each phase change the signal raises plays its countdown beep through the optional <see cref="ISfx"/>, on the same
     /// event as the input gate (GO sounds exactly when the runner may move). A late bind that only catches up does not sound.
+    /// T-120: GO adds the pistol and the crowd, a false start has its own sound, and the line plays the place's sound (RaceSfxRules) and the crowd.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class RaceStartView : MonoBehaviour
@@ -140,7 +141,9 @@ namespace SpeedStars.UI.Race
             if (wordText != null && wordText.font != null && wordText.font.atlasPopulationMode == AtlasPopulationMode.Dynamic)
                 wordText.font.TryAddCharacters(_finishWord);
             ShowPhase(RaceStartPhase.Finish);
-            _sfx?.Play(outcome.Rank == 1 && outcome.RunnerCount > 1 ? SfxId.Reward : SfxId.Claim);
+            if (_sfx == null) return;
+            _sfx.Play(RaceSfxRules.FinishFor(outcome.Rank, outcome.RunnerCount));
+            _sfx.Play(SfxId.CrowdEnd);
         }
 
         private void OnPhaseChanged(RaceStartPhase phase)
@@ -149,8 +152,16 @@ namespace SpeedStars.UI.Race
             if (_sfx == null) return;
             if (phase == RaceStartPhase.Ready) _sfx.Play(SfxId.CountdownReady);
             else if (phase == RaceStartPhase.Set) _sfx.Play(SfxId.CountdownSet);
-            else if (phase == RaceStartPhase.Go) _sfx.Play(SfxId.CountdownGo);
-            else if (phase == RaceStartPhase.FalseStart) _sfx.Play(SfxId.Denied);
+            else if (phase == RaceStartPhase.Go) PlayGo();
+            else if (phase == RaceStartPhase.FalseStart) _sfx.Play(SfxId.FalseStart);
+        }
+
+        /// <summary>GO: the beep, the starter's pistol and the crowd, together (the runner may move from this very moment).</summary>
+        private void PlayGo()
+        {
+            _sfx.Play(SfxId.CountdownGo);
+            _sfx.Play(SfxId.StartGun);
+            _sfx.Play(SfxId.CrowdStart);
         }
 
         /// <summary>Starts the motion of a phase from its first frame, replacing whatever was playing.</summary>

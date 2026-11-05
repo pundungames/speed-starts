@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace SpeedStars.Core.Audio
 {
-    /// <summary>The short sounds the game plays. The WAV file of each one carries its name (Audio/Sfx/&lt;name&gt;.wav).</summary>
+    /// <summary>The short sounds the game plays. The WAV file of each one carries its name (Audio/Sfx/&lt;name&gt;.wav). Values are stored as ints in AudioConfig: only append.</summary>
     public enum SfxId
     {
         /// <summary>A button went down.</summary>
@@ -17,7 +17,27 @@ namespace SpeedStars.Core.Audio
         CountdownSet,
         CountdownGo,
         /// <summary>A bigger reward (the 7-day claim).</summary>
-        Reward
+        Reward,
+        /// <summary>The starter's pistol, with GO.</summary>
+        StartGun,
+        /// <summary>The crowd at the start, with GO.</summary>
+        CrowdStart,
+        /// <summary>A press before GO.</summary>
+        FalseStart,
+        /// <summary>The player's left foot press.</summary>
+        StepLeft,
+        /// <summary>The player's right foot press.</summary>
+        StepRight,
+        /// <summary>The player knocked over a hurdle.</summary>
+        ObstacleHit,
+        /// <summary>Crossed the line first in a race with opponents.</summary>
+        FinishFirst,
+        /// <summary>Crossed the line in any other place (or alone).</summary>
+        FinishRace,
+        /// <summary>The crowd at the line.</summary>
+        CrowdEnd,
+        /// <summary>A new personal best on the results screen.</summary>
+        NewRecord
     }
 
     /// <summary>Plays the short sound effects. Silent while the player's sound switch is off.</summary>

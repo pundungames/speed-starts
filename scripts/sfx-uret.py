@@ -1,12 +1,15 @@
 """Generates the placeholder UI sound effects (T-052) as 44.1 kHz mono 16-bit WAV files.
 
 Standard library only (wave + math), no randomness: running it again writes byte-identical files.
-Run from the repository root:  python -I scripts/sfx-uret.py
+Run from the repository root:  python -I scripts/sfx-uret.py --force
+Since T-120 Audio/Sfx holds the real sound pack under the same names: without --force the script refuses to write, so a
+second run cannot overwrite the real sounds with these placeholders.
 Output: Assets/Speed-Staes/Audio/Sfx/<SfxId>.wav (file names match the SfxId enum names, which the config seed uses).
 Soft and short on purpose: peak -6 dBFS, 5 ms fade in / fade out. Real sound design replaces these later.
 """
 import math
 import os
+import sys
 import wave
 
 RATE = 44100
@@ -90,6 +93,8 @@ def write_wav(path, samples):
 
 
 def main():
+    if "--force" not in sys.argv[1:]:
+        sys.exit("Refusing to write: Audio/Sfx holds the real sounds (T-120). Pass --force to overwrite them with the placeholders.")
     os.makedirs(OUT_DIR, exist_ok=True)
     for name in sorted(SOUNDS):
         samples = finish(SOUNDS[name]())

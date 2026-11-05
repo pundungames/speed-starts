@@ -1,3 +1,4 @@
+using SpeedStars.Core.Audio;
 using SpeedStars.Core.Race;
 using SpeedStars.Meta.Config;
 using SpeedStars.Physical;
@@ -9,6 +10,8 @@ namespace SpeedStars.Bridge
     /// <summary>
     /// Gives each race the hurdles of its event: at READY the event's layout goes to <see cref="RunnerHurdles"/>, and the jump
     /// only works where there are hurdles (a swipe up in a flat race does nothing). An event not found is a flat race.
+    /// T-120: a hurdle the player knocks over plays ObstacleHit. The runner has no event for it, so the count of
+    /// <see cref="RunnerHurdles.Knocked"/> is watched; a count that drops (new race, reset) only follows it down, silently.
     /// </summary>
     public sealed class RaceHurdles : MonoBehaviour
     {
@@ -20,9 +23,15 @@ namespace SpeedStars.Bridge
         PracticeSession practice;
 
         RaceEventCatalog _events;
+        ISfx _sfx;
+        int _knockedSeen;
 
         [Inject]
         void Construct([InjectOptional] RaceEventCatalog events) => _events = events;
+
+        /// <summary>Optional: without a bound sound system a knocked hurdle is silent.</summary>
+        [Inject]
+        void InjectAudio([InjectOptional] ISfx sfx) => _sfx = sfx;
 
         void OnEnable()
         {
@@ -32,6 +41,14 @@ namespace SpeedStars.Bridge
         void OnDisable()
         {
             if (session) session.StartPhaseChanged -= OnStartPhase;
+        }
+
+        void Update()
+        {
+            if (!hurdles) return;
+            int knocked = hurdles.Knocked;
+            if (knocked > _knockedSeen) _sfx?.Play(SfxId.ObstacleHit);
+            _knockedSeen = knocked;
         }
 
         void OnStartPhase(RaceStartPhase phase)
@@ -49,6 +66,7 @@ namespace SpeedStars.Bridge
                 spacing = pSpacing;
             }
             hurdles.Configure(count, first, spacing);
+            _knockedSeen = hurdles.Knocked;
             if (hurdles.body) hurdles.body.acceptJump = count > 0;
         }
     }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DG.Tweening;
+using SpeedStars.Core.Audio;
 using SpeedStars.Core.Race;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
@@ -138,6 +139,7 @@ namespace SpeedStars.UI.Race
         private bool _punchRecord;
         private bool _punchGems;
         private bool _practiceAvailable;
+        private ISfx _sfx;
 
         public event Action PracticeRequested;
         public event Action RaceAgainRequested;
@@ -156,6 +158,13 @@ namespace SpeedStars.UI.Race
             _resultsNavigator = navigator;
             _resultsLeaderboard = leaderboard;
             _resultsSelection = selection;
+        }
+
+        /// <summary>Optional: without a bound sound system the record punch is silent.</summary>
+        [Inject]
+        public void InjectAudio([InjectOptional] ISfx sfx)
+        {
+            _sfx = sfx;
         }
 
         /// <summary>Optional: without opponents (no standings) the table shows the player's own race as before.</summary>
@@ -468,7 +477,10 @@ namespace SpeedStars.UI.Race
 
             float end = Mathf.Max(0f, (count - 1) * interval) + duration;
             if (_punchRecord && personalBestCard != null)
+            {
                 seq.Insert(end, personalBestCard.DOPunchScale(Vector3.one * _resultsMotion.ButtonPunchScale, _resultsMotion.ButtonPunchDuration, _resultsMotion.ButtonPunchVibrato));
+                seq.InsertCallback(end, () => _sfx?.Play(SfxId.NewRecord)); // with the punch, once per presented result
+            }
             if (_punchGems && gemRewardRoot != null)
                 seq.Insert(end, gemRewardRoot.transform.DOPunchScale(Vector3.one * _resultsMotion.ButtonPunchScale, _resultsMotion.ButtonPunchDuration, _resultsMotion.ButtonPunchVibrato));
 

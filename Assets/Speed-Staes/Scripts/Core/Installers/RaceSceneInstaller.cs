@@ -40,6 +40,8 @@ namespace SpeedStars.Installers
             Container.Bind<IResultsView>().FromInstance(results).AsSingle();
             // T-081: left / right arrow = left / right foot of the player's runner, next to Malik's N/M and touch.
             Container.BindInterfacesTo<ArrowKeyRunnerInput>().AsSingle().WithArguments(raceSession).NonLazy();
+            // T-120: the sound of the player's own steps.
+            Container.BindInterfacesTo<RaceStepSounds>().AsSingle().WithArguments(raceSession).NonLazy();
             // T-075/T-076: the bots keep the live order the HUD and the results list read (both inject it as optional).
             if (raceBots != null) Container.Bind(typeof(IRaceStandings), typeof(IRaceTraces)).FromInstance(raceBots).AsSingle();
             Container.Bind<IRaceEventLookup>().To<CatalogRaceEventLookup>().AsSingle();
