@@ -874,7 +874,9 @@ namespace SpeedStars.Physical
         const float HeldFrom = 0.25f;          // a key's hold weight below this is a tap, from here to HeldTo it turns into a real hold
         const float HeldTo = 0.6f;
         const float HoldRealPeak = 0.5f;       // a Hold whose real weight reached this was really held (a tap's ~0.3 weight gives ~0.05)
-        const float HoldTippedLean = 30f;      // the hips leaned this far (deg) when a held leg is let go: it comes in under the body
+        const float HoldChainOnAt = 0.5f;      // the hold's chain comes in when the strongest hold's weight is past this (a tap's stays under)
+        const float HoldChainOffLean = 25f;    // and goes when the hold is let go and the chain's own lean (deg) is back under this
+        const float HoldTippedLean = 30f;     // the hips leaned this far (deg) when a held leg is let go: it comes in under the body
 
         float _gaitW, _speedCurve, _accel, _lastSpeed, _gaitHead;   // gait weight 0..1; speed curve 0..1; trunk's share of head lean
         Spring _gait, _kick;                       // gait lean and the press pitch (deg, trunk)
@@ -928,7 +930,9 @@ namespace SpeedStars.Physical
         bool _bound, _heightSet;
         float _lastBodyY;                          // last frame's body height (the head bone is last frame's too)
         bool _carried = true, _headDown;           // last frame: a leg carried the body / the head was on the ground
-        Spring _holdTip;                           // the lean a real hold has tipped the body over (deg)
+        Spring _holdChain;                         // how much of the hold's chain (0..1): stays until the head has come back, not as the tip falls
+        bool _holdChainOn;
+        Spring _holdTip;                          // the lean a real hold has tipped the body over (deg)
         float _pairTargetLast;                     // PairWeight's last answer outside the wait for a pair's second key
         float _heldNow, _bothHeld;                // this frame: the strongest real hold of a leg in Hold (0..1), both keys' (0 unless both in Hold)
         float _hipsNow, _holdHead, _legTurn;       // this frame: the hips' lean (deg), the hold's share of the head angle, the legs' turn with the hips
@@ -1436,6 +1440,8 @@ namespace SpeedStars.Physical
             _hipsLean.Reset();
             _holdTip.Reset();
             _bothTip.Reset();
+            _holdChain.Reset();
+            _holdChainOn = false;
             _holdHead = 0f;
             ResetGait();
             _carried = true;
@@ -2765,7 +2771,14 @@ namespace SpeedStars.Physical
             _holdTip.Step(holdTarget, holdIn.frequency, holdIn.damping, dt);
             // The both-keys part goes through the same springs: read raw it threw the head 31 deg in a frame into a dive and the hips 14 out of one.
             _bothTip.Step(bothTarget, bothIn.frequency, bothIn.damping, dt);
-            float w = Mathf.Clamp01(_holdTip.Value / Mathf.Max(1f, holdLean));
+            // The chain stays while the head is still far forward: on the release the tip falls in 0.3 s but the head takes about a second,
+            // and the plain chain's deep curl (bend ~0.94 x the lean) came back under a forward head (chest 72 -> 89 -> 46).
+            if (_heldNow > HoldChainOnAt) _holdChainOn = true;
+            else if (full < HoldChainOffLean) _holdChainOn = false;
+            SpringSettings chainIn = _holdChainOn ? holdTipSpring : holdTipBackSpring;
+            _holdChain.Step(_holdChainOn ? 1f : 0f, chainIn.frequency, chainIn.damping, dt);
+            // Never behind the tip on the way in: the tip must not lean a curled back.
+            float w = Mathf.Clamp01(Mathf.Max(_holdChain.Value, _holdTip.Value / Mathf.Max(1f, holdLean)));
             if (w > 0f)
             {
                 float low = hipShare * Mathf.Max(0f, full);
