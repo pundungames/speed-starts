@@ -27,6 +27,10 @@ namespace SpeedStars.Runner
         public float lookHeight = 0.9f;
         [Tooltip("How tightly the camera follows along the track.")]
         public float followSharpness = 12f;
+        [Tooltip("Time (s) the camera's own speed along the track takes to follow the runner's, so a press's surge does not move the picture.")]
+        public float trackSpeedSmooth = 0.35f;
+        [Tooltip("How strongly (1/s) the camera makes up what it is off along the track.")]
+        public float trackPull = 2.5f;
         [Tooltip("The player's distance setting: multiplies distance and leaves the zoom on top of it.")]
         public float distanceScale = 1f;
 
@@ -40,9 +44,9 @@ namespace SpeedStars.Runner
         [Tooltip("How fast the zoom asked for by presses fades (share of the full zoom per second).")]
         public float zoomPressFade = 0.4f;
         [Tooltip("Time to flow back (s): it never jumps with a step.")]
-        public float zoomOutTime = 0.33f;
+        public float zoomFlowOutTime = 0.45f;
         [Tooltip("Time to flow in (s).")]
-        public float zoomInTime = 0.17f;
+        public float zoomFlowInTime = 0.6f;
 
         [Header("Shake")]
         [Tooltip("Shake size on a knocked hurdle (m); sideways only.")]
@@ -52,8 +56,12 @@ namespace SpeedStars.Runner
         [Tooltip("How fast the shake moves (noise steps per second).")]
         public float shakeRate = 30f;
 
+        /// <summary>Further off than this along the track (m) the camera closes the gap as fast as the plain follow does (a change of runner).</summary>
+        const float TrackFarOff = 3f;
+
         RunnerBody _body;
         Vector3 _position;
+        float _trackSpeed;
         float _zoom, _zoomVelocity, _pressZoom;
         float _shakeSize, _shakeTime, _shakeStart = -10f;
         float _lastHitWeight;
@@ -116,7 +124,10 @@ namespace SpeedStars.Runner
             _zoom = _zoomVelocity = _pressZoom = 0f;
             _shakeStart = -10f;
             _lastHitWeight = 0f;
-            _position = Desired();
+            var sim = _body ? _body.Sim : null;
+            _trackSpeed = sim != null ? sim.Speed : 0f;
+            // At speed it rests as far behind as it runs, so a snap does not start with a slide.
+            _position = Desired() - target.forward * (_trackSpeed / Mathf.Max(0.01f, followSharpness));
             transform.position = _position;
             transform.rotation = Facing();
         }
@@ -142,19 +153,35 @@ namespace SpeedStars.Runner
         {
             if (!target) return;
 
+            float dt = Time.deltaTime;
             var sim = _body ? _body.Sim : null;
             if (sim != null)
             {
-                _pressZoom = Mathf.Max(0f, _pressZoom - zoomPressFade * Time.deltaTime);
+                _pressZoom = Mathf.Max(0f, _pressZoom - zoomPressFade * dt);
                 float wanted = Mathf.Max(_pressZoom, Mathf.Clamp01(sim.Speed / Mathf.Max(0.01f, zoomFullSpeed)));
-                _zoom = Mathf.SmoothDamp(_zoom, wanted, ref _zoomVelocity, wanted > _zoom ? zoomOutTime : zoomInTime);
+                _zoom = Mathf.SmoothDamp(_zoom, wanted, ref _zoomVelocity, wanted > _zoom ? zoomFlowOutTime : zoomFlowInTime);
                 if (sim.HitWeight > _lastHitWeight) Shake(hitShake, hitShakeTime);
                 _lastHitWeight = sim.HitWeight;
             }
 
-            float t = 1f - Mathf.Exp(-followSharpness * Time.deltaTime);
+            float t = 1f - Mathf.Exp(-followSharpness * dt);
+            Vector3 desired = Desired();
             // Only the track direction and the zoom go through this; the shake stays out of it so it ends exactly.
-            _position = Vector3.Lerp(_position, Desired(), t);
+            if (sim != null)
+            {
+                // Along the track the camera runs at the runner's smoothed speed, moving by exactly what it moved (no lag that depends on the
+                // frame time), and only slowly makes up what it is off. It stays as far behind as it always did at speed
+                // (speed / followSharpness), so the framing is the same.
+                Vector3 along = target.forward;
+                _trackSpeed = Mathf.Lerp(_trackSpeed, sim.Speed, 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, trackSpeedSmooth)));
+                desired -= along * (_trackSpeed / Mathf.Max(0.01f, followSharpness));
+                Vector3 off = desired - _position;
+                float offAlong = Vector3.Dot(off, along);
+                // Far off (a change of runner without a snap) it closes as fast as it always did.
+                float pull = Mathf.Abs(offAlong) > TrackFarOff ? t : 1f - Mathf.Exp(-trackPull * dt);
+                _position += (off - along * offAlong) * t + along * (_trackSpeed * dt + offAlong * pull);
+            }
+            else _position = Vector3.Lerp(_position, desired, t);
 
             Current(out float size);
             float n = Time.time * shakeRate;
