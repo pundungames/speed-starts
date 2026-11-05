@@ -56,11 +56,14 @@ namespace SpeedStars.Physical
     ///      leg) carry the body by their angles: the pelvis sits so that the lowest carrying foot stands on the
     ///      ground. When the last foot leaves with no leg coming down — both keys held together, the dive — nothing
     ///      carries the body: it flies on with the rise its push gave it, under constant gravity (liftKick: the last
-    ///      push throws it up a little), going forward at the run's speed, tipping over as the head goes forward
-    ///      (the hips follow it, and in the air the body tips on by how far forward the head is, airTip, past
-    ///      level) and comes down head first: the dive, no special case. Head, pelvis, knees and feet never go
-    ///      into the ground: the body stops on the first that touches. Letting go, the legs come back under and
-    ///      lift it (softly from low down, ~0.5 s). See UpdateBodyHeight / KeepAboveGround.
+    ///      push throws it up a little), going forward at the run's speed, tipping over as the keys are held
+    ///      (a real hold tips the whole body, holdLean, both keys on to bothLean, near level the back humps and
+    ///      the head dips) and comes down head first: the dive, no special case. Head, pelvis, knees and feet never go
+    ///      into the ground: the body stops on the first that touches (the head too, it does not settle further).
+    ///      Letting go, the legs come back under and lift it (softly from low down, ~0.5 s). See UpdateBodyHeight /
+    ///      KeepAboveGround. A real hold is the hold weight past a tap's (HeldWeight): every hold effect (tip, the
+    ///      leg's reach back, the front leg's support, the end of the hop) is scaled by it, so a tap's brief Hold
+    ///      phase changes nothing.
     /// Running (gait weight: speed, a key down, no hold, on the ground) the arms pump with the opposite leg's
     /// thigh in both directions, wider and with a more closed elbow the faster and the cleaner the running (the
     /// sim's Form); standing or held they keep the pose's rest and the armBack hold (StepArm). Arms, knees'
@@ -174,6 +177,8 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float sitShiftZ;  // last frame: how far the sit-back moved this free leg's ankle along z (m)
             [System.NonSerialized] public LegAngles dispAngles;   // a planted leg's angles as shown (from the sat-back hip to the nailed ankle)
             [System.NonSerialized] public float dispThighWorld, dispW;   // ...its world thigh, and how much it differs from the solved one (0 = not sitting back)
+            [System.NonSerialized] public float holdFromWorld, holdFromKnee;   // where a hold began: the thigh (world) and the knee
+            [System.NonSerialized] public float holdBoth;   // 0..1: the other key is held too (the dive's legs stay in line)
             [System.NonSerialized] public float cycle;      // this leg's own press-to-press time (s), smoothed; 0 = never pressed
             [System.NonSerialized] public float swingLen;   // the swing's time (s)
             [System.NonSerialized] public double pressedAt = -10.0, lastPress = -1.0, swingT0;
@@ -337,6 +342,16 @@ namespace SpeedStars.Physical
                  "bent knee makes up): leaning, held legs trail the body in a nearly straight line instead of rising " +
                  "ahead of it (the reference video's dive).")]
         public float heldLegArch = -10f;
+        [Tooltip("One key really held (the other free): the held leg goes back on its own to this thigh angle (deg from " +
+                 "straight down, − = back), nearly straight, then goes on with the tipping body's line. Both keys held: holdBack.")]
+        public float holdThigh = -65f;
+        [Tooltip("One key really held: the held leg's knee opens to this (deg, 180 = straight) while it goes back.")]
+        public float holdStraightKnee = 165f;
+        [Tooltip("The held leg takes this long (s) to reach holdThigh and holdStraightKnee from where it was.")]
+        public float holdReachTime = 0.18f;
+        [Tooltip("The leg in front of a real hold starts here (thigh, knee) while the body is still upright and opens to " +
+                 "holdSupport as the body tips: it does not stand with the shin upright under a body that is not over it yet.")]
+        public LegAngles holdSupportStart = new LegAngles(55f, 110f);
 
         [Header("Run cycle: stance (foot planted) → swing (one curve) → touchdown")]
         [Tooltip("Where the swing's keys fall in its time (0..1): the heel kick (recover), the folded pass (mid), the " +
@@ -463,19 +478,23 @@ namespace SpeedStars.Physical
         public float liftRange = 0.2f;
         [Tooltip("Upward speed the last foot's push gives the body as it leaves the ground with nothing left to carry it (m/s).")]
         public float liftKick = 1.5f;
-        [Tooltip("With nothing carrying the body the whole body (head included) tips forward at up to this rate " +
-                 "(deg/s), by how far forward the head is, until the head is on the ground or the hips are level " +
-                 "(pelvisPitchRange.y): it comes down and lies flat. It comes back once the legs carry the body again. " +
-                 "The reference video: the straight body turns ~45° → ~78° over the half second in the air.")]
-        public float airTip = 90f;
-        [Tooltip("Once a leg carries the body again the tip goes back to 0 through this spring.")]
-        public SpringSettings airTipBack = new SpringSettings(3f, 1f);
-        [Tooltip("Head on the ground with no foot carrying: the body settles through this spring — the waist's curve " +
-                 "opens, the head comes up off its forward bend and the tip goes on to level — so the body comes down " +
-                 "after the head (chest, hips, knees) instead of hanging on it. A foot carrying again takes it back.")]
-        public SpringSettings settleSpring = new SpringSettings(1.5f, 1f);
-        [Tooltip("Settled on the ground the head comes up this far past the line of the body (deg), looking ahead.")]
-        public float settleHeadUp = 15f;
+        [Tooltip("A key really held (a tap's weight does not count) tips the whole body forward by this much (deg) through " +
+                 "holdTipSpring, on top of the head-led lean: the hold's dive starts at once, not as the head slowly builds.")]
+        public float holdLean = 32f;
+        [Tooltip("The hold's tip goes to holdLean (and back) through this spring (damping 1: no swing).")]
+        public SpringSettings holdTipSpring = new SpringSettings(7f, 1f);
+        [Tooltip("Both keys really held tip the body on by this much more (deg, squared by the weight: quick presses on " +
+                 "both barely count): the dive goes on to level (pelvisPitchRange.y).")]
+        public float bothLean = 55f;
+        [Tooltip("Near level (the dive) the waist's curve turns over into a hump: the whole waist's bend (deg, − = the " +
+                 "shoulders above the low back); B-spine takes half of it.")]
+        public float spineLevelCurve = -12f;
+        [Tooltip("Near level the head dips this much (deg) forward of the body's line.")]
+        public float headDip = 20f;
+        [Tooltip("A real hold: the chest takes this share of the lean the head-led chain gives it (the rest is the hold's tip).")]
+        [Range(0f, 1f)] public float holdChestShare = 0.78f;
+        [Tooltip("A real hold: the waist base takes this share of the lean the head-led chain gives it (the rest is the hold's tip).")]
+        [Range(0f, 1f)] public float holdWaistShare = 0.6f;
         [Tooltip("The pelvis follows the height a planted foot asks for through this spring (stiff: the dip in the middle of a stance is short).")]
         public SpringSettings stanceSpring = new SpringSettings(12f, 0.9f);
         [Tooltip("Running: how much lower the pelvis is in the middle of a stance than at its ends (m, at the full stride). " +
@@ -797,6 +816,10 @@ namespace SpeedStars.Physical
         const float HoldGaitFrom = 0.35f;      // hold weight where the gait starts to fade ...
         const float HoldGaitTo = 0.95f;        // ... and is gone (a tap's weight stays below the first)
         const float SitFadeRange = 6f;         // leaning back this far (deg) takes the gait lean off
+        const float HeldFrom = 0.25f;          // a key's hold weight below this is a tap, from here to HeldTo it turns into a real hold
+        const float HeldTo = 0.6f;
+        const float HoldRealShare = 0.25f;     // the hold's tip past this share of holdLean when a leg is let go: it was really held, not a tap (a tap's ~0.3 weight tips ~6%)
+        const float HoldTippedLean = 30f;      // the hips leaned this far (deg) when a held leg is let go: it comes in under the body
 
         float _gaitW, _speedCurve, _accel, _lastSpeed, _gaitHead;   // gait weight 0..1; speed curve 0..1; trunk's share of head lean
         Spring _gait, _kick;                       // gait lean and the press pitch (deg, trunk)
@@ -811,7 +834,7 @@ namespace SpeedStars.Physical
         float _armKick;                            // 1 right after a press, falling back: the hop's arm throw
         float _armClock = ArmIdle, _armPeriod = ArmPeriodMax;   // seconds since the last press; the last press-to-press time
         float _lastHipY;                           // last frame's final hip height (runner space), for the rise limit
-        bool _hipFree;                             // last frame's hip height was free to be limited (a run, not a dive or a settle)
+        bool _hipFree;                             // last frame's hip height was free to be limited (a run, not a dive)
         readonly float[] _sitW = new float[2];       // each leg's share in the sit-back pivot (blends over sitPivotBlend)
         int _hopPresses, _hopPrevLeg = -1;          // the press count last seen, and the leg of the press before
         double _hopPrevTime = -10.0;
@@ -847,8 +870,9 @@ namespace SpeedStars.Physical
         bool _bound, _heightSet;
         float _lastBodyY;                          // last frame's body height (the head bone is last frame's too)
         bool _carried = true, _headDown;           // last frame: a leg carried the body / the head was on the ground
-        Spring _tip;                               // the lean the body has tipped over in the air (deg)
-        Spring _settle;                            // 0..1: the body settling down after the head touched (no foot carrying)
+        Spring _holdTip;                           // the lean a real hold has tipped the body over (deg)
+        float _heldNow, _bothHeld;                 // this frame: the strongest real hold of a leg in Hold (0..1), both keys' (0 unless both in Hold)
+        float _hipsNow, _holdHead, _legTurn;       // this frame: the hips' lean (deg), the hold's share of the head angle, the legs' turn with the hips
         MultiAimConstraint _headAim;
         Transform _headBone, _lookTarget, _neckBone;
         float _neckTrimNow;                        // this frame's neck trim (deg), applied after the rig
@@ -1273,6 +1297,9 @@ namespace SpeedStars.Physical
         void ToHold(Leg leg, Leg partner, double time)
         {
             Enter(leg, LegPhase.Hold, time, holdTakeTime);
+            leg.holdFromWorld = leg.thighWorld;
+            leg.holdFromKnee = leg.angles.knee;
+            leg.holdBoth = 0f;
             if (partner.HeldBack || partner.grounded || partner.phase == LegPhase.Reach || partner.phase == LegPhase.Front) return;
             Enter(partner, LegPhase.Reach, time, PushTime());
         }
@@ -1288,8 +1315,8 @@ namespace SpeedStars.Physical
             _lean.Reset();
             _waistBase.Reset();
             _hipsLean.Reset();
-            _tip.Reset();
-            _settle.Reset();
+            _holdTip.Reset();
+            _holdHead = 0f;
             ResetGait();
             _carried = true;
             _ballistic = false;
@@ -1359,7 +1386,8 @@ namespace SpeedStars.Physical
                     switch (leg.phase)
                     {
                         case LegPhase.Hold:
-                            if (!leg.held) StartSwing(leg, time);
+                            // In a dive's free fall the legs stay in line until the head is down; a run's short flight lets go at once.
+                            if (!leg.held && !(_ballistic && !_headDown)) ReleaseHold(leg, time);
                             break;
                         case LegPhase.Push:
                             if (!leg.grounded)
@@ -1421,7 +1449,14 @@ namespace SpeedStars.Physical
             switch (leg.phase)
             {
                 case LegPhase.Reach: return reach;
-                case LegPhase.Front: return LegAngles.Lerp(reach, holdSupport, otherHold);
+                case LegPhase.Front:
+                {
+                    // The support opens from holdSupportStart to holdSupport as the body tips; only a real hold starts it
+                    // lower, so a tap's brief hold of the other leg leaves the front leg's target as it was.
+                    float tilt = Mathf.Clamp01(_hipsNow / Mathf.Max(1f, pelvisPitchRange.y));
+                    LegAngles support = LegAngles.Lerp(holdSupport, holdSupportStart, HeldWeight(otherHold) * (1f - tilt));
+                    return LegAngles.Lerp(reach, support, otherHold);
+                }
                 case LegPhase.Push:
                 case LegPhase.Hold: return LegAngles.Lerp(pushEnd, holdBack, ownHold);
                 default: return LegAngles.Lerp(Home(), Balance(), leg.idle);
@@ -1550,8 +1585,45 @@ namespace SpeedStars.Physical
             leg.thighWorld = leg.angles.thigh - legTurn * leg.follow;
             // The limits only stop the turn with the hips: a held leg always gets back to its own hold angle.
             if (leg.phase == LegPhase.Hold)
+            {
                 leg.thighWorld = Mathf.Max(Mathf.Min(leg.angles.thigh, -Mathf.Min(heldLegMaxAngle, hipPitch + heldLegArch)),
                     leg.thighWorld);
+                // A key really held with the other free: the leg goes back on its own (thigh and knee, a short curve from where
+                // the hold began) and on with the tipping body once that is further back; both held it stays in the body's line.
+                // Scaled by the real hold, so a tap's brief Hold phase is as it was.
+                leg.holdBoth = Mathf.MoveTowards(leg.holdBoth, other.held ? 1f : 0f, FollowRate * dt);
+                float real = HeldWeight(leg == leftLeg ? _holdL : _holdR);
+                float p = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((float)(_now - leg.phaseTime) / Mathf.Max(0.01f, holdReachTime)));
+                float aimThigh = Mathf.Lerp(holdThigh, holdBack.thigh, leg.holdBoth);
+                float aimKnee = Mathf.Lerp(holdStraightKnee, holdBack.knee, leg.holdBoth);
+                float ramp = Mathf.Min(leg.thighWorld, Mathf.Lerp(leg.holdFromWorld, aimThigh, p));
+                leg.thighWorld = Mathf.Lerp(leg.thighWorld, ramp, real);
+                leg.angles.knee = Mathf.Min(Mathf.Lerp(leg.angles.knee, Mathf.Lerp(leg.holdFromKnee, aimKnee, p), real), maxKnee);
+            }
+        }
+
+        /// <summary>How much of a key's hold weight is a real hold (0 for quick presses, which stay near 0.3).</summary>
+        static float HeldWeight(float weight) => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(HeldFrom, HeldTo, weight));
+
+        /// <summary>
+        /// A held leg let go. A tap's (the Hold phase lasted a few frames): the swing, as ever. A real hold: the leg's shown angle
+        /// is taken over into its own frame (the clamp that held it stops here, nothing jumps), then upright it swings up behind like
+        /// after a push; tipped well forward (or in a dive's fall) folding up behind would throw the foot over the hips, so it comes
+        /// straight in under the body.
+        /// </summary>
+        void ReleaseHold(Leg leg, double time)
+        {
+            if (_holdTip.Value <= HoldRealShare * holdLean)
+            {
+                StartSwing(leg, time);
+                return;
+            }
+            leg.angles.thigh = leg.thighWorld + _legTurn * leg.follow;
+            leg.thighT.set = leg.kneeT.set = false;
+            leg.thighRate = leg.kneeRate = 0f;
+            bool tipped = _hipsNow > HoldTippedLean;
+            if (_ballistic || tipped) Enter(leg, LegPhase.Rest, time, frontHomeTime * SpeedUp());
+            else StartSwing(leg, time);
         }
 
         /// <summary>The front foot's angle (deg, − = toes up): heel down, toes up, by speed between the two profiles.</summary>
@@ -1853,6 +1925,11 @@ namespace SpeedStars.Physical
             _holdL = preview ? 0f : sim.Legs[0].WeightValue;
             _holdR = preview ? 0f : sim.Legs[1].WeightValue;
             _dive = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(HoldGaitFrom, HoldGaitTo, Mathf.Max(_holdL, _holdR)));
+            // A leg in Hold for a few frames after a tap is not a hold: only the weight past a tap's counts (HeldWeight).
+            _heldNow = Mathf.Max(leftLeg.phase == LegPhase.Hold ? HeldWeight(_holdL) : 0f,
+                                 rightLeg.phase == LegPhase.Hold ? HeldWeight(_holdR) : 0f);
+            // Both keys: the weaker one, and no more than the real hold (quick presses on both must not tip the pair).
+            _bothHeld = leftLeg.phase == LegPhase.Hold && rightLeg.phase == LegPhase.Hold ? Mathf.Min(_holdL, _holdR) * _heldNow : 0f;
             UpdateHop(sim, now, dt);
 
             // 2. Legs: phases → angles → knee and ankle points (a planted foot's legs are solved after the height).
@@ -1868,23 +1945,17 @@ namespace SpeedStars.Physical
             _profileW = Mathf.Lerp(_profileW, profileTarget, 1f - Mathf.Exp(-4f * dt));
             _extent = StanceExtent(leftLeg);
             _headAngle = preview ? 0f : sim.HeadAngle * (1f - _hop);   // a one-leg hop does not throw the head forward
-            // The tip over in the air turns the whole body, head included (else the hips would pass the head).
-            float tip = 0f, baseBend = 0f, bend = 0f, legLean = 0f;
+            float baseBend = 0f, bend = 0f, legLean = 0f;
             if (!preview)
             {
                 lean = UpdateLean(dt, out baseBend, out bend, out legLean);
+                _hipsNow = lean;
                 UpdateGaitLean(sim, dt, ref lean, ref baseBend, ref bend, ref legLean);
                 UpdateBounceLean(dt, ref lean, ref baseBend, ref bend);
                 lean -= hopBackLean * _hop;   // hopping on one leg the trunk sits back (SitBack below)
-                tip = UpdateTip(dt, pelvisPitchRange.y - p.pelvisPitch - lean);
-                lean += tip + jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
-                // The head on the ground with no foot carrying lets the body settle after it: the waist opens.
-                float settle = _carried ? 0f : _headDown ? 1f : _settle.Value;
-                _settle.Step(settle, settleSpring.frequency, settleSpring.damping, dt);
-                float open = 1f - Mathf.Clamp01(_settle.Value);
-                baseBend *= open;
-                bend *= open;
+                lean += jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
             }
+            else _holdHead = _hipsNow = 0f;
 
             // 3. Forward the hips take their part of the lean (the waist bends the rest on them), within
             //    pelvisPitchRange. Back, the whole body leans about the feet on the ground (below, after the height).
@@ -1892,6 +1963,7 @@ namespace SpeedStars.Physical
             float hipPitch = Mathf.Clamp(p.pelvisPitch + lean - backLean, pelvisPitchRange.x, pelvisPitchRange.y);
             // The lean part only (the pose's own tilt does not turn the legs), with all of the lean the hips left to the waist.
             float legTurn = hipPitch - p.pelvisPitch + legLean;
+            _legTurn = legTurn;
             Quaternion pelvisTilt = Quaternion.Euler(hipPitch, 0f, 0f);
 
             UpdateLeg(leftLeg, now, dt, legTurn, _holdL, _holdR);
@@ -1952,14 +2024,14 @@ namespace SpeedStars.Physical
             // Write the rig. The waist base sits at waistAngle plus its bend on the hips; the chain (TwistChain)
             // fills the chest in between it and the top, whose angle the neck and head work from (0 = the rig's rest).
             Quaternion rootRot = transform.rotation;
-            _neckTrimNow = preview ? 0f : neckTrim * Mathf.SmoothStep(0f, 1f, (_lean.Value + tip) / Mathf.Max(1f, neckTrimLean));
+            _neckTrimNow = preview ? 0f : neckTrim * Mathf.SmoothStep(0f, 1f, (_lean.Value + _holdTip.Value) / Mathf.Max(1f, neckTrimLean));
             hipTarget.position = transform.TransformPoint(hip);
             hipTarget.rotation = rootRot * Quaternion.Euler(backLean, 0f, 0f) * pelvisTilt * _restHipRot;
             spineRootTarget.rotation = hipTarget.rotation * Quaternion.Euler(waistAngle + baseBend, 0f, 0f);
             // Leaning back the head keeps looking ahead: it takes only headKeep of the lean, the neck bends the rest.
             WriteHead(hipPitch + backLean + waistAngle - _restWaist + waistTopAngle + bend,
                 p.pelvisPitch + waistAngle - _restWaist,
-                _headAngle + tip - backLean + _gaitHead, backLean, p.headDown, Mathf.Clamp01(_settle.Value), rootRot);
+                _headAngle + _holdHead - backLean + _gaitHead, backLean, p.headDown, rootRot);
             WriteLeg(leftLeg);
             WriteLeg(rightLeg);
 
@@ -2020,6 +2092,7 @@ namespace SpeedStars.Physical
                 _hopPrevTime = at;
             }
             float hopTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
+            hopTarget *= 1f - _heldNow;   // a real hold ends the hop: else the trunk sits back (hopBackLean) against the forward tip
             _hop = Mathf.Lerp(_hop, off ? 0f : hopTarget, k);
             _pair = Mathf.Lerp(_pair, off ? 0f : PairWeight(now), k);
             for (int i = 0; i < 2; i++)
@@ -2140,14 +2213,13 @@ namespace SpeedStars.Physical
         /// headKeep of it and keeps looking ahead: the neck bends forward on the trunk, up to neckMax. The head is
         /// aimed by placing its look target.
         /// </summary>
-        void WriteHead(float trunk, float poseTrunk, float head, float sit, float headDown, float settle, Quaternion rootRot)
+        void WriteHead(float trunk, float poseTrunk, float head, float sit, float headDown, Quaternion rootRot)
         {
             float follow = Mathf.Lerp(Mathf.Max(0f, poseTrunk - neckMax), poseTrunk, headDown);
             float lead = Mathf.Lerp(Mathf.Min(neckMax, headLead), neckMax, Mathf.Clamp01(-sit / 10f));
-            lead = Mathf.Lerp(lead, -settleHeadUp, settle);   // settling on the ground the head comes up, looking ahead
             float pitch = Mathf.Clamp(follow + head + sit * headKeep, trunk - neckMax + body.Sim.T.headBack, trunk + lead);
             // Hopping on one key the head looks ahead (world pitch toward level) whatever the trunk does; alternating keys, pairs and dives have 0 here.
-            pitch = Mathf.Lerp(pitch, 0f, _hop * (1f - _pair) * (1f - settle));
+            pitch = Mathf.Lerp(pitch, 0f, _hop * (1f - _pair));
             float neck = Mathf.Clamp(pitch - trunk, -neckMax, neckMax) * NeckShare;
             spineTipTarget.rotation = rootRot * Quaternion.Euler(trunk + neck, _chestYaw, _chestRoll) * _restSpineTip;
             if (!_headAim || !_headBone || !_lookTarget) return;
@@ -2216,11 +2288,11 @@ namespace SpeedStars.Physical
         /// The hip's final height may rise only so fast while running (hipRiseMax). The height spring's own limit
         /// (maxRiseSpeed) is on the body before the sit-back; the sit-back's pivot moving from the heel to the hip and the floors'
         /// push stack on top of it, and one-key hops threw the hip up 4-5 cm in a frame. The legs that are not planted
-        /// go down with the hip (their hang stays), a planted one keeps its foot and bends. Not in a dive, a settle or a jump.
+        /// go down with the hip (their hang stays), a planted one keeps its foot and bends. Not in a dive or a jump.
         /// </summary>
         void LimitHipRise(ref Vector3 hip, float dt)
         {
-            bool free = !_ballistic && !_jumping && _settle.Value <= 0f;
+            bool free = !_ballistic && !_jumping;
             float cut = free && _hipFree && dt > 0f ? hip.y - (_lastHipY + Mathf.Lerp(hipRiseMax, hopHipRiseMax, _hop * (1f - _pair)) * dt) : 0f;
             if (cut > 0f)
             {
@@ -2241,12 +2313,12 @@ namespace SpeedStars.Physical
         /// world while the body moves on (the planted stance does it with footZ; resting, front, reaching and landed feet were
         /// carried by their angles and slid). The pin is a world point, so the root's own move is used directly, no sum of steps.
         /// When the leg runs out of length, or the foot is lifted, the pin lets go and the foot melts to where the leg puts it
-        /// (pinOffset), raised while it does: no snap, no slide. The dive, the settle, a jump and the hold's back leg are left to
+        /// (pinOffset), raised while it does: no snap, no slide. The dive, a jump and the hold's back leg are left to
         /// their own rules (the pin fades with the hold weight).
         /// </summary>
         void PinFeet(Vector3 hip, Quaternion tilt, float width, float dt)
         {
-            bool allowed = !preview && !_jumping && !_ballistic && _settle.Value <= 0f;
+            bool allowed = !preview && !_jumping && !_ballistic;
             float strength = 1f - _dive;
             for (int i = 0; i < 2; i++)
             {
@@ -2341,9 +2413,9 @@ namespace SpeedStars.Physical
             }
             if (leftLeg.carry || rightLeg.carry)
             {
-                // A dive's or a jump's landing, or a settled body, may come down as fast as it falls.
+                // A dive's or a jump's landing may come down as fast as it falls.
                 // _ballistic still holds last frame's value here, so the first carried frame after a dive stays exempt.
-                bool limitDrop = !_ballistic && !_jumping && _settle.Value <= 0f;
+                bool limitDrop = !_ballistic && !_jumping;
                 float prevY = _bodyY.Value;
                 float need = float.MinValue, cap = float.MaxValue;
                 bool planted = false;
@@ -2407,7 +2479,7 @@ namespace SpeedStars.Physical
                 float target = Mathf.Lerp(_offY, landY, Mathf.SmoothStep(0f, 1f, w)) + rise * 4f * w * (1f - w);
                 if (incoming.phase == LegPhase.Land) target += landHover;
                 _bodyY.Step(target, flightSpring.frequency, flightSpring.damping, dt);
-                if (!wasBallistic && !_jumping && _settle.Value <= 0f) LimitHeightSpeed(flightPrevY, dt);
+                if (!wasBallistic && !_jumping) LimitHeightSpeed(flightPrevY, dt);
                 return _bodyY.Value;
             }
 
@@ -2426,27 +2498,6 @@ namespace SpeedStars.Physical
             if (y == _bodyY.Value) return;
             _bodyY.Value = y;
             _bodyY.Velocity = Mathf.Clamp(_bodyY.Velocity, -maxDropSpeed, Mathf.Lerp(maxRiseSpeed, hopHipRiseMax, _hop * (1f - _pair)));
-        }
-
-        /// <summary>
-        /// The tip over with nothing carrying the body (deg, + forward, on top of the head's lean; the whole body,
-        /// head included): it tips forward by how far forward the head is (airTip) until the head is on the ground
-        /// or the hips are level (max), so the body comes down and lies flat. Once a leg carries the body again it
-        /// comes back (airTipBack).
-        /// </summary>
-        float UpdateTip(float dt, float max)
-        {
-            // Only a real free fall (the dive: nothing carries and no leg is coming down) tips the body: the short flights of
-            // a run, mashing included, do not.
-            if (_carried || !_ballistic)
-                _tip.Step(0f, airTipBack.frequency, airTipBack.damping, dt);
-            else
-            {
-                if (!_headDown || _settle.Value > 0f) _tip.Value += airTip * Mathf.Clamp01(_headAngle / Mathf.Max(1f, body.Sim.T.headForwardMax)) * dt;
-                _tip.Value = Mathf.Min(_tip.Value, Mathf.Max(0f, max));
-                _tip.Velocity = 0f;
-            }
-            return _tip.Value;
         }
 
         /// <summary>
@@ -2494,7 +2545,8 @@ namespace SpeedStars.Physical
         /// is B-spine's bend on the hips, bend the whole waist's (top on hips), legLean the lean the hips left to the
         /// waist (the legs turn with it all the same). Back it only takes the head's swing past where the head rests (headBack while running): the
         /// head alone tips back there, the body sits back only when the way back throws the head beyond it
-        /// (about the feet, see SitBack). Holding leans it too, through the head. Nothing else moves it. How low it gets is
+        /// (about the feet, see SitBack). A real hold tips it at once (holdLean, both keys on to bothLean; the chain blends toward the
+        /// hold's shares and, near level, the hump), by the tip's build-up, so a tap changes nothing. Nothing else moves it. How low it gets is
         /// up to the legs: they keep the hips at their height (UpdateBodyHeight), so with a foot carrying the
         /// body the head cannot reach the ground. The sim's own lean stays for the game (stumble losses).
         /// </summary>
@@ -2511,6 +2563,29 @@ namespace SpeedStars.Physical
             // The curve, plus what the links below have not caught up with yet (the wave).
             baseBend = waistBaseShare * top + (_waistBase.Value - full);
             bend = (waistBaseShare + waistTopShare) * top + (top - full);
+
+            // A key really held (HeldWeight: a tap's does not count) tips the whole body at once, holdLean, and both keys on
+            // toward level. The chain's own lean stays under it, at holdChestShare / holdWaistShare, and near level the curve
+            // turns over into a hump with the head dipping. All of it by the tip's own build-up (w): a tap leaves it at 0, and
+            // a press or a release only moves targets.
+            _holdTip.Step(holdLean * _heldNow, holdTipSpring.frequency, holdTipSpring.damping, dt);
+            float w = Mathf.Clamp01(_holdTip.Value / Mathf.Max(1f, holdLean));
+            if (w > 0f)
+            {
+                float low = hipShare * Mathf.Max(0f, full);
+                float whole = _holdTip.Value + bothLean * _bothHeld * _bothHeld;
+                float holdHips = low + whole;
+                float level = Mathf.Max(1f, pelvisPitchRange.y);
+                float hump = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.5f * level, level, holdHips));
+                float holdBase = Mathf.Lerp(holdWaistShare * Mathf.Max(0f, _waistBase.Value) - low, spineLevelCurve * 0.5f, hump);
+                float holdBend = Mathf.Lerp(holdChestShare * Mathf.Max(0f, top) - low, spineLevelCurve, hump);
+                hips = Mathf.Lerp(hips, holdHips, w);
+                baseBend = Mathf.Lerp(baseBend, holdBase, w);
+                bend = Mathf.Lerp(bend, holdBend, w);
+                legLean = Mathf.Lerp(legLean, 0f, w);
+                _holdHead = whole + headDip * hump * w;
+            }
+            else _holdHead = 0f;
             if (bend < -waistBackMax)
             {
                 baseBend *= -waistBackMax / bend;
@@ -2665,7 +2740,7 @@ namespace SpeedStars.Physical
             float holdW = Mathf.Max(_holdL, _holdR);
             // Not in free fall (the dive): the short flights between a run's steps are part of the gait (a gate on "a foot
             // carries" flipped it every step and halved the twist and the arms).
-            float gate = _stepping * (_ballistic ? 0f : 1f) * (sim.InJump ? 0f : 1f) * (1f - Mathf.Clamp01(_settle.Value)) *
+            float gate = _stepping * (_ballistic ? 0f : 1f) * (sim.InJump ? 0f : 1f) *
                          (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(HoldGaitFrom, HoldGaitTo, holdW)));
             _gaitW = Mathf.Lerp(_gaitW, _speedCurve * gate, 1f - Mathf.Exp(-GaitBlend * dt));
 
