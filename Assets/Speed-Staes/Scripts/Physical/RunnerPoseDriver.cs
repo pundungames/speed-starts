@@ -381,7 +381,7 @@ namespace SpeedStars.Physical
         public float hopBackLean = 42f;
         [Tooltip("The body's extra rise between two steps (m) at full hop bias, and with two keys pressed together (the legs " +
                  "in step): one leg hopping, or both legs bouncing the body like a sack.")]
-        public float hopRise = 0.17f;
+        public float hopRise = 0.22f;
         [Tooltip("The hopping leg's push: how far the pelvis rises (m, at full hop weight) through the push, up to the toe-off, so the " +
                  "bounce starts with the push; the flight's arc (hopRise) goes on from there. With it the stance's dip is gone.")]
         public float hopPushRise = 0.04f;
@@ -610,7 +610,7 @@ namespace SpeedStars.Physical
 
         [Header("Limb muscles: what is shown follows the target (input only moves the target, nothing snaps)")]
         [Tooltip("A free leg's thigh, knee and an arm's swing and elbow follow their targets through this spring.")]
-        public SpringSettings limbSpring = new SpringSettings(8f, 0.9f);
+        public SpringSettings limbSpring = new SpringSettings(11f, 0.9f);
         [Tooltip("Fastest a free leg's thigh or knee turns (deg/s).")]
         public float legMaxSpeed = 1100f;
         [Tooltip("Hardest a free leg's thigh or knee speeds up or slows down (deg/s²).")]
@@ -705,6 +705,7 @@ namespace SpeedStars.Physical
         const float RootSpeedBlend = 12f;      // the root's speed for the swing's end speed is smoothed at this rate (1/s)
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
         const float Overstretch = 0.985f;      // a planted leg this near its full length is at toe-off (the knee never locks)
+        const float CatchGrace = 0.06f;        // a finished catch waits this long (s) for the foot to be down before it is planted anyway
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
         const float LockKnee = 15f;
@@ -1198,7 +1199,11 @@ namespace SpeedStars.Physical
                         case LegPhase.Push:
                             if (!leg.grounded)
                             {
-                                if (time >= leg.EndTime || Touching(leg)) leg.grounded = leg.needLock = true;
+                                // The catch ends and the foot is planted where it is SEEN touching: the planted leg is solved from the
+                                // ankle on the ground, so planting a foot still in the air (the shown leg lags its target) snapped
+                                // the knee and the foot down in one frame. It waits a moment for the foot to come down.
+                                bool low = leg.ankle.y - AnkleGround(leg) <= TouchHeight;
+                                if (Touching(leg) || (time >= leg.EndTime && (low || time >= leg.EndTime + CatchGrace))) leg.grounded = leg.needLock = true;
                             }
                             else if (leg.toeOff) StartSwing(leg, time);
                             break;
