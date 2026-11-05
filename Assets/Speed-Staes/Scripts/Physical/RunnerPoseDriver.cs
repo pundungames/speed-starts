@@ -166,6 +166,9 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float dz0;        // how far behind the hip joint the foot was put down (m)
             [System.NonSerialized] public float stanceU;    // 0..1 through the stance (the foot's way)
             [System.NonSerialized] public float kneeRate;   // the knee's angular speed last frame (deg/s)
+            [System.NonSerialized] public float sitShiftZ;  // last frame: how far the sit-back moved this free leg's ankle along z (m)
+            [System.NonSerialized] public LegAngles dispAngles;   // a planted leg's angles as shown (from the sat-back hip to the nailed ankle)
+            [System.NonSerialized] public float dispThighWorld, dispW;   // ...its world thigh, and how much it differs from the solved one (0 = not sitting back)
             [System.NonSerialized] public float cycle;      // this leg's own press-to-press time (s), smoothed; 0 = never pressed
             [System.NonSerialized] public float swingLen;   // the swing's time (s)
             [System.NonSerialized] public double pressedAt = -10.0, lastPress = -1.0, swingT0;
@@ -343,10 +346,13 @@ namespace SpeedStars.Physical
         public float hopBackLean = 30f;
         [Tooltip("The body's extra rise between two steps (m) at full hop bias, and with two keys pressed together (the legs " +
                  "in step): one leg hopping, or both legs bouncing the body like a sack.")]
-        public float hopRise = 0.05f;
-        [Tooltip("The hopping leg's push: how far the pelvis sinks on (m, at full hop weight) as the foot goes back, so the leg " +
-                 "reaches back to hopPushEnd instead of running out of length at the run's height; the flight springs it up.")]
-        public float hopDip = 0.05f;
+        public float hopRise = 0.09f;
+        [Tooltip("The hopping leg's push: how far the pelvis rises (m, at full hop weight) through the push, up to the toe-off, so the " +
+                 "bounce starts with the push; the flight's arc (hopRise) goes on from there. With it the stance's dip is gone.")]
+        public float hopPushRise = 0.04f;
+        [Tooltip("Fastest the hip may rise (m/s) at full one-key hop weight (both rise limits, maxRiseSpeed and hipRiseMax, blend to it): " +
+                 "the bounce's arc is steeper than a run's and the run's limits flattened its top.")]
+        [Min(0.1f)] public float hopHipRiseMax = 3f;
 
         [Header("Leg timing (s)")]
         [Tooltip("A key down longer than this is a hold: the pushing leg goes on to the hold angles and the other leg reaches " +
@@ -963,6 +969,13 @@ namespace SpeedStars.Physical
             if (leg.cycle <= 0f) leg.cycle = Mathf.Clamp(2f * (body && body.Sim != null ? body.Sim.StepTime : 0.3f), stepTimeMin, 2f * stepTimeMax);
             float elapsed = Mathf.Min((float)(time - leg.pressedAt), leg.cycle * 0.5f);
             float len = Mathf.Clamp(leg.cycle - elapsed, swingMin, Mathf.Max(swingMin, stepTimeMax));
+            // Lifting off a planted foot while sitting back: from the angles it was shown with (continuous foot), not the solved ones.
+            if (leg.dispW > 0f)
+            {
+                leg.angles = LegAngles.Lerp(leg.angles, leg.dispAngles, leg.dispW);
+                leg.thighWorld = Mathf.Lerp(leg.thighWorld, leg.dispThighWorld, leg.dispW);
+                leg.dispW = 0f;
+            }
             Enter(leg, LegPhase.Recover, time, len);
             leg.swingT0 = time;
             leg.swingLen = len;
@@ -1403,7 +1416,8 @@ namespace SpeedStars.Physical
         {
             if (leg.needLock)
             {
-                leg.footZ = leg.ankle.z;
+                // Sitting back, the free leg was shown moved by the sit-back (sitShiftZ): the nail goes where the foot was seen.
+                leg.footZ = leg.ankle.z + leg.sitShiftZ;
                 leg.dz0 = joint.z - leg.footZ;
                 leg.needLock = false;
             }
@@ -1452,10 +1466,11 @@ namespace SpeedStars.Physical
         /// <summary>Body height a planted foot asks for: the joint over the ankle at the stance's height, lowest in the middle of it.</summary>
         float StanceNeed(Leg leg, Vector3 joint)
         {
-            // One key hopping: the body sinks on into the push (the leg goes back far only with the hip low: at the run's height the
-            // straight leg is out of length at a thigh of -13) and the flight springs it up again.
-            float extent = StanceExtent(leg) - stanceDip * _amp * Mathf.Sin(Mathf.PI * leg.stanceU) -
-                           hopDip * _hop * (1f - _pair) * leg.stanceU * leg.stanceU;
+            // One key hopping the body does not sink into the stance (the dip fades with the hop weight) and rises through the push
+            // instead, so the flight's arc starts from the push and the hop reads as a bounce, not a squat and a stretch.
+            float hopW = _hop * (1f - _pair);
+            float extent = StanceExtent(leg) - stanceDip * _amp * Mathf.Sin(Mathf.PI * leg.stanceU) * (1f - hopW) +
+                           hopPushRise * hopW * Mathf.SmoothStep(0f, 1f, leg.stanceU);
             return extent + AnkleGround(leg) - joint.y;
         }
 
@@ -1636,6 +1651,7 @@ namespace SpeedStars.Physical
             }
             leftLeg.rock = rightLeg.rock = 0f;
             if (backLean < 0f) SitBack(ref hip, backLean);
+            else leftLeg.sitShiftZ = rightLeg.sitShiftZ = 0f;
             // Whatever moved the body last (the height spring, the sit-back's pivot) is limited, then the floors are kept:
             // the last step that moves anything is the one that clamps (docs/TUZAKLAR.md: after the sit-back, the foot went in).
             if (!preview) LimitHipRise(ref hip, dt);
@@ -1647,6 +1663,7 @@ namespace SpeedStars.Physical
                 if (backLean < 0f) leg.ankle.y = Mathf.Max(leg.ankle.y, AnkleGround(leg));
                 if (!preview && !leg.grounded && !leg.carry) leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + FreeFootRise(leg, Mathf.Min(0f, backLean)));
             }
+            if (!preview) ShowPlantedAngles(hip, pelvisTilt, p.width, backLean, legTurn);
 
             // Write the rig. The waist base sits at waistAngle plus its bend on the hips; the chain (TwistChain)
             // fills the chest in between it and the top, whose angle the neck and head work from (0 = the rig's rest).
@@ -1849,16 +1866,30 @@ namespace SpeedStars.Physical
             float hipW = Mathf.Max(0f, 1f - sumW);
             Vector3 pivot = (hip * hipW + sum) / (hipW + sumW);
             Quaternion r = Quaternion.Euler(backLean, 0f, 0f);
-            Quaternion foot = Quaternion.Euler(backLean * heelRock, 0f, 0f);
+            // Hopping on one key the foot lands flat: the heel rock fades with the hop weight.
+            float rock = backLean * heelRock * (1f - _hop * (1f - _pair));
+            Quaternion foot = Quaternion.Euler(rock, 0f, 0f);
+            Vector3 oldHip = hip;
             hip = pivot + r * (hip - pivot);
             for (int i = 0; i < 2; i++)
             {
                 Leg leg = Legs(i);
+                if (!leg.carry)
+                {
+                    // A leg that is not held hangs from the hip's new place without turning with the trunk (the run's legs stay
+                    // under it; only a hold and a dive, _dive, turn the legs with it). Turning it about the hip moved its foot by
+                    // ~20 cm: at the touchdown the foot was nailed where the unturned leg is, and again at the toe-off.
+                    Quaternion turn = Quaternion.Slerp(Quaternion.identity, r, leg.phase == LegPhase.Hold ? 1f : _dive);
+                    float oldZ = leg.ankle.z;
+                    leg.knee = hip + turn * (leg.knee - oldHip);
+                    leg.ankle = hip + turn * (leg.ankle - oldHip);
+                    leg.sitShiftZ = leg.ankle.z - oldZ;
+                    continue;
+                }
                 leg.knee = pivot + r * (leg.knee - pivot);
-                if (!leg.carry) { leg.ankle = pivot + r * (leg.ankle - pivot); continue; }
                 Vector3 heel = Heel(leg);
                 leg.ankle = heel + foot * (leg.ankle - heel);
-                leg.rock = backLean * heelRock;
+                leg.rock = rock;
             }
         }
 
@@ -1871,7 +1902,7 @@ namespace SpeedStars.Physical
         void LimitHipRise(ref Vector3 hip, float dt)
         {
             bool free = !_ballistic && !_jumping && _settle.Value <= 0f;
-            float cut = free && _hipFree && dt > 0f ? hip.y - (_lastHipY + hipRiseMax * dt) : 0f;
+            float cut = free && _hipFree && dt > 0f ? hip.y - (_lastHipY + Mathf.Lerp(hipRiseMax, hopHipRiseMax, _hop * (1f - _pair)) * dt) : 0f;
             if (cut > 0f)
             {
                 hip.y -= cut;
@@ -1884,6 +1915,32 @@ namespace SpeedStars.Physical
             }
             _lastHipY = hip.y;
             _hipFree = free;
+        }
+
+        /// <summary>
+        /// A planted leg's angles as they are SHOWN: from the sat-back hip's joint to the nailed ankle (SolveStance solves from the
+        /// unturned hip). A leg that lifts off starts its swing from these (StartSwing), so the foot leaves where it was and not
+        /// 20 cm off. Weighted by how far the body sits back (0 = the solved angles: a run is untouched).
+        /// </summary>
+        void ShowPlantedAngles(Vector3 hip, Quaternion pelvisTilt, float width, float backLean, float legTurn)
+        {
+            float w = Mathf.Clamp01(-backLean / 2f);
+            Quaternion tilt = Quaternion.Euler(backLean, 0f, 0f) * pelvisTilt;
+            for (int i = 0; i < 2; i++)
+            {
+                Leg leg = Legs(i);
+                leg.dispW = 0f;
+                if (!leg.grounded || w <= 0f) continue;
+                Vector3 joint = Joint(leg, hip, tilt, width);
+                float dy = leg.ankle.y - joint.y, dz = leg.ankle.z - joint.z;
+                float l1 = leg.thighLength, l2 = leg.shinLength;
+                float c = Mathf.Clamp(Mathf.Sqrt(dy * dy + dz * dz), Mathf.Abs(l1 - l2) + 0.02f, MaxReach(leg));
+                float knee = Mathf.Acos(Mathf.Clamp((l1 * l1 + l2 * l2 - c * c) / (2f * l1 * l2), -1f, 1f)) * Mathf.Rad2Deg;
+                float bend = Mathf.Acos(Mathf.Clamp((l1 * l1 + c * c - l2 * l2) / (2f * l1 * c), -1f, 1f)) * Mathf.Rad2Deg;
+                leg.dispThighWorld = Mathf.Atan2(dz, -dy) * Mathf.Rad2Deg + bend;
+                leg.dispAngles = new LegAngles(leg.dispThighWorld + legTurn * leg.follow, Mathf.Min(knee, maxKnee));
+                leg.dispW = w;
+            }
         }
 
         /// <summary>Where a foot on the ground touches it at the heel (runner space): behind the ankle, on the ground.</summary>
@@ -1990,10 +2047,10 @@ namespace SpeedStars.Physical
         /// <summary>Keeps this frame's body height step within maxDropSpeed down and maxRiseSpeed up (running only).</summary>
         void LimitHeightSpeed(float prevY, float dt)
         {
-            float y = Mathf.Clamp(_bodyY.Value, prevY - maxDropSpeed * dt, prevY + maxRiseSpeed * dt);
+            float y = Mathf.Clamp(_bodyY.Value, prevY - maxDropSpeed * dt, prevY + Mathf.Lerp(maxRiseSpeed, hopHipRiseMax, _hop * (1f - _pair)) * dt);
             if (y == _bodyY.Value) return;
             _bodyY.Value = y;
-            _bodyY.Velocity = Mathf.Clamp(_bodyY.Velocity, -maxDropSpeed, maxRiseSpeed);
+            _bodyY.Velocity = Mathf.Clamp(_bodyY.Velocity, -maxDropSpeed, Mathf.Lerp(maxRiseSpeed, hopHipRiseMax, _hop * (1f - _pair)));
         }
 
         /// <summary>
