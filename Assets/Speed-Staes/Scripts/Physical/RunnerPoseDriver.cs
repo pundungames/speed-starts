@@ -373,9 +373,12 @@ namespace SpeedStars.Physical
         public LegAngles hopContact = new LegAngles(10f, 165f);
         [Tooltip("The balance leg's thigh sways this many degrees (forward while the body rises) with the one-key hop, so it does not look frozen.")]
         public float hopSway = 12f;
+        [Tooltip("The balance leg comes this much lower (deg of thigh) as the body rises through the hop arc (hopRise): held out nearly level " +
+                 "with the hip at its lowest (the foot stays 35+ cm up there), a little lower at the top so the foot does not go past ~55 cm.")]
+        public float balanceLift = 22f;
         [Tooltip("The leg the hops leave out (not the one pressed again and again): held out in front, nearly straight, in the " +
                  "air, balancing; it carries nothing. Blended in by the sim's HopBias.")]
-        public LegAngles balanceLeg = new LegAngles(62f, 148f);
+        public LegAngles balanceLeg = new LegAngles(80f, 140f);
         [Tooltip("The trunk sits back by this much (deg) on one-leg hops: the head-led lean and the gait lean fade out as the " +
                  "hop bias rises.")]
         public float hopBackLean = 42f;
@@ -1287,7 +1290,8 @@ namespace SpeedStars.Physical
         LegAngles Key(LegAngles key, LegAngles hopKey) => Stride(LegAngles.Lerp(key, hopKey, _hop * (1f - _pair)));
 
         /// <summary>The balance leg: held out straight, its thigh swaying a few degrees with the body's bounce (forward going up).</summary>
-        LegAngles Balance() => new LegAngles(balanceLeg.thigh + hopSway * Mathf.Clamp(_bodyY.Velocity / HopSwaySpeed, -1f, 1f), balanceLeg.knee);
+        LegAngles Balance() => new LegAngles(balanceLeg.thigh - balanceLift * Mathf.Clamp01(_bodyY.Value / Mathf.Max(0.05f, hopRise)) +
+                                             hopSway * Mathf.Clamp(_bodyY.Velocity / HopSwaySpeed, -1f, 1f), balanceLeg.knee);
 
         LegAngles Home() => LegAngles.Lerp(crouch, runHome, _runHome);
 
