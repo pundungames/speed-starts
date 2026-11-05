@@ -505,6 +505,9 @@ namespace SpeedStars.Physical
         [Tooltip("Running: how much lower the pelvis is in the middle of a stance than at its ends (m, at the full stride). " +
                  "The knee bends for it through the IK.")]
         public float stanceDip = 0.04f;
+        [Tooltip("Plain running keeps this share of the body's up-and-down (the stance's dip and the flight's rise). " +
+                 "Hops and pair jumps keep all of theirs.")]
+        [Range(0f, 1f)] public float runBounce = 0.5f;
         [Tooltip("Running: the pelvis' rise between two steps, at the top of the flight (m, at speed and good form). " +
                  "None at a standstill.")]
         public float flightRise = 0.15f;
@@ -1872,7 +1875,8 @@ namespace SpeedStars.Physical
             // One key hopping the body does not sink into the stance (the dip fades with the hop weight) and rises through the push
             // instead, so the flight's arc starts from the push and the hop reads as a bounce, not a squat and a stretch.
             float hopW = _hop * (1f - _pair);
-            float extent = StanceExtent(leg) - (stanceDip * _dipAmp * (1f - hopW) + hopStanceDip * hopW) * Mathf.Sin(Mathf.PI * leg.stanceU) +
+            float bounce = Mathf.Lerp(1f, runBounce, _plainRun);
+            float extent = StanceExtent(leg) - (stanceDip * _dipAmp * (1f - hopW) * bounce + hopStanceDip * hopW) * Mathf.Sin(Mathf.PI * leg.stanceU) +
                            hopPushRise * hopW * Mathf.SmoothStep(0f, 1f, leg.stanceU);
             return extent + AnkleGround(leg) - joint.y;
         }
@@ -2535,7 +2539,8 @@ namespace SpeedStars.Physical
                 Vector3 joint = Joint(incoming, hip, pelvisTilt, width);
                 float landY = StanceExtent(incoming) + AnkleGround(incoming) - joint.y;
                 float speed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(riseSpeed.x, riseSpeed.y, sim.Speed));
-                float rise = flightRise * speed * Mathf.Lerp(1f - formWeight, 1f, Mathf.Clamp01(sim.Form)) +
+                float rise = flightRise * speed * Mathf.Lerp(1f - formWeight, 1f, Mathf.Clamp01(sim.Form)) *
+                             Mathf.Lerp(1f, runBounce, _plainRun) +
                              hopRise * Mathf.Max(_hop, _pair);
                 float target = Mathf.Lerp(_offY, landY, Mathf.SmoothStep(0f, 1f, w)) + rise * 4f * w * (1f - w);
                 if (incoming.phase == LegPhase.Land) target += landHover;
