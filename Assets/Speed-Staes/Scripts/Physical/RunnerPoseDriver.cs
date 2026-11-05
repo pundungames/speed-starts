@@ -329,6 +329,10 @@ namespace SpeedStars.Physical
         [Tooltip("Swing end, touchdown: the foot swept down and back under the knee, the leg nearly (not fully) straight, " +
                  "the foot coming down under the body, not stretched out ahead of it.")]
         public LegAngles contact = new LegAngles(22f, 165f);
+        [Tooltip("Plain running only: the touchdown pose with the knee a little bent, the foot about as far ahead as contact " +
+                 "(a classic run cycle's contact frame). Blended in by the run weight; a hop or a pair jump keeps contact. " +
+                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing.")]
+        public LegAngles contactRun = new LegAngles(30f, 145f);
         [Tooltip("Hold only: the other leg's reach when a key is held. It opens forward nearly straight and the foot " +
                  "lands well ahead (the reference video: ~47° from straight down).")]
         public LegAngles reach = new LegAngles(47f, 175f);
@@ -1157,7 +1161,7 @@ namespace SpeedStars.Physical
         void StartCatch(Leg leg, double time)
         {
             EnsureBuffers(leg);
-            LegAngles c = Key(contact, hopContact);
+            LegAngles c = Key(ContactPose(), hopContact);
             // Already there (the touchdown pose, or the foot on the ground past the fold): nothing to catch, plant it now.
             // A catch of even a few frames would slide the foot along the ground at the body's speed. A foot still in the
             // air is not down: it is caught and planted when it touches, or the body would drop to it in one frame.
@@ -1224,7 +1228,7 @@ namespace SpeedStars.Physical
             k[1] = RecoverKeyFor(leg);
             k[2] = MidKey();
             k[3] = KneeDriveKey();
-            k[4] = Key(contact, hopContact);
+            k[4] = Key(ContactPose(), hopContact);
             for (int i = 1; i < SwingKeyCount - 1; i++)
             {
                 float span = n[i + 1] - n[i - 1];
@@ -1251,7 +1255,7 @@ namespace SpeedStars.Physical
             k[1] = RecoverKeyFor(leg);
             k[2] = MidKey();
             k[3] = KneeDriveKey();
-            k[4] = Key(contact, hopContact);
+            k[4] = Key(ContactPose(), hopContact);
             for (int i = 1; i < SwingKeyCount - 1; i++)
             {
                 float span = n[i + 1] - n[i - 1];
@@ -1799,7 +1803,10 @@ namespace SpeedStars.Physical
             leg.shinLength * Mathf.Cos((a.thigh - (180f - a.knee)) * Mathf.Deg2Rad);
 
         /// <summary>The joint's height over the ground in a stance, before its dip: the crouch standing, the touchdown pose running.</summary>
-        float StanceExtent(Leg leg) => Mathf.Lerp(Extent(leg, crouch), Extent(leg, Stride(contact)), _runHome);
+        float StanceExtent(Leg leg) => Mathf.Lerp(Extent(leg, crouch), Extent(leg, Stride(ContactPose())), _runHome);
+
+        /// <summary>Plain running's touchdown pose blended in; a hop or a pair keeps contact.</summary>
+        LegAngles ContactPose() => LegAngles.Lerp(contact, contactRun, _plainRun);
 
         /// <summary>The longest the leg can be (m): hip joint to ankle at the largest knee angle.</summary>
         float MaxReach(Leg leg)
