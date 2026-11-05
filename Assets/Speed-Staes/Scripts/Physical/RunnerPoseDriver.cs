@@ -361,8 +361,11 @@ namespace SpeedStars.Physical
         [Tooltip("Where the swing's keys fall in its time (0..1): the heel kick (recover), the folded pass (mid), the " +
                  "knee drive (kneeDrive). The swing ends at the touchdown pose at 1, when the leg's next press is due.")]
         public Vector3 swingKeys = new Vector3(0.22f, 0.5f, 0.78f);
-        [Tooltip("Past the folded pass the knee opens later than the thigh comes forward: 1 = it keeps pace, higher = the leg drives " +
-                 "from the hip first and the knee opens late. The ends of the swing do not move.")]
+        [Tooltip("Plain running's own swing keys (same meaning as swingKeys; blended in by the plain-run weight). The thigh's peak " +
+                 "comes earlier, so a nearly straight leg has time to come down before the touchdown.")]
+        public Vector3 runSwingKeys = new Vector3(0.22f, 0.45f, 0.68f);
+        [Tooltip("From the folded pass to the thigh's peak the knee opens later than the thigh comes forward: 1 = it keeps pace, " +
+                 "higher = the leg drives from the hip first and the knee opens late; it is open as the thigh arrives. The ends do not move.")]
         [Range(1f, 4f)] public float kneeOpenDelay = 2f;
         [Tooltip("The swing never takes less than this (s).")]
         public float swingMin = 0.12f;
@@ -385,9 +388,9 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key).")]
         public LegAngles recoverFast = new LegAngles(-60f, 88f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
-        public LegAngles kneeOpen = new LegAngles(68f, 140f);
+        public LegAngles kneeOpen = new LegAngles(68f, 170f);
         [Tooltip("Plain running at fast-stride speed: the knee drive (kneeOpen's faster pair).")]
-        public LegAngles kneeOpenFast = new LegAngles(78f, 130f);
+        public LegAngles kneeOpenFast = new LegAngles(78f, 170f);
         [Tooltip("How much of the stride (and the flight) comes from how well the runner has been running (the sim's " +
                  "Form: presses on time): 0 = speed alone, 1 = a runner with no form takes no stride.")]
         [Range(0f, 1f)] public float formWeight = 0.8f;
@@ -1206,9 +1209,10 @@ namespace SpeedStars.Physical
             float[] n = leg.knots;
             k[0] = leg.angles;
             n[0] = 0f;
-            n[1] = Mathf.Clamp(swingKeys.x, 0.02f, 0.9f);
-            n[2] = Mathf.Clamp(swingKeys.y, n[1] + 0.02f, 0.95f);
-            n[3] = Mathf.Clamp(swingKeys.z, n[2] + 0.02f, 0.98f);
+            Vector3 sk = Vector3.Lerp(swingKeys, runSwingKeys, _plainRun);   // plain running peaks earlier; hop and pair keep swingKeys
+            n[1] = Mathf.Clamp(sk.x, 0.02f, 0.9f);
+            n[2] = Mathf.Clamp(sk.y, n[1] + 0.02f, 0.95f);
+            n[3] = Mathf.Clamp(sk.z, n[2] + 0.02f, 0.98f);
             n[4] = 1f;
             // Lifted, the foot does not travel back through the world: the thigh goes on back only as far as the body's own move carries it.
             leg.swingBackLimit = k[0].thigh - Mathf.Rad2Deg * _rootSpeed * n[1] * len / Mathf.Max(MinExtent, _extent);
@@ -1281,11 +1285,12 @@ namespace SpeedStars.Physical
         LegAngles EvalSwing(Leg leg, float share)
         {
             LegAngles at = SwingSegment(leg, share);
-            float from = leg.knots[2];   // the folded pass
-            if (share > from)
+            // The leg drives from the hip first; the knee opens late on that way and is open as the thigh arrives.
+            float from = leg.knots[2], to = leg.knots[3];   // the folded pass, the thigh's peak
+            if (share > from && share < to)
             {
-                float u = (share - from) / Mathf.Max(1e-4f, 1f - from);
-                at.knee = SwingSegment(leg, from + (1f - from) * Mathf.Pow(u, kneeOpenDelay)).knee;
+                float u = (share - from) / Mathf.Max(1e-4f, to - from);
+                at.knee = SwingSegment(leg, from + (to - from) * Mathf.Pow(u, kneeOpenDelay)).knee;
             }
             return at;
         }
@@ -1586,7 +1591,7 @@ namespace SpeedStars.Physical
                     float share = SwingShare(leg, now);
                     RefreshSwingKeys(leg);
                     leg.angles = EvalSwing(leg, share);
-                    leg.phase = share < Mathf.Clamp(swingKeys.y, 0.02f, 0.95f) ? LegPhase.Recover : LegPhase.Mid;
+                    leg.phase = share < leg.knots[2] ? LegPhase.Recover : LegPhase.Mid;
                     air = share;
                     break;
                 }
