@@ -146,62 +146,53 @@ Her karede şu katmanlar üst üste konur:
 | 1 | **Pozlar** | `Physical/Poses/*.asset` | **Ready** → (hızlandıkça) **Run** → (sim'in eğimi aşınca) **Stumble**. Tutma/dalış/yatma pozu **yok**. |
 | 2 | **Bacak açıları** | `Leg angles` / `Leg timing` | Bacak bir **açıdır**: uyluk (dikeye göre, + = önde) ve diz (180 = düz). Hareket uyluktan başlar; açılardan FK ile diz ve bilek bulunur, IK sadece bunu üretir. Her faz bacağın **o anki açısından** başlar. |
 | 3 | **Eğim: baş → boyun → bel → kalça** | `Head & neck` + `Body` | Aşağıda. |
-| 4 | **Gövde yüksekliği** | Bacak açıları | Kalça, en alttaki taşıyan ayak (Hold'da olmayan her bacak) zemine değecek yükseklikte (`heightSpring`). Yerden kalkarken yumuşak `liftSpring`. Taşıyan kalmayınca gövde uçar (dalış). Hiçbir parça zemine girmez. |
+| 4 | **Gövde yüksekliği** | Bacak açıları | Kalçayı yalnız **yere basan ayak** taşır (evde, önde inmiş ya da iten, ayağı yere değiyorsa). Havadaki bacak gövdeyi aşağı çekmez. İki ayak da havadaysa **koşu uçuşu**: `flightLift` ile kalkış, `flightGravity` ile iniş, ayak basınca `dropSpring` ile oturma. Hiçbir parça zemine girmez. |
 
-### Eğim zinciri (2026-10-27)
+> **2026-11-05, `claude/karakter-hareketleri-baec15` branch'i:** Bu bölüm baştan yazıldı. Ayrıntılı açıklamalar
+> koddaki `<summary>` ve Tooltip'lerde. Fizik (`RunnerSim`) değişmedi; hepsi `RunnerPoseDriver`.
 
-- Eğim **sadece baştan** gelir (sim'in `HeadAngle`'ı). Zincir: **baş → boyun → belin üstü (`B-chest`) → belin dibi
-  (`B-spine`) → kalça**; her halka bir üsttekini sönümlü bir yayla izler (`hipFollowSpring`, sonra `waistSpring`):
-  baş önden gider, kalça en son gelir (canlılık, salınım yok).
-- **Paylar (öne):** kalça eğimin `hipShare` (0.65) kadarını alır; bel bunun üstüne kavis yapar: belin dibi
-  `waistBaseShare` (0.27), belin üstü `waistTopShare` (0.67) kadar. **Bacaklar** (tutulan dahil) eğimin tamamıyla
-  döner — ayak kalkışı kalçanın payından etkilenmez.
-- **Duruşta bel:** `waistAngle` (2°, `B-spine` X) + `waistTopAngle` (13°): hafif kavis (kullanıcının seçtiği
-  girdisiz duruş açıları: spine 2, chest 4.5, neck 12).
-- **Geriye:** gövde sadece başın dinlenme yerini **geçen** kısmı alır, bütün vücudu yerdeki ayakların **topukları**
-  etrafında döndürerek (`SitBack`, `heelRock`); bel geriye en fazla `waistBackMax` (7°). Baş ileri bakar
-  (`headKeep`).
-- **Boyun:** öne eğilmede `B-neck` zincirin verdiğinden `neckTrim` (10°) daha az bükülür (`neckTrimLean` 30°'den
-  itibaren tamamı); baş kendi açısını korur → baş gövde çizgisinde kalır, yere kıvrık baş değil gövde iner.
-  IK'dan sonra `LateUpdate`'te uygulanır.
-- `B-chest` kemiğini rig'in TwistChain'i ara değer olarak doldurur; prefab'taki eğri ortaya %60 verir (bölüm 5).
+### Eğim zinciri: baştan kalçaya, halka halka
 
-Ölçüm (tek ayak tutma, kemiklerin üst kemiğe göre açısı): baş 28° → kalça 15 / bel dibi 14 / orta 9 / boyun 21;
-baş 63° → 35 / 25 / 21 / ~19 (kırpma sonrası). Arka ayak ucu yerden ~0.26 m.
+- **Ölçü sim'in baş açısıdır** (`HeadAngle`): ritimde dik, sık basma/tutmada öne. Zincir yukarıdan aşağı:
+  **göğüs** başın `chestShare` (0.78), **bel dibi** `waistShare` (0.6), **kalça** `hipShare` (0.45) kadarını alır.
+  Her halka bir öncekinden az eğilir, sırt **yay** gibi kavislenir (sopa değil). Her halka üsttekini yayla izler
+  (`hipFollowSpring`, `waistSpring`): baş önce gider, kalça en son gelir.
+- **Bütün gövdeye eklenenler:** hızla hafif eğilme (`hipRunLean` 3→8°), **tek tuş tutulunca hızlı devrilme**
+  (`holdLean` 32°, `holdTipSpring` 7 Hz; referansta 0.15 sn'de ~30°), **iki tuş tutulunca** dalışa eğilme
+  (`bothLean` × ağırlık²). Kısa basışlar bunları tetiklemez (tutma ağırlığı ~0.3'te kalır, `HeldWeight`).
+- **Yataya yakın** eğri dalış kamburuna döner (`spineLevelCurve`): bel dibi yukarı, omuzlar kalça çizgisinin üstünde,
+  baş öne-aşağı (`headDip`). **Geriye** en fazla `hipBackMax` (12°).
+- Duruş açıları (`waistAngle` 2, `waistTopAngle` 13) ve boyun kırpma (`neckTrim`) aynı.
 
-### Bacak fazları
+Ölçüm: ritim 0.32 sn: kalça 16 / bel 18 / göğüs 16 / boyun 28 (dik); tek tuş tutma: 26 / 31 / 39 / 51.
+
+### Bacak fazları (tek tuş = tek bacak)
 
 | Faz | Ne zaman | Hedef (uyluk / diz) | Sonra |
 |---|---|---|---|
-| **Rest** | Girdi yok | `crouch` 40 / 100 (bir tuş basılıyken hızla `runHome` 10 / 160) | — |
-| **Push** | Bu bacağın tuşu | `Lerp(pushEnd −30 / 150, holdBack, tutma ağırlığı)` | Tuş basılıysa Hold, değilse Recover |
-| **Recover** | İtiş bitti | `recover` −40 / 100: uyluk geride, alt bacak katlanır | Mid |
-| **Mid** | Kendiliğinden | `mid` 15 / 70 | Rest |
-| **Reach** | Diğer bacağın tuşu | `reach` 47 / 175: öne neredeyse düz, ayak önde iner | Front |
-| **Front** | Reach bitti | Önde yerde; diğer bacak tutuldukça `holdSupport` 80 / 100 | Diğeri itmiyor/tutulmuyorsa Rest (`frontHomeTime`) |
-| **Hold** | İtiş bitince tuş hâlâ basılı | `holdBack` −60 / 145 (diz hafif bükük); gövdenin eğimiyle kalça etrafında `heldLegMaxAngle` (90 = yatay) ve gövde çizgisine (`heldLegArch`) kadar kalkar; bu sınırlar bacağı kendi tutma açısının önüne çekmez | Bırakınca Mid |
+| **Rest** | Girdi yok / evde | `crouch` 40/100, koşarken `runHome` 10/160 | — |
+| **Push** | Bu bacağın tuşu | `pushEnd` (yavaş −36/150, hızlı `pushEndFast` −60/160; `strideSpeed` 2→8 m/s). Süre `pushBackTime` (0.12→0.08 sn), eğri `pushEase` | Tuş basılıysa Hold, değilse Recover |
+| **Recover** | İtiş bitti | `recover` (−37/83, hızlı `recoverFast` −56/88), `recoverTime` 0.07 | Basışlar sürüyorsa **Wait**, yoksa Mid |
+| **Wait** | Geride, diğer tuşu bekler | `recover` açısında kalır; diğer tuşta öne fırlar; `openHoldTime` (0.6 sn) basış yoksa Mid | Reach / Mid |
+| **Mid** | Kendiliğinden | `mid` 15/44 | Rest |
+| **Reach** | Diğer bacağın tuşu | `reach` (61/155, hızlı `reachFast` 78/145), eğri `reachEase`. Diz önce katlanır (`reachFoldKnee`, uyluk yolunun `reachFoldAt` kadarında), uyluk yolunun `reachOpenAt` (0.85) kadarına gelince açılır | Ayak yere değince Front. Arka bacak geride (Recover/Wait) iken **havada açık bekler**, gövde ayağın 1.5 cm üstünde süzülür |
+| **Front** | Yere indi | Ayak yerinde, bacak gövde hızıyla eve akar (en fazla `frontGroundMax`). Diğeri **gerçekten tutuluyorsa** destek: gövde devrildikçe `holdSupportStart` 55/110'dan `holdSupport` 80/100'e (baldır dik) | Rest |
+| **Hold** | İtiş bitince tuş basılı | **Tek tuş:** bacak itiş sonundan `holdReachTime` (0.18 sn) içinde kendi geri açısına (`holdThigh` −65°) gider, diz aynı ilerlemeyle düzleşir (`holdStraightKnee` 165); gövde devrilip çizgisini geçince gövdeyle birlikte kalkar. **İki tuş:** kalçanın çizgisinde (`heldLegArch`, `holdKnee`) | Bırakınca: gövde dikse Recover, eğikse doğrudan gövdenin altına (Rest); takla yok |
 
-Süreler: `pushTime`, `recoverTime`, `midTime`, `homeTime`; havadaki fazlar hızlıyken `airTimeAtSpeed` kadar kısalır.
+**Diz yayı:** havadaki bacakta alt bacak uyluğu `kneeSpring` (9 Hz) ile izler. Ayak bileği eğrileri aynı.
 
-**Ayak bileği:** havada (Recover/Mid) bilek salınım eğrisini (`swingAnkle`) izler. Geçişte yerdeki ayak açısından
-gelen değer önce bilek sınırına kırpılır (2026-10-27): geriye katlanan bacakta ayak `B-foot` X ~−47'ye kadar açılır
-(önce −63'te kalıyordu).
+### Dalış: özel parça yok
 
-### Dalış — iki ayak, tek ayak özel durumu yok
-
-Kural tek: **son ayak yerden itişle kalkar** (iki tuş birden de, tutulurken diğerine basmak da aynı).
-
-| Aşama | Ne olur |
-|---|---|
-| **Kalkış** | İten bacaklar gövdeyi aşağı çekemez; taşıyan kalmayınca gövde `liftKick` (1.5 m/s) yukarı hız alır. |
-| **Havada** | Sabit yerçekimi (sim'in `gravity`), ileri gitme koşu hızından. Bütün vücut baş ne kadar öndeyse o hızla öne devrilir (`airTip`, prefab 60), baş yere değene ya da kalça yataya gelene kadar. Bacaklar gövde çizgisinde, kollar arkada. |
-| **Yere iniş** | Önce baş değer. **Sonra gövde yerleşir** (2026-10-27, `settleSpring`): bel kavisi açılır, baş gövdeye göre `settleHeadUp` kadar kalkıp öne bakar, devrilme yataya kadar sürer; baş artık gövdeyi tutmaz → göğüs, kalça ve dizler sırayla ~0.8 sn'de yere iner. Hiçbir parça zemine girmez (baş `headRest`, kalça `MinPelvis`, taşımayan diz `kneeRest` ve ayak). |
-| **Bırakınca** | Bacaklar toparlanır ve taşır; yerleşme ~0.5 sn'de geri açılır, gövde `liftSpring` ile ~0.6 sn'de kalkar, devrilme `airTipBack` ile döner, topuklar üstünde geriye oturma. |
+İki tuş basılı: `bothLean` kalçayı yataya götürür, bacaklar gövde çizgisinde kalır; ayak yerden kesilince gövde
+`liftKick` ile kalkar, sim yerçekimiyle iner, baş yere değince durur. Eski devrilme (`airTip`, `diveTipSpring`) ve
+yerleşme (`settleSpring`, `settleHeadUp`) kaldırıldı. Bırakınca bacaklar gövdenin altına toplanır, karakter kalkar.
 
 ### Kollar
 
-El IK kapalı. **Bir tuş = bir bacak + bir kol** (sağ tuş: sağ bacak + sol kol). Kol o bacağın uyluğunun sadece
-evin gerisine gidişini izler; yay/gecikme yok; tam geride sabit `armBack` / `elbowBack`.
+El IK kapalı. **Karşı bacağa bağlı** (sağ bacak, sol kol): kol karşı bacağın **o anki uyluk açısını** okur ve
+`recover`…`reach` aralığını `armBack` (−40) … `armFront` (+50) aralığına çevirir; dirsek arkada `elbowBack`, önde
+`elbowFront` (95). Karşı bacak yeni faza girince kol `armEase` eğrisiyle (en az `armMinTime` 0.2 sn) oraya gider.
+Tutmada bacak geride olduğu için kol da geride. Duruşta pozun kol açısı.
 
 ---
 
@@ -338,18 +329,20 @@ Her alanın İngilizce açıklaması kodda `Tooltip` olarak da var (Inspector'da
 | Key poses | `ready`, `run`, `stumble` | Poz asset'leri (boşsa koddaki varsayılan). |
 | Blend | `runPoseSpeed` | Ready → Run'ın tamamlandığı hız. |
 | | `stumbleBlendRange` | Stumble'ın devreye girme aralığı. |
-| Leg angles | `crouch`, `runHome`, `pushEnd`, `recover`, `mid`, `reach`, `holdBack`, `holdSupport` | Fazların uyluk / diz açıları (bölüm 4 tablo). |
+| Leg angles | `crouch`, `runHome`, `pushEnd`/`pushEndFast`, `recover`/`recoverFast`, `mid`, `reach`/`reachFast`, `reachLand`, `holdSupport`, `holdKnee` | Fazların uyluk / diz açıları (bölüm 4 tablo); `…Fast` eşleri `strideSpeed` aralığında hızla karışır. |
+| | `reachFoldKnee`, `reachFoldAt`, `reachOpenAt` | Öne gelen bacakta dizin katlanması ve uyluk yolunun neresinde açılacağı. |
+| | `holdThigh`, `holdStraightKnee`, `holdReachTime`, `holdSupportStart` | Tek tuş tutmada bacağın kendi geri açısı, düzleşen diz, süre; öndeki desteğin başlangıç pozu. |
 | | `maxKnee` | Diz hiç tam düz olmaz. |
-| | `heldLegMaxAngle` | Tutulan bacağın en fazla kalkacağı açı (90 = yatay). |
-| | `heldLegArch` | Tutulan bacağın gövde çizgisini en fazla geçeceği açı. |
-| Leg timing | `pushTime`, `recoverTime`, `midTime`, `homeTime`, `frontHomeTime`, `airTimeAtSpeed` | Faz süreleri. |
+| | `heldLegArch` | İki tuş tutmada bacağın kalça çizgisinden farkı. |
+| Leg timing | `pushTime`, `pushBackTime`, `recoverTime`, `midTime`, `homeTime`, `frontHomeTime`, `swingSteps` | Faz süreleri (geri dönüş sim'in adım süresinden). |
+| | `pushEase`/`pushCurve`, `reachEase`/`reachCurve`, `kneeSpring` | İtiş ve uzanmanın eğrisi (EaseInCirc, EaseOutQuint, Linear, Custom); havada dizin gecikmesi. |
+| | `openHoldTime`, `frontGroundMax`, `reachAirMax` | Seyrek basışta arka bacağın bekleme süresi, öndeki bacağın yerde en uzun süresi, uzanan ayağın havada en uzun beklemesi. |
 | | `restToBaseSpeed` | Tuş basılıyken ev: altında `crouch`, üstünde `runHome`. |
 | | `stanceBlend` | Koşu duruşu ↔ çömelme geçiş hızı. |
 | Body height | `heightSpring` | Kalçanın bacak yüksekliğini izlediği yay. |
 | | `liftSpring`, `liftBelow`, `liftRange` | Yerden kalkarken yumuşak yay ve devreye girdiği alçaklık. |
 | | `liftKick` | Son ayak kalkarken gövdeye yukarı hız. |
-| | `airTip`, `airTipBack` | Taşıyan yokken öne devrilme hızı; taşınınca geri dönüş. |
-| | `settleSpring`, `settleHeadUp` | Dalışta baş yere değince gövdenin yere yerleşmesi; yerleşince başın kalkışı. |
+| | `flightLift`, `flightGravity`, `dropSpring` | Koşu uçuşunun kalkışı ve yerçekimi; ayak basınca gövdenin oturması. |
 | Ground | `headRest`, `kneeRest` | Baş ve dizin yerdeki yüksekliği. |
 | Foot | `pitchBack` | Tutulan ayağın açısı. |
 | Foot motion | `accelProfile`, `maxSpeedProfile` | Hızlanma / max hız ayak profilleri: `touchdownPitch`, `stancePitch`, `toeRoll`, `swingAnkle`, `swingToe`. |
@@ -361,14 +354,16 @@ Her alanın İngilizce açıklaması kodda `Tooltip` olarak da var (Inspector'da
 | | `headKeep` | Geriye oturmada başın aldığı pay (ileri bakar). |
 | | `heelRock` | Geriye oturmada ayakların topuğa kalkma payı. |
 | | `neckTrim`, `neckTrimLean` | Öne eğilmede boyundan geri alınan açı ve tam devreye girdiği eğim. |
-| | `hipFollow`, `hipFollowSpring` | Gövdenin baş açısını izleme oranı ve yayı (belin üstü). |
+| | `hipFollowSpring` | Göğsün başı izleme yayı (zincirin ilk halkası). |
 | Body | `waistAngle`, `waistTopAngle` | Duruşta bel dibi ve belin üstünün açısı. |
-| | `hipShare` | Öne eğimin kalçanın aldığı payı. |
-| | `waistBaseShare`, `waistTopShare` | Belin dibinin ve üstünün kavis payı. |
+| | `chestShare`, `waistShare`, `hipShare` | Başın açısından göğüs, bel dibi ve kalçanın aldığı pay (azalan, kavis verir). |
+| | `hipRunLean`, `holdLean`, `holdTipSpring`, `bothLean`, `hipBackMax` | Hızla eğilme; tek tuş tutmada hızlı devrilme ve yayı; iki tuşta dalış eğimi; geriye sınır. |
+| | `spineLevelCurve`, `headDip` | Yataya yakın dalış kamburu ve başın öne düşmesi. |
 | | `waistSpring` | Zincirde her halkanın bir üsttekini izleme yayı. |
 | | `waistBackMax` | Belin geriye en fazla bükülmesi. |
 | | `pelvisPitchRange` | Kalçanın öne eğim sınırı. |
-| Arms | `armBack`, `elbowBack` | Tam geride kolun ve dirseğin sabit açısı. |
+| Arms | `armBack`, `elbowBack`, `armFront`, `elbowFront` | Kolun ve dirseğin en geri / en ön açıları. |
+| | `armEase`, `armCurve`, `armMinTime` | Kolun karşı bacağa gidiş eğrisi ve en kısa süresi. |
 | | `armOutward` | Kolların yana açısı. |
 | | `shoulderFollow` | Köprücük kemiğinin kol salınımını izlemesi. |
 | Preview | `preview`, `previewPose`, `previewLean` | Play'de tek pozu sabit tutup asset'i canlı düzenleme. |

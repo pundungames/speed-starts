@@ -370,6 +370,7 @@ MonoBehaviour:
     lowEnergy: 25
     lowEnergyFactor: 0.6
   acceptInput: 1
+  acceptJump: 1
 --- !u!114 &2034175899099249921
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -526,17 +527,33 @@ MonoBehaviour:
     thigh: 10
     knee: 160
   pushEnd:
-    thigh: -42
+    thigh: -36
     knee: 150
   recover:
-    thigh: -52
-    knee: 60
+    thigh: -37
+    knee: 83
   mid:
     thigh: 15
     knee: 44
   reach:
-    thigh: 47
-    knee: 175
+    thigh: 61
+    knee: 155
+  pushEndFast:
+    thigh: -60
+    knee: 160
+  recoverFast:
+    thigh: -56
+    knee: 88
+  reachFast:
+    thigh: 78
+    knee: 145
+  strideSpeed: {x: 2, y: 8}
+  reachFoldKnee: {x: 100, y: 55}
+  reachFoldAt: 0.3
+  reachLand:
+    thigh: 35
+    knee: 155
+  reachLandTime: 0.1
   holdBack:
     thigh: -60
     knee: 145
@@ -547,22 +564,58 @@ MonoBehaviour:
   heldLegMaxAngle: 90
   heldLegArch: -10
   pushTime: 0.2
+  pushBackTime: {x: 0.12, y: 0.08}
+  pushCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.5
+      value: 0.22
+      inSlope: 0.9
+      outSlope: 0.9
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 2.2
+      outSlope: 2.2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  kneeSpring:
+    frequency: 9
+    damping: 0.9
   animSpeedUp: 0.5
-  recoverTime: 0.15
+  recoverTime: 0.07
   midTime: 0.15
   homeTime: 0.15
   frontHomeTime: 0.3
-  stepTimeMin: 0.2
-  stepTimeMax: 0.6
-  stepSlow: 2.667
-  stepFollow: 0.5
+  openHoldTime: 0.6
+  frontGroundMax: 0.5
+  swingSteps: 2
   restToBaseSpeed: {x: 0.5, y: 3}
   stanceBlend: 8
   heightSpring:
     frequency: 8
     damping: 0.8
   dropSpring:
-    frequency: 3
+    frequency: 4.5
     damping: 0.6
   liftSpring:
     frequency: 0.9
@@ -570,6 +623,9 @@ MonoBehaviour:
   liftBelow: 0.25
   liftRange: 0.2
   liftKick: 1.5
+  flightLift: 0.85
+  flightGravity: 12
+  reachAirMax: 0.5
   airTip: 60
   airTipBack:
     frequency: 3

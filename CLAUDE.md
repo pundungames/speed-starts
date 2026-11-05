@@ -1,9 +1,27 @@
 # Speed Stars (speed-starts) — Proje Devir Notu
 
 > Bu dosya Claude Code tarafından her oturumda otomatik okunur. Projeye yeni bir oturumla devam ederken
-> bağlam buradan gelir. Son güncelleme: 2026-10-27.
+> bağlam buradan gelir. Son güncelleme: 2026-11-05.
 > **Ayrıntılı rehber:** `Assets/Speed-Staes/Scripts/Physical/PlayerController.md` — oturumun başında oku
 > (bölüm 8: Inspector'daki her alan tek tek).
+
+## 2026-11-05 — `claude/karakter-hareketleri-baec15` branch'i (main'e henüz bağlanmadı)
+
+Karakter hareketleri ayrı branch'te yeniden düzenlendi (yalnız `RunnerPoseDriver.cs` + prefab; `RunnerSim`
+değişmedi). Aşağıdaki "Oturmuş kurallar"daki **eğim zinciri, dalış, tutma ve kollar** maddelerinin yerini bu aldı;
+ayrıntı `PlayerController.md` bölüm 4:
+
+- **Bacaklar** tek tuş = tek bacak fazlarıyla; açılar hızla açılır (`…Fast`, `strideSpeed`), itiş kısa ve eğrili
+  (`pushBackTime`, `pushEase`), öne gelen bacakta diz önce katlanıp uyluk yerine varınca açılır (`reachOpenAt`).
+  Seyrek basışta arka bacak geride bekler (`Wait`), ön bacak havada açık kalır, gövde ayağın üstünde süzülür.
+- **Gövde yüksekliği:** yalnız yere basan ayak taşır; iki ayak havadaysa koşu uçuşu (`flightLift`, `flightGravity`).
+- **Bel:** sim'in baş açısından aşağı zincir (göğüs → bel dibi → kalça, azalan paylar = kavis). Tek tuş tutmada
+  gövde hızla devrilir (`holdLean`); iki tuşta dalış (`bothLean`), özel devrilme/yerleşme parçası yok.
+- **Tek tuş tutma:** tutulan bacak önce kendi geri açısına gider ve dizi düzleşir (`holdThigh` −65, `holdReachTime`),
+  sonra gövde onun çizgisine gelir; öndeki ayak yerde, gövdeyle açılır. Bırakışta takla yok.
+- **Kollar:** karşı bacağın o anki uyluk açısını izler, iki yöne sallanır (`armBack`/`armFront`, `armEase`).
+- Koşu ve dalış, son tutma değişikliğinden önce ve sonra ölçüldü: değişmedi.
+- `PhysicalTest.unity`'de engeller test için silindi; bu değişiklik **commit'e konmadı**.
 
 ## Proje nedir
 

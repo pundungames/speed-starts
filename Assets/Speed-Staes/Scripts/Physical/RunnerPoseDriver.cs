@@ -21,17 +21,16 @@ namespace SpeedStars.Physical
     ///                       to the front at the speed it has — never a snap (ReachOn);
     ///        after a push — the thigh stays back while the shin folds up (Recover), then the leg goes on its
     ///                       own to a mid angle (Mid) and home (Rest);
-    ///        held         — the pushed leg goes on to the hold angles (Hold) and rises behind with the waist
-    ///                       lean (one held or both); the leg in front turns into the support angles as the hold builds up;
+    ///        held         — the pushed leg goes on into the line of the hips (Hold, HoldLine) and goes up behind
+    ///                       as they tip; the leg in front turns into the support angles as the hold builds up;
     ///        no input     — home: the crouch angles (blended to the running home while presses keep coming).
     ///      Every phase starts from the leg's current angles, so a press mid-swing goes on back from there.
-    ///   3. The lean comes from the head alone (UpdateLean), down a chain: head → neck → chest (the waist's
-    ///      top) → B-spine (its base) → hips, each following the one above through a spring (the head leads,
-    ///      the hips come last). Forward the hips take hipShare of the lean the head asks for and the back
-    ///      curves on top of them (waistBaseShare, waistTopShare of the lean), back only up to waistBackMax; the
-    ///      legs still turn with all of it. The hips pitch within pelvisPitchRange. Legs in the air and held legs turn with the hips' lean; a leg
-    ///      on the ground keeps its angle to the ground (FollowHips). Height still comes from the legs (4), so
-    ///      while a foot carries the body the head cannot reach the ground.
+    ///   3. The lean runs down a chain from the head (UpdateLean): the sim's head angle is the measure; chest,
+    ///      waist base and hips take smaller and smaller shares of it (chestShare, waistShare, hipShare), each
+    ///      following the one above through a spring, so the back rounds like a chain. Speed (hipRunLean) and both
+    ///      keys held (bothLean, toward level: the dive, with its hump, spineLevelCurve) lean the whole body. The
+    ///      hips pitch within pelvisPitchRange. Legs in the air and held legs turn with the hips; a leg on the
+    ///      ground keeps its angle to the ground (FollowHips). Height still comes from the legs (4).
     ///   Head and neck: one head angle, back ↔ upright ↔ forward, computed by the sim (RunnerSim.HeadAngle,
     ///      it also takes speed off presses made with the head down) and drawn here. One input per key: down or
     ///      up — a tap and a hold are the same thing, a hold only lasts longer. While a key is down the head
@@ -45,8 +44,7 @@ namespace SpeedStars.Physical
     ///      it down. When the last foot leaves the ground — however it gets there, both keys together or one
     ///      after the other — nothing carries the body: it flies on with the rise its push gave it, under
     ///      constant gravity (liftKick: the last push throws it up a little), going forward at the run's speed,
-    ///      tipping over as the head goes forward (the hips follow it, and in the air the body tips on by how far
-    ///      forward the head is, airTip, past level) and comes down head first: the dive, no special case. Head, pelvis, knees and
+    ///      the hips tipped by the held keys, and comes down onto the ground: the dive, no special case. Head, pelvis, knees and
     ///      feet never go into the ground: the body stops on the first that touches. Letting go, the legs come
     ///      back under and lift it (softly from low down, ~0.5 s). See UpdateBodyHeight / KeepAboveGround.
     /// One key moves one leg and one arm (right key: right leg + left arm): the arm follows that leg's thigh
@@ -69,10 +67,18 @@ namespace SpeedStars.Physical
             Mid,
             /// <summary>The other leg was pressed: thigh stays forward, shin opens, the foot lands ahead.</summary>
             Reach,
-            /// <summary>In front on the ground while the other leg is still pushing, recovering or held.</summary>
+            /// <summary>
+            /// Landed in front, on the ground while the other leg is still pushing, recovering or held: the foot stays
+            /// put, the leg turns back toward home at the body's speed.
+            /// </summary>
             Front,
             /// <summary>Still held after the push: back and straight, rising behind with the waist lean.</summary>
             Hold,
+            /// <summary>
+            /// Recovered and waiting behind, shin folded, for the other key (it then comes forward at once): the legs
+            /// stay apart between sparse presses instead of drifting home. No press for openHoldTime: on to mid.
+            /// </summary>
+            Wait,
         }
 
         /// <summary>One leg's angles (deg): thigh from straight down (+ = forward), knee between thigh and shin.</summary>
@@ -139,6 +145,10 @@ namespace SpeedStars.Physical
             [HideInInspector] public double swingStart; // sim time the swing began (end of the push)
             [HideInInspector] public float swingTime;   // recover + mid + home of this swing (s)
             [HideInInspector] public float thighRate;   // the thigh's angular speed last frame (deg/s, + = forward)
+            [System.NonSerialized] public bool grounded = true; // last frame its foot was down on the ground
+            [System.NonSerialized] public double landStart = -1.0; // reached out: sim time it began coming down to land (− = not yet)
+            [System.NonSerialized] public Spring kneeLag;   // the knee trailing its target in the air (kneeSpring)
+            [System.NonSerialized] public float holdFromWorld, holdFromKnee; // where a hold began (thigh world, knee)
             public Vector3 RestBall => restAnkle + ballOffset;
             public double EndTime => phaseTime + duration;
             /// <summary>Push, recover, mid and reach run their time and hand over; the others wait.</summary>
@@ -194,6 +204,35 @@ namespace SpeedStars.Physical
             [HideInInspector] public Vector3 restDir;
             [HideInInspector] public float side;
             [HideInInspector] public float swing, elbow;   // this frame's pose (deg)
+            // The tween toward the opposite leg's phase (StepArm).
+            [System.NonSerialized] public float fromSwing, fromElbow, toSwing, toElbow, tweenTime;
+            [System.NonSerialized] public double tweenStart = -1.0;
+            [System.NonSerialized] public LegPhase legPhase;
+            [System.NonSerialized] public double legPhaseTime = -1.0;
+        }
+
+        /// <summary>The shape of a move over its time (0..1 → 0..1).</summary>
+        public enum EaseShape
+        {
+            /// <summary>The curve next to it (edit it in the Inspector).</summary>
+            Custom,
+            Linear,
+            /// <summary>Slow out, quick at the end.</summary>
+            EaseInCirc,
+            /// <summary>Quick out, slowing down into its place at the end.</summary>
+            EaseOutQuint,
+        }
+
+        static float Ease(EaseShape shape, AnimationCurve custom, float s)
+        {
+            s = Mathf.Clamp01(s);
+            switch (shape)
+            {
+                case EaseShape.Linear: return s;
+                case EaseShape.EaseInCirc: return 1f - Mathf.Sqrt(1f - s * s);
+                case EaseShape.EaseOutQuint: return 1f - Mathf.Pow(1f - s, 5f);
+                default: return custom != null && custom.length > 0 ? Mathf.Clamp01(custom.Evaluate(s)) : s;
+            }
         }
 
         [Tooltip("The physics this draws (found on this object if empty). The visual never changes speed or timing.")]
@@ -243,31 +282,87 @@ namespace SpeedStars.Physical
         [Tooltip("The other leg on a press: it opens forward nearly straight and the foot lands well ahead " +
                  "(the reference video: ~47° from straight down).")]
         public LegAngles reach = new LegAngles(47f, 175f);
-        [Tooltip("A held leg at a full hold: back, the knee a little bent (not dead straight). It rises behind with the " +
-                 "hips' lean, up to heldLegMaxAngle.")]
-        public LegAngles holdBack = new LegAngles(-60f, 145f);
+        [Tooltip("pushEnd at stride speed (strideSpeed.y): the faster the run, the further back the push ends (the " +
+                 "reference video: the legs open ~85° slow, ~110° fast).")]
+        public LegAngles pushEndFast = new LegAngles(-60f, 160f);
+        [Tooltip("recover at stride speed (strideSpeed.y): the thigh further back, the shin less folded.")]
+        public LegAngles recoverFast = new LegAngles(-75f, 135f);
+        [Tooltip("reach at stride speed (strideSpeed.y): the leg opens further forward, the knee a little bent.")]
+        public LegAngles reachFast = new LegAngles(70f, 145f);
+        [Tooltip("Speed (m/s) from which (x) to which (y) pushEnd, recover and reach turn into their Fast angles " +
+                 "(linearly): the stride opens with speed.")]
+        public Vector2 strideSpeed = new Vector2(2f, 8f);
+        [Tooltip("Coming forward into its reach the knee first folds (heel up) to this angle, then the shin opens out " +
+                 "forward to the reach's knee: x slow, y fast (strideSpeed). Lower = the heel comes up higher and the " +
+                 "shin flicks out more. A leg already more folded only opens.")]
+        public Vector2 reachFoldKnee = new Vector2(100f, 55f);
+        [Tooltip("Share of the thigh's way forward by which the knee is folded (heel up behind).")]
+        [Range(0.05f, 0.9f)] public float reachFoldAt = 0.45f;
+        [Tooltip("The knee stays folded until the thigh has come this share of its way to its place in front; only " +
+                 "then does the shin open out forward (1 = only once the thigh is there).")]
+        [Range(0.1f, 0.99f)] public float reachOpenAt = 0.85f;
+        [Tooltip("Reached out and still in the air, the leg comes down and back to this touchdown pose before the foot " +
+                 "lands (real sprinting: the foot lands just ahead of the body, not at full reach), so the body does not " +
+                 "sink to meet a leg held out level.")]
+        public LegAngles reachLand = new LegAngles(35f, 155f);
+        [Tooltip("How long (s) after its reach the leg takes to come down to reachLand.")]
+        public float reachLandTime = 0.1f;
+        [Tooltip("A held leg's knee at a full hold (deg): a little bent, not dead straight. Its thigh trails the hips " +
+                 "in their line (heldLegArch), so as the hips tip forward the leg goes up behind with them.")]
+        public float holdKnee = 145f;
+        [Header("One key held (the other free): the held leg's own way back, then the body comes into its line")]
+        [Tooltip("One key held: the held leg goes back to this thigh angle (deg from straight down, world) on its own, " +
+                 "while the body is still upright; once the tipping body's line is further back it goes on with it. " +
+                 "The reference game: ~−65°, the knee straight, then the body tips into one line with it.")]
+        public float holdThigh = -65f;
+        [Tooltip("One key held: the knee opens from the push's bend to this (deg) as the thigh goes back (same way).")]
+        public float holdStraightKnee = 165f;
+        [Tooltip("One key held: how long (s) the leg takes from the end of its push to holdThigh / holdStraightKnee.")]
+        public float holdReachTime = 0.18f;
+        [Tooltip("The leg in front while the other is held, as the hold starts (the body still upright): it opens to " +
+                 "holdSupport as the body tips forward over the planted foot (the shin stays upright).")]
+        public LegAngles holdSupportStart = new LegAngles(55f, 110f);
         [Tooltip("The leg in front while the other is held, at a full hold, carrying the body. thigh + knee = 180 " +
                  "stands the shin upright, the pelvis behind and above the foot.")]
         public LegAngles holdSupport = new LegAngles(80f, 100f);
         [Tooltip("The knee is never quite straight (the IK snaps at full reach).")]
         public float maxKnee = 177f;
-        [Tooltip("A held leg rises behind with the body's lean up to this angle from straight down (deg; 90 = level).")]
-        public float heldLegMaxAngle = 90f;
-        [Tooltip("A held leg's thigh goes at most this far past the hips' angle (deg; − = short of it, which the slightly " +
-                 "bent knee makes up): leaning, held legs trail the body in a nearly straight line instead of rising " +
-                 "ahead of it (the reference video's dive).")]
+        [Tooltip("A held leg's thigh trails the line of the hips this far past it (deg; − = short of it, which the " +
+                 "slightly bent knee makes up): the held legs and the body make one nearly straight line (the dive).")]
         public float heldLegArch = -10f;
 
         [Header("Leg timing (s)")]
-        [Tooltip("Push: the pressed leg going back, and the other leg's reach forward with it (s). A fixed time of its " +
-                 "own, not the sim's stanceTime: too short and the legs jump instead of flowing.")]
+        [Tooltip("The other leg's reach forward on a press (s), quicker with speed (animSpeedUp), and the shortest the " +
+                 "landed front leg takes going back toward home (see frontGroundMax).")]
         public float pushTime = 0.2f;
+        [Tooltip("The pressed leg's push back (s): x slow, y fast (strideSpeed). Short and quick at any speed, as in " +
+                 "the reference game (the leg is back about 0.15 s after the press, with the fold after it).")]
+        public Vector2 pushBackTime = new Vector2(0.12f, 0.08f);
+        [Tooltip("The push's shape over its time: EaseInCirc = slow out of home/mid, quick at the end; EaseOutQuint = " +
+                 "quick out, slowing down into the back; Linear; Custom = pushCurve below.")]
+        public EaseShape pushEase = EaseShape.EaseOutQuint;
+        [Tooltip("pushEase Custom: how the thigh goes over the push's time (0..1 → 0..1): an ease-in toward easeInCirc, starting slow " +
+                 "out of home/mid and speeding up to the end (the reference game), its end slope kept moderate so the " +
+                 "leg does not flick in the last frames. The fold after it takes over at that speed; the knee opens on " +
+                 "a smooth curve of its own.")]
+        public AnimationCurve pushCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 0f),
+            new Keyframe(0.5f, 0.22f, 0.9f, 0.9f), new Keyframe(1f, 1f, 2.2f, 2.2f));
+        [Tooltip("The leg reaching forward (the other key's press) over its time: EaseOutQuint = quick out, slowing " +
+                 "into its place in front; EaseInCirc = slow out, quick at the end; Linear; Custom = reachCurve. The " +
+                 "knee folds and opens by how far the thigh has come (reachFoldAt / reachOpenAt), so it follows along.")]
+        public EaseShape reachEase = EaseShape.EaseOutQuint;
+        [Tooltip("reachEase Custom: the reach over its time (0..1 → 0..1).")]
+        public AnimationCurve reachCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        [Tooltip("In the air (folding up, coming through, waiting behind, reaching) the knee follows its angle through " +
+                 "this spring instead of exactly: the thigh leads and the shin trails it a moment, as a loose limb does, " +
+                 "so the lower leg never snaps (lower frequency = more lag). On the ground the knee is exact. " +
+                 "Frequency 0 = off.")]
+        public SpringSettings kneeSpring = new SpringSettings(9f, 0.9f);
         [Tooltip("At max speed the push and the swing take this share of their time (1 = as slow as standing): the " +
                  "faster the run, the quicker the legs and arms, so they keep up with presses on time.")]
         [Range(0.2f, 1f)] public float animSpeedUp = 0.5f;
-        [Tooltip("Shin folding up after the push. recover + mid + home are shares of the step: scaled together so " +
-                 "push + recover + mid + home fill the time between presses (stepTimeMin to stepTimeMax), one curve " +
-                 "with no stop between them.")]
+        [Tooltip("Shin folding up after the push. recover + mid + home are shares of the swing: scaled together so " +
+                 "push + recover + mid + home take swingSteps of the sim's step time, one curve with no stop between them.")]
         public float recoverTime = 0.15f;
         [Tooltip("From recovered to the mid angle (a share of the step, see recoverTime).")]
         public float midTime = 0.15f;
@@ -276,16 +371,17 @@ namespace SpeedStars.Physical
         [Tooltip("The leg in front goes home this slowly once the other is no longer pushing or held (the body passes " +
                  "over it); scaled with the step like recoverTime.")]
         public float frontHomeTime = 0.3f;
-        [Tooltip("The step never goes quicker than this (s), however fast the presses come.")]
-        public float stepTimeMin = 0.2f;
-        [Tooltip("The step never goes slower than this (s): sparser presses finish it in this time and the pose waits.")]
-        public float stepTimeMax = 0.6f;
-        [Tooltip("The swing takes this many times the press-to-press time (after stepTimeMin/Max): above 1 the legs " +
-                 "and arms move slower than the presses come, and the next press takes the leg on from where it is.")]
-        public float stepSlow = 2.667f;
-        [Tooltip("How much of each new press-to-press time the step takes on (1 = just the last one): one odd press " +
-                 "does not jerk the legs.")]
-        [Range(0.1f, 1f)] public float stepFollow = 0.5f;
+        [Tooltip("A leg that has pushed and folded up waits behind for the other key this long at most (s) after the " +
+                 "last press (the reference game: between sparse presses the legs stay apart, then change over quickly); " +
+                 "with no press by then it comes on home.")]
+        public float openHoldTime = 0.6f;
+        [Tooltip("A leg landed in front goes back toward home at the body's speed (the foot stays where it landed) but " +
+                 "takes at most this long (s): slow, the legs stay apart longer.")]
+        public float frontGroundMax = 0.5f;
+        [Tooltip("A leg's whole cycle (push + recover + mid + home) takes this many of the sim's steps (its StepTime, " +
+                 "from the speed): 2 = one stride, the legs keep the body's pace however sparse the presses; a leg done " +
+                 "early waits at home for the next press. Lower = quicker legs.")]
+        public float swingSteps = 2f;
         [Tooltip("While a key is down, home is the crouch below x m/s and the running home above y. With no key down " +
                  "home is the crouch: the runner heads straight for it, no upright stance on the way.")]
         public Vector2 restToBaseSpeed = new Vector2(0.5f, 3f);
@@ -309,19 +405,17 @@ namespace SpeedStars.Physical
         public float liftRange = 0.2f;
         [Tooltip("Upward speed the last foot's push gives the body as it leaves the ground with nothing left to carry it (m/s).")]
         public float liftKick = 1.5f;
-        [Tooltip("With nothing carrying the body the whole body (head included) tips forward at up to this rate " +
-                 "(deg/s), by how far forward the head is, until the head is on the ground or the hips are level " +
-                 "(pelvisPitchRange.y): it comes down and lies flat. It comes back once the legs carry the body again. " +
-                 "The reference video: the straight body turns ~45° → ~78° over the half second in the air.")]
-        public float airTip = 90f;
-        [Tooltip("Once a leg carries the body again the tip goes back to 0 through this spring.")]
-        public SpringSettings airTipBack = new SpringSettings(3f, 1f);
-        [Tooltip("Head on the ground with no foot carrying: the body settles through this spring — the waist's curve " +
-                 "opens, the head comes up off its forward bend and the tip goes on to level — so the body comes down " +
-                 "after the head (chest, hips, knees) instead of hanging on it. A foot carrying again takes it back.")]
-        public SpringSettings settleSpring = new SpringSettings(1.5f, 1f);
-        [Tooltip("Settled on the ground the head comes up this far past the line of the body (deg), looking ahead.")]
-        public float settleHeadUp = 15f;
+        [Tooltip("Running, both feet off the ground (the leg in front still reaching, the other folded behind): the body " +
+                 "flies on, leaving with at least this upward speed (m/s), under flightGravity, until a foot lands. " +
+                 "It never drops onto a foot still in the air. With flightGravity: 0.9 / 15 = a hop of about 3 cm, " +
+                 "0.12 s up and down.")]
+        public float flightLift = 0.9f;
+        [Tooltip("Gravity of that running flight (m/s²): higher = a heavier, shorter hop (9.8 is real; the sim's own " +
+                 "gravity stays for the dive).")]
+        public float flightGravity = 15f;
+        [Tooltip("A leg reached out forward stays so in the air until its foot comes down on the ground, but at most " +
+                 "this long after its reach is done (s).")]
+        public float reachAirMax = 0.5f;
 
         [Header("Ground: nothing goes into it (with no foot carrying, the body stops on the first part down)")]
         [Tooltip("Head bone height above the ground when the head lies on it (m).")]
@@ -387,26 +481,45 @@ namespace SpeedStars.Physical
         public float neckTrim = 10f;
         [Tooltip("Forward lean (deg) from which all of neckTrim is in.")]
         public float neckTrimLean = 30f;
-        [Tooltip("Share of the head angle the body follows, all the way (the head comes down, the body bends after it).")]
-        [Range(0f, 1f)] public float hipFollow = 1f;
-        [Tooltip("The top of the waist (chest, neck base) follows the head through this spring, so the head leads.")]
+        [Tooltip("The top of the chain (chest, neck base) follows the head through this spring: the head moves first.")]
         public SpringSettings hipFollowSpring = new SpringSettings(4f, 0.9f);
 
-        [Header("Body: head → neck → chest → waist base → hips, each following the one above")]
+        [Header("Body: a chain from the head (the sim's head angle, the measure) down to the hips")]
+        [Tooltip("Share of the head's forward angle the chest (top of the waist) takes. Each link down takes less, so " +
+                 "every link bends a little on the one below: the back rounds like a chain, never one stiff line.")]
+        [Range(0f, 1f)] public float chestShare = 0.78f;
+        [Tooltip("Share of the head's forward angle the base of the waist (B-spine) takes (below chestShare).")]
+        [Range(0f, 1f)] public float waistShare = 0.6f;
+        [Tooltip("Share of the head's forward angle the hips take (the last link; the legs turn with them).")]
+        [Range(0f, 1f)] public float hipShare = 0.45f;
+        [Tooltip("Each link down (waist base, hips) follows the one above through this spring (damping 1: it lags, " +
+                 "never swings): the bend flows down the back, deeper while the head moves.")]
+        public SpringSettings waistSpring = new SpringSettings(3f, 1f);
+        [Tooltip("The whole body's forward lean while running (deg, every link alike): x standing, y at max speed.")]
+        public Vector2 hipRunLean = new Vector2(3f, 8f);
+        [Tooltip("A key held down tips the whole body forward this much (deg) at once, over the front foot, through " +
+                 "holdTipSpring (the reference game: ~30–35° within 0.15 s of the hold; the head's slower lean takes it " +
+                 "on to ~75° by 1.5 s). The held leg stays in the line of the hips, so it goes back with them. Quick " +
+                 "presses never get there (their hold weight stays low).")]
+        public float holdLean = 32f;
+        [Tooltip("How quickly the body tips into holdLean and back (frequency, damping).")]
+        public SpringSettings holdTipSpring = new SpringSettings(7f, 1f);
+        [Tooltip("More forward lean for the whole body (deg) with both keys held, at the lower of the two hold " +
+                 "weights: with the head down it takes the hips to level — the dive comes out of it.")]
+        public float bothLean = 55f;
+        [Tooltip("Most the body (on the heels) leans back with the head swinging back (deg).")]
+        public float hipBackMax = 12f;
+        [Tooltip("Near level (the dive) the curve turns over: the low back arches up this much on the hips (deg, − = " +
+                 "up), the shoulders above the line of the hips and legs, the head dipping in front (headDip) — the " +
+                 "reference game's hump. It blends in from half of level on.")]
+        public float spineLevelCurve = -12f;
+        [Tooltip("Near level the head dips forward past the chest by up to this (deg): the head below the shoulders.")]
+        public float headDip = 20f;
         [Tooltip("B-spine's bend on the hips at rest (deg, its Inspector X); the chain's bend comes on top.")]
         public float waistAngle = 2f;
         [Tooltip("The top of the waist's bend forward on B-spine at rest (deg, on top of the rig's rest): with " +
                  "waistAngle a gentle curve, the base a little back, chest and neck forward.")]
         public float waistTopAngle = 13f;
-        [Tooltip("Share of the forward lean the hips take themselves (the legs turn with all of it); the waist bends " +
-                 "on top of them. Leaning back the hips take all of it.")]
-        [Range(0f, 1f)] public float hipShare = 0.65f;
-        [Tooltip("The top of the waist (chest and neck base) bends this share of the lean on B-spine, on top of the hips'.")]
-        [Range(0f, 1f)] public float waistTopShare = 0.67f;
-        [Tooltip("The base of the waist (B-spine) bends this share of the lean on the hips.")]
-        [Range(0f, 1f)] public float waistBaseShare = 0.27f;
-        [Tooltip("Each link down the waist follows the one above through this spring (damping 1: it lags, never swings).")]
-        public SpringSettings waistSpring = new SpringSettings(3f, 1f);
         [Tooltip("Most the waist bends back (deg); a lean back past it is the whole body sitting back on the heels.")]
         public float waistBackMax = 7f;
         [Tooltip("Hip pitch range (deg, + = forward): the forward lean — the head's pull, the dive — turns " +
@@ -421,6 +534,20 @@ namespace SpeedStars.Physical
         [Tooltip("Elbow bend with the arm all the way back (deg): the forearm has turned back with the upper arm " +
                  "and points down-back (stays so while held).")]
         public float elbowBack = 30f;
+        [Tooltip("Upper arm (deg, +) with its leg all the way forward (the opposite leg reaching): the arm swings both " +
+                 "ways, in proportion to that leg (its back angle → armBack, its reach → armFront).")]
+        public float armFront = 50f;
+        [Tooltip("Elbow bend with the arm all the way forward (deg): bent, the hand up in front (the reference game " +
+                 "~80–90°). Between back and front the elbow goes with the upper arm.")]
+        public float elbowFront = 95f;
+        [Tooltip("The arm's move toward the opposite leg's phase: EaseOutQuint = quick out, slowing into place; " +
+                 "EaseInCirc = slow out, quick at the end; Linear; Custom = armCurve.")]
+        public EaseShape armEase = EaseShape.EaseOutQuint;
+        [Tooltip("armEase Custom: the arm's move over its time (0..1 → 0..1).")]
+        public AnimationCurve armCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        [Tooltip("An arm's move starts with its leg's phase and lasts that phase's time, but at least this long (s): " +
+                 "a quick push does not snap the arm.")]
+        public float armMinTime = 0.2f;
         [Tooltip("Arms angled out sideways from the body (deg), so they clear the trunk.")]
         public float armOutward = 8f;
         [Tooltip("Shoulder (clavicle) follows the arm swing (deg at full swing).")]
@@ -471,7 +598,11 @@ namespace SpeedStars.Physical
         const float HeelBehindAnkle = 0.05f;   // heel contact point behind the ankle joint (m)
         const float ToesUpFree = 5f;           // foot this far toes up (deg) keeps its toes in line instead of flat
         const float MinPelvis = 0.1f;          // the pelvis never goes lower than this above the ground (m)
-        const float MinFlowRate = 50f;         // a leg turning forward slower than this (deg/s) starts its reach from rest
+        const float MinPushTime = 0.06f;       // a push never goes quicker than this (s), however fast the run
+        const float GroundContact = 0.01f;     // a foot this close above the ground (m) has landed
+        const float GroundKeep = 0.05f;        // a carrying foot counts as on the ground up to this high (m)
+        const float GlideGap = 0.015f;         // a reach held out in the air glides this far over the ground (m)
+        const float MinFlowRate = 50f;        // a leg turning forward slower than this (deg/s) starts its reach from rest
         const float JumpAnkleFade = 10f;       // after a jump the ankles go back to the run's angles this fast (1/s)
         const float FollowRate = 6f;           // a leg changes between turning with the hips and keeping to the ground this fast (1/s)
 
@@ -481,21 +612,21 @@ namespace SpeedStars.Physical
         float _ground, _sole, _profileW, _runHome;
         float _restWaist;                          // B-spine's bend on the hips at rest (deg)
         float _stepping;                           // 1 = a key is down (run stance), 0 = none: Ready crouch
-        float _pressGap = float.MaxValue;          // press to press (s), smoothed by stepFollow
-        double _lastPress = -1.0;                  // sim time of the last press
         Spring _bodyY, _lean;                      // the waist top's lean after the head (deg)
         Spring _waistBase, _hipsLean;              // B-spine's and the hips' lean down the chain (deg)
         float _headAngle;                          // this frame's head angle (deg, + = forward)
         float _holdL, _holdR;                      // hold weights this frame
         bool _bound, _heightSet;
+        bool _inFlight;                            // running with both feet in the air (not a dive)
         float _lastBodyY;                          // last frame's body height (the head bone is last frame's too)
         bool _carried = true, _headDown;           // last frame: a leg carried the body / the head was on the ground
-        Spring _tip;                               // the lean the body has tipped over in the air (deg)
-        Spring _settle;                            // 0..1: the body settling down after the head touched (no foot carrying)
+        float _pelvisNow;                          // this frame's pose pelvis pitch (deg): a held leg trails its line
+        Spring _holdTip;                           // the quick forward tip of a key held (deg, whole body)
         MultiAimConstraint _headAim;
         Transform _headBone, _lookTarget, _neckBone;
         float _neckTrimNow;                        // this frame's neck trim (deg), applied after the rig
         float _lookDistance;
+        double _lastPress = -10.0;                 // sim time of the last press (a leg waiting behind waits from it)
 
         Vector3 Local(Transform t) => transform.InverseTransformPoint(t.position);
 
@@ -585,6 +716,7 @@ namespace SpeedStars.Physical
         {
             leg.phase = LegPhase.Rest;
             leg.phaseTime = 0.0;
+            leg.grounded = true;
             leg.reachNext = false;
             leg.duration = 0f;
             leg.held = false;
@@ -640,24 +772,21 @@ namespace SpeedStars.Physical
             if (!pressed)
             {
                 l.held = false;
-                if (l.phase == LegPhase.Hold) Enter(l, LegPhase.Mid, time, StepPart(midTime));
+                // A held leg let go folds up behind first, as after any push (then waits or comes on).
+                // Flying in a dive the legs stay in line with the body until it is down (TickLegs takes them on).
+                if (l.phase == LegPhase.Hold && (_carried || _headDown || l.grounded)) ReleaseHold(l, time);
                 return;
             }
             l.held = true;
             l.reachNext = false;
-            if (_lastPress >= 0.0)
-            {
-                // A pause counts as stepTimeMax: it does not leave the next steps sluggish.
-                float gap = Mathf.Min((float)(time - _lastPress), stepTimeMax);
-                _pressGap = _pressGap == float.MaxValue ? gap : Mathf.Lerp(_pressGap, gap, stepFollow);
-            }
             _lastPress = time;
-            Enter(l, LegPhase.Push, time, PushTime());
+            Enter(l, LegPhase.Push, time, PushDuration(l));
             var other = Legs(1 - leg);
             if (other.HeldBack) return;
-            // A leg still going back finishes that first; one coming forward turns to the front as it goes.
+            // A leg still going back finishes that first; one coming forward (or waiting behind) turns to the front
+            // as it goes.
             if (other.phase == LegPhase.Push || other.phase == LegPhase.Recover) other.reachNext = true;
-            else if (other.phase == LegPhase.Mid) ReachOn(other, time);
+            else if (other.phase == LegPhase.Mid || other.phase == LegPhase.Wait) ReachOn(other, time);
             else Enter(other, LegPhase.Reach, time, PushTime());
         }
 
@@ -676,7 +805,7 @@ namespace SpeedStars.Physical
         void ReachOn(Leg leg, double time)
         {
             leg.reachNext = false;
-            float dist = Mathf.Abs(reach.thigh - leg.angles.thigh);
+            float dist = Mathf.Abs(Reach().thigh - leg.angles.thigh);
             float push = PushTime();
             if (leg.thighRate > MinFlowRate)
             {
@@ -685,7 +814,7 @@ namespace SpeedStars.Physical
             }
             else
                 Enter(leg, LegPhase.Reach, time,
-                    Mathf.Max(push, StepPart(midTime) * dist / Mathf.Max(1f, Mathf.Abs(mid.thigh - recover.thigh))));
+                    Mathf.Max(push, StepPart(midTime) * dist / Mathf.Max(1f, Mathf.Abs(mid.thigh - Recover().thigh))));
         }
 
         void OnRunReset()
@@ -693,32 +822,60 @@ namespace SpeedStars.Physical
             _lean.Reset();
             _waistBase.Reset();
             _hipsLean.Reset();
-            _tip.Reset();
-            _settle.Reset();
+            _holdTip.Reset();
             _carried = true;
             _wasInJump = false;
+            _inFlight = false;
+            _lastPress = -10.0;
             leftLeg.sideOut = rightLeg.sideOut = leftLeg.jumpW = rightLeg.jumpW = 0f;
             ResetLeg(leftLeg);
             ResetLeg(rightLeg);
             _heightSet = false;
-            _pressGap = float.MaxValue;
-            _lastPress = -1.0;
         }
 
         Leg Legs(int i) => i == 0 ? leftLeg : rightLeg;
 
         float Speed01() => body && body.Sim != null ? Mathf.Clamp01(body.Sim.Speed / body.Sim.T.maxSpeed) : 0f;
 
+        /// <summary>How far the stride has opened with speed: 0 at strideSpeed.x, 1 at strideSpeed.y.</summary>
+        float Stride01() => body && body.Sim != null
+            ? Mathf.InverseLerp(strideSpeed.x, strideSpeed.y, body.Sim.Speed) : 0f;
+
+        LegAngles PushEnd() => LegAngles.Lerp(pushEnd, pushEndFast, Stride01());
+        LegAngles Recover() => LegAngles.Lerp(recover, recoverFast, Stride01());
+        LegAngles Reach() => LegAngles.Lerp(reach, reachFast, Stride01());
+
+        /// <summary>How far forward of the thigh joint the foot is at these angles (runner space, m).</summary>
+        static float FootAhead(Leg leg, LegAngles a) =>
+            leg.thighLength * Mathf.Sin(a.thigh * Mathf.Deg2Rad) +
+            leg.shinLength * Mathf.Sin((a.thigh - (180f - a.knee)) * Mathf.Deg2Rad);
+
         /// <summary>
-        /// A phase's share of the step: push + recover + mid + home fill the time between presses, so the legs (and
-        /// the arms after them) flow from press to press, faster as the presses come faster. Between stepTimeMin and
-        /// stepTimeMax; before the presses have a rhythm, the sim's StepTime.
+        /// A push is quick whatever the speed (the reference game: the leg goes back in about 0.1 s): pushBackTime,
+        /// slow to fast over strideSpeed. Slow, the foot slides back a little on the ground; the look comes first.
         /// </summary>
-        float StepPart(float time)
+        float PushDuration(Leg leg) => Mathf.Max(MinPushTime, Mathf.Lerp(pushBackTime.x, pushBackTime.y, Stride01()));
+
+        /// <summary>
+        /// The time a foot on the ground takes from the leg's angles now to these, going back under the body at the
+        /// body's speed (between MinPushTime and most).
+        /// </summary>
+        float GroundTime(Leg leg, LegAngles to, float most)
         {
-            float gap = _pressGap == float.MaxValue ? (body && body.Sim != null ? body.Sim.StepTime : 0.4f) : _pressGap;
-            float step = Mathf.Clamp(gap, stepTimeMin, Mathf.Max(stepTimeMin, stepTimeMax)) * stepSlow * SpeedUp();
-            return time * Mathf.Max(0.01f, step - PushTime()) / SwingParts;
+            float speed = body && body.Sim != null ? body.Sim.Speed : 0f;
+            float way = Mathf.Max(0f, FootAhead(leg, leg.angles) - FootAhead(leg, to));
+            return Mathf.Clamp(way / Mathf.Max(0.01f, speed), MinPushTime, Mathf.Max(MinPushTime, most));
+        }
+
+        /// <summary>
+        /// A phase's share of the swing: push + recover + mid + home take swingSteps of the sim's step time (from the
+        /// body's speed, not from how the presses come), so the legs and the arms after them keep the body's pace.
+        /// push = the push this swing follows (s; − = the usual PushTime).
+        /// </summary>
+        float StepPart(float time, float push = -1f)
+        {
+            float cycle = (body && body.Sim != null ? body.Sim.StepTime : 0.25f) * Mathf.Max(0.1f, swingSteps);
+            return time * Mathf.Max(0.01f, cycle - (push < 0f ? PushTime() : push)) / SwingParts;
         }
 
         float SwingParts => Mathf.Max(0.01f, recoverTime + midTime + homeTime);
@@ -741,7 +898,17 @@ namespace SpeedStars.Physical
             leg.fromPitch = leg.pitch;
             leg.easeOut = false;
             leg.swing = false;
+            leg.landStart = -1.0;
         }
+
+        /// <summary>
+        /// Reached out in front while the other leg is still behind (folding up or waiting for its key): the leg holds
+        /// its reach in the air (the body glides just above the ground, UpdateBodyHeight) instead of landing at once;
+        /// it comes down when the other leg comes on or the next key is pressed.
+        /// </summary>
+        static bool HoldsReach(Leg leg, Leg partner, double now) =>
+            leg.phase == LegPhase.Reach && now >= leg.EndTime && leg.landStart < 0.0 &&
+            (partner.phase == LegPhase.Recover || partner.phase == LegPhase.Wait);
 
         /// <summary>Hand a swing on to its next phase (its share of the swing's time), still on the one curve.</summary>
         void EnterSwing(Leg leg, LegPhase phase, double time)
@@ -764,16 +931,25 @@ namespace SpeedStars.Physical
                 foreach (var leg in new[] { leftLeg, rightLeg })
                 {
                     var partner = leg == leftLeg ? rightLeg : leftLeg;
-                    if (leg.phase == LegPhase.Hold && !leg.held)
+                    // Let go: it folds up — but flying in a dive only once the body is down (head on the ground), so
+                    // the legs do not swing round over the body in the air.
+                    if (leg.phase == LegPhase.Hold && !leg.held && (_carried || _headDown || leg.grounded))
                     {
-                        Enter(leg, LegPhase.Mid, time, StepPart(midTime));
+                        ReleaseHold(leg, time);
                         continue;
                     }
-                    // The front foot stays planted ahead until the other leg has pushed and recovered.
+                    // The front foot stays planted ahead until the other leg has pushed and recovered (or while it
+                    // waits behind for the next press).
                     if (leg.phase == LegPhase.Front && partner.phase != LegPhase.Push && partner.phase != LegPhase.Hold &&
-                        partner.phase != LegPhase.Recover)
+                        partner.phase != LegPhase.Recover && partner.phase != LegPhase.Wait)
                     {
                         Enter(leg, LegPhase.Rest, time, StepPart(frontHomeTime));
+                        continue;
+                    }
+                    // Waiting behind: no press for openHoldTime, it comes on home by itself.
+                    if (leg.phase == LegPhase.Wait)
+                    {
+                        if (time - _lastPress >= openHoldTime) Enter(leg, LegPhase.Mid, time, StepPart(midTime));
                         continue;
                     }
                     if (!leg.Timed || time < leg.EndTime) continue;
@@ -781,16 +957,23 @@ namespace SpeedStars.Physical
                     switch (leg.phase)
                     {
                         case LegPhase.Push:
-                            if (leg.held) Enter(leg, LegPhase.Hold, end, 0f);
+                            if (leg.held)
+                            {
+                                Enter(leg, LegPhase.Hold, end, 0f);
+                                leg.holdFromWorld = leg.thighWorld;
+                                leg.holdFromKnee = leg.angles.knee;
+                            }
                             else
                             {
                                 leg.swingStart = end;
-                                leg.swingTime = StepPart(recoverTime + midTime + homeTime);
+                                leg.swingTime = StepPart(recoverTime + midTime + homeTime, leg.duration);
                                 EnterSwing(leg, LegPhase.Recover, end);
                             }
                             break;
                         case LegPhase.Recover:
                             if (leg.reachNext) ReachOn(leg, end);
+                            // Presses still coming: wait behind for the other key instead of drifting home.
+                            else if (end - _lastPress < openHoldTime) Enter(leg, LegPhase.Wait, end, 0f);
                             else if (leg.swing) EnterSwing(leg, LegPhase.Mid, end);
                             else Enter(leg, LegPhase.Mid, end, StepPart(midTime));
                             break;
@@ -799,7 +982,16 @@ namespace SpeedStars.Physical
                             else Enter(leg, LegPhase.Rest, end, StepPart(homeTime));
                             break;
                         case LegPhase.Reach:
-                            Enter(leg, LegPhase.Front, end, 0f);
+                            // Reached out, it stays so in the air until the foot comes down on the ground (the body
+                            // flying on, see UpdateBodyHeight); never longer than reachAirMax.
+                            // Held out while the other leg is behind; then it comes down (landStart) and lands.
+                            if (HoldsReach(leg, partner, time)) break;
+                            if (leg.landStart < 0.0) leg.landStart = time;
+                            if (!leg.grounded && time - leg.landStart < reachAirMax) break;
+                            // Landed ahead: the body passes over the foot, so the leg goes on back toward home at
+                            // the body's speed (the foot stays where it landed).
+                            Enter(leg, LegPhase.Front, time, 0f);
+                            leg.duration = GroundTime(leg, Home(), Mathf.Max(PushTime(), frontGroundMax));
                             break;
                     }
                 }
@@ -817,36 +1009,98 @@ namespace SpeedStars.Physical
         {
             switch (leg.phase)
             {
-                case LegPhase.Recover: return recover;
+                case LegPhase.Recover:
+                case LegPhase.Wait: return Recover();
                 case LegPhase.Mid: return mid;
-                case LegPhase.Reach: return reach;
-                case LegPhase.Front: return LegAngles.Lerp(reach, holdSupport, otherHold);
+                case LegPhase.Reach: return Reach();
+                case LegPhase.Front:
+                {
+                    LegAngles plain = LegAngles.Lerp(Home(), holdSupport, otherHold);
+                    // The other leg really held (quick presses stay out of it): the support opens with the body's
+                    // tip, from holdSupportStart upright to holdSupport at level.
+                    float held = HeldWeight(otherHold);
+                    if (held <= 0f) return plain;
+                    float tilt = Mathf.Clamp01((_hipsLean.Value + _holdTip.Value) / Mathf.Max(1f, pelvisPitchRange.y));
+                    LegAngles support = LegAngles.Lerp(holdSupportStart, holdSupport, tilt);
+                    return LegAngles.Lerp(plain, LegAngles.Lerp(Home(), support, otherHold), held);
+                }
                 case LegPhase.Push:
-                case LegPhase.Hold: return LegAngles.Lerp(pushEnd, holdBack, ownHold);
+                case LegPhase.Hold: return LegAngles.Lerp(PushEnd(), HoldLine(), ownHold);
                 default: return Home();
             }
         }
 
         LegAngles Home() => LegAngles.Lerp(crouch, runHome, _runHome);
 
+        /// <summary>
+        /// The knee through a reach, by how far the thigh has come forward (not by time): it folds first, heel up
+        /// (reachFoldKnee, deeper the faster, by reachFoldAt of the thigh's way), stays folded while the thigh drives
+        /// on, and only once the thigh is reachOpenAt of the way to its place in front does the shin open out
+        /// forward into the reach's knee for the landing.
+        /// </summary>
+        float ReachKnee(Leg leg, float s)
+        {
+            float goal = Reach().thigh;
+            float way = Mathf.Abs(goal - leg.from.thigh) < 1f
+                ? s : Mathf.Clamp01(Mathf.InverseLerp(leg.from.thigh, goal, leg.angles.thigh));
+            float foldAt = Mathf.Clamp(reachFoldAt, 0.05f, 0.9f);
+            float openAt = Mathf.Clamp(reachOpenAt, foldAt, 0.99f);
+            float fold = Mathf.Min(leg.from.knee, Mathf.Lerp(reachFoldKnee.x, reachFoldKnee.y, Stride01()));
+            if (way < foldAt) return Mathf.Lerp(leg.from.knee, fold, Mathf.SmoothStep(0f, 1f, way / foldAt));
+            if (way < openAt) return fold;
+            return Mathf.Lerp(fold, Reach().knee, Mathf.SmoothStep(0f, 1f, (way - openAt) / (1f - openAt)));
+        }
+
         /// <summary>This frame's angles (from the phase's start into its target) and the foot's angles with them.</summary>
+        /// <summary>The swing's curve over its time: it starts at speed (taking over from the push) and slows to rest.</summary>
+        static float SwingCurve(float x) => 1f - (1f - x) * (1f - x);
+
         void UpdateLeg(Leg leg, double now, float dt, float legTurn, float ownHold, float otherHold)
         {
             float s = leg.duration > 0f ? Mathf.Clamp01((float)(now - leg.phaseTime) / leg.duration) : 1f;
             float lastThigh = leg.angles.thigh;
             // Phases start and end at rest (smooth step); one that takes over a moving leg starts at its speed.
             // A swing is one smooth step over recover + mid + home: it slows only as it comes home.
-            float ease = leg.easeOut ? 1f - (1f - s) * (1f - s) : Mathf.SmoothStep(0f, 1f, s);
+            // A landed front foot goes back at the body's steady speed (no ease); a push follows pushCurve (slow
+            // out, quick at the end).
+            float ease = leg.phase == LegPhase.Push ? Ease(pushEase, pushCurve, s)
+                : leg.phase == LegPhase.Reach ? Ease(reachEase, reachCurve, s)
+                : leg.phase == LegPhase.Front ? s
+                : leg.easeOut ? 1f - (1f - s) * (1f - s) : Mathf.SmoothStep(0f, 1f, s);
             if (leg.swing && leg.swingTime > 0f)
             {
+                // The swing after a push starts at the push's speed and only slows as it comes home.
                 SwingShares(leg.phase, out float a, out float b);
-                float g = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((float)(now - leg.swingStart) / leg.swingTime));
-                float ga = Mathf.SmoothStep(0f, 1f, a), gb = Mathf.SmoothStep(0f, 1f, b);
+                float g = SwingCurve(Mathf.Clamp01((float)(now - leg.swingStart) / leg.swingTime));
+                float ga = SwingCurve(a), gb = SwingCurve(b);
                 ease = Mathf.Clamp01((g - ga) / Mathf.Max(0.0001f, gb - ga));
             }
-            leg.angles = LegAngles.Lerp(leg.from, Target(leg, ownHold, otherHold), ease);
+            LegAngles target = Target(leg, ownHold, otherHold);
+            leg.angles = LegAngles.Lerp(leg.from, target, ease);
+            // Pushing, the knee opens on a smooth curve of its own: the thigh's quick end must not flick the shin.
+            if (leg.phase == LegPhase.Push)
+                leg.angles.knee = Mathf.Lerp(leg.from.knee, target.knee, Mathf.SmoothStep(0f, 1f, s));
+            if (leg.phase == LegPhase.Reach)
+            {
+                leg.angles.knee = ReachKnee(leg, s);
+                // Reached out with the foot still in the air: once the other leg comes on (or a key is pressed) it
+                // comes down and back to land (reachLand).
+                if (leg.landStart >= 0.0)
+                    leg.angles = LegAngles.Lerp(leg.angles, reachLand,
+                        Mathf.SmoothStep(0f, 1f, (float)(now - leg.landStart) / Mathf.Max(0.01f, reachLandTime)));
+            }
             leg.thighRate = dt > 0f ? (leg.angles.thigh - lastThigh) / dt : 0f;
             leg.angles.knee = Mathf.Min(leg.angles.knee, maxKnee);
+            // In the air the shin trails the thigh (kneeSpring); on the ground the knee is exact (the foot stays true).
+            bool kneeFree = leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid ||
+                            leg.phase == LegPhase.Wait || leg.phase == LegPhase.Reach;
+            if (kneeFree && kneeSpring.frequency > 0f)
+            {
+                leg.kneeLag.Step(leg.angles.knee, kneeSpring.frequency, kneeSpring.damping, dt);
+                leg.angles.knee = Mathf.Min(leg.kneeLag.Value, maxKnee);
+            }
+            else
+                leg.kneeLag.Reset(leg.angles.knee);
 
             // Foot: heel up through the push; the reaching foot lands heel first, toes up, and stays so while it
             // is planted ahead, rolling flat only as it goes home; in the air the ankle and toes follow the swing
@@ -866,6 +1120,9 @@ namespace SpeedStars.Physical
                 case LegPhase.Recover:
                     air = 0.5f * s;
                     break;
+                case LegPhase.Wait:
+                    air = 0.5f;   // the foot as at the end of its recovery
+                    break;
                 case LegPhase.Mid:
                     air = 0.5f + 0.5f * s;
                     break;
@@ -873,7 +1130,8 @@ namespace SpeedStars.Physical
                     pitch = Mathf.Lerp(leg.fromPitch, FrontPitch(), Mathf.SmoothStep(0f, 1f, s));
                     break;
                 case LegPhase.Front:
-                    pitch = FrontPitch();
+                    // Heel down on landing, rolling flat as the body passes over the foot.
+                    pitch = Mathf.Lerp(FrontPitch(), 0f, s);
                     break;
                 case LegPhase.Rest:
                     pitch = leg.fromPitch * (1f - Mathf.SmoothStep(0f, 1f, s));
@@ -893,20 +1151,47 @@ namespace SpeedStars.Physical
         /// <summary>
         /// Legs turn with the hips' lean, except a leg on the ground: standing home, waiting in front (the support
         /// leg of a hold) or pushing off keeps its angle to the ground, so the foot stays where it is. A held leg
-        /// turning up behind with the hips stops at heldLegMaxAngle (level) and never goes more than heldLegArch past
-        /// the line of the body (it trails the body nearly straight). Blended, so a leg landing or lifting
-        /// off does not snap.
+        /// turns with the hips all the way (its angle is the line of the hips, HoldLine), so it goes up behind as
+        /// they tip. Blended, so a leg landing or lifting off does not snap.
         /// </summary>
-        void FollowHips(Leg leg, Leg other, float legTurn, float hipPitch, float dt)
+        void FollowHips(Leg leg, Leg partner, float legTurn, double now, float dt)
         {
             bool planted = leg.phase == LegPhase.Rest || leg.phase == LegPhase.Front ||
                            leg.phase == LegPhase.Push;
             leg.follow = Mathf.MoveTowards(leg.follow, planted ? 0f : 1f, FollowRate * dt);
             leg.thighWorld = leg.angles.thigh - legTurn * leg.follow;
-            // The limits only stop the turn with the hips: a held leg always gets back to its own hold angle.
-            if (leg.phase == LegPhase.Hold)
-                leg.thighWorld = Mathf.Max(Mathf.Min(leg.angles.thigh, -Mathf.Min(heldLegMaxAngle, hipPitch + heldLegArch)),
-                    leg.thighWorld);
+            // One key held (the other free): the leg goes back on its own to holdThigh, its knee opening on the
+            // same way; once the tipping body's line is further back, it goes on with the body. (Both held — the
+            // dive — the legs simply stay in the body's line.)
+            if (leg.phase == LegPhase.Hold && !partner.held)
+            {
+                float p = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((float)(now - leg.phaseTime) / Mathf.Max(0.01f, holdReachTime)));
+                leg.thighWorld = Mathf.Min(leg.thighWorld, Mathf.Lerp(leg.holdFromWorld, holdThigh, p));
+                leg.angles.knee = Mathf.Min(Mathf.Lerp(leg.holdFromKnee, holdStraightKnee, p), maxKnee);
+            }
+        }
+
+        /// <summary>How much of a key's hold weight is a real hold (0 for quick presses, which stay at ~0.3).</summary>
+        static float HeldWeight(float weight) => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.25f, 0.6f, weight));
+
+        /// <summary>
+        /// A held leg at a full hold, on the hips (turned with them): the thigh in the line of the hips, heldLegArch
+        /// short of it, the knee at holdKnee — the held legs and the body make one nearly straight line.
+        /// </summary>
+        LegAngles HoldLine() => new LegAngles(-_pelvisNow - heldLegArch, holdKnee);
+
+        /// <summary>
+        /// A held leg let go: carried by the other foot it folds up behind as after any push; with the body down on
+        /// the ground (nothing carrying) it comes straight in under the body to stand on (home, keeping to the
+        /// ground), so it never swings up over the tipped hips.
+        /// </summary>
+        void ReleaseHold(Leg leg, double time)
+        {
+            // Body still upright: fold up behind as after a push. Tipped well forward (or down): folding up behind
+            // would throw the foot up over the hips, so it comes straight in under the body to stand on.
+            bool tipped = _hipsLean.Value + _holdTip.Value > 30f;
+            if (_carried && !tipped) Enter(leg, LegPhase.Recover, time, StepPart(recoverTime));
+            else Enter(leg, LegPhase.Rest, time, StepPart(homeTime));
         }
 
         /// <summary>The front foot's angle (deg, − = toes up): heel down, toes up, by speed between the two profiles.</summary>
@@ -963,7 +1248,10 @@ namespace SpeedStars.Physical
             {
                 // The Ready crouch is where the runner always heads; the run stance only lasts while a key is
                 // down, so with no input it goes straight back to the crouch (no upright stance on the way).
-                bool stepping = sim.Legs[0].Pressed || sim.Legs[1].Pressed || sim.InJump;   // a jump is still the run
+                // A jump is still the run, and so is the time between presses while they keep coming (openHoldTime
+                // since the last one): no crouch between steps; it crouches once the presses stop.
+                bool stepping = sim.Legs[0].Pressed || sim.Legs[1].Pressed || sim.InJump ||
+                                sim.Time - _lastPress < openHoldTime;
                 _stepping = Mathf.Lerp(_stepping, stepping ? 1f : 0f, 1f - Mathf.Exp(-stanceBlend * dt));
                 p = PoseData.Lerp(Get(ready, RunnerPoseDefaults.Ready), Get(run, RunnerPoseDefaults.Run),
                     Mathf.SmoothStep(0f, 1f, sim.Speed / Mathf.Max(0.01f, runPoseSpeed)) * _stepping);
@@ -984,33 +1272,27 @@ namespace SpeedStars.Physical
             float profileTarget = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(accelProfileSpeed, maxProfileSpeed, sim.Speed));
             _profileW = Mathf.Lerp(_profileW, profileTarget, 1f - Mathf.Exp(-4f * dt));
             _headAngle = preview ? 0f : sim.HeadAngle;
-            // The tip over in the air turns the whole body, head included (else the hips would pass the head).
-            float tip = 0f, baseBend = 0f, bend = 0f, legLean = 0f;
+            // The hips lead (from the input), the spine curves on them, the head comes last (UpdateLean).
+            float baseBend = 0f, bend = 0f, headLean = 0f;
             if (!preview)
             {
-                lean = UpdateLean(dt, out baseBend, out bend, out legLean);
-                tip = UpdateTip(dt, pelvisPitchRange.y - p.pelvisPitch - lean);
-                lean += tip + jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
-                // The head on the ground with no foot carrying lets the body settle after it: the waist opens.
-                float settle = _carried ? 0f : _headDown ? 1f : _settle.Value;
-                _settle.Step(settle, settleSpring.frequency, settleSpring.damping, dt);
-                float open = 1f - Mathf.Clamp01(_settle.Value);
-                baseBend *= open;
-                bend *= open;
+                lean = UpdateLean(dt, out baseBend, out bend, out headLean);
+                lean += jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
             }
 
-            // 3. Forward the hips take their part of the lean (the waist bends the rest on them), within
-            //    pelvisPitchRange. Back, the whole body leans about the feet on the ground (below, after the height).
+            // 3. Forward the hips lean (the spine curves on them), within pelvisPitchRange. Back, the whole body
+            //    leans about the feet on the ground (below, after the height).
             float backLean = Mathf.Min(0f, lean);
             float hipPitch = Mathf.Clamp(p.pelvisPitch + lean - backLean, pelvisPitchRange.x, pelvisPitchRange.y);
-            // The lean part only (the pose's own tilt does not turn the legs), with all of the lean the hips left to the waist.
-            float legTurn = hipPitch - p.pelvisPitch + legLean;
+            // The lean part only (the pose's own tilt does not turn the legs).
+            float legTurn = hipPitch - p.pelvisPitch;
             Quaternion pelvisTilt = Quaternion.Euler(hipPitch, 0f, 0f);
+            _pelvisNow = p.pelvisPitch;
 
             UpdateLeg(leftLeg, now, dt, legTurn, _holdL, _holdR);
             UpdateLeg(rightLeg, now, dt, legTurn, _holdR, _holdL);
-            FollowHips(leftLeg, rightLeg, legTurn, hipPitch + legLean, dt);
-            FollowHips(rightLeg, leftLeg, legTurn, hipPitch + legLean, dt);
+            FollowHips(leftLeg, rightLeg, legTurn, now, dt);
+            FollowHips(rightLeg, leftLeg, legTurn, now, dt);
             if (!preview) PoseJump(sim);
             Vector3 hip = _restHip + new Vector3(0f, 0f, p.pelvis.x);
             LegFK(leftLeg, hip, pelvisTilt, p.width);
@@ -1025,7 +1307,11 @@ namespace SpeedStars.Physical
             {
                 leg.knee.y += bodyY;
                 leg.ankle.y += bodyY;
-                leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + HeelLift(leg));
+                float floor = _ground + HeelLift(leg);
+                // Landing takes the foot right down; a foot already carrying stays so a little above (the height
+                // spring may overshoot), so it does not flicker between carrying and flying.
+                leg.grounded = leg.ankle.y <= floor + (Carries(leg) ? GroundKeep : GroundContact);
+                leg.ankle.y = Mathf.Max(leg.ankle.y, floor);
             }
             leftLeg.rock = rightLeg.rock = 0f;
             if (backLean < 0f) SitBack(ref hip, backLean);
@@ -1033,21 +1319,21 @@ namespace SpeedStars.Physical
             // Write the rig. The waist base sits at waistAngle plus its bend on the hips; the chain (TwistChain)
             // fills the chest in between it and the top, whose angle the neck and head work from (0 = the rig's rest).
             Quaternion rootRot = transform.rotation;
-            _neckTrimNow = preview ? 0f : neckTrim * Mathf.SmoothStep(0f, 1f, (_lean.Value + tip) / Mathf.Max(1f, neckTrimLean));
+            _neckTrimNow = preview ? 0f : neckTrim * Mathf.SmoothStep(0f, 1f, _lean.Value / Mathf.Max(1f, neckTrimLean));
             hipTarget.position = transform.TransformPoint(hip);
             hipTarget.rotation = rootRot * Quaternion.Euler(backLean, 0f, 0f) * pelvisTilt * _restHipRot;
             spineRootTarget.rotation = hipTarget.rotation * Quaternion.Euler(waistAngle + baseBend, 0f, 0f);
             // Leaning back the head keeps looking ahead: it takes only headKeep of the lean, the neck bends the rest.
             WriteHead(hipPitch + backLean + waistAngle - _restWaist + waistTopAngle + bend,
                 p.pelvisPitch + waistAngle - _restWaist,
-                _headAngle + tip - backLean, backLean, p.headDown, Mathf.Clamp01(_settle.Value), rootRot);
+                headLean - backLean, backLean, p.headDown, rootRot);
             WriteLeg(leftLeg);
             WriteLeg(rightLeg);
 
             // Arms: one key, one leg, one arm (the right key's press sends the right leg back and the left arm
             // with it); a leg held back keeps its arm back.
-            StepArm(leftArm, p.leftArm, LegBack(rightLeg));
-            StepArm(rightArm, p.rightArm, LegBack(leftLeg));
+            StepArm(leftArm, p.leftArm, rightLeg, now);
+            StepArm(rightArm, p.rightArm, leftLeg, now);
         }
 
         /// <summary>How much of the jump's pose is on: in over the wind-up, out over the last quarter of the air.</summary>
@@ -1145,11 +1431,10 @@ namespace SpeedStars.Physical
         /// headKeep of it and keeps looking ahead: the neck bends forward on the trunk, up to neckMax. The head is
         /// aimed by placing its look target.
         /// </summary>
-        void WriteHead(float trunk, float poseTrunk, float head, float sit, float headDown, float settle, Quaternion rootRot)
+        void WriteHead(float trunk, float poseTrunk, float head, float sit, float headDown, Quaternion rootRot)
         {
             float follow = Mathf.Lerp(Mathf.Max(0f, poseTrunk - neckMax), poseTrunk, headDown);
             float lead = Mathf.Lerp(Mathf.Min(neckMax, headLead), neckMax, Mathf.Clamp01(-sit / 10f));
-            lead = Mathf.Lerp(lead, -settleHeadUp, settle);   // settling on the ground the head comes up, looking ahead
             float pitch = Mathf.Clamp(follow + head + sit * headKeep, trunk - neckMax + body.Sim.T.headBack, trunk + lead);
             float neck = Mathf.Clamp(pitch - trunk, -neckMax, neckMax) * NeckShare;
             spineTipTarget.rotation = rootRot * Quaternion.Euler(trunk + neck, 0f, 0f) * _restSpineTip;
@@ -1208,6 +1493,32 @@ namespace SpeedStars.Physical
                 return _bodyY.Value;
             }
             bool carryL = Carries(leftLeg), carryR = Carries(rightLeg);
+            // Running with both feet in the air (not both held: that is the dive below): the body flies on from
+            // where it is, never starting down, under the sim's gravity until a foot lands. No tip over, no settle.
+            // A body already falling from a dive (not carried) goes on falling as a dive does, keys let go or not.
+            bool dive = leftLeg.phase == LegPhase.Hold && rightLeg.phase == LegPhase.Hold;
+            if (!carryL && !carryR && !dive && _heightSet && _carried)
+            {
+                // Every hop leaves at flightLift: not the height spring's own speed (it may be catching the body
+                // sharply just then, and would throw it high).
+                if (!_inFlight) _bodyY.Velocity = flightLift;
+                _inFlight = true;
+                _bodyY.Velocity -= flightGravity * dt;
+                _bodyY.Value += _bodyY.Velocity * dt;
+                // A leg held out in front while the other is behind: the body comes down no lower than just over
+                // that foot and glides there (the split held near the ground, no landing yet, no sliding foot).
+                float glide = float.MinValue;
+                if (HoldsReach(leftLeg, rightLeg, sim.Time)) glide = Mathf.Max(glide, LegNeed(leftLeg) + GlideGap);
+                if (HoldsReach(rightLeg, leftLeg, sim.Time)) glide = Mathf.Max(glide, LegNeed(rightLeg) + GlideGap);
+                if (_bodyY.Value < glide)
+                {
+                    _bodyY.Value = glide;
+                    _bodyY.Velocity = Mathf.Max(0f, _bodyY.Velocity);
+                }
+                _carried = true;
+                return _bodyY.Value;
+            }
+            _inFlight = false;
             if (carryL || carryR)
             {
                 float need = float.MinValue;
@@ -1227,8 +1538,9 @@ namespace SpeedStars.Physical
                 return _bodyY.Value;
             }
 
-            // The last foot pushes off: the body leaves the ground going up (never carried on down by the spring).
-            if (_carried) _bodyY.Velocity = Mathf.Max(0f, _bodyY.Velocity) + liftKick;
+            // The last foot pushes off: the body leaves the ground going up at the kick's speed, always the same (not
+            // the height spring's or a run flight's speed on top: the dive stays low, as in the reference game).
+            if (_carried) _bodyY.Velocity = liftKick;
             _carried = false;
             _bodyY.Velocity -= sim.T.gravity * dt;
             _bodyY.Value += _bodyY.Velocity * dt;
@@ -1236,26 +1548,13 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
-        /// The tip over with nothing carrying the body (deg, + forward, on top of the head's lean; the whole body,
-        /// head included): it tips forward by how far forward the head is (airTip) until the head is on the ground
-        /// or the hips are level (max), so the body comes down and lies flat. Once a leg carries the body again it
-        /// comes back (airTipBack).
+        /// A leg carries the body only with its foot on the ground: home, landed in front, or pushing (to the end of
+        /// its push) once its foot is down. A leg in the air (reaching, folding up, coming through, waiting behind,
+        /// or pressed while still in the air) or held back does not: the body never sinks to put a foot that is still
+        /// in the air on the ground, and never stays up on one either (it comes down onto it first).
         /// </summary>
-        float UpdateTip(float dt, float max)
-        {
-            if (_carried)
-                _tip.Step(0f, airTipBack.frequency, airTipBack.damping, dt);
-            else
-            {
-                if (!_headDown || _settle.Value > 0f) _tip.Value += airTip * Mathf.Clamp01(_headAngle / Mathf.Max(1f, body.Sim.T.headForwardMax)) * dt;
-                _tip.Value = Mathf.Min(_tip.Value, Mathf.Max(0f, max));
-                _tip.Velocity = 0f;
-            }
-            return _tip.Value;
-        }
-
-        /// <summary>A leg carries the body unless it is held back (a pushing leg carries it to the end of its push).</summary>
-        static bool Carries(Leg leg) => leg.phase != LegPhase.Hold;
+        static bool Carries(Leg leg) =>
+            leg.grounded && (leg.phase == LegPhase.Rest || leg.phase == LegPhase.Front || leg.phase == LegPhase.Push);
 
         /// <summary>
         /// Body height a carrying leg asks for: its foot on the ground, and its knee not in it (folding under the
@@ -1293,36 +1592,61 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
-        /// The body's lean (deg, + forward), down a chain: the top of the waist follows the head angle all the way
-        /// (hipFollow), no threshold, through a spring so the head leads; the waist base follows the top, the
-        /// hips follow the base (waistSpring each), so the bend runs down the back like a wave. Settled, forward
-        /// the hips take hipShare of the lean the head asks for and the waist curves on top of them (waistBaseShare,
-        /// waistTopShare of the lean); the waist bends back waistBackMax at most. Returns the hips' lean; baseBend
-        /// is B-spine's bend on the hips, bend the whole waist's (top on hips), legLean the lean the hips left to the
-        /// waist (the legs turn with it all the same). Back it only takes the head's swing past where the head rests (headBack while running): the
-        /// head alone tips back there, the body sits back only when the way back throws the head beyond it
-        /// (about the feet, see SitBack). Holding leans it too, through the head. Nothing else moves it. How low it gets is
-        /// up to the legs: they keep the hips at their height (UpdateBodyHeight), so with a foot carrying the
-        /// body the head cannot reach the ground. The sim's own lean stays for the game (stumble losses).
+        /// The body's lean (deg, + forward), down a chain from the head: the sim's head angle is the measure (on the
+        /// beat upright, mashing or holding forward). The chest takes chestShare of it (through hipFollowSpring), the
+        /// waist base waistShare, the hips hipShare, each following the one above through waistSpring — every link
+        /// bends a little on the one below, so the back rounds like a chain, and the bend flows down. The whole
+        /// body also leans with speed (hipRunLean) and with both keys held (bothLean, toward level: the dive, where
+        /// the curve turns into the hump, spineLevelCurve, the head dipping, headDip). Back only by the head swinging
+        /// back past its rest (hipBackMax; SitBack). Returns the hips' lean; baseBend is B-spine's bend on the hips,
+        /// bend the whole waist's (top on hips), headLean the head's angle. How low the body gets is up to the legs.
         /// </summary>
-        float UpdateLean(float dt, out float baseBend, out float bend, out float legLean)
+        float UpdateLean(float dt, out float baseBend, out float bend, out float headLean)
         {
-            float head = _headAngle >= 0f ? _headAngle : Mathf.Min(0f, _headAngle - body.Sim.HeadRest);
-            _lean.Step(head * hipFollow, hipFollowSpring.frequency, hipFollowSpring.damping, dt);
-            float top = _lean.Value;
-            _waistBase.Step(top, waistSpring.frequency, waistSpring.damping, dt);
-            _hipsLean.Step(_waistBase.Value, waistSpring.frequency, waistSpring.damping, dt);
-            float full = _hipsLean.Value;
-            float hips = full > 0f ? full * hipShare : full;
-            legLean = full - hips;
-            // The curve, plus what the links below have not caught up with yet (the wave).
-            baseBend = waistBaseShare * top + (_waistBase.Value - full);
-            bend = (waistBaseShare + waistTopShare) * top + (top - full);
+            // The measure is the sim's head angle: presses on the beat keep it upright, mashing or holding take it
+            // forward. The whole body leans a little with speed and, with both keys held, toward level (the dive).
+            float head = Mathf.Max(0f, _headAngle);
+            // Both keys held (squared: quick presses on both, mashing, barely count; both held down do).
+            float both = Mathf.Min(_holdL, _holdR);
+            float whole = Mathf.Lerp(hipRunLean.x, hipRunLean.y, Speed01()) * _stepping + bothLean * both * both;
+            // Back only by the head swinging back past its rest: every link alike (the body on its heels).
+            float back = _headAngle < 0f ? Mathf.Max(-hipBackMax, Mathf.Min(0f, _headAngle - body.Sim.HeadRest)) : 0f;
+
+            // A chain down from the head: chest, waist base, hips, each a smaller share of the head's angle (so each
+            // bends a little on the one below: a rounded back, not a rod) and each following the one above a moment
+            // later (the bend flows down; the hips come last).
+            _lean.Step(whole + back + chestShare * head, hipFollowSpring.frequency, hipFollowSpring.damping, dt);
+            float chest = _lean.Value;
+            float under = Mathf.Max(0.01f, chestShare);
+            _waistBase.Step(whole + back + (chest - whole - back) * waistShare / under,
+                waistSpring.frequency, waistSpring.damping, dt);
+            float waist = _waistBase.Value;
+            float overW = Mathf.Max(0.01f, waistShare);
+            _hipsLean.Step(whole + back + (waist - whole - back) * hipShare / overW,
+                waistSpring.frequency, waistSpring.damping, dt);
+            float hips = _hipsLean.Value;
+
+            // A key held tips the whole body forward at once (holdLean, quick spring), over the chain's own lean.
+            float held = HeldWeight(Mathf.Max(_holdL, _holdR));
+            _holdTip.Step(holdLean * held, holdTipSpring.frequency, holdTipSpring.damping, dt);
+            hips += _holdTip.Value;
+            chest += _holdTip.Value;
+            waist += _holdTip.Value;
+
+            baseBend = waist - hips;
+            bend = chest - hips;
+            // Near level (the dive) the curve turns over into the hump: the low back up, the shoulders above.
+            float level = Mathf.Max(1f, pelvisPitchRange.y);
+            float hump = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.5f * level, level, hips));
+            baseBend = Mathf.Lerp(baseBend, spineLevelCurve * 0.5f, hump);
+            bend = Mathf.Lerp(bend, spineLevelCurve, hump);
             if (bend < -waistBackMax)
             {
                 baseBend *= -waistBackMax / bend;
                 bend = -waistBackMax;
             }
+            // The head itself: the measure, on the same whole-body lean, dipping in front near level.
+            headLean = whole + _holdTip.Value + _headAngle + headDip * hump;
             return hips;
         }
 
@@ -1337,32 +1661,56 @@ namespace SpeedStars.Physical
         /// <summary>−1 = left, +1 = right.</summary>
         static float Side(Leg leg) => leg.restAnkle.x < 0f ? -1f : 1f;
 
-        /// <summary>
-        /// How far back the leg's thigh is (0 = home or ahead, 1 = at the end of the push or further). Measured
-        /// from the lower of home and the reach, so a leg reaching forward reads 0.
-        /// </summary>
-        float LegBack(Leg leg)
-        {
-            float top = Mathf.Min(Home().thigh, reach.thigh);
-            return Mathf.Clamp01((top - leg.angles.thigh) / Mathf.Max(1f, top - pushEnd.thigh));
-        }
-
         /// <summary>A foot-profile curve at phase s, blended between the acceleration and max-speed profiles.</summary>
         float Profile(System.Func<FootProfile, AnimationCurve> curve, float s)
             => Mathf.Lerp(curve(accelProfile).Evaluate(s), curve(maxSpeedProfile).Evaluate(s), _profileW);
 
         /// <summary>
-        /// One key moves one leg and one arm: the arm follows the opposite leg's thigh exactly (no spring), but only
-        /// the way that leg's own key sends it — back of home (its push, its hold, its way home). The leg reaching
-        /// forward because the other key was pressed leaves the arm at rest. The forearm goes back with the upper
-        /// arm as one chain (the elbow opens), stays so while held, closes coming home. All the way back the arm is
-        /// at armBack / elbowBack whatever the speed or key pose: only its rest comes from the pose.
+        /// One key moves one leg and the opposite arm: each time the opposite leg starts a phase, the arm starts a
+        /// move (armEase) toward where that phase takes the leg, in proportion — the leg's back angle is armBack /
+        /// elbowBack, its reach armFront / elbowFront, in between in between (the elbow goes with the upper arm: bent
+        /// in front, open behind). The move lasts the leg's phase time but at least armMinTime. At home (standing)
+        /// the arm goes to the pose's own rest.
         /// </summary>
-        void StepArm(Arm arm, ArmPose pose, float legBack)
+        void StepArm(Arm arm, ArmPose pose, Leg leg, double now)
         {
-            float back = preview ? 0f : legBack;
-            arm.swing = Mathf.Lerp(pose.swing, armBack, back);
-            arm.elbow = Mathf.Lerp(pose.elbow, elbowBack, back);
+            if (preview)
+            {
+                arm.swing = pose.swing;
+                arm.elbow = pose.elbow;
+                arm.tweenStart = -1.0;
+                return;
+            }
+            float toSwing, toElbow;
+            if (leg.phase == LegPhase.Rest && _runHome < 0.5f)
+            {
+                toSwing = pose.swing;
+                toElbow = pose.elbow;
+            }
+            else
+            {
+                // Where the leg really is (its thigh this frame, with the hips' tip): a held leg going back with the
+                // tipping body sends the arm back too.
+                float back = Recover().thigh, front = Reach().thigh;
+                float k = Mathf.InverseLerp(back, front, leg.thighWorld);
+                toSwing = Mathf.Lerp(armBack, armFront, k);
+                toElbow = Mathf.Lerp(elbowBack, elbowFront, k);
+            }
+            // A new phase of the leg starts a new move, from wherever the arm is.
+            if (arm.tweenStart < 0.0 || leg.phase != arm.legPhase || leg.phaseTime != arm.legPhaseTime)
+            {
+                arm.fromSwing = arm.tweenStart < 0.0 ? toSwing : arm.swing;
+                arm.fromElbow = arm.tweenStart < 0.0 ? toElbow : arm.elbow;
+                arm.tweenStart = now;
+                arm.tweenTime = Mathf.Max(armMinTime, leg.duration);
+                arm.legPhase = leg.phase;
+                arm.legPhaseTime = leg.phaseTime;
+            }
+            arm.toSwing = toSwing;
+            arm.toElbow = toElbow;
+            float e = Ease(armEase, armCurve, (float)(now - arm.tweenStart) / Mathf.Max(0.01f, arm.tweenTime));
+            arm.swing = Mathf.Lerp(arm.fromSwing, arm.toSwing, e);
+            arm.elbow = Mathf.Lerp(arm.fromElbow, arm.toElbow, e);
         }
 
         // Arms, knees, ankles and toes are posed after the Animator/rig has written the skeleton this frame.
