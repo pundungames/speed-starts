@@ -507,8 +507,11 @@ namespace SpeedStars.Physical
         [Tooltip("A key really held (a tap's weight does not count) tips the whole body forward by this much (deg) through " +
                  "holdTipSpring, on top of the head-led lean: the hold's dive starts at once, not as the head slowly builds.")]
         public float holdLean = 32f;
-        [Tooltip("The hold's tip goes to holdLean (and back) through this spring (damping 1: no swing).")]
-        public SpringSettings holdTipSpring = new SpringSettings(7f, 1f);
+        [Tooltip("The hold's tip goes to holdLean (into the hold) through this spring (damping 1: no swing).")]
+        public SpringSettings holdTipSpring = new SpringSettings(5f, 1f);
+        [Tooltip("The hold's tip comes back (out of a hold, the target below the value) through this softer spring: the hips " +
+                 "dropped 15 deg in one frame on the release with the spring that goes in.")]
+        public SpringSettings holdTipBackSpring = new SpringSettings(3f, 1f);
         [Tooltip("The one-leg hop and two-keys-together weights follow their targets through this spring (damping 1: no overshoot). " +
                  "A spring starts slowly: no first-frame jump of the hips or legs.")]
         public SpringSettings gaitBlendSpring = new SpringSettings(5f, 1f);
@@ -2738,9 +2741,13 @@ namespace SpeedStars.Physical
             // toward level. The chain's own lean stays under it, at holdChestShare / holdWaistShare, and near level the curve
             // turns over into a hump with the head dipping. All of it by the tip's own build-up (w): a tap leaves it at 0, and
             // a press or a release only moves targets.
-            _holdTip.Step(holdLean * _heldNow, holdTipSpring.frequency, holdTipSpring.damping, dt);
-            // The both-keys part goes through the same spring: read raw it threw the head 31 deg in a frame into a dive and the hips 14 out of one.
-            _bothTip.Step(bothLean * _bothHeld * _bothHeld, holdTipSpring.frequency, holdTipSpring.damping, dt);
+            // Out of a hold (the target below the value) the softer back spring: the hips dropped 15 deg in a frame on the release.
+            float holdTarget = holdLean * _heldNow, bothTarget = bothLean * _bothHeld * _bothHeld;
+            SpringSettings holdIn = holdTarget < _holdTip.Value ? holdTipBackSpring : holdTipSpring;
+            SpringSettings bothIn = bothTarget < _bothTip.Value ? holdTipBackSpring : holdTipSpring;
+            _holdTip.Step(holdTarget, holdIn.frequency, holdIn.damping, dt);
+            // The both-keys part goes through the same springs: read raw it threw the head 31 deg in a frame into a dive and the hips 14 out of one.
+            _bothTip.Step(bothTarget, bothIn.frequency, bothIn.damping, dt);
             float w = Mathf.Clamp01(_holdTip.Value / Mathf.Max(1f, holdLean));
             if (w > 0f)
             {
