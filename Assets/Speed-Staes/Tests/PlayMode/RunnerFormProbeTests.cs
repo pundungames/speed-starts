@@ -36,6 +36,13 @@ namespace SpeedStars.PlayTests
     ///     '-runTests','-testPlatform','PlayMode','-testFilter','RunnerForm_AllScenarios_WriteCsvAndFrames',
     ///     '-testResults','D:\Pundun\form-probe\result.xml','-logFile','D:\Pundun\form-probe\unity.log','-shotDir','D:\Pundun\form-probe\before'
     /// Optional: -probeSide left puts the probe camera on the runner's left (default right).
+    ///
+    /// T-139: <see cref="RunnerTransitions_WriteFrameStrips"/> (same rig, test filter RunnerTransitions_WriteFrameStrips, same -shotDir)
+    /// plays fifteen scripted scenarios (timed key down/up events: start, run to hop, hop swap, hop to run, run to pair, pair to run,
+    /// pair to hop, pair order, long taps, slow, fast and rough runs, holds, stop) and writes per scenario S:
+    ///   trans_S.csv (every frame: the form columns plus leg state, body state, drawn bone heights and the key events of that frame),
+    ///   trans_S_strip0.png ... (40 CONSECUTIVE frames at 60 fps around each transition, 8 columns x 5 rows of 320x240 cells,
+    ///   left to right and top to bottom) and trans_S_strip0.txt (one line per cell). Read them with scripts/runner-olcum/transition_check.py.
     /// </summary>
     public sealed class RunnerFormProbeTests
     {
@@ -90,10 +97,29 @@ namespace SpeedStars.PlayTests
         private const float FirstSecondsWindow = 2f;
         private const float StepWindowSeconds = 0.1f;
 
+        // T-139 frame strips: consecutive frames, a small cell each.
+        private const int StripCols = 8;
+        private const int StripRows = 5;
+        private const int StripFrames = StripCols * StripRows;
+        private const int StripCellW = 320;
+        private const int StripCellH = 240;
+        /// <summary>A strip starts this long (s) before the transition's key event.</summary>
+        private const float StripLead = 0.1f;
+
         private enum Mode { Alternate, SameLeg, Both, Perfect, HoldOne, HoldBoth, Swap }
+
+        /// <summary>One scripted key event: scenario time (s), leg 0/1, down or up.</summary>
+        private struct Ev
+        {
+            public double Time;
+            public int Leg;
+            public bool Down;
+        }
 
         private sealed class Scenario
         {
+            public List<Ev> Events;        // not null = scripted press mode (T-139): the events are the whole input
+            public float[] StripStarts;    // scripted mode: scenario times at which a 40-frame strip starts
             public string Name;
             public Mode Mode;
             public float Period;          // seconds between presses (not for Perfect / holds)
@@ -129,6 +155,134 @@ namespace SpeedStars.PlayTests
             new Scenario { Name = "swap", Mode = Mode.Swap, Period = 0.27f, PeriodJitter = 0.05f, HoldMin = 0.05f, HoldMax = 0.16f, Seed = 13 },
             new Scenario { Name = "human", Mode = Mode.Alternate, Period = 0.27f, PeriodJitter = 0.04f, HoldMin = 0.06f, HoldMax = 0.16f },
         };
+
+        /// <summary>Builds a scripted scenario from blocks of presses; Next is the time of the next press slot.</summary>
+        private sealed class Script
+        {
+            public readonly string Name;
+            public readonly List<Ev> Events = new List<Ev>();
+            public readonly List<float> Strips = new List<float>();
+            public double Next = 0.5;
+            public int LastLeg = -1;
+            public double LastRelease;
+            private readonly System.Random _rng;
+
+            public Script(string name, int seed = 20261104)
+            {
+                Name = name;
+                _rng = new System.Random(seed);
+            }
+
+            private void Key(double t, int leg, double hold)
+            {
+                Events.Add(new Ev { Time = t, Leg = leg, Down = true });
+                Events.Add(new Ev { Time = t + hold, Leg = leg, Down = false });
+                LastRelease = Math.Max(LastRelease, t + hold);
+            }
+
+            private double Draw(float hold, float holdMin, float holdMax) =>
+                holdMin > 0f && holdMax > 0f ? holdMin + _rng.NextDouble() * (holdMax - holdMin) : hold;
+
+            /// <summary>A strip that starts <see cref="StripLead"/> before the given event time.</summary>
+            public void Strip(double eventTime) => Strips.Add((float)Math.Max(0.0, eventTime - StripLead));
+
+            /// <summary>Alternating taps for span seconds; endOnLeg &gt;= 0 picks the first leg so the last tap is that leg. Returns the first tap's time.</summary>
+            public double Alt(float span, float period, float hold, int endOnLeg = -1, float jitter = 0f, float holdMin = 0f, float holdMax = 0f)
+            {
+                int n = Math.Max(1, (int)Math.Ceiling(span / period - 1e-6));
+                int first = endOnLeg >= 0 ? ((endOnLeg - (n - 1)) % 2 + 2) % 2 : (LastLeg >= 0 ? 1 - LastLeg : 0);
+                double firstTime = Next;
+                for (int i = 0; i < n; i++)
+                {
+                    int leg = (first + i) % 2;
+                    Key(Next, leg, Draw(hold, holdMin, holdMax));
+                    LastLeg = leg;
+                    Next += period + (jitter > 0f ? ((float)_rng.NextDouble() * 2f - 1f) * jitter : 0f);
+                }
+                return firstTime;
+            }
+
+            /// <summary>One key tapped again and again. Returns the first tap's time.</summary>
+            public double Same(float span, float period, float hold, int leg)
+            {
+                int n = Math.Max(1, (int)Math.Ceiling(span / period - 1e-6));
+                double firstTime = Next;
+                for (int i = 0; i < n; i++)
+                {
+                    Key(Next, leg, hold);
+                    LastLeg = leg;
+                    Next += period;
+                }
+                return firstTime;
+            }
+
+            /// <summary>Both keys together; the second follows the first by a gap drawn from gapMin..gapMax; flip swaps which key is first each time.</summary>
+            public double Pair(float span, float period, float hold, float gapMin, float gapMax, bool flip)
+            {
+                int n = Math.Max(1, (int)Math.Ceiling(span / period - 1e-6));
+                double firstTime = Next;
+                for (int i = 0; i < n; i++)
+                {
+                    int first = flip ? i % 2 : 0;
+                    double gap = gapMin + _rng.NextDouble() * (gapMax - gapMin);
+                    Key(Next, first, hold);
+                    Key(Next + gap, 1 - first, hold);
+                    LastLeg = 1 - first;
+                    Next += period;
+                }
+                return firstTime;
+            }
+
+            /// <summary>The given keys held for duration seconds; the next slot is one period after the release. Returns the press time.</summary>
+            public double Held(float duration, float period, params int[] legs)
+            {
+                double t = Next;
+                foreach (int leg in legs) Key(t, leg, duration);
+                LastLeg = legs.Length == 1 ? legs[0] : 1;
+                Next = t + duration + period;
+                return t;
+            }
+
+            public Scenario Build(float tail)
+            {
+                float last = Strips.Count > 0 ? Strips[Strips.Count - 1] + StripFrames * Dt : 0f;
+                Events.Sort((a, b) => a.Time.CompareTo(b.Time));
+                return new Scenario
+                {
+                    Name = Name, Events = Events, StripStarts = Strips.ToArray(),
+                    Duration = Mathf.Max((float)LastRelease + tail, last + 0.2f),
+                };
+            }
+        }
+
+        private static Scenario[] TransitionScenarios()
+        {
+            const float Tap = 0.08f;
+            var list = new List<Scenario>();
+            Script s;
+
+            s = new Script("start"); s.Alt(3f, 0.30f, Tap); s.Strips.Add(0.40f); list.Add(s.Build(0.5f));
+
+            s = new Script("runToHop"); s.Alt(3f, 0.27f, Tap, 0); s.Strip(s.Same(2f, 0.27f, Tap, 1) + 0.27); list.Add(s.Build(0.5f));
+            s = new Script("hopSwap"); s.Same(2.5f, 0.27f, Tap, 1); s.Strip(s.Same(2f, 0.27f, Tap, 0)); list.Add(s.Build(0.5f));
+            s = new Script("hopToRun"); s.Same(2.5f, 0.27f, Tap, 1); s.Strip(s.Alt(2f, 0.27f, Tap)); list.Add(s.Build(0.5f));
+
+            s = new Script("runToPair"); s.Alt(3f, 0.27f, Tap); s.Strip(s.Pair(2f, 0.35f, Tap, 0.015f, 0.015f, false)); list.Add(s.Build(0.5f));
+            s = new Script("pairToRun"); s.Pair(2.5f, 0.35f, Tap, 0.015f, 0.015f, false); s.Strip(s.Alt(2f, 0.27f, Tap)); list.Add(s.Build(0.5f));
+            s = new Script("pairToHop"); s.Pair(2.5f, 0.35f, Tap, 0.015f, 0.015f, false); s.Strip(s.Same(2f, 0.27f, Tap, 1)); list.Add(s.Build(0.5f));
+            s = new Script("pairOrder"); s.Pair(4f, 0.35f, Tap, 0f, 0.040f, true); s.Strips.Add(2.0f); list.Add(s.Build(0.5f));
+
+            s = new Script("longTapRun"); s.Alt(5f, 0.27f, 0.18f); s.Strips.Add(3.0f); list.Add(s.Build(0.5f));
+            s = new Script("slowRun"); s.Alt(5f, 0.45f, Tap); s.Strips.Add(3.0f); list.Add(s.Build(0.5f));
+            s = new Script("fastRun"); s.Alt(5f, 0.20f, Tap); s.Strips.Add(3.5f); list.Add(s.Build(0.5f));
+            s = new Script("roughRun", 7); s.Alt(5f, 0.27f, 0f, -1, 0.06f, 0.05f, 0.18f); s.Strips.Add(3.0f); list.Add(s.Build(0.5f));
+
+            s = new Script("holdOne"); s.Alt(2.5f, 0.27f, Tap, 0); double h = s.Held(1.2f, 0.27f, 1); s.Strip(h); s.Strip(h + 1.2); s.Alt(1.5f, 0.27f, Tap); list.Add(s.Build(0.5f));
+            s = new Script("holdBoth"); s.Alt(2.5f, 0.27f, Tap, 0); h = s.Held(1.2f, 0.27f, 0, 1); s.Strip(h); s.Strip(h + 1.2); s.Alt(1.5f, 0.27f, Tap); list.Add(s.Build(0.5f));
+
+            s = new Script("stop"); s.Alt(3f, 0.27f, Tap); s.Strip(s.LastRelease); list.Add(s.Build(2.5f));
+            return list.ToArray();
+        }
 
         private const string SummaryHeader =
             "scenario,presses,fallbackPresses,frames,speedAvg,speedPeak,trunkLeanAvg,trunkLeanMax," +
@@ -216,6 +370,52 @@ namespace SpeedStars.PlayTests
                 progress.LanePreference = laneBefore;
                 if (!selectedBefore.IsEmpty) selection.Select(selectedBefore);
                 saveFiles.Restore();
+            }
+        }
+
+        /// <summary>
+        /// T-139: scripted key events (see <see cref="TransitionScenarios"/>), every frame to trans_S.csv and 40 consecutive frames at each
+        /// transition to trans_S_strip&lt;i&gt;.png/.txt. No behaviour is asserted: only that the scenarios ran and the files exist.
+        /// </summary>
+        [UnityTest]
+        [Explicit("Measuring rig: run on request with -shotDir (see the class summary).")]
+        [Category("RunnerProbe")]
+        public IEnumerator RunnerTransitions_WriteFrameStrips()
+        {
+            string dir = ArgValue("-shotDir");
+            if (string.IsNullOrEmpty(dir)) Assert.Ignore("No -shotDir argument: the measuring rig only runs when asked for.");
+            Directory.CreateDirectory(dir);
+
+            int previousFps = Time.captureFramerate;
+            SaveFolderSnapshot saveFiles = SaveFolderSnapshot.Take();
+            DiContainer container = ProjectContext.Instance.Container;
+            IRaceSelection selection = container.Resolve<IRaceSelection>();
+            RaceEventId selectedBefore = selection.Selected;
+            Scenario[] scenarios = TransitionScenarios();
+            int ran = 0;
+            try
+            {
+                Time.captureFramerate = Fps;
+                foreach (Scenario scenario in scenarios)
+                {
+                    PickFlatEvent(container, selection);
+                    yield return RunScenario(dir, scenario, null);
+                    ran++;
+                }
+            }
+            finally
+            {
+                Time.captureFramerate = previousFps;
+                if (!selectedBefore.IsEmpty) selection.Select(selectedBefore);
+                saveFiles.Restore();
+            }
+
+            Assert.AreEqual(scenarios.Length, ran, "every transition scenario must run");
+            foreach (Scenario scenario in scenarios)
+            {
+                Assert.IsTrue(File.Exists(Path.Combine(dir, $"trans_{scenario.Name}.csv")), $"trans_{scenario.Name}.csv was not written");
+                for (int i = 0; i < scenario.StripStarts.Length; i++)
+                    Assert.IsTrue(File.Exists(Path.Combine(dir, $"trans_{scenario.Name}_strip{i}.png")), $"trans_{scenario.Name}_strip{i}.png was not written");
             }
         }
 
@@ -314,9 +514,10 @@ namespace SpeedStars.PlayTests
             }
 
             run.WriteFiles(dir);
-            summary.Add(run.SummaryRow());
+            if (scenario.Events == null) summary.Add(run.SummaryRow());
             Assert.Greater(run.FrameCount, 0, $"{scenario.Name}: no frame was recorded");
-            Assert.AreEqual(ShotCount, run.ShotsTaken, $"{scenario.Name}: the contact sheet is incomplete");
+            Assert.AreEqual(scenario.Events != null ? scenario.StripStarts.Length : ShotCount, run.ShotsTaken,
+                $"{scenario.Name}: the contact sheet or a strip is incomplete");
             UnityEngine.Debug.Log($"FORM_OK {scenario.Name}: {run.FrameCount} frames, {run.PressCount} presses");
         }
 
@@ -446,6 +647,22 @@ namespace SpeedStars.PlayTests
             private readonly PropertyInfo _speed, _head, _hop, _airborne, _lastResult, _lastEff;
             private readonly float _groundY;
 
+            // T-139 (scripted mode): extra reflection, the head bone, the strip state.
+            private readonly FieldInfo _lGrounded, _lCarry, _lPinned, _lIdle, _lToeOff;
+            private readonly FieldInfo[] _bodyFields;   // driver: _hop _pair _dive _plainRun _amp _heldNow _carried _idleStock _ballistic
+            private readonly FieldInfo _bodyYField;
+            private readonly Transform _headBone;
+            private Quaternion _headRest;
+            private int _evIdx;
+            private readonly bool[] _keyDown = new bool[2];
+            private readonly StringBuilder _pending = new StringBuilder();
+            private int _stripIdx, _stripFrame;
+            private bool _stripOn;
+            private readonly List<Color32[]> _stripCells = new List<Color32[]>();
+            private readonly List<string> _stripLines = new List<string>();
+            private readonly List<(List<Color32[]> cells, List<string> lines)> _stripsDone = new List<(List<Color32[]>, List<string>)>();
+            private static readonly string[] BodyNames = { "_hop", "_pair", "_dive", "_plainRun", "_amp", "_heldNow", "_carried", "_idleStock", "_ballistic" };
+
             private readonly List<string> _csv = new List<string>();
             private readonly List<Fr> _frames = new List<Fr>();
             private readonly List<Color32[]> _cells = new List<Color32[]>();
@@ -459,7 +676,7 @@ namespace SpeedStars.PlayTests
 
             public double Start { get; private set; }
             public int FrameCount => _frames.Count;
-            public int ShotsTaken => _cells.Count;
+            public int ShotsTaken => _sc.Events != null ? _stripsDone.Count : _cells.Count;
             public int PressCount => _pressTimes.Count;
 
             public Run(Scenario sc, Component body, Component driver, object bodyObject, object input, MethodInfo inject,
@@ -500,6 +717,32 @@ namespace SpeedStars.PlayTests
                 Assert.IsNotNull(_hipsBone, "B-hips not found under the pose driver");
                 Assert.IsNotNull(_chestBone, "B-chest not found under the pose driver");
                 _groundY = body.transform.position.y;
+
+                _lGrounded = leg.GetField("grounded", Any); _lCarry = leg.GetField("carry", Any); _lPinned = leg.GetField("pinned", Any);
+                _lIdle = leg.GetField("idle", Any); _lToeOff = leg.GetField("toeOff", Any);
+                _bodyFields = new FieldInfo[BodyNames.Length];
+                for (int i = 0; i < BodyNames.Length; i++) _bodyFields[i] = d.GetField(BodyNames[i], Any);
+                _bodyYField = d.GetField("_bodyY", Any);
+                _headBone = FindDeep(_runner, "B-head");
+                if (sc.Events != null)
+                {
+                    // A name that no longer exists is reported, not guessed: the column reads nan.
+                    foreach (FieldInfo field in new[] { _lGrounded, _lCarry, _lPinned, _lIdle, _lToeOff, _bodyYField })
+                        if (field == null) UnityEngine.Debug.LogWarning("TRANS_FIELD_MISSING a leg or _bodyY field the strips read is gone");
+                    for (int i = 0; i < BodyNames.Length; i++)
+                        if (_bodyFields[i] == null) UnityEngine.Debug.LogWarning($"TRANS_FIELD_MISSING RunnerPoseDriver.{BodyNames[i]}");
+                    if (_headBone == null) UnityEngine.Debug.LogWarning("TRANS_FIELD_MISSING B-head bone");
+                }
+            }
+
+            /// <summary>A bool as 1/0, a number as itself, anything else (or a missing field) as nan.</summary>
+            private static float Num(FieldInfo field, object owner)
+            {
+                if (field == null) return float.NaN;
+                object v = field.GetValue(owner);
+                if (v is bool b) return b ? 1f : 0f;
+                try { return Convert.ToSingle(v, CultureInfo.InvariantCulture); }
+                catch (Exception) { return float.NaN; }
             }
 
             public void Begin()
@@ -511,7 +754,40 @@ namespace SpeedStars.PlayTests
                 _csv.Add("t,speed,head,hopY,lastResult,lastEfficiency," + LegColumns("L") + "," + LegColumns("R") +
                          ",hipY,hipPitch,trunkLean,hips_yaw,hips_roll,hips_pitch,chest_yaw,chest_roll,chest_pitch," +
                          "armL_swing,armL_elbow,armR_swing,armR_elbow," +
-                         "L_ankleZ,R_ankleZ,L_toeY,R_toeY,L_footY,R_footY,L_footWorldZ,R_footWorldZ,stepping,L_held,R_held");
+                         "L_ankleZ,R_ankleZ,L_toeY,R_toeY,L_footY,R_footY,L_footWorldZ,R_footWorldZ,stepping,L_held,R_held" +
+                         (_sc.Events != null ? TransHeader() : string.Empty));
+            }
+
+            private static string TransLegColumns(string p) =>
+                $"{p}_grounded,{p}_carry,{p}_pinned,{p}_idle,{p}_toeOff,{p}_footAlong,{p}_footH,{p}_toeAlong,{p}_toeH";
+
+            /// <summary>Columns after the form ones: frame, key events, per-leg state and world foot, body state, drawn bones.</summary>
+            private static string TransHeader() =>
+                ",frame,events," + TransLegColumns("L") + "," + TransLegColumns("R") +
+                ",d_hop,d_pair,d_dive,d_plainRun,d_amp,d_heldNow,d_carried,d_idleStock,d_ballistic,d_bodyY,d_bodyYVel,hipBoneH,headPitch";
+
+            /// <summary>One leg's state and its foot and toe in the world: along the run axis and height above the ground.</summary>
+            private string TransLeg(object leg, Transform foot, Transform toe, Vector3 forward) =>
+                string.Join(",", F(Num(_lGrounded, leg)), F(Num(_lCarry, leg)), F(Num(_lPinned, leg)), F(Num(_lIdle, leg)), F(Num(_lToeOff, leg)),
+                    F(Vector3.Dot(foot.position, forward)), F(foot.position.y - _groundY),
+                    F(Vector3.Dot(toe.position, forward)), F(toe.position.y - _groundY));
+
+            private string TransRow(int frame, Vector3 forward, float headPitch)
+            {
+                var sb = new StringBuilder(256);
+                sb.Append(',').Append(frame).Append(',').Append(_pending).Append(',')
+                  .Append(TransLeg(_legL, _footL, _toeL, forward)).Append(',').Append(TransLeg(_legR, _footR, _toeR, forward));
+                foreach (FieldInfo field in _bodyFields) sb.Append(',').Append(F(Num(field, _driver)));
+                float bodyY = float.NaN, bodyYVel = float.NaN;
+                if (_bodyYField != null)
+                {
+                    object spring = _bodyYField.GetValue(_driver);
+                    bodyY = Convert.ToSingle(spring.GetType().GetField("Value").GetValue(spring), CultureInfo.InvariantCulture);
+                    bodyYVel = Convert.ToSingle(spring.GetType().GetField("Velocity").GetValue(spring), CultureInfo.InvariantCulture);
+                }
+                sb.Append(',').Append(F(bodyY)).Append(',').Append(F(bodyYVel)).Append(',').Append(F(_hipsBone.position.y - _groundY))
+                  .Append(',').Append(F(headPitch));
+                return sb.ToString();
             }
 
             /// <summary>World Y of a bone minus the runner root's Y.</summary>
@@ -538,6 +814,8 @@ namespace SpeedStars.PlayTests
             public void End()
             {
                 _active = false;
+                for (int leg = 0; leg < 2; leg++)
+                    if (_keyDown[leg]) { Send(leg, false); _keyDown[leg] = false; }
                 foreach (var release in _releases) Send(release.leg, false);
                 _releases.Clear();
             }
@@ -566,6 +844,7 @@ namespace SpeedStars.PlayTests
             /// <summary>Called once per frame, before the frame's pose is computed.</summary>
             public void Tick(double t)
             {
+                if (_sc.Events != null) { TickScript(t); return; }
                 for (int i = _releases.Count - 1; i >= 0; i--)
                 {
                     if (t < _releases[i].time) continue;
@@ -624,6 +903,24 @@ namespace SpeedStars.PlayTests
                 }
             }
 
+            /// <summary>
+            /// Scripted mode: the events due before the next frame go in now, each stamped with its own exact time (the body takes a press
+            /// at its stamp, so a 15 ms gap between two keys survives a 16.7 ms frame). They show on the next sampled frame.
+            /// </summary>
+            private void TickScript(double t)
+            {
+                List<Ev> events = _sc.Events;
+                while (_evIdx < events.Count && events[_evIdx].Time < t + Dt - 1e-9)
+                {
+                    Ev e = events[_evIdx++];
+                    _inject.Invoke(_input, new object[] { e.Leg, e.Down, Start + e.Time });
+                    _keyDown[e.Leg] = e.Down;
+                    if (e.Down) _pressTimes.Add(e.Time);
+                    if (_pending.Length > 0) _pending.Append('|');
+                    _pending.Append(e.Leg == 0 ? 'L' : 'R').Append(e.Down ? '+' : '-');
+                }
+            }
+
             // ---------------------------------------------------------------- sampling
 
             public void Sample()
@@ -642,7 +939,11 @@ namespace SpeedStars.PlayTests
                     _haveRest = true;
                     _hipsRest = hipsRel;
                     _chestRest = chestRel;
+                    if (_headBone != null) _headRest = runnerInv * _headBone.rotation;
                 }
+                float headPitch = float.NaN;
+                if (_headBone != null)
+                    headPitch = Wrap(((runnerInv * _headBone.rotation) * Quaternion.Inverse(_headRest)).eulerAngles.x);
                 Quaternion hipsTurn = hipsRel * Quaternion.Inverse(_hipsRest);
                 Quaternion chestTurn = chestRel * Quaternion.Inverse(_chestRest);
                 Vector3 hipsEuler = hipsTurn.eulerAngles;   // only the pitch column still comes from Euler
@@ -685,9 +986,56 @@ namespace SpeedStars.PlayTests
                   .Append(F(azL)).Append(',').Append(F(azR)).Append(',').Append(F(toeLy)).Append(',').Append(F(toeRy)).Append(',')
                   .Append(F(footLy)).Append(',').Append(F(footRy)).Append(',').Append(F(fzL)).Append(',').Append(F(fzR)).Append(',')
                   .Append(F(stepping)).Append(',').Append(F(heldL)).Append(',').Append(F(heldR));
+                if (_sc.Events != null)
+                {
+                    sb.Append(TransRow(_frame, forward, headPitch));
+                    _csv.Add(sb.ToString());
+                    TakeStripFrame((float)t, forward);
+                    _pending.Clear();
+                    return;
+                }
                 _csv.Add(sb.ToString());
 
                 TakeShotIfDue((float)t);
+            }
+
+            /// <summary>Scripted mode: from a strip's start time, one cell per frame for <see cref="StripFrames"/> consecutive frames.</summary>
+            private void TakeStripFrame(float t, Vector3 forward)
+            {
+                float[] starts = _sc.StripStarts;
+                if (!_stripOn)
+                {
+                    if (_stripIdx >= starts.Length || t < starts[_stripIdx] - 1e-4f) return;
+                    _stripOn = true;
+                    _stripFrame = 0;
+                    _stripCells.Clear();
+                    _stripLines.Clear();
+                }
+
+                _stripCells.Add(GrabProbe(StripCellW, StripCellH));
+                int row = _stripFrame / StripCols, col = _stripFrame % StripCols;
+                string events = _pending.Length > 0 ? _pending.ToString() : "-";
+                _stripLines.Add(string.Join(",", row, col, _frame, F(t), _phase.GetValue(_legL), _phase.GetValue(_legR),
+                    F(Num(_lGrounded, _legL)), F(Num(_lGrounded, _legR)), events));
+                _stripFrame++;
+                if (_stripFrame < StripFrames) return;
+
+                _stripsDone.Add((new List<Color32[]>(_stripCells), new List<string>(_stripLines)));
+                _stripIdx++;
+                _stripOn = false;
+            }
+
+            /// <summary>The probe camera beside the runner (it follows the root, ground in view), rendered at the given size.</summary>
+            private Color32[] GrabProbe(int width, int height)
+            {
+                SetOthersVisible(false);
+                Vector3 center = new Vector3(_body.transform.position.x, _groundY + ProbeCenterHeight, _body.transform.position.z);
+                Vector3 side = _body.transform.right * _side;
+                _probe.transform.position = center + side * ProbeDistance;
+                _probe.transform.rotation = Quaternion.LookRotation(-side, Vector3.up);
+                Color32[] pixels = Grab(_probe, width, height);
+                SetOthersVisible(true);
+                return pixels;
             }
 
             private string ReadLeg(object leg, out float thigh, out float thighWorld, out float kneeY, out float kneeAngle, out float ankleZ,
@@ -729,13 +1077,7 @@ namespace SpeedStars.PlayTests
                 }
                 if (_frame - _shotStart < _cells.Count * _shotStep) return;
 
-                SetOthersVisible(false);
-                Vector3 center = new Vector3(_body.transform.position.x, _groundY + ProbeCenterHeight, _body.transform.position.z);
-                Vector3 side = _body.transform.right * _side;
-                _probe.transform.position = center + side * ProbeDistance;
-                _probe.transform.rotation = Quaternion.LookRotation(-side, Vector3.up);
-                _cells.Add(Grab(_probe, CellW, CellH));
-                SetOthersVisible(true);
+                _cells.Add(GrabProbe(CellW, CellH));
                 _cellTimes.Add(t);
 
                 if (_cells.Count - 1 == GameShotCell)
@@ -773,6 +1115,7 @@ namespace SpeedStars.PlayTests
 
             public void WriteFiles(string dir)
             {
+                if (_sc.Events != null) { WriteTransFiles(dir); return; }
                 File.WriteAllLines(Path.Combine(dir, $"form_{_sc.Name}.csv"), _csv);
 
                 int sheetW = Cols * CellW, sheetH = Rows * CellH;
@@ -792,6 +1135,29 @@ namespace SpeedStars.PlayTests
 
                 if (_gamePixels != null) SavePng(Path.Combine(dir, $"form_{_sc.Name}_game.png"), _gamePixels, GameW, GameH);
                 UnityEngine.Debug.Log($"SHOT_OK {Path.Combine(dir, $"form_{_sc.Name}_sheet.png")}");
+            }
+
+            private void WriteTransFiles(string dir)
+            {
+                File.WriteAllLines(Path.Combine(dir, $"trans_{_sc.Name}.csv"), _csv);
+                int sheetW = StripCols * StripCellW, sheetH = StripRows * StripCellH;
+                for (int s = 0; s < _stripsDone.Count; s++)
+                {
+                    var sheet = new Color32[sheetW * sheetH];
+                    List<Color32[]> cells = _stripsDone[s].cells;
+                    for (int i = 0; i < cells.Count; i++)
+                    {
+                        int col = i % StripCols, row = i / StripCols;
+                        int top = (StripRows - 1 - row) * StripCellH; // pixel rows count from the bottom
+                        for (int y = 0; y < StripCellH; y++)
+                            Array.Copy(cells[i], y * StripCellW, sheet, (top + y) * sheetW + col * StripCellW, StripCellW);
+                    }
+                    SavePng(Path.Combine(dir, $"trans_{_sc.Name}_strip{s}.png"), sheet, sheetW, sheetH);
+                    var lines = new List<string> { "row,col,frame,t,L_phase,R_phase,L_grounded,R_grounded,events" };
+                    lines.AddRange(_stripsDone[s].lines);
+                    File.WriteAllLines(Path.Combine(dir, $"trans_{_sc.Name}_strip{s}.txt"), lines);
+                }
+                UnityEngine.Debug.Log($"TRANS_OK {_sc.Name}: {_frames.Count} frames, {_stripsDone.Count} strips, {_pressTimes.Count} presses");
             }
 
             public string SummaryRow()
