@@ -7,17 +7,17 @@ MOD: süpervizör
 
 Son güncelleme: 2026-11-05 (süpervizör, tur içi). Son checkpoint `docs/checkpoints/2026-11-04-karakter-ik.md`. Push kullanıcıda.
 
-## Şu anki iş: karakter IK (Slack listesi; T-107..T-116)
-Kullanıcı: "istediğin kodlara gir, bizimki iyi olursa bizim sistemi kullanıcaz", "izin isteme, ne gerekliyse yap", "yapıldıkça bana geçir, ben de deniyim". Malik'e haber verilip verilmediği belli değil; aynı dosyalara girerse çakışır.
-- **Dallar:** kullanıcı `IKTest`'te (ana klasör, Unity açık). İş `agent/ik-kosucu`'da, worktree `D:\Pundun\speed-starts-ik`; ikisi de T-116 ikinci turunda (`0ccd83c6` ve üstündeki belge commit'i). Hedefli testler ve ölçüm temizse `git merge --ff-only agent/ik-kosucu`, tam takımı beklemeden. `agent/ik-govde` ve worktree'si birleşti, silinebilir.
-- **05.11:** T-113, T-114 (ezme, `earliness`), T-115 (zemin, kollar) `merged`; tam takım `cb1763bf`'te PlayMode 98/102, EditMode 1281/1285, kalan 6 kırmızı bilinen. T-116 (tek tuş zıplama) `review`: kullanıcı deniyor, kalanlar task notunda.
+## Şu anki iş: karakter IK (Slack listesi; T-107..T-117)
+Kullanıcı: "istediğin kodlara gir, bizimki iyi olursa bizim sistemi kullanıcaz", "izin isteme, ne gerekliyse yap", "yapıldıkça bana geçir", **"test etmeden yap işlerini, en son ben bakarım" (05.11: koşucu görsel işinde test ve ölçüm turu yok, yalnız derle ve geçir)**. Ana kural: input yalnız hedef değiştirir, uzuv resetlenmez, snap yok; hareket geniş ve esnek. Malik'e haber verilip verilmediği belli değil; aynı dosyalara girerse çakışır.
+- **Dallar:** kullanıcı `IKTest`'te (ana klasör, Unity açık). İş `agent/ik-kosucu`'da, worktree `D:\Pundun\speed-starts-ik`; ikisi de T-117'de (`38166c97` ve üstündeki belge commit'i). Birleştirme `git merge --ff-only agent/ik-kosucu`. `agent/ik-govde` ve worktree'si birleşti, silinebilir.
+- **05.11:** T-113, T-114 (ezme, `earliness`), T-115 (zemin, kollar) `merged`; tam takım `cb1763bf`'te PlayMode 98/102, EditMode 1281/1285, kalan 6 kırmızı bilinen. T-116, T-117 `review`: kullanıcı bakacak; T-117'nin tutmayan maddeleri task notunda. `T-120-sesler` başka oturumda, ayrı worktree'de.
 - **Kilit:** `agent-kit.config.local.psd1`'de 4 yol yorumda (`Scripts/Physical`, `Physical`, `Prefabs/Character`, `SideFollowCamera.cs`). Kalan 8 satırı kaldırmayı izin sistemi reddetti, gerekmedi.
 - **Yapılan:** koşu pozu sürekli, bacak tek döngü eğrisi, ayak kilidi, uçuş, kalça hız sınırı, burgu ve kol pompası, hafif çapraz kamera (`sideYaw` 12), iki tuş tek itiş, tek tuş hız uçurumu kapalı.
 - **Sonuç (form ölçümü, önce → sonra, en iyi koşu):** koşu pozu 0.38 → 1.00, geçişte diz 111° → 43°, eğim 7.5° → 19°, kalça burgusu 0 → 18°, kol ileri +33 (çene) → +45, iki tuşta en alçak diz 0.04 → 0.47 m.
 
 ## Sıradaki iş
-1. T-116: kullanıcının tek tuş hissi cevabına göre. Bilinen kalanlar: kalkış karesinde ayak ucu 2.8 cm iken z +11 cm; itiş uyluğu +4.6'da bitiyor (hedef −15), temas 3 kare.
-2. Ezmede ayak atlaması `mash012` −31 cm, iki tuşta `both030` −18 cm: ayrı kök, dokunulmadı; kullanıcı görürse aç.
+1. T-117: kullanıcının cevabına göre. Bilinen kalanlar: tek tuşta temas 2-3 kare, itiş uyluğu +9 (bacak geriye uzanıp itmiyor), ön ayak havada 70 cm'e çıkıyor, tepe yüksekliği ve temas süresi birbirini kısıyor; koşuda yerdeki bacağın dizi hâlâ bir karede hız değiştiriyor (36-52°); koşuda el tepede yüze kadar çıkıyor (`armRunFront` 72).
+2. Dalış ve tutma T-117'den sonra ölçülmedi; tam takım `38166c97`'de koşmadı.
 3. Kullanıcı görsün: ezmede 100 m 22+ sn (hedef "en az 13" varsayımdı); tuş 0.04'te 30°/60° ~1.5 sn geç, 0.08-0.11 tuş 0.07'de ~1 sn hızlı; basılı tutmada koşudan baş ilk saniye ~6° geride.
 4. Tuş süresi uçurumu: T-114'ten sonra yeniden ölçülmedi (`simprobe`). Önceki: ritim 0.28'de tuş 0.13 sn = 11.1 sn, 0.17 sn = bitmiyor.
 5. Video: `D:\Pundun\form-probe\ref\` kareler; `Downloads/Screen_Recording_20261104_174949_Speed Stars.mp4`. Davranış anlamak için, kare kare kopya yok.
