@@ -861,7 +861,8 @@ namespace SpeedStars.Physical
         readonly float[] _sitW = new float[2];       // each leg's share in the sit-back pivot (blends over sitPivotBlend)
         int _hopPresses, _hopPrevLeg = -1;          // the press count last seen, and the leg of the press before
         double _hopPrevTime = -10.0;
-        float _hopTarget;                           // 1 when that press was the same leg again, 0 when it was the other
+        bool _hopRepeated;                          // the last press taken was the same leg again: the hop is really on
+        float _hopTarget;                         // 1 when that press was the same leg again, 0 when it was the other
         float _hop, _pair, _dive;                   // one-leg hop weight, two-keys-together weight, hold weight (dive) 0..1
         float _twist, _roll, _lastThighL, _lastThighR, _chestYaw, _chestRoll;
         bool _trunkInit;
@@ -2189,11 +2190,17 @@ namespace SpeedStars.Physical
                 int leg = _poseLastLeg;
                 double at = _poseLastTime;
                 float wasTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
-                _hopTarget = leg >= 0 && leg == _hopPrevLeg && at - _hopPrevTime < HopRepeatWindow ? 1f : 0f;
-                // The hop opens: the other leg leaves the ground whatever phase it is in, so the switch from a run is the same every time
+                bool within = leg >= 0 && at - _hopPrevTime < HopRepeatWindow;
+                bool same = within && leg == _hopPrevLeg;
+                // A change of key in a hop is a hop on the other leg, not a step of a run: dropping the hop for one press brought both
+                // feet down and up together. Two changes in a row (the last press was itself a change) are a run.
+                bool swap = within && !same && _hopRepeated && wasTarget > 0.5f;
+                _hopTarget = same || swap ? 1f : 0f;
+                _hopRepeated = same;
+                // The hop opens (or changes leg): the other leg leaves the ground whatever phase it is in, so the switch from a run is the same every time
                 // (a leg that stayed down carried the body and the flight spring never ran: only the pressed foot moved). A planted foot
                 // starts from the angles it was shown with (Enter); the pin lets go by itself once the leg is the balance leg (PinFeet).
-                if (_hopTarget > 0.5f && wasTarget < 0.5f && !off && _dive <= 0.3f)
+                if (_hopTarget > 0.5f && (wasTarget < 0.5f || swap) && !off && _dive <= 0.3f)
                 {
                     Leg other = Legs(1 - leg);
                     bool free = other.phase == LegPhase.Rest && !other.grounded;
@@ -2824,6 +2831,7 @@ namespace SpeedStars.Physical
             _kick.Reset();
             _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = _hopTarget = 0f;
             _hopPrevLeg = -1;
+            _hopRepeated = false;
             _hopPrevTime = -10.0;
             _posePresses = _armPresses = _hopPresses = 0;
             _poseLastLeg = -1;
