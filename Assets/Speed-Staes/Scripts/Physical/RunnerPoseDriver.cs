@@ -388,6 +388,9 @@ namespace SpeedStars.Physical
         [Tooltip("The hopping leg's stance: how far the pelvis sinks in the middle of it (m, at full hop weight): the body comes down " +
                  "onto the foot (the leg bends, the push has room to reach back) and springs up out of it, a real jump.")]
         public float hopStanceDip = 0.06f;
+        [Tooltip("One-key hop: the swing ends this much earlier than the next press is due (s, at full hop weight), so the foot is down " +
+                 "and planted when the press comes and the push has room: the stance is the time between touchdown and toe-off.")]
+        public float hopLead = 0.05f;
         [Tooltip("Fastest the hip may rise (m/s) at full one-key hop weight (both rise limits, maxRiseSpeed and hipRiseMax, blend to it): " +
                  "the bounce's arc is steeper than a run's and the run's limits flattened its top.")]
         [Min(0.1f)] public float hopHipRiseMax = 4.5f;
@@ -714,6 +717,7 @@ namespace SpeedStars.Physical
         const float RootSpeedBlend = 12f;      // the root's speed for the swing's end speed is smoothed at this rate (1/s)
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
         const float Overstretch = 0.985f;      // a planted leg this near its full length is at toe-off (the knee never locks)
+        const float HopPlant = 0.5f;           // one-key hop weight above which a landed foot is planted without waiting for the press
         const float CatchGrace = 0.14f;        // a finished catch waits this long (s) for the foot to be down before it is planted anyway
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
@@ -1031,7 +1035,8 @@ namespace SpeedStars.Physical
             EnsureBuffers(leg);
             if (leg.cycle <= 0f) leg.cycle = Mathf.Clamp(2f * (body && body.Sim != null ? body.Sim.StepTime : 0.3f), stepTimeMin, 2f * stepTimeMax);
             float elapsed = Mathf.Min((float)(time - leg.pressedAt), leg.cycle * 0.5f);
-            float len = Mathf.Clamp(leg.cycle - elapsed, swingMin, Mathf.Max(swingMin, stepTimeMax));
+            float lead = hopLead * _hop * (1f - _pair);   // one-key hop: the foot lands this much before the press is due
+            float len = Mathf.Clamp(leg.cycle - elapsed - lead, swingMin, Mathf.Max(swingMin, stepTimeMax));
             // Lifting off a planted foot while sitting back: from the angles it was shown with (continuous foot), not the solved ones.
             if (leg.dispW > 0f)
             {
@@ -1238,6 +1243,14 @@ namespace SpeedStars.Physical
                             break;
                         case LegPhase.Land:
                             if (!_stepNow) Enter(leg, LegPhase.Rest, time, frontHomeTime * SpeedUp());
+                            else if (_hop * (1f - _pair) > HopPlant && leg.ankle.y - AnkleGround(leg) <= TouchHeight * 1.5f)
+                            {
+                                // Hopping on one key the foot is down before the press comes (the swing ends hopLead early): it is planted
+                                // where it landed, so the press finds it on the ground and only extends the stance; a late press waits on it.
+                                leg.pressedAt = time;
+                                Enter(leg, LegPhase.Push, time, 0f);
+                                leg.grounded = leg.needLock = true;
+                            }
                             break;
                     }
                 }
