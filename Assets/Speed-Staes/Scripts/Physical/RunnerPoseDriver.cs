@@ -746,6 +746,7 @@ namespace SpeedStars.Physical
         const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
         const float IdleRate = 4f;             // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
+        const float PairWindow = 0.06f;        // two presses this close (s) are together (full), twice as far apart are not at all
         const float PressTwin = 0.06f;         // two presses closer than this (s) are one throw (two keys together)
         const float ArmIdle = 10f;             // the arm clock before any press (s): the throw is over
         const float ArmPeriodMin = 0.1f;       // the press-to-press time the arm's return follows lies within these (s)
@@ -1858,19 +1859,19 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
-        /// 1 when the two legs press together (their last presses are a whole cycle apart, or none), 0 when they alternate
-        /// (half a cycle apart); 0 when either has not pressed lately. From the legs' own press times and cycles.
+        /// 1 when the two legs' last presses were together (their real time apart is within the pair window), 0 when they were
+        /// not: keys in turn are never a pair at any rhythm, one key pressed again after a pair takes it down (its partner's
+        /// last press is then far back), and it fades when the presses stop. No modulo of a cycle: only the time between the two presses.
         /// </summary>
         float PairWeight(double now)
         {
             Leg a = leftLeg, b = rightLeg;
-            float cycle = 0.5f * (a.cycle + b.cycle);
-            if (a.lastPress < 0.0 || b.lastPress < 0.0 || cycle < 0.05f) return 0f;
+            if (a.lastPress < 0.0 || b.lastPress < 0.0) return 0f;
             float old = (float)(now - System.Math.Min(a.lastPress, b.lastPress));
             float recent = 1f - Mathf.SmoothStep(0f, 1f, (old - stepTimeMax) / Mathf.Max(0.01f, stepTimeMax));
-            float d = (float)(System.Math.Abs(a.lastPress - b.lastPress) % cycle);
-            d = Mathf.Min(d, cycle - d);
-            return Mathf.Clamp01(1f - d / (0.5f * cycle)) * recent;
+            float gap = (float)System.Math.Abs(a.lastPress - b.lastPress);
+            float together = 1f - Mathf.SmoothStep(0f, 1f, (gap - PairWindow) / PairWindow);
+            return together * recent;
         }
 
         /// <summary>How much of the jump's pose is on: in over the wind-up, out over the last quarter of the air.</summary>
