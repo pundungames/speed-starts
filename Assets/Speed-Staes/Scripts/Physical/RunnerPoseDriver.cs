@@ -443,7 +443,10 @@ namespace SpeedStars.Physical
         public float hopLead = 0.05f;
         [Tooltip("Fastest the hip may rise (m/s) at full one-key hop weight (both rise limits, maxRiseSpeed and hipRiseMax, blend to it): " +
                  "the bounce's arc is steeper than a run's and the run's limits flattened its top.")]
-        [Min(0.1f)] public float hopHipRiseMax = 4.5f;
+        [Min(0.1f)] public float hopHipRiseMax = 3.2f;
+        [Tooltip("Fastest the pelvis may go down (m/s) at full one-key hop or pair weight (maxDropSpeed blends to it): the arc comes down " +
+                 "as fast as it went up, so the body is low when the foot arrives and the leg does not run out of length on touching.")]
+        [Min(0.1f)] public float hopDropSpeed = 3.5f;
 
         [Header("Leg timing (s)")]
         [Tooltip("The reach's time (s), and the push's pace. Quicker with speed (animSpeedUp). Whether a key is a hold is holdAfter's.")]
@@ -479,7 +482,7 @@ namespace SpeedStars.Physical
                  "Going up stays on heightSpring (a foot never goes into the ground).")]
         public SpringSettings dropSpring = new SpringSettings(3f, 0.6f);
         [Tooltip("Fastest the pelvis may go down while running (m/s). A press that lands on a foot still in the air would " +
-                 "otherwise pull the body to the foot's stance height in one frame. Not used in the dive, over hurdles or getting up.")]
+                 "otherwise pull the body to the foot's stance height in one frame. A hop or a pair blends to hopDropSpeed. Not used in the dive, over hurdles or getting up.")]
         [Min(0.1f)] public float maxDropSpeed = 1.5f;
         [Tooltip("Fastest the pelvis may go up while running (m/s): a leg's height ask that jumps (mashing) cannot throw the body " +
                  "up in one frame. Not used in the dive, over hurdles or getting up.")]
@@ -2659,10 +2662,12 @@ namespace SpeedStars.Physical
         /// <summary>Keeps this frame's body height step within maxDropSpeed down and maxRiseSpeed up (running only).</summary>
         void LimitHeightSpeed(float prevY, float dt)
         {
-            float y = Mathf.Clamp(_bodyY.Value, prevY - maxDropSpeed * dt, prevY + Mathf.Lerp(maxRiseSpeed, hopHipRiseMax, _hop * (1f - _pair)) * dt);
+            // A hop's or pair's arc falls as fast as it rises (plain running keeps maxDropSpeed: both weights are 0 there).
+            float drop = Mathf.Lerp(maxDropSpeed, hopDropSpeed, Mathf.Max(_hop, _pair));
+            float y = Mathf.Clamp(_bodyY.Value, prevY - drop * dt, prevY + Mathf.Lerp(maxRiseSpeed, hopHipRiseMax, _hop * (1f - _pair)) * dt);
             if (y == _bodyY.Value) return;
             _bodyY.Value = y;
-            _bodyY.Velocity = Mathf.Clamp(_bodyY.Velocity, -maxDropSpeed, Mathf.Lerp(maxRiseSpeed, hopHipRiseMax, _hop * (1f - _pair)));
+            _bodyY.Velocity = Mathf.Clamp(_bodyY.Velocity, -drop, Mathf.Lerp(maxRiseSpeed, hopHipRiseMax, _hop * (1f - _pair)));
         }
 
         /// <summary>
