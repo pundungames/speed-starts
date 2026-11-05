@@ -229,7 +229,9 @@ namespace SpeedStars.Physical
 
         /// <summary>
         /// A limb angle that is only ever steered: a damped spring toward the target with a limit on its speed and on its
-        /// acceleration when speeding up (a muscle); braking is the spring's, so the limb stops at its target. Input and phase changes move the TARGET; the shown angle and its speed go on from where they were.
+        /// acceleration when speeding up (a muscle); braking is the spring's but limited too, far above speeding up (BrakeShare),
+        /// so the limb stops near its target (a small overshoot is expected) and does not turn round in one frame. Input and phase
+        /// changes move the TARGET; the shown angle and its speed go on from where they were.
         /// </summary>
         public struct Track
         {
@@ -243,6 +245,8 @@ namespace SpeedStars.Physical
                 set = true;
             }
 
+            const float BrakeShare = 4f;   // braking may be this many times the speeding-up limit
+
             public float Step(float target, float dt, SpringSettings spring, float maxSpeed, float maxAccel)
             {
                 if (dt <= 0f) return x;
@@ -252,8 +256,10 @@ namespace SpeedStars.Physical
                 for (int i = 0; i < steps; i++)
                 {
                     float a = w * w * (target - x) - 2f * spring.damping * w * v;
-                    // The limit is a muscle's on speeding up. Braking stays free, or the limb sails far past its target.
-                    if (a * v >= 0f) a = Mathf.Clamp(a, -maxAccel, maxAccel);
+                    // The limit is a muscle's on speeding up; braking may be BrakeShare times stronger (free braking turned a limb round
+                    // 28 deg in one frame when its target flipped, while no brake sails it far past the target).
+                    float limit = a * v >= 0f ? maxAccel : maxAccel * BrakeShare;
+                    a = Mathf.Clamp(a, -limit, limit);
                     v = Mathf.Clamp(v + a * h, -maxSpeed, maxSpeed);
                     x += v * h;
                 }
@@ -849,7 +855,8 @@ namespace SpeedStars.Physical
         const float ArmIdle = 10f;             // the arm clock before any press (s): the throw is over
         const float ArmPeriodMin = 0.1f;       // the press-to-press time the arm's return follows lies within these (s)
         const float ArmPeriodMax = 0.5f;
-        const float RockRise = 0.06f;          // the trunk rock eases up to its target over this (s), not at once
+        const float ArmRise = 0.05f;           // the arms' throw eases up to 1 over this (s), not at once
+        const float RockRise = 0.06f;         // the trunk rock eases up to its target over this (s), not at once
         const float RockFastPeriod = 0.2f;     // press-to-press time (s) at and under which the rock is down to rockFastShare ...
         const float RockSlowPeriod = 0.4f;     // ... and at and over which it is whole
         const float RideFilter = 10f;          // rideBob's height speed follows the body's this fast (1/s)
@@ -880,7 +887,7 @@ namespace SpeedStars.Physical
         Spring _bounceLean;                        // the trunk's lean in the bounce (deg), through bounceLeanSpring
         float _rockKick;                           // eases up to 1 at a press, back to 0 over the press interval: the run's trunk rock
         float _rideVel;                            // the body height's speed, filtered (m/s): what rideBob reads
-        float _armKick;                            // 1 right after a press, falling back: the hop's arm throw
+        float _armKick;                            // eases up to 1 after a press (ArmRise), then falls back: the hop's arm throw
         float _armClock = ArmIdle, _armPeriod = ArmPeriodMax;   // seconds since the last press; the last press-to-press time
         float _lastHipY;                           // last frame's final hip height (runner space), for the rise limit
         bool _hipFree;                             // last frame's hip height was free to be limited (a run, not a dive)
@@ -2217,7 +2224,10 @@ namespace SpeedStars.Physical
                 }
             }
             float armFall = Mathf.Min(1f / Mathf.Max(0.1f, armHopReturn), ArmReturnShare * _armPeriod);
-            _armKick = 1f - Mathf.SmoothStep(0f, 1f, _armClock / armFall);
+            // It eases up over ArmRise like the rock: a jump to 1 on a press stepped the arms' target (28 deg turned in a frame at a pair press).
+            // The fall's steepest slope (1.5 / armFall, 17.6 per s at the fastest period) stays under 1 / ArmRise, so it still tracks.
+            float armTarget = 1f - Mathf.SmoothStep(0f, 1f, _armClock / armFall);
+            _armKick = Mathf.MoveTowards(_armKick, armTarget, dt / ArmRise);
             // The run's rock comes back over the whole press interval (a slow rhythm: gently there and back), not in 0.17 s.
             // It stays at the top for the first 0.35 of the fall, so the spring reaches the target even at a fast rhythm.
             float rockFall = Mathf.Max(0.1f, ArmReturnShare * _armPeriod);
