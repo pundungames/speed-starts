@@ -1723,6 +1723,8 @@ namespace SpeedStars.Physical
             {
                 Leg leg = Legs(i), partner = Legs(1 - i);
                 if (_jumping) { leg.carry = leg.phase != LegPhase.Hold; continue; }
+                // The balance leg of the one-key hop carries nothing in any phase: a leg left on the ground held the body and the hop never started.
+                if (leg.idle > IdleCarry && leg.phase != LegPhase.Hold && _dive <= 0.3f) { leg.carry = false; continue; }
                 switch (leg.phase)
                 {
                     case LegPhase.Push: leg.carry = leg.grounded; break;
@@ -1961,7 +1963,17 @@ namespace SpeedStars.Physical
                 _hopPresses = _posePresses;
                 int leg = _poseLastLeg;
                 double at = _poseLastTime;
+                float wasTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
                 _hopTarget = leg >= 0 && leg == _hopPrevLeg && at - _hopPrevTime < HopRepeatWindow ? 1f : 0f;
+                // The hop opens: the other leg leaves the ground whatever phase it is in, so the switch from a run is the same every time
+                // (a leg that stayed down carried the body and the flight spring never ran: only the pressed foot moved). A planted foot
+                // starts from the angles it was shown with (Enter); the pin lets go by itself once the leg is the balance leg (PinFeet).
+                if (_hopTarget > 0.5f && wasTarget < 0.5f && !off && _dive <= 0.3f)
+                {
+                    Leg other = Legs(1 - leg);
+                    bool free = other.phase == LegPhase.Rest && !other.grounded;
+                    if (other.phase != LegPhase.Hold && !free) Enter(other, LegPhase.Rest, now, stockReturnTime);
+                }
                 _hopPrevLeg = leg;
                 _hopPrevTime = at;
             }
@@ -1971,7 +1983,7 @@ namespace SpeedStars.Physical
             for (int i = 0; i < 2; i++)
             {
                 Leg leg = Legs(i);
-                leg.idle = Mathf.MoveTowards(leg.idle, i != sim.LastLeg ? _hop : 0f, IdleRate * dt);
+                leg.idle = Mathf.MoveTowards(leg.idle, i != _poseLastLeg ? _hop : 0f, IdleRate * dt);
             }
         }
 
@@ -2204,7 +2216,8 @@ namespace SpeedStars.Physical
                 // With no key a body that still glides does not nail a foot again and again (the pin lets go at the leg's length, the foot
                 // came forward and was pinned anew: a step of its own): the foot that let go stays with the body until it stops.
                 bool entry = gap <= TouchHeight && Mathf.Abs(leg.pinOffset) <= 0.002f && (!_idleStock || _rootSpeed < PinStopSpeed);
-                bool pin = allowed && !leg.grounded && phaseOk && (was ? gap <= TouchHeight * PinExit : entry);
+                bool isBalanceLeg = leg.idle > IdleCarry && leg.phase != LegPhase.Hold && _dive <= 0.3f;
+                bool pin = allowed && !isBalanceLeg && !leg.grounded && phaseOk && (was ? gap <= TouchHeight * PinExit : entry);
                 if (pin && !was)
                 {
                     leg.pinPoint = transform.TransformPoint(leg.ankle);
