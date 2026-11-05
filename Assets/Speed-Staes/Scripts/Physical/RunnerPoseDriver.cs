@@ -388,9 +388,9 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key).")]
         public LegAngles recoverFast = new LegAngles(-60f, 88f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
-        public LegAngles kneeOpen = new LegAngles(68f, 170f);
+        public LegAngles kneeOpen = new LegAngles(85f, 170f);
         [Tooltip("Plain running at fast-stride speed: the knee drive (kneeOpen's faster pair).")]
-        public LegAngles kneeOpenFast = new LegAngles(78f, 170f);
+        public LegAngles kneeOpenFast = new LegAngles(92f, 170f);
         [Tooltip("How much of the stride (and the flight) comes from how well the runner has been running (the sim's " +
                  "Form: presses on time): 0 = speed alone, 1 = a runner with no form takes no stride.")]
         [Range(0f, 1f)] public float formWeight = 0.8f;
