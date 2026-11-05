@@ -932,7 +932,8 @@ namespace SpeedStars.Physical
         bool _carried = true, _headDown;           // last frame: a leg carried the body / the head was on the ground
         Spring _holdChain;                         // how much of the hold's chain (0..1): stays until the head has come back, not as the tip falls
         bool _holdChainOn;
-        Spring _holdTip;                          // the lean a real hold has tipped the body over (deg)
+        Spring _hump;                              // how far the back has turned over into the dive's hump (0..1), eased
+        Spring _holdTip;                        // the lean a real hold has tipped the body over (deg)
         float _pairTargetLast;                     // PairWeight's last answer outside the wait for a pair's second key
         float _heldNow, _bothHeld;                // this frame: the strongest real hold of a leg in Hold (0..1), both keys' (0 unless both in Hold)
         float _hipsNow, _holdHead, _legTurn;       // this frame: the hips' lean (deg), the hold's share of the head angle, the legs' turn with the hips
@@ -1441,6 +1442,7 @@ namespace SpeedStars.Physical
             _holdTip.Reset();
             _bothTip.Reset();
             _holdChain.Reset();
+            _hump.Reset();
             _holdChainOn = false;
             _holdHead = 0f;
             ResetGait();
@@ -2780,13 +2782,21 @@ namespace SpeedStars.Physical
             _holdChain.Step(_holdChainOn ? 1f : 0f, chainIn.frequency, chainIn.damping, dt);
             // Never behind the tip on the way in: the tip must not lean a curled back.
             float w = Mathf.Clamp01(Mathf.Max(_holdChain.Value, _holdTip.Value / Mathf.Max(1f, holdLean)));
+            float lowHips = hipShare * Mathf.Max(0f, full);
+            float wholeTip = _holdTip.Value + _bothTip.Value;
+            float levelPitch = Mathf.Max(1f, pelvisPitchRange.y);
+            // The hump's own spring: holdHips falls in about 0.1 s on a release and the hump closed with it (head 46 -> 87 in two frames).
+            float humpTarget = w > 0f
+                ? Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.5f * levelPitch, levelPitch, lowHips + wholeTip))
+                : 0f;
+            SpringSettings humpIn = humpTarget < _hump.Value ? holdTipBackSpring : holdTipSpring;
+            _hump.Step(humpTarget, humpIn.frequency, humpIn.damping, dt);
             if (w > 0f)
             {
-                float low = hipShare * Mathf.Max(0f, full);
-                float whole = _holdTip.Value + _bothTip.Value;
+                float low = lowHips;
+                float whole = wholeTip;
                 float holdHips = low + whole;
-                float level = Mathf.Max(1f, pelvisPitchRange.y);
-                float hump = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.5f * level, level, holdHips));
+                float hump = Mathf.Clamp01(_hump.Value);
                 float holdBase = Mathf.Lerp(holdWaistShare * Mathf.Max(0f, _waistBase.Value) - low, spineLevelCurve * 0.5f, hump);
                 float holdBend = Mathf.Lerp(holdChestShare * Mathf.Max(0f, top) - low, spineLevelCurve, hump);
                 hips = Mathf.Lerp(hips, holdHips, w);
