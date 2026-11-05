@@ -386,7 +386,11 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running: from x m/s to y m/s the fast angles (recoverFast, kneeOpenFast) come in, linearly.")]
         public Vector2 fastStrideSpeed = new Vector2(2f, 8f);
         [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key).")]
-        public LegAngles recoverFast = new LegAngles(-60f, 88f);
+        public LegAngles recoverFast = new LegAngles(-60f, 125f);
+        [Tooltip("Plain running at low speed: the heel kick, the rear leg open behind (replaces recover; recoverFast is its faster pair).")]
+        public LegAngles recoverOpen = new LegAngles(-55f, 125f);
+        [Tooltip("Plain running: the folded pass, further back than mid (replaces mid; the hop keeps mid's own key).")]
+        public LegAngles midRun = new LegAngles(0f, 55f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
         public LegAngles kneeOpen = new LegAngles(78f, 170f);
         [Tooltip("Plain running at fast-stride speed: the knee drive (kneeOpen's faster pair).")]
@@ -1217,7 +1221,7 @@ namespace SpeedStars.Physical
             // Lifted, the foot does not travel back through the world: the thigh goes on back only as far as the body's own move carries it.
             leg.swingBackLimit = k[0].thigh - Mathf.Rad2Deg * _rootSpeed * n[1] * len / Mathf.Max(MinExtent, _extent);
             k[1] = RecoverKeyFor(leg);
-            k[2] = Key(mid, hopMid);
+            k[2] = MidKey();
             k[3] = KneeDriveKey();
             k[4] = Key(contact, hopContact);
             for (int i = 1; i < SwingKeyCount - 1; i++)
@@ -1244,7 +1248,7 @@ namespace SpeedStars.Physical
             LegAngles[] k = leg.keys, m = leg.slope;
             float[] n = leg.knots;
             k[1] = RecoverKeyFor(leg);
-            k[2] = Key(mid, hopMid);
+            k[2] = MidKey();
             k[3] = KneeDriveKey();
             k[4] = Key(contact, hopContact);
             for (int i = 1; i < SwingKeyCount - 1; i++)
@@ -1348,7 +1352,11 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>Heel-kick key: plain running opens it with speed; a hop or pair jump keeps recover.</summary>
-        LegAngles RecoverKey() => Key(LegAngles.Lerp(recover, recoverFast, _fastW * _plainRun), hopRecover);
+        LegAngles RecoverKey() =>
+            Key(LegAngles.Lerp(recover, LegAngles.Lerp(recoverOpen, recoverFast, _fastW), _plainRun), hopRecover);
+
+        /// <summary>Folded-pass key: plain running passes further back than mid; a hop or pair jump keeps mid.</summary>
+        LegAngles MidKey() => Key(LegAngles.Lerp(mid, midRun, _plainRun), hopMid);
 
         /// <summary>The recover key of this leg's swing: running, its thigh is held up to the swing's own back limit (a hop or pair jump: untouched).</summary>
         LegAngles RecoverKeyFor(Leg leg)
