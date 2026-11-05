@@ -352,8 +352,19 @@ namespace SpeedStars.Physical
         [Tooltip("The stride (how far the knee drives, how far the foot lands and pushes back) grows from strideMin at x m/s " +
                  "to the full keys at y m/s.")]
         public Vector2 strideSpeed = new Vector2(1.5f, 9f);
-        [Tooltip("Share of the full stride at a standstill and while running badly (0 = the legs stay at runHome).")]
-        [Range(0f, 1f)] public float strideMin = 0.25f;
+        [Tooltip("Share of the full stride at a standstill and while running badly in plain running (0 = the legs stay at " +
+                 "runHome). High, so slow running still opens the legs; hopping and pair jumps use jumpStrideMin.")]
+        [Range(0f, 1f)] public float strideMin = 0.8f;
+        [Tooltip("The stride floor while hopping (one key) or pair jumping: they keep the narrow stride they always had.")]
+        [Range(0f, 1f)] public float jumpStrideMin = 0.25f;
+        [Tooltip("Plain running: from x m/s to y m/s the fast angles (recoverFast, kneeOpenFast) come in, linearly.")]
+        public Vector2 fastStrideSpeed = new Vector2(2f, 8f);
+        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key).")]
+        public LegAngles recoverFast = new LegAngles(-60f, 88f);
+        [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
+        public LegAngles kneeOpen = new LegAngles(68f, 140f);
+        [Tooltip("Plain running at fast-stride speed: the knee drive (kneeOpen's faster pair).")]
+        public LegAngles kneeOpenFast = new LegAngles(78f, 130f);
         [Tooltip("How much of the stride (and the flight) comes from how well the runner has been running (the sim's " +
                  "Form: presses on time): 0 = speed alone, 1 = a runner with no form takes no stride.")]
         [Range(0f, 1f)] public float formWeight = 0.8f;
@@ -820,6 +831,9 @@ namespace SpeedStars.Physical
         double _lastPress = -1.0;                  // sim time of the last press
         double _now;                               // this frame's sim time
         float _amp = 1f;                           // this frame's stride (strideMin..1)
+        float _dipAmp = 1f;                        // the stride under the old 0.25 floor: sizes the stance dip, so slow running does not sink deeper
+        float _plainRun = 1f;                      // 1 = plain running, 0 = hop or pair jump (they keep today's keys)
+        float _fastW;                              // 0..1: speed through fastStrideSpeed
         float _extent = 0.8f;                      // hip joint height above the foot in a run (m)
         Vector3 _lastRootPos;                      // the root last frame
         bool _haveRoot;
@@ -1128,9 +1142,9 @@ namespace SpeedStars.Physical
             LegAngles[] k = leg.keys, m = leg.slope;
             float[] n = leg.knots;
             k[0] = leg.angles;
-            k[1] = Key(recover, hopRecover);
+            k[1] = RecoverKey();
             k[2] = Key(mid, hopMid);
-            k[3] = Key(kneeDrive, hopKneeDrive);
+            k[3] = KneeDriveKey();
             k[4] = Key(contact, hopContact);
             n[0] = 0f;
             n[1] = Mathf.Clamp(swingKeys.x, 0.02f, 0.9f);
@@ -1160,9 +1174,9 @@ namespace SpeedStars.Physical
             if (leg.keys == null) return;
             LegAngles[] k = leg.keys, m = leg.slope;
             float[] n = leg.knots;
-            k[1] = Key(recover, hopRecover);
+            k[1] = RecoverKey();
             k[2] = Key(mid, hopMid);
-            k[3] = Key(kneeDrive, hopKneeDrive);
+            k[3] = KneeDriveKey();
             k[4] = Key(contact, hopContact);
             for (int i = 1; i < SwingKeyCount - 1; i++)
             {
@@ -1225,12 +1239,32 @@ namespace SpeedStars.Physical
         LegAngles Stride(LegAngles key) => new LegAngles(Mathf.Lerp(runHome.thigh, key.thigh, _amp),
             Mathf.Lerp(runHome.knee, key.knee, FoldKeep + (1f - FoldKeep) * _amp));
 
-        /// <summary>This frame's stride (strideMin..1): from speed and from how well the runner has been running.</summary>
-        float Amp(RunnerSim sim)
+        /// <summary>Stride floor the stance dip is sized from: the old narrow floor, so a wider plain stride adds no squat.</summary>
+        const float DipStrideMin = 0.25f;
+
+        /// <summary>Speed and form as 0..1: how far the stride is from its floor to the full keys.</summary>
+        float StrideDrive(RunnerSim sim)
         {
             float speed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(strideSpeed.x, strideSpeed.y, sim.Speed));
-            return Mathf.Lerp(strideMin, 1f, speed * Mathf.Lerp(1f - formWeight, 1f, Mathf.Clamp01(sim.Form)));
+            return speed * Mathf.Lerp(1f - formWeight, 1f, Mathf.Clamp01(sim.Form));
         }
+
+        /// <summary>
+        /// This frame's stride (floor..1): from speed and from how well the runner has been running. The floor is the wide
+        /// strideMin in plain running and the narrow jumpStrideMin while hopping or pair jumping, so those keep their old stride.
+        /// </summary>
+        float Amp(RunnerSim sim)
+        {
+            float floor = Mathf.Lerp(strideMin, jumpStrideMin, Mathf.Max(_hop, _pair));
+            return Mathf.Lerp(floor, 1f, StrideDrive(sim));
+        }
+
+        /// <summary>Heel-kick key: plain running opens it with speed; a hop or pair jump keeps recover.</summary>
+        LegAngles RecoverKey() => Key(LegAngles.Lerp(recover, recoverFast, _fastW * _plainRun), hopRecover);
+
+        /// <summary>Knee-drive key: plain running opens the shin forward (more at low speed); a hop or pair jump keeps kneeDrive.</summary>
+        LegAngles KneeDriveKey() =>
+            Key(LegAngles.Lerp(kneeDrive, LegAngles.Lerp(kneeOpen, kneeOpenFast, _fastW), _plainRun), hopKneeDrive);
 
         /// <summary>
         /// A key held past pushTime: the leg goes on to the hold angles, and the other leg (unless it is held back, or
@@ -1705,7 +1739,7 @@ namespace SpeedStars.Physical
             // One key hopping the body does not sink into the stance (the dip fades with the hop weight) and rises through the push
             // instead, so the flight's arc starts from the push and the hop reads as a bounce, not a squat and a stretch.
             float hopW = _hop * (1f - _pair);
-            float extent = StanceExtent(leg) - (stanceDip * _amp * (1f - hopW) + hopStanceDip * hopW) * Mathf.Sin(Mathf.PI * leg.stanceU) +
+            float extent = StanceExtent(leg) - (stanceDip * _dipAmp * (1f - hopW) + hopStanceDip * hopW) * Mathf.Sin(Mathf.PI * leg.stanceU) +
                            hopPushRise * hopW * Mathf.SmoothStep(0f, 1f, leg.stanceU);
             return extent + AnkleGround(leg) - joint.y;
         }
@@ -1785,6 +1819,9 @@ namespace SpeedStars.Physical
             _now = now;
             _jumping = !preview && sim.InJump;
             _amp = Amp(sim);
+            _dipAmp = Mathf.Lerp(DipStrideMin, 1f, StrideDrive(sim));
+            _plainRun = 1f - Mathf.Max(_hop, _pair);
+            _fastW = Mathf.InverseLerp(fastStrideSpeed.x, fastStrideSpeed.y, sim.Speed);
             _stepNow = false;
 
             // 1. Key poses.
