@@ -7,9 +7,9 @@ namespace SpeedStars.Runner
 {
     /// <summary>
     /// Side-on race camera: sits to the runner's right and tracks along the run axis only,
-    /// so step bob and pelvis sway never shake the frame. Three things come from the race itself and touch only
-    /// the picture: each press sends the camera back, flowing, and the speed holds it there (it comes in as both fade), and a wrong
-    /// step or a knocked hurdle shakes it.
+    /// so step bob and pelvis sway never shake the frame. Its height never changes (the zoom moves it only away from the runner).
+    /// Two things come from the race itself and touch only the picture: each press sends the camera back, flowing, and the speed
+    /// holds it there (it comes in as both fade), and a knocked hurdle shakes it sideways.
     /// </summary>
     public sealed class SideFollowCamera : MonoBehaviour
     {
@@ -17,7 +17,7 @@ namespace SpeedStars.Runner
         public Transform target;
         [Tooltip("Distance from the runner standing still (m).")]
         public float distance = 4.5f;
-        [Tooltip("How far the camera looks down at the runner (deg). The height follows from it, so the angle stays the same at any distance or zoom.")]
+        [Tooltip("How far the camera looks down at the runner (deg). The camera's fixed height follows from it at full zoom, so the angle is right at running speed and the height never moves with the zoom.")]
         public float pitch = 8f;
         [Tooltip("Turns the camera round the runner toward the runner's front (deg), so the near and far leg and arm can be told apart. 0 is exactly side-on. The follow stays on the run axis.")]
         public float sideYaw = 12f;
@@ -45,11 +45,7 @@ namespace SpeedStars.Runner
         public float zoomInTime = 0.17f;
 
         [Header("Shake")]
-        [Tooltip("Shake size on a wrong step, early or late (m).")]
-        public float wrongStepShake = 0.03f;
-        [Tooltip("Shake length on a wrong step (s).")]
-        public float wrongStepShakeTime = 0.15f;
-        [Tooltip("Shake size on a knocked hurdle (m).")]
+        [Tooltip("Shake size on a knocked hurdle (m); sideways only.")]
         public float hitShake = 0.12f;
         [Tooltip("Shake length on a knocked hurdle (s).")]
         public float hitShakeTime = 0.3f;
@@ -94,8 +90,6 @@ namespace SpeedStars.Runner
         {
             if (!pressed || _body.Sim == null) return;
             _pressZoom = Mathf.Clamp01(_pressZoom + zoomPerPress);
-            PressResult result = _body.Sim.LastResult;
-            if (result == PressResult.Early || result == PressResult.Late) Shake(wrongStepShake, wrongStepShakeTime);
         }
 
         /// <summary>A stronger shake running now is not cut by a smaller one.</summary>
@@ -133,15 +127,14 @@ namespace SpeedStars.Runner
         Vector3 Desired()
         {
             float back = distance * distanceScale * Mathf.Lerp(1f, zoomDistance, _zoom);
-            float up = lookHeight + back * Mathf.Tan(pitch * Mathf.Deg2Rad);
             Vector3 side = Side();
             // The lead is taken along the picture's own horizontal, so the runner sits the same share of the frame left at any yaw.
             Vector3 screenRight = Vector3.Cross(Vector3.up, -side);
-            return target.position + screenRight * leadAhead + side * back + Vector3.up * up;
+            return target.position + screenRight * leadAhead + side * back + Vector3.up * StandingHeight;
         }
 
-        /// <summary>Camera height standing still at the normal distance (m).</summary>
-        public float StandingHeight => lookHeight + distance * Mathf.Tan(pitch * Mathf.Deg2Rad);
+        /// <summary>The camera's one fixed height (m): what the pitch gives at full zoom, so the picture at running speed is unchanged and presses never move it.</summary>
+        public float StandingHeight => lookHeight + distance * distanceScale * zoomDistance * Mathf.Tan(pitch * Mathf.Deg2Rad);
 
         Quaternion Facing() => Quaternion.LookRotation(-Side(), Vector3.up) * Quaternion.Euler(pitch, 0f, 0f);
 
@@ -165,8 +158,7 @@ namespace SpeedStars.Runner
 
             Current(out float size);
             float n = Time.time * shakeRate;
-            Vector3 shake = transform.right * ((Mathf.PerlinNoise(n, 0.3f) - 0.5f) * 2f * size)
-                + Vector3.up * ((Mathf.PerlinNoise(0.7f, n) - 0.5f) * 2f * size);
+            Vector3 shake = transform.right * ((Mathf.PerlinNoise(n, 0.3f) - 0.5f) * 2f * size);
 
             transform.position = _position + shake;
             transform.rotation = Facing();
