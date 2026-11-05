@@ -753,12 +753,11 @@ namespace SpeedStars.Physical
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
         const float LockKnee = 15f;
-        const float HopBlend = 4f;             // the hop and pair weights follow their targets this fast (1/s)
+        const float HopBlend = 18f;            // the hop and pair weights follow their targets this fast (1/s): ~0.13 s to settle
+        const float HopRepeatWindow = 1f;      // the same key again within this (s) is a hop (the sim's repeat)
         const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
-        const float IdleRate = 4f;             // a leg turns into the balance leg (and back) this fast (1/s)
+        const float IdleRate = 12f;             // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
-        const float HopBiasFrom = 0.2f;        // the sim's hop bias (one repeat gives 0.45, two 0.7) where the pose's hop begins: the 2nd repeat is half in...
-        const float HopBiasTo = 0.7f;          // ...and the 3rd is full; one key every second settles at ~0.67 and keeps it. A single step gives 0.
         const float PairWindow = 0.04f;        // two presses this close (s) are together (full), twice as far apart are not at all (the sim's togetherWindow)
         const float PressTwin = 0.06f;         // two presses closer than this (s) are one throw (two keys together)
         const float ArmIdle = 10f;             // the arm clock before any press (s): the throw is over
@@ -785,6 +784,9 @@ namespace SpeedStars.Physical
         float _lastHipY;                           // last frame's final hip height (runner space), for the rise limit
         bool _hipFree;                             // last frame's hip height was free to be limited (a run, not a dive or a settle)
         readonly float[] _sitW = new float[2];       // each leg's share in the sit-back pivot (blends over sitPivotBlend)
+        int _hopPresses, _hopPrevLeg = -1;          // the press count last seen, and the leg of the press before
+        double _hopPrevTime = -10.0;
+        float _hopTarget;                           // 1 when that press was the same leg again, 0 when it was the other
         float _hop, _pair, _dive;                   // one-leg hop weight, two-keys-together weight, hold weight (dive) 0..1
         float _twist, _roll, _lastThighL, _lastThighR, _chestYaw, _chestRoll;
         bool _trunkInit;
@@ -1107,6 +1109,27 @@ namespace SpeedStars.Physical
                 LimitSlope(StanceRate() * len * d1, k[4].thigh - k[3].thigh) / d1, 0f);
         }
 
+        /// <summary>
+        /// The swing's keys follow the hop weight as it is NOW: a swing that began as a run's and meets a hop (or the reverse) goes on to the
+        /// new keys from where it is (the shown angles follow their target through the limb springs), not on the old path to the end.
+        /// </summary>
+        void RefreshSwingKeys(Leg leg)
+        {
+            if (leg.keys == null) return;
+            LegAngles[] k = leg.keys, m = leg.slope;
+            float[] n = leg.knots;
+            k[1] = Key(recover, hopRecover);
+            k[2] = Key(mid, hopMid);
+            k[3] = Key(kneeDrive, hopKneeDrive);
+            k[4] = Key(contact, hopContact);
+            for (int i = 1; i < SwingKeyCount - 1; i++)
+            {
+                float span = n[i + 1] - n[i - 1];
+                m[i] = new LegAngles(KeySlope(k[i - 1].thigh, k[i].thigh, k[i + 1].thigh, span),
+                    KeySlope(k[i - 1].knee, k[i].knee, k[i + 1].knee, span));
+            }
+        }
+
         /// <summary>The slope (angle per unit of the swing) through a key: Catmull-Rom, flat at a peak or a trough.</summary>
         static float KeySlope(float before, float at, float after, float span) =>
             (at - before) * (after - at) <= 0f ? 0f : (after - before) / Mathf.Max(1e-3f, span);
@@ -1362,6 +1385,7 @@ namespace SpeedStars.Physical
                 case LegPhase.Mid:
                 {
                     float share = SwingShare(leg, now);
+                    RefreshSwingKeys(leg);
                     leg.angles = EvalSwing(leg, share);
                     leg.phase = share < Mathf.Clamp(swingKeys.y, 0.02f, 0.95f) ? LegPhase.Recover : LegPhase.Mid;
                     air = share;
@@ -1874,7 +1898,19 @@ namespace SpeedStars.Physical
             _armKick = 1f - Mathf.SmoothStep(0f, 1f, _armClock / armFall);
             float k = 1f - Mathf.Exp(-HopBlend * dt);
             bool off = preview || sim.InJump;
-            _hop = Mathf.Lerp(_hop, off ? 0f : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((sim.HopBias - HopBiasFrom) / (HopBiasTo - HopBiasFrom))), k);
+            // The hop target comes from the presses themselves (not the sim's slowly built bias, which keeps ~0.5 for a while after a
+            // change of key): the same leg again within a second is 1, the other leg is 0, and a second without a press is 0.
+            if (sim.Presses != _hopPresses)
+            {
+                _hopPresses = sim.Presses;
+                int leg = sim.LastLeg;
+                double at = sim.LastPressTime;
+                _hopTarget = leg >= 0 && leg == _hopPrevLeg && at - _hopPrevTime < HopRepeatWindow ? 1f : 0f;
+                _hopPrevLeg = leg;
+                _hopPrevTime = at;
+            }
+            float hopTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
+            _hop = Mathf.Lerp(_hop, off ? 0f : hopTarget, k);
             _pair = Mathf.Lerp(_pair, off ? 0f : PairWeight(now), k);
             for (int i = 0; i < 2; i++)
             {
@@ -2477,7 +2513,9 @@ namespace SpeedStars.Physical
             _bounceLean.Reset();
             _gait.Reset();
             _kick.Reset();
-            _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = 0f;
+            _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = _hopTarget = 0f;
+            _hopPrevLeg = -1;
+            _hopPrevTime = -10.0;
             _sitW[0] = _sitW[1] = 0f;
             _armKick = 0f;
             _armClock = ArmIdle;
