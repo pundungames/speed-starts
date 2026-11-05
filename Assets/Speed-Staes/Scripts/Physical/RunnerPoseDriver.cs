@@ -30,7 +30,7 @@ namespace SpeedStars.Physical
     ///                             Swinging legs stay under the body whatever the lean (only a dive, the hold weight, turns
     ///                             them with the hips), so mashing keeps the feet reaching the ground.
     ///      The stride (how far the knee drives, how far the foot lands and pushes) grows with speed and with
-    ///      how well the runner has been running (sim.Form). A key held past pushTime turns its leg into the hold
+    ///      how well the runner has been running (sim.Form). A key held past holdAfter turns its leg into the hold
     ///      (Hold) and the other leg reaches forward (Reach → Front); a held leg rises behind with the waist lean.
     ///      No input: home, the crouch (blended to the running home while presses keep coming).
     ///      Every phase starts from the leg's current angles.
@@ -445,9 +445,11 @@ namespace SpeedStars.Physical
         [Min(0.1f)] public float hopHipRiseMax = 4.5f;
 
         [Header("Leg timing (s)")]
-        [Tooltip("A key down longer than this is a hold: the pushing leg goes on to the hold angles and the other leg reaches " +
-                 "forward (s). Quicker with speed (animSpeedUp); a tap is shorter. Also the reach's time.")]
+        [Tooltip("The reach's time (s), and the push's pace. Quicker with speed (animSpeedUp). Whether a key is a hold is holdAfter's.")]
         public float pushTime = 0.2f;
+        [Tooltip("A key must stay down this long before its leg holds: the pushing leg goes on to the hold angles and the other " +
+                 "leg reaches forward (s). A shorter press is a tap, whatever the speed.")]
+        public float holdAfter = 0.22f;
         [Tooltip("At max speed pushTime and the legs' going home take this share of their time (1 = as slow as standing).")]
         [Range(0.2f, 1f)] public float animSpeedUp = 0.5f;
         [Tooltip("A leg in front (or landed with nothing more coming) goes home this slowly; quicker with speed.")]
@@ -1068,7 +1070,7 @@ namespace SpeedStars.Physical
 
         /// <summary>
         /// A press puts that leg's foot down (BeginStance); a release of a held leg sends it into its swing.
-        /// The other leg is left alone: it is in its own cycle (a key held past pushTime is what sends it forward).
+        /// The other leg is left alone: it is in its own cycle (a key held past holdAfter is what sends it forward).
         /// </summary>
         void OnTapped(int leg, bool pressed, double time)
         {
@@ -1377,7 +1379,7 @@ namespace SpeedStars.Physical
             Key(LegAngles.Lerp(kneeDrive, LegAngles.Lerp(kneeOpen, kneeOpenFast, _fastW), _plainRun), hopKneeDrive);
 
         /// <summary>
-        /// A key held past pushTime: the leg goes on to the hold angles, and the other leg (unless it is held back, or
+        /// A key held past holdAfter: the leg goes on to the hold angles, and the other leg (unless it is held back, or
         /// planted from a tap of its own) reaches forward to carry the body.
         /// </summary>
         void ToHold(Leg leg, Leg partner, double time)
@@ -1391,7 +1393,7 @@ namespace SpeedStars.Physical
             Enter(partner, LegPhase.Reach, time, PushTime());
         }
 
-        /// <summary>Time for a key to be held before it is a hold, and for the reach: pushTime, quicker with speed (animSpeedUp).</summary>
+        /// <summary>The reach's time: pushTime, quicker with speed (animSpeedUp). Not the hold's start (holdAfter).</summary>
         float PushTime() => pushTime * SpeedUp();
 
         /// <summary>Share of their time the legs take at this speed: 1 standing, animSpeedUp at max speed.</summary>
@@ -1443,7 +1445,7 @@ namespace SpeedStars.Physical
 
         /// <summary>
         /// Phases that have run their time hand over. A planted foot that has run out (toe-off) swings; a swing that has run
-        /// its time lands and waits in the touchdown pose; a caught leg plants its foot; a key held past pushTime turns its
+        /// its time lands and waits in the touchdown pose; a caught leg plants its foot; a key held past holdAfter turns its
         /// leg (pushing or in its first swing) into a hold, and a held leg let go swings; a reach ends in front on the
         /// ground and stays there while the other leg is still pushing, recovering or held, then goes home; a landed
         /// leg with nothing more coming goes home.
@@ -1457,7 +1459,7 @@ namespace SpeedStars.Physical
                 {
                     Leg leg = Legs(i), partner = Legs(1 - i);
                     if (leg.held && (leg.phase == LegPhase.Push || leg.phase == LegPhase.Recover) &&
-                        time - leg.pressedAt >= PushTime())
+                        time - leg.pressedAt >= holdAfter)   // not PushTime(): that is 0.1-0.2 s at speed and made 0.18 s taps holds
                     {
                         ToHold(leg, partner, time);
                         continue;
