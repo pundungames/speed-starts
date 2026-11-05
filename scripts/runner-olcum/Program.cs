@@ -9,7 +9,9 @@ static class P
     // Prefab values of HumanCharacterDummy_F (2026-11-04), the ones the game runs with.
     public static float Waste = -1f; public static float Waste2 = -1f;
     public static float PushT = -1f;
-    static RunnerTuning T() { var t = new RunnerTuning(); if (Waste >= 0f) t.wasteKickShare = Waste; if (PushT > 0f) t.pushTime = PushT; if (FlatKick) { t.goodKickShare = 1f; t.wasteKickShare = 1f; } t.maxSpeed = 13f; t.pushGain = 1.22f; t.dragQuadratic = 0.032f; t.gravity = 5f; t.headKick = 12f; if (Waste2 >= 0f) t.wasteKickShare = Waste2; t.headReturnDelay = 0.1f; return t; }
+    static RunnerTuning T() { var t = new RunnerTuning(); if (Waste >= 0f) t.wasteKickShare = Waste; if (PushT > 0f) t.pushTime = PushT; if (FlatKick) { t.goodKickShare = 1f; t.wasteKickShare = 1f; } t.maxSpeed = 13f; t.pushGain = 1.22f; t.dragQuadratic = 0.032f; t.gravity = 5f; t.headKick = 12f; if (Waste2 >= 0f) t.wasteKickShare = Waste2; t.headReturnDelay = 0.1f; Over(t); return t; }
+    // Quick tuning trials: SIM_SET="strainGain=0.09;headKick=10" overrides float fields of RunnerTuning.
+    static string Ovr; static void Over(RunnerTuning t) { var v = Ovr ?? Environment.GetEnvironmentVariable("SIM_SET"); if (string.IsNullOrEmpty(v)) return; foreach (var kv in v.Split(';')) { var a = kv.Split('='); var f = typeof(RunnerTuning).GetField(a[0]); if (f != null) f.SetValue(t, float.Parse(a[1], CultureInfo.InvariantCulture)); } }
 
     sealed class R { public string Name; public float T100 = -1, VEnd, VMax, HeadAvg, HeadMax, Eff; public int Good, Early, Late, N; }
 
@@ -183,10 +185,143 @@ static class P
         }
     }
 
+    struct Res { public float T100, V3, V6, V10, H10, Eff, Good, H30, H60, H80, Loss3; }
+
+    // Mashing table: keys in turn at a fixed gap and key time; v3/v6/v10 = speed at that second, h10 = head at 10 s.
+    static Res SpamRun(float gap, float hold)
+    {
+        var s = new RunnerSim(T());
+        var r = new Res { T100 = -1f, H30 = -1f, H60 = -1f, H80 = -1f };
+        double next = 0.2, rel = -1, t = 0, dt = 1.0 / 240.0, effSum = 0; int leg = 0, relLeg = 0, n = 0, good = 0;
+        while (t < 30)
+        {
+            if (t >= next)
+            {
+                s.Press(leg); relLeg = leg; rel = t + hold; leg = 1 - leg; next += gap;
+                n++; effSum += s.LastEfficiency; if (s.LastResult == PressResult.Good) good++;
+            }
+            if (rel >= 0 && t >= rel) { s.Release(relLeg); rel = -1; }
+            s.Advance((float)dt); t += dt;
+            if (r.T100 < 0f && s.Distance >= 100f) r.T100 = (float)t;
+            if (r.V3 == 0f && t >= 3) r.V3 = s.Speed;
+            if (r.V6 == 0f && t >= 6) r.V6 = s.Speed;
+            if (r.V10 == 0f && t >= 10) { r.V10 = s.Speed; r.H10 = s.HeadAngle; }
+            if (r.H30 < 0f && s.HeadAngle >= 30f) r.H30 = (float)t;
+            if (r.H60 < 0f && s.HeadAngle >= 60f) r.H60 = (float)t;
+            if (r.H80 < 0f && s.HeadAngle >= 79f) r.H80 = (float)t;
+        }
+        r.Eff = n > 0 ? (float)(effSum / n) : 0f;
+        r.Good = n > 0 ? (float)good / n : 0f;
+        return r;
+    }
+
+    static string Sec(float v) => v < 0 ? "  -" : v.ToString("0.0");
+
+    static void SpamTable()
+    {
+        Console.WriteLine($"{"aralik",7}{"tus",6}{"100m",8}{"v3",6}{"v6",6}{"v10",6}{"bas10",7}{"verim",7}{"good%",7}{"b30",5}{"b60",5}{"b80",5}");
+        foreach (var hold in new[] { 0.04f, 0.07f })
+        foreach (var gap in new[] { 0.08f, 0.09f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.18f, 0.20f, 0.22f, 0.24f, 0.26f, 0.28f, 0.30f, 0.40f, 0.50f })
+        {
+            var r = SpamRun(gap, hold);
+            Console.WriteLine($"{gap,7:0.00}{hold,6:0.00}{(r.T100 < 0 ? ">30" : r.T100.ToString("0.00")),8}{r.V3,6:0.0}{r.V6,6:0.0}{r.V10,6:0.0}{r.H10,7:0}{r.Eff,7:0.00}{r.Good * 100,7:0}{Sec(r.H30),5}{Sec(r.H60),5}{Sec(r.H80),5}");
+        }
+    }
+
+    // Neighbour gaps 0.01 apart, 0.08-0.30: v10, 100 m, and the v10 ratio to the previous gap (cliff = ratio > 1.6 either way).
+    static void Scan()
+    {
+        foreach (var hold in new[] { 0.04f, 0.07f })
+        {
+            Console.WriteLine($"tus {hold:0.00}: aralik v10 [100m] oran");
+            float prev = -1; var line = "";
+            for (int i = 8; i <= 30; i++)
+            {
+                var r = SpamRun(i / 100f, hold);
+                float ratio = prev > 0 ? Math.Max(r.V10, prev) / Math.Max(0.05f, Math.Min(r.V10, prev)) : 1f;
+                line += $" {i / 100f:0.00}={r.V10:0.0}[{(r.T100 < 0 ? ">30" : r.T100.ToString("0.0"))}]{(ratio > 1.6f ? "!" + ratio.ToString("0.0") : "")}";
+                prev = r.V10;
+                if (i % 6 == 1 || i == 30) { Console.WriteLine(line); line = ""; }
+            }
+            Console.WriteLine(line);
+        }
+    }
+
+    // Acceptance score of one override set (T-114): list of violated checks.
+    static List<string> Score()
+    {
+        var bad = new List<string>();
+        var v10 = new Dictionary<string, float>();
+        foreach (var hold in new[] { 0.04f, 0.07f })
+        {
+            float prev = -1;
+            for (int i = 8; i <= 24; i++)
+            {
+                var r = SpamRun(i / 100f, hold);
+                string k = $"{i}/{hold:0.00}";
+                if (prev > 0 && Math.Max(r.V10, prev) / Math.Max(0.05f, Math.Min(r.V10, prev)) > 1.6f) bad.Add($"cliff {k}");
+                prev = r.V10;
+                if (i <= 16)
+                {
+                    if (r.V10 < 2.5f || r.V10 > 5.2f) bad.Add($"v10 {k}={r.V10:0.0}");
+                    if (r.T100 > 0 && r.T100 < 13f) bad.Add($"t100 {k}={r.T100:0.0}");
+                }
+                if (i >= 18 && i <= 22 && r.T100 > 0 && r.T100 <= 11.8f) bad.Add($"band {k}={r.T100:0.0}");
+                if (i >= 10 && i <= 14 && hold == 0.04f)
+                {
+                    if (r.H30 < 0.5f || r.H30 > 3.5f) bad.Add($"b30 {k}={r.H30:0.0}");
+                    if (r.H60 < 2.5f || r.H60 > 6.5f) bad.Add($"b60 {k}={r.H60:0.0}");
+                    if (r.H80 < 4.5f || r.H80 > 8.5f) bad.Add($"b80 {k}={r.H80:0.0}");
+                }
+            }
+        }
+        return bad;
+    }
+
+    // GRID="strainGain=0.04,0.06;strainWastePower=1,2": every combination, sorted by violations.
+    static void Grid()
+    {
+        var spec = Environment.GetEnvironmentVariable("GRID").Split(';');
+        var names = new List<string>(); var vals = new List<string[]>();
+        foreach (var sp in spec) { var a = sp.Split('='); names.Add(a[0]); vals.Add(a[1].Split(',')); }
+        var res = new List<(string, List<string>)>();
+        var idx = new int[names.Count];
+        while (true)
+        {
+            var parts = new List<string>();
+            for (int i = 0; i < names.Count; i++) parts.Add($"{names[i]}={vals[i][idx[i]]}");
+            Ovr = string.Join(";", parts);
+            res.Add((Ovr, Score()));
+            int d = 0; while (d < idx.Length && ++idx[d] == vals[d].Length) idx[d++] = 0;
+            if (d == idx.Length) break;
+        }
+        res.Sort((a, b) => a.Item2.Count.CompareTo(b.Item2.Count));
+        for (int i = 0; i < Math.Min(12, res.Count); i++) Console.WriteLine($"{res[i].Item2.Count,3} {res[i].Item1} :: {string.Join(" ", res[i].Item2.GetRange(0, Math.Min(14, res[i].Item2.Count)))}");
+    }
+
+    // Trace one gap: time:speed/head/strain/form every 0.5 s (args: gap tap).
+    static void Trace(float gap, float hold)
+    {
+        var s = new RunnerSim(T());
+        double next = 0.2, rel = -1, t = 0, dt = 1.0 / 240.0, rep = 0; int leg = 0, relLeg = 0; string line = "";
+        while (t < 12)
+        {
+            if (t >= next) { float st0 = s.Strain; s.Press(leg); if (Environment.GetEnvironmentVariable("PRESSLOG") != null && t < 3) Console.WriteLine($"  t={t:0.00} {s.LastResult} eff={s.LastEfficiency:0.00} v={s.Speed:0.0} air={s.Airborne} dStrain={s.Strain - st0:0.000}"); relLeg = leg; rel = t + hold; leg = 1 - leg; next += gap; }
+            if (rel >= 0 && t >= rel) { s.Release(relLeg); rel = -1; }
+            s.Advance((float)dt); t += dt;
+            if (t >= rep) { line += $" {t:0.0}:{s.Speed:0.0}/{s.HeadAngle:0}/{s.Strain:0.00}/{s.Form:0.00}"; rep += 0.5; if (rep % 2.0 < 0.01) { Console.WriteLine(line); line = ""; } }
+        }
+        Console.WriteLine(line);
+    }
+
     static void Main(string[] args)
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         if (args.Length > 0 && args[0] == "phased") { if (args.Length > 1) Waste2 = float.Parse(args[1]); Phased(); Table(); return; }
+        if (args.Length > 0 && args[0] == "spam") { SpamTable(); return; }
+        if (args.Length > 0 && args[0] == "scan") { Scan(); return; }
+        if (args.Length > 0 && args[0] == "grid") { Grid(); return; }
+        if (args.Length > 0 && args[0] == "trace") { Trace(float.Parse(args[1]), args.Length > 2 ? float.Parse(args[2]) : 0.04f); return; }
         if (args.Length > 0 && args[0] == "start") { Start3(); return; }
         if (args.Length > 0 && args[0] == "cliff") { CliffSweep(); return; }
         if (args.Length > 0 && args[0] == "push") { PushSweep(); return; }

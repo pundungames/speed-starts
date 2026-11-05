@@ -141,7 +141,7 @@ namespace SpeedStars.Physical
         [Range(0f, 2f)] public float goodKickShare = 0.2f;
         [Tooltip("Share of headKick a wasted press (efficiency 0: in the air, very late, leg not back) takes. In between " +
                  "it follows the press's timing efficiency, so bad presses pile the head up and good ones keep it low.")]
-        [Range(0f, 5f)] public float wasteKickShare = 0.5f;
+        [Range(0f, 5f)] public float wasteKickShare = 0.25f;
         [Tooltip("Key still down: the head goes on forward at this rate (deg/s × the key's hold weight; both keys = twice).")]
         public float holdPush = 70f;
         [Tooltip("No key down: the head comes back to headBack through this spring. Presses before it is back pile it up.")]
@@ -166,16 +166,22 @@ namespace SpeedStars.Physical
         public SpringSettings holdOut = new SpringSettings(4.5f, 1f);
 
         [Header("Strain: wasted presses build it slowly, on-time presses and rest wear it off; it leans the head forward (over seconds)")]
-        [Tooltip("Strain (0..1) each wasted press adds, × (1 − the press's timing): over-tapping takes seconds to lean the runner, not one press.")]
-        public float strainGain = 0.045f;
+        [Tooltip("Strain (0..1) each wasted press adds, × (1 − the press's timing)^strainWastePower, and × the press's push scale squared: " +
+                 "over-tapping takes seconds to lean the runner, not one press, and tapping faster than a runner can step does not pile it up faster per second.")]
+        public float strainGain = 0.09f;
         [Tooltip("Strain each on-time press takes away, × its timing^8 (a wasted press takes none): back on the rhythm the head comes up within a couple of seconds.")]
         public float strainRelief = 0.2f;
+        [Tooltip("An on-time press only wears strain off as far as the runner has been pressing on time lately: its relief is × Form^this. " +
+                 "Mashing lands every other press on the beat by chance; without this the good ones wipe out what the wasted ones built. 0 = every on-time press relieves in full.")]
+        public float strainReliefFormPower = 5f;
+        [Tooltip("Strain a press adds is × (1 − its timing)^this: above 1 a press only a little early adds much less than a fully wasted one, so a cadence a bit too fast bends the runner slowly and mashing quickly.")]
+        public float strainWastePower = 2f;
         [Tooltip("Strain lost per second whatever happens (1/s).")]
         public float strainLeak = 0.05f;
         [Tooltip("Extra leak (× strainLeak) when no press has come for about 0.5 s: keys up, the runner gets his breath.")]
         public float strainRest = 8f;
         [Tooltip("Share of headForwardMax a full strain leans the head to.")]
-        [Range(0f, 1f)] public float strainHead = 1f;
+        [Range(0f, 2f)] public float strainHead = 1.3f;
 
         [Header("Head → speed: the further forward the head, the less a press gives and the more the runner loses")]
         [Tooltip("Head angle (deg) at which a press gives nothing; upright or back a press gives all. In between it " +
@@ -443,8 +449,9 @@ namespace SpeedStars.Physical
             // A head that is down spoils the push: it comes back in full only as the head comes up.
             eff *= HeadUpright;
             _head.Velocity += T.headNod * share;
-            // Wasted presses pile strain up a little each; on-time ones wear it off (no threshold between them).
-            Strain = Mathf.Clamp01(Strain + (T.strainGain * (1f - kickTiming) - T.strainRelief * Mathf.Pow(kickTiming, 8f)) * share);
+            // Wasted presses pile strain up a little each (a press cut short by the tapping speed less); on-time ones wear it off, as far
+            // as the runner has been pressing on time lately (Form) - mashing hits the beat by chance every other press (no threshold).
+            Strain = Mathf.Clamp01(Strain + (T.strainGain * pushScale * pushScale * Mathf.Pow(1f - kickTiming, T.strainWastePower) - T.strainRelief * Mathf.Pow(kickTiming, 8f) * Mathf.Pow(_form, T.strainReliefFormPower)) * share);
             l.Kick = T.headKick * Mathf.Lerp(T.goodKickShare, T.wasteKickShare, 1f - kickTiming) * share;
 
             float gain = T.pushGain * eff * share * pushScale;

@@ -282,14 +282,17 @@ namespace SpeedStars.PlayTests
         }
 
         [Test]
-        public void MashingShowsMoreHeadThanPressingEarlyThanARhythm()
+        public void MashingAndPressingEarlyBothShowMuchMoreHeadThanARhythm()
         {
+            // Pressing a little early (0.20) wastes about as many presses as mashing (0.14): both pile the head up until it
+            // sits near its limit, so the average no longer tells them apart - only from the rhythm.
             object tuning = NewTuning();
             float mash = Rhythm(tuning, 0.14f).HeadAverage;
             float early = Rhythm(tuning, 0.20f).HeadAverage;
             float rhythm = Rhythm(tuning, 0.26f).HeadAverage;
-            Assert.Greater(mash, early, "mashing must show the head further forward than pressing early");
-            Assert.Greater(early, rhythm, "pressing early must show the head further forward than the rhythm");
+            const float Margin = 20f;
+            Assert.Greater(mash, rhythm + Margin, "mashing must show the head far forward of the rhythm");
+            Assert.Greater(early, rhythm + Margin, "pressing early must show the head far forward of the rhythm");
         }
 
         [Test]
@@ -384,37 +387,158 @@ namespace SpeedStars.PlayTests
             return s.Speed;
         }
 
+        private static readonly float[] MashGaps = { 0.08f, 0.09f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f };
+        private static readonly float[] MashHolds = { 0.04f, 0.07f };
+
         [Test]
         public void SustainedMashingKeepsMovingAndIsSlowerThanASlowRhythm()
         {
             object tuning = NewTuning();
             float slow = AlternatingSpeed(tuning, 0.5f, KeyHold, 10f);
-            foreach (float gap in new[] { 0.08f, 0.10f, 0.12f, 0.14f })
+            foreach (float hold in MashHolds)
+                foreach (float gap in MashGaps)
+                {
+                    float mash = AlternatingSpeed(tuning, gap, hold, 10f);
+                    Assert.Greater(mash, 0.5f, $"mashing at {gap:0.00} (key {hold:0.00}) must not leave the runner standing");
+                    Assert.Less(mash, slow, $"mashing at {gap:0.00} (key {hold:0.00}) must not beat a slow rhythm");
+                }
+        }
+
+        [Test]
+        public void MashingCoversTheRaceNoFasterThanASlowRhythmWhateverTheKeyTime()
+        {
+            // Every other mashed press lands on the beat by chance and is a perfect one: its relief must not wipe out what the
+            // wasted ones built, or mashing runs as fast as a good rhythm (T-114).
+            object tuning = NewTuning();
+            float slow = Rhythm(tuning, 0.50f).Seconds;
+            foreach (float hold in MashHolds)
+                foreach (float gap in MashGaps)
+                    Assert.Greater(Rhythm(tuning, gap, hold: hold).Seconds, slow, $"mashing at {gap:0.00} (key {hold:0.00}) is faster than a 0.50 rhythm");
+        }
+
+        [Test]
+        public void AClearlyTooFastCadenceIsSlowerThanTheFastestRhythm()
+        {
+            object tuning = NewTuning();
+            float fast = Rhythm(tuning, 0.30f).Seconds;
+            foreach (float hold in MashHolds)
+                for (int i = 18; i <= 22; i++)
+                    Assert.Greater(Rhythm(tuning, i / 100f, hold: hold).Seconds, fast, $"{i / 100f:0.00} (key {hold:0.00}) is faster than a 0.30 rhythm");
+        }
+
+        [Test]
+        public void NeighbouringMashGapsDoNotJumpInSpeed()
+        {
+            // Gaps 0.01 apart, 0.08 up to 0.22. At 0.23 the beat is on time once the runner is fast, a different kind of run
+            // (a runner from the start cannot hold 0.22 but can hold 0.23): that edge is known and not asserted here.
+            object tuning = NewTuning();
+            foreach (float hold in MashHolds)
             {
-                float mash = AlternatingSpeed(tuning, gap, 0.04f, 10f);
-                Assert.Greater(mash, 0.5f, $"mashing at {gap:0.00} must not leave the runner standing");
-                Assert.Less(mash, slow, $"mashing at {gap:0.00} must not beat a slow rhythm");
+                float prev = AlternatingSpeed(tuning, 0.08f, hold, 10f);
+                for (int i = 9; i <= 22; i++)
+                {
+                    float now = AlternatingSpeed(tuning, i / 100f, hold, 10f);
+                    Assert.LessOrEqual(Mathf.Max(now, prev) / Mathf.Max(0.05f, Mathf.Min(now, prev)), 1.6f, $"speed jumps between {(i - 1) / 100f:0.00} and {i / 100f:0.00} (key {hold:0.00})");
+                    prev = now;
+                }
             }
+        }
+
+        /// <summary>Seconds until the head first passes each angle under alternating taps (-1 = never within 15 s).</summary>
+        private static float[] HeadTimes(object tuning, float gap, float hold, params float[] angles)
+        {
+            var s = new Sim(tuning);
+            var times = Enumerable.Repeat(-1f, angles.Length).ToArray();
+            double next = 0.2, release = -1, t = 0;
+            int leg = 0, relLeg = 0;
+            while (t < 15.0)
+            {
+                if (t >= next) { s.Press(leg); relLeg = leg; release = t + hold; leg = 1 - leg; next += gap; }
+                if (release >= 0 && t >= release) { s.Release(relLeg); release = -1; }
+                s.Advance(Step);
+                t += Step;
+                for (int i = 0; i < angles.Length; i++)
+                    if (times[i] < 0f && s.Head >= angles[i]) times[i] = (float)t;
+            }
+            return times;
+        }
+
+        [Test]
+        public void MashingLeansTheHeadSlowlyAndInOrder()
+        {
+            // The lean builds over seconds: 30 degrees takes a couple of seconds, 60 a few more, 80 later still; nothing lies down within a second.
+            object tuning = NewTuning();
+            foreach (float gap in new[] { 0.12f, 0.13f, 0.14f })
+            {
+                float[] t = HeadTimes(tuning, gap, 0.04f, 30f, 60f, 79f);
+                Assert.Greater(t[0], 1f, $"{gap:0.00}: the head is at 30 degrees within a second");
+                Assert.Greater(t[1], t[0] + 1f, $"{gap:0.00}: 60 degrees comes too soon after 30");
+                Assert.Greater(t[2], t[1] + 0.5f, $"{gap:0.00}: 80 degrees comes too soon after 60");
+                Assert.Less(t[2], 10f, $"{gap:0.00}: the head never gets all the way forward");
+            }
+        }
+
+        [Test]
+        public void BackOnTheRhythmTheHeadComesUpWithinSeconds()
+        {
+            object tuning = NewTuning();
+            var s = new Sim(tuning);
+            double next = 0.2, release = -1, t = 0;
+            int leg = 0, relLeg = 0;
+            float headAtSwitch = 0f;
+            double backAt = -1;
+            const double SwitchAt = 9.0;
+            while (t < 16.0)
+            {
+                float gap = t < SwitchAt ? 0.13f : 0.28f, hold = t < SwitchAt ? 0.04f : KeyHold;
+                if (t >= next) { s.Press(leg); relLeg = leg; release = t + hold; leg = 1 - leg; next += gap; }
+                if (release >= 0 && t >= release) { s.Release(relLeg); release = -1; }
+                s.Advance(Step);
+                t += Step;
+                if (headAtSwitch == 0f && t >= SwitchAt) headAtSwitch = s.Head;
+                if (backAt < 0 && t >= SwitchAt && s.Head < 15f) backAt = t - SwitchAt;
+            }
+            Assert.Greater(headAtSwitch, 60f, "the mashing leaned the head forward");
+            Assert.That(backAt, Is.InRange(0.0, 3.5), "the rhythm must bring the head up within a few seconds");
         }
 
         [Test]
         public void MashingBuildsLeanOverSecondsNotInOneSecond()
         {
             object tuning = NewTuning();
-            var s = new Sim(tuning);
-            double next = 0.2, release = -1, t = 0;
-            int leg = 0, relLeg = 0;
-            float headAt1 = 0f, headAt6 = 0f;
-            while (t < 6f)
+            foreach (float hold in MashHolds)
+                foreach (float gap in new[] { 0.12f, 0.13f, 0.14f })
+                {
+                    var s = new Sim(tuning);
+                    double next = 0.2, release = -1, t = 0;
+                    int leg = 0, relLeg = 0;
+                    float headAt1 = 0f;
+                    while (t < 6f)
+                    {
+                        if (t >= next) { s.Press(leg); relLeg = leg; release = t + hold; leg = 1 - leg; next += gap; }
+                        if (release >= 0 && t >= release) { s.Release(relLeg); release = -1; }
+                        s.Advance(Step);
+                        t += Step;
+                        if (t < 1f) headAt1 = s.Head;
+                    }
+                    Assert.Less(headAt1, 0.5f * s.Head, $"the head must go forward gradually under sustained mashing ({gap:0.00}, key {hold:0.00})");
+                }
+        }
+
+        [Test]
+        public void TheRhythmRowsKeepTheHeadLowAndTheirOrder()
+        {
+            // The cost of mashing must not reach a rhythm: slower rhythms are slower, the head stays up.
+            object tuning = NewTuning();
+            float mashPeak = Rhythm(tuning, 0.14f, hold: 0.04f).HeadPeak;
+            float previous = 0f;
+            foreach (float gap in new[] { 0.26f, 0.28f, 0.30f, 0.40f, 0.50f })
             {
-                if (t >= next) { s.Press(leg); relLeg = leg; release = t + 0.04; leg = 1 - leg; next += 0.11; }
-                if (release >= 0 && t >= release) { s.Release(relLeg); release = -1; }
-                s.Advance(Step);
-                t += Step;
-                if (t < 1f) headAt1 = s.Head;
+                Result r = Rhythm(tuning, gap);
+                Assert.Less(r.HeadPeak, 0.5f * mashPeak, $"rhythm {gap:0.00} leans the head");
+                Assert.Greater(r.Seconds, previous, $"rhythm {gap:0.00} is not slower than the faster one");
+                previous = r.Seconds;
             }
-            headAt6 = s.Head;
-            Assert.Less(headAt1, 0.5f * headAt6, "the head must go forward gradually under sustained mashing");
         }
     }
 }
