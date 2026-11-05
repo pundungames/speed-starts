@@ -1597,6 +1597,14 @@ namespace SpeedStars.Physical
                 case LegPhase.Mid:
                 {
                     float share = SwingShare(leg, now);
+                    // Running, the rear leg stays open behind while the other is out in front: it goes through only as that one comes down.
+                    Leg other = leg == leftLeg ? rightLeg : leftLeg;
+                    if (_plainRun > 0.5f && !_idleStock && dt > 0f && share >= leg.knots[1] && share < leg.knots[2] &&
+                        other.phase == LegPhase.Mid && !other.grounded)
+                    {
+                        leg.swingT0 += dt;   // its clock waits; a press still catches it from here
+                        share = SwingShare(leg, now);
+                    }
                     RefreshSwingKeys(leg);
                     leg.angles = EvalSwing(leg, share);
                     leg.phase = share < leg.knots[2] ? LegPhase.Recover : LegPhase.Mid;
