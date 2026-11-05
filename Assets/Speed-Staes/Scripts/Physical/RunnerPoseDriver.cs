@@ -1408,7 +1408,8 @@ namespace SpeedStars.Physical
 
         /// <summary>
         /// A key held past holdAfter: the leg goes on to the hold angles, and the other leg (unless it is held back, or
-        /// planted from a tap of its own) reaches forward to carry the body.
+        /// planted from a tap of its own, or with its key down: that one goes to its own hold when its time comes) reaches
+        /// forward to carry the body.
         /// </summary>
         void ToHold(Leg leg, Leg partner, double time)
         {
@@ -1417,7 +1418,7 @@ namespace SpeedStars.Physical
             leg.holdFromKnee = leg.angles.knee;
             leg.holdBoth = 0f;
             leg.holdPeak = 0f;
-            if (partner.HeldBack || partner.grounded || partner.phase == LegPhase.Reach || partner.phase == LegPhase.Front) return;
+            if (partner.held || partner.HeldBack || partner.grounded || partner.phase == LegPhase.Reach || partner.phase == LegPhase.Front) return;
             Enter(partner, LegPhase.Reach, time, PushTime());
         }
 
