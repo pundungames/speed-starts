@@ -505,6 +505,9 @@ namespace SpeedStars.Physical
         public float holdLean = 32f;
         [Tooltip("The hold's tip goes to holdLean (and back) through this spring (damping 1: no swing).")]
         public SpringSettings holdTipSpring = new SpringSettings(7f, 1f);
+        [Tooltip("The one-leg hop and two-keys-together weights follow their targets through this spring (damping 1: no overshoot). " +
+                 "A spring starts slowly: no first-frame jump of the hips or legs.")]
+        public SpringSettings gaitBlendSpring = new SpringSettings(5f, 1f);
         [Tooltip("Both keys really held tip the body on by this much more (deg, squared by the weight: quick presses on " +
                  "both barely count): the dive goes on to level (pelvisPitchRange.y).")]
         public float bothLean = 55f;
@@ -824,7 +827,6 @@ namespace SpeedStars.Physical
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
         const float LockKnee = 15f;
-        const float HopBlend = 18f;            // the hop and pair weights follow their targets this fast (1/s): ~0.13 s to settle
         const float HopRepeatWindow = 1f;      // the same key again within this (s) is a hop (the sim's repeat)
         const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
         const float IdleRate = 12f;             // a leg turns into the balance leg (and back) this fast (1/s)
@@ -870,7 +872,8 @@ namespace SpeedStars.Physical
         double _hopPrevTime = -10.0;
         bool _hopRepeated;                          // the last press taken was the same leg again: the hop is really on
         float _hopTarget;                         // 1 when that press was the same leg again, 0 when it was the other
-        float _hop, _pair, _dive;                   // one-leg hop weight, two-keys-together weight, hold weight (dive) 0..1
+        Spring _hopSpring, _pairSpring, _bothTip;   // the hop and pair weights' springs (gaitBlendSpring); the both-keys tip's (holdTipSpring)
+        float _hop, _pair, _dive;                 // one-leg hop weight, two-keys-together weight, hold weight (dive) 0..1
         float _twist, _roll, _lastThighL, _lastThighR, _chestYaw, _chestRoll;
         bool _trunkInit;
         bool _wasInJump;                           // last frame in a jump: this frame's landing
@@ -1405,6 +1408,7 @@ namespace SpeedStars.Physical
             _waistBase.Reset();
             _hipsLean.Reset();
             _holdTip.Reset();
+            _bothTip.Reset();
             _holdHead = 0f;
             ResetGait();
             _carried = true;
@@ -2194,7 +2198,6 @@ namespace SpeedStars.Physical
             float rockFall = Mathf.Max(0.1f, ArmReturnShare * _armPeriod);
             float rockU = Mathf.Clamp01((_armClock / rockFall - 0.35f) / 0.65f);
             _rockKick = 1f - Mathf.SmoothStep(0f, 1f, rockU);
-            float k = 1f - Mathf.Exp(-HopBlend * dt);
             bool off = preview || sim.InJump;
             // The hop target comes from the presses themselves (not the sim's slowly built bias, which keeps ~0.5 for a while after a
             // change of key): the same leg again within a second is 1, the other leg is 0, and a second without a press is 0.
@@ -2230,8 +2233,11 @@ namespace SpeedStars.Physical
             float hopTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
             hopTarget *= 1f - _heldNow;   // a real hold ends the hop: else the trunk sits back (hopBackLean) against the forward tip
             hopTarget *= 1f - PairWeight(now);   // a pair gives way: the arms already read _pair, the legs and trunk must too
-            _hop = Mathf.Lerp(_hop, off ? 0f : hopTarget, k);
-            _pair = Mathf.Lerp(_pair, off ? 0f : PairWeight(now), k);
+            // Springs, not a lerp: a lerp is fastest in its first frame (0.26 of the way = 11 deg/frame on the hips via hopBackLean).
+            _hopSpring.Step(off ? 0f : hopTarget, gaitBlendSpring.frequency, gaitBlendSpring.damping, dt);
+            _pairSpring.Step(off ? 0f : PairWeight(now), gaitBlendSpring.frequency, gaitBlendSpring.damping, dt);
+            _hop = Mathf.Clamp01(_hopSpring.Value);
+            _pair = Mathf.Clamp01(_pairSpring.Value);
             for (int i = 0; i < 2; i++)
             {
                 Leg leg = Legs(i);
@@ -2707,11 +2713,13 @@ namespace SpeedStars.Physical
             // turns over into a hump with the head dipping. All of it by the tip's own build-up (w): a tap leaves it at 0, and
             // a press or a release only moves targets.
             _holdTip.Step(holdLean * _heldNow, holdTipSpring.frequency, holdTipSpring.damping, dt);
+            // The both-keys part goes through the same spring: read raw it threw the head 31 deg in a frame into a dive and the hips 14 out of one.
+            _bothTip.Step(bothLean * _bothHeld * _bothHeld, holdTipSpring.frequency, holdTipSpring.damping, dt);
             float w = Mathf.Clamp01(_holdTip.Value / Mathf.Max(1f, holdLean));
             if (w > 0f)
             {
                 float low = hipShare * Mathf.Max(0f, full);
-                float whole = _holdTip.Value + bothLean * _bothHeld * _bothHeld;
+                float whole = _holdTip.Value + _bothTip.Value;
                 float holdHips = low + whole;
                 float level = Mathf.Max(1f, pelvisPitchRange.y);
                 float hump = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.5f * level, level, holdHips));
@@ -2849,6 +2857,8 @@ namespace SpeedStars.Physical
             _gait.Reset();
             _kick.Reset();
             _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = _hopTarget = 0f;
+            _hopSpring.Reset();
+            _pairSpring.Reset();
             _hopPrevLeg = -1;
             _hopRepeated = false;
             _hopPrevTime = -10.0;
