@@ -39,3 +39,4 @@ RunnerPoseDriver'a elle tasindi (gercek tutma agirligi HeldWeight, govde zinciri
 Sapmalar: _bothHeld _heldNow ile carpildi (hizli iki tus basisi govdeyi devirmesin); on destek baslangici HeldWeight(otherHold) ile olceklendi (tap'te hedef eskisi gibi); gercek tutma esigi holdLean'in %25'i.
 Bacak izleyicisi: FollowHips diz'i UpdateLeg'den sonra ezer, kneeRate ezilmis diz'den hesaplanir; ReleaseHold gercek tutmada hizlari sifirlar, tap yolunda etkisi tutma agirligiyla olcekli (kucuk).
 Calistirilmadi, derlenmedi, olculmedi. PinFeet _dive ile soner: tutmada on ayak civilenmez (dokunulmadi).
+Duzeltme: _ballistic salt dalis degil (cift ziplama/sekme uzun basis); cizgide kalma yalniz holdPeak >= HoldRealPeak olan bacakta, birakis holdPeak ile ayrilir.

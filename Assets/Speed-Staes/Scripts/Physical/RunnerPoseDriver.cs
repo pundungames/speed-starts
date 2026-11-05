@@ -179,6 +179,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float dispThighWorld, dispW;   // ...its world thigh, and how much it differs from the solved one (0 = not sitting back)
             [System.NonSerialized] public float holdFromWorld, holdFromKnee;   // where a hold began: the thigh (world) and the knee
             [System.NonSerialized] public float holdBoth;   // 0..1: the other key is held too (the dive's legs stay in line)
+            [System.NonSerialized] public float holdPeak;   // the largest real-hold weight reached in this Hold (a tap stays near 0.05)
             [System.NonSerialized] public float cycle;      // this leg's own press-to-press time (s), smoothed; 0 = never pressed
             [System.NonSerialized] public float swingLen;   // the swing's time (s)
             [System.NonSerialized] public double pressedAt = -10.0, lastPress = -1.0, swingT0;
@@ -818,7 +819,7 @@ namespace SpeedStars.Physical
         const float SitFadeRange = 6f;         // leaning back this far (deg) takes the gait lean off
         const float HeldFrom = 0.25f;          // a key's hold weight below this is a tap, from here to HeldTo it turns into a real hold
         const float HeldTo = 0.6f;
-        const float HoldRealShare = 0.25f;     // the hold's tip past this share of holdLean when a leg is let go: it was really held, not a tap (a tap's ~0.3 weight tips ~6%)
+        const float HoldRealPeak = 0.5f;       // a Hold whose real weight reached this was really held (a tap's ~0.3 weight gives ~0.05)
         const float HoldTippedLean = 30f;      // the hips leaned this far (deg) when a held leg is let go: it comes in under the body
 
         float _gaitW, _speedCurve, _accel, _lastSpeed, _gaitHead;   // gait weight 0..1; speed curve 0..1; trunk's share of head lean
@@ -1300,6 +1301,7 @@ namespace SpeedStars.Physical
             leg.holdFromWorld = leg.thighWorld;
             leg.holdFromKnee = leg.angles.knee;
             leg.holdBoth = 0f;
+            leg.holdPeak = 0f;
             if (partner.HeldBack || partner.grounded || partner.phase == LegPhase.Reach || partner.phase == LegPhase.Front) return;
             Enter(partner, LegPhase.Reach, time, PushTime());
         }
@@ -1387,7 +1389,7 @@ namespace SpeedStars.Physical
                     {
                         case LegPhase.Hold:
                             // In a dive's free fall the legs stay in line until the head is down; a run's short flight lets go at once.
-                            if (!leg.held && !(_ballistic && !_headDown)) ReleaseHold(leg, time);
+                            if (!leg.held && !(leg.holdPeak >= HoldRealPeak && _ballistic && !_headDown)) ReleaseHold(leg, time);
                             break;
                         case LegPhase.Push:
                             if (!leg.grounded)
@@ -1593,6 +1595,7 @@ namespace SpeedStars.Physical
                 // Scaled by the real hold, so a tap's brief Hold phase is as it was.
                 leg.holdBoth = Mathf.MoveTowards(leg.holdBoth, other.held ? 1f : 0f, FollowRate * dt);
                 float real = HeldWeight(leg == leftLeg ? _holdL : _holdR);
+                leg.holdPeak = Mathf.Max(leg.holdPeak, real);
                 float p = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((float)(_now - leg.phaseTime) / Mathf.Max(0.01f, holdReachTime)));
                 float aimThigh = Mathf.Lerp(holdThigh, holdBack.thigh, leg.holdBoth);
                 float aimKnee = Mathf.Lerp(holdStraightKnee, holdBack.knee, leg.holdBoth);
@@ -1613,13 +1616,18 @@ namespace SpeedStars.Physical
         /// </summary>
         void ReleaseHold(Leg leg, double time)
         {
-            if (_holdTip.Value <= HoldRealShare * holdLean)
+            // The reach-back ramp moved the shown thigh and knee off the tracker's, even in a hold let go below the threshold:
+            // take the shown angle over (holdPeak 0, a tap that never reached the ramp, stays exactly as it was).
+            if (leg.holdPeak > 0f)
+            {
+                leg.angles.thigh = leg.thighWorld + _legTurn * leg.follow;
+                leg.thighT.set = leg.kneeT.set = false;
+            }
+            if (leg.holdPeak < HoldRealPeak)
             {
                 StartSwing(leg, time);
                 return;
             }
-            leg.angles.thigh = leg.thighWorld + _legTurn * leg.follow;
-            leg.thighT.set = leg.kneeT.set = false;
             leg.thighRate = leg.kneeRate = 0f;
             bool tipped = _hipsNow > HoldTippedLean;
             if (_ballistic || tipped) Enter(leg, LegPhase.Rest, time, frontHomeTime * SpeedUp());
