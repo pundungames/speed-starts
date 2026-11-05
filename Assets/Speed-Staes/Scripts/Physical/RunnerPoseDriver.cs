@@ -1179,6 +1179,14 @@ namespace SpeedStars.Physical
         /// <summary>Start a phase from the leg's current angles (a planted foot is let go; the caller plants it again).</summary>
         static void Enter(Leg leg, LegPhase phase, double time, float duration)
         {
+            // Any way off the ground (toe-off, a hold, a reach) starts from the angles the planted leg was SHOWN with: the solved
+            // ones are from the unturned hip, and a leg started from them moved its foot 20-40 cm in one frame (the swap).
+            if (leg.grounded && leg.dispW > 0f)
+            {
+                leg.angles = LegAngles.Lerp(leg.angles, leg.dispAngles, leg.dispW);
+                leg.thighWorld = Mathf.Lerp(leg.thighWorld, leg.dispThighWorld, leg.dispW);
+                leg.dispW = 0f;
+            }
             leg.phase = phase;
             leg.phaseTime = time;
             leg.duration = duration;
