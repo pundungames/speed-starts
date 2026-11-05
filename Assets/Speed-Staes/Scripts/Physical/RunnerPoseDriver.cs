@@ -746,6 +746,8 @@ namespace SpeedStars.Physical
         const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
         const float IdleRate = 4f;             // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
+        const float HopBiasFrom = 0.2f;        // the sim's hop bias (one repeat gives 0.45, two 0.7) where the pose's hop begins: the 2nd repeat is half in...
+        const float HopBiasTo = 0.7f;          // ...and the 3rd is full; one key every second settles at ~0.67 and keeps it. A single step gives 0.
         const float PairWindow = 0.06f;        // two presses this close (s) are together (full), twice as far apart are not at all
         const float PressTwin = 0.06f;         // two presses closer than this (s) are one throw (two keys together)
         const float ArmIdle = 10f;             // the arm clock before any press (s): the throw is over
@@ -1849,7 +1851,7 @@ namespace SpeedStars.Physical
             _armKick = 1f - Mathf.SmoothStep(0f, 1f, _armClock / armFall);
             float k = 1f - Mathf.Exp(-HopBlend * dt);
             bool off = preview || sim.InJump;
-            _hop = Mathf.Lerp(_hop, off ? 0f : Mathf.SmoothStep(0f, 1f, sim.HopBias), k);
+            _hop = Mathf.Lerp(_hop, off ? 0f : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((sim.HopBias - HopBiasFrom) / (HopBiasTo - HopBiasFrom))), k);
             _pair = Mathf.Lerp(_pair, off ? 0f : PairWeight(now), k);
             for (int i = 0; i < 2; i++)
             {

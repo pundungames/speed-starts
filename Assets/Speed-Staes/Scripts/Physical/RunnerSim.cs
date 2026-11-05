@@ -468,7 +468,8 @@ namespace SpeedStars.Physical
             LeanSpring.Velocity += T.leanKick * (1f + T.stumbleKick * (1f - eff)) * share;
             if (!pairSecond) _form += (timing - _form) * T.formFollow;
             // The same leg again raises the hop bias, the other leg (a pair's second key too) lowers it: a continuous state, no mode.
-            _hopBias += ((LastLeg == leg ? 1f : 0f) - _hopBias) * T.hopBiasFollow;
+            // Only a repeat (the same leg within a second) raises it: after a longer pause the same leg is a new step, not a hop.
+            _hopBias += ((repeat ? 1f : 0f) - _hopBias) * T.hopBiasFollow;
 
             if (result == PressResult.Start || result == PressResult.Good || result == PressResult.Late || nearLanding)
             {
