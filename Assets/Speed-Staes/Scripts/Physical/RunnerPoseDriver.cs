@@ -344,6 +344,9 @@ namespace SpeedStars.Physical
         [Tooltip("The body's extra rise between two steps (m) at full hop bias, and with two keys pressed together (the legs " +
                  "in step): one leg hopping, or both legs bouncing the body like a sack.")]
         public float hopRise = 0.05f;
+        [Tooltip("The hopping leg's push: how far the pelvis sinks on (m, at full hop weight) as the foot goes back, so the leg " +
+                 "reaches back to hopPushEnd instead of running out of length at the run's height; the flight springs it up.")]
+        public float hopDip = 0.05f;
 
         [Header("Leg timing (s)")]
         [Tooltip("A key down longer than this is a hold: the pushing leg goes on to the hold angles and the other leg reaches " +
@@ -380,6 +383,10 @@ namespace SpeedStars.Physical
         [Tooltip("Fastest the pelvis may go up while running (m/s): a leg's height ask that jumps (mashing) cannot throw the body " +
                  "up in one frame. Not used in the dive, over hurdles or getting up.")]
         [Min(0.1f)] public float maxRiseSpeed = 2f;
+        [Tooltip("Fastest the hip's FINAL height may rise while running (m/s), after the sit-back and the floors: the hop's " +
+                 "toe-off stacked them to 4-5 cm in a frame (the box-run look). 1.75 is 2.9 cm per frame at 60 fps. Not used in " +
+                 "the dive, over hurdles or getting up.")]
+        [Min(0.1f)] public float hipRiseMax = 1.75f;
         [Tooltip("Rate (1/s) at which the sitting-back pivot moves from the hip to the heels of the legs that carry (and between " +
                  "them): switching it at once moved the hip several cm in one frame. The dive switches at once.")]
         [Min(1f)] public float sitPivotBlend = 8f;
@@ -583,7 +590,8 @@ namespace SpeedStars.Physical
         public float armHopDown = -45f;
         [Tooltip("Elbow bend (deg) in the hop: about a right angle, the forearms up in front of the chest.")]
         public float armHopElbow = 90f;
-        [Tooltip("How fast the throw falls back after the press's snap (1/s): the attack is instant, the return soft.")]
+        [Tooltip("The throw falls back after the press's snap in at most 1/x s (shorter when the presses come faster: it is " +
+                 "down before the next one): the attack is instant, the return soft.")]
         public float armHopReturn = 6f;
 
         [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
@@ -649,6 +657,10 @@ namespace SpeedStars.Physical
         const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
         const float IdleRate = 4f;             // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
+        const float ArmIdle = 10f;             // the arm clock before any press (s): the throw is over
+        const float ArmPeriodMin = 0.1f;       // the press-to-press time the arm's return follows lies within these (s)
+        const float ArmPeriodMax = 0.5f;
+        const float ArmReturnShare = 0.85f;    // the arm is back down this share of the press-to-press time in (it waits for the next press)
 
         const float GaitBlend = 8f;            // the gait weight follows its target this fast (1/s)
         const float AccelBlend = 6f;           // the acceleration is smoothed this fast (1/s)
@@ -664,6 +676,9 @@ namespace SpeedStars.Physical
         Spring _gait, _kick;                       // gait lean and the press pitch (deg, trunk)
         int _lastPresses, _armPresses;
         float _armKick;                            // 1 right after a press, falling back: the hop's arm throw
+        float _armClock = ArmIdle, _armPeriod = ArmPeriodMax;   // seconds since the last press; the last press-to-press time
+        float _lastHipY;                           // last frame's final hip height (runner space), for the rise limit
+        bool _hipFree;                             // last frame's hip height was free to be limited (a run, not a dive or a settle)
         readonly float[] _sitW = new float[2];       // each leg's share in the sit-back pivot (blends over sitPivotBlend)
         float _hop, _pair, _dive;                   // one-leg hop weight, two-keys-together weight, hold weight (dive) 0..1
         float _twist, _roll, _lastThighL, _lastThighR, _chestYaw, _chestRoll;
@@ -1285,6 +1300,25 @@ namespace SpeedStars.Physical
             return Mathf.Max(0f, HeelBehindAnkle * Mathf.Sin(a) + leg.ballOffset.y * (1f - Mathf.Cos(a)));
         }
 
+        /// <summary>
+        /// How far the ankle of a leg that is not planted (a hold, a swing) must stand over its resting height so that the
+        /// foot LateUpdate will pose does not go into the ground, heel or ball. The wanted pitch is not the foot's: PoseAnkle
+        /// turns it into a bend on the shin, clamped, and blends the swing curve in, so the foot's real pitch is predicted
+        /// the same way (shinTurn: how far the shin has been turned since the angles, sitting back). Only ever raises.
+        /// </summary>
+        float FreeFootRise(Leg leg, float shinTurn)
+        {
+            float shinDown = -(leg.thighWorld - (180f - leg.angles.knee)) + shinTurn;   // toes down the shin alone gives the foot
+            float bend = Mathf.Lerp(Mathf.Clamp(leg.pitch + leg.rock - shinDown, -ankleUpMax, ankleDownMax),
+                leg.swingAnkle, leg.swingW * leg.strideW);
+            bend = Mathf.Clamp(Mathf.Lerp(bend, leg.jumpAnkle, leg.jumpW), -ankleUpMax, ankleDownMax);
+            float pitch = (shinDown + bend) * Mathf.Deg2Rad;
+            float down = Mathf.Max(0f, pitch), up = Mathf.Max(0f, -pitch);
+            float heel = Mathf.Max(0f, HeelBehindAnkle * Mathf.Sin(up) + leg.ballOffset.y * (1f - Mathf.Cos(up)));
+            float ball = Mathf.Max(0f, leg.ballOffset.z * Mathf.Sin(down) + leg.ballOffset.y * (1f - Mathf.Cos(down)));
+            return heel + ball;
+        }
+
         /// <summary>The thigh joint (runner space) on the tilted pelvis, before the body's height is added.</summary>
         Vector3 Joint(Leg leg, Vector3 hip, Quaternion pelvisTilt, float width) =>
             hip + pelvisTilt * leg.hipJointFromHip + new Vector3(Side(leg) * width, 0f, 0f);
@@ -1418,7 +1452,10 @@ namespace SpeedStars.Physical
         /// <summary>Body height a planted foot asks for: the joint over the ankle at the stance's height, lowest in the middle of it.</summary>
         float StanceNeed(Leg leg, Vector3 joint)
         {
-            float extent = StanceExtent(leg) - stanceDip * _amp * Mathf.Sin(Mathf.PI * leg.stanceU);
+            // One key hopping: the body sinks on into the push (the leg goes back far only with the hip low: at the run's height the
+            // straight leg is out of length at a thigh of -13) and the flight springs it up again.
+            float extent = StanceExtent(leg) - stanceDip * _amp * Mathf.Sin(Mathf.PI * leg.stanceU) -
+                           hopDip * _hop * (1f - _pair) * leg.stanceU * leg.stanceU;
             return extent + AnkleGround(leg) - joint.y;
         }
 
@@ -1593,17 +1630,23 @@ namespace SpeedStars.Physical
                 leg.knee.y += bodyY;
                 leg.ankle.y += bodyY;
                 leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + HeelLift(leg));
+                // A held or swinging foot is posed toes down after the IK: its ball stands under the ankle's level, so the
+                // ankle floor is the foot's own pitch's, not just the heel's (the ball went 4 cm under in holds and swings).
+                if (!preview && !leg.grounded && !leg.carry) leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + FreeFootRise(leg, 0f));
             }
             leftLeg.rock = rightLeg.rock = 0f;
             if (backLean < 0f) SitBack(ref hip, backLean);
+            // Whatever moved the body last (the height spring, the sit-back's pivot) is limited, then the floors are kept:
+            // the last step that moves anything is the one that clamps (docs/TUZAKLAR.md: after the sit-back, the foot went in).
+            if (!preview) LimitHipRise(ref hip, dt);
             // Sitting back turns the legs that do not carry about the heels, below the ground: nothing stays under it
             // (the heel, and the ball of a foot pitched toes down or rocked back).
-            if (backLean < 0f)
-                for (int i = 0; i < 2; i++)
-                {
-                    Leg leg = Legs(i);
-                    leg.ankle.y = Mathf.Max(leg.ankle.y, AnkleGround(leg));
-                }
+            for (int i = 0; i < 2; i++)
+            {
+                Leg leg = Legs(i);
+                if (backLean < 0f) leg.ankle.y = Mathf.Max(leg.ankle.y, AnkleGround(leg));
+                if (!preview && !leg.grounded && !leg.carry) leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + FreeFootRise(leg, Mathf.Min(0f, backLean)));
+            }
 
             // Write the rig. The waist base sits at waistAngle plus its bend on the hips; the chain (TwistChain)
             // fills the chest in between it and the top, whose angle the neck and head work from (0 = the rig's rest).
@@ -1632,8 +1675,17 @@ namespace SpeedStars.Physical
         /// </summary>
         void UpdateHop(RunnerSim sim, double now, float dt)
         {
-            if (sim.Presses != _armPresses) { _armPresses = sim.Presses; _armKick = 1f; }
-            else _armKick *= Mathf.Exp(-armHopReturn * dt);
+            // The arm's throw is a function of the time since the press, and its fall takes the shorter of 1/armHopReturn and
+            // most of the last press-to-press time: an exponential fall never got there inside a 0.25 s tap (22% of the way left).
+            _armClock += dt;
+            if (sim.Presses != _armPresses)
+            {
+                _armPresses = sim.Presses;
+                _armPeriod = Mathf.Clamp(_armClock, ArmPeriodMin, ArmPeriodMax);
+                _armClock = 0f;
+            }
+            float armFall = Mathf.Min(1f / Mathf.Max(0.1f, armHopReturn), ArmReturnShare * _armPeriod);
+            _armKick = 1f - Mathf.SmoothStep(0f, 1f, _armClock / armFall);
             float k = 1f - Mathf.Exp(-HopBlend * dt);
             bool off = preview || sim.InJump;
             _hop = Mathf.Lerp(_hop, off ? 0f : Mathf.SmoothStep(0f, 1f, sim.HopBias), k);
@@ -1808,6 +1860,30 @@ namespace SpeedStars.Physical
                 leg.ankle = heel + foot * (leg.ankle - heel);
                 leg.rock = backLean * heelRock;
             }
+        }
+
+        /// <summary>
+        /// The hip's final height may rise only so fast while running (hipRiseMax). The height spring's own limit
+        /// (maxRiseSpeed) is on the body before the sit-back; the sit-back's pivot moving from the heel to the hip and the floors'
+        /// push stack on top of it, and one-key hops threw the hip up 4-5 cm in a frame. The legs that are not planted
+        /// go down with the hip (their hang stays), a planted one keeps its foot and bends. Not in a dive, a settle or a jump.
+        /// </summary>
+        void LimitHipRise(ref Vector3 hip, float dt)
+        {
+            bool free = !_ballistic && !_jumping && _settle.Value <= 0f;
+            float cut = free && _hipFree && dt > 0f ? hip.y - (_lastHipY + hipRiseMax * dt) : 0f;
+            if (cut > 0f)
+            {
+                hip.y -= cut;
+                for (int i = 0; i < 2; i++)
+                {
+                    Leg leg = Legs(i);
+                    leg.knee.y -= leg.grounded ? cut * 0.5f : cut;
+                    if (!leg.grounded) leg.ankle.y -= cut;
+                }
+            }
+            _lastHipY = hip.y;
+            _hipFree = free;
         }
 
         /// <summary>Where a foot on the ground touches it at the heel (runner space): behind the ankle, on the ground.</summary>
@@ -2079,6 +2155,8 @@ namespace SpeedStars.Physical
             _gaitW = _speedCurve = _accel = _lastSpeed = _gaitHead = _hop = _pair = 0f;
             _sitW[0] = _sitW[1] = 0f;
             _armKick = 0f;
+            _armClock = ArmIdle;
+            _hipFree = false;
             _lastPresses = 0;
             _twist = _roll = _chestYaw = _chestRoll = 0f;
             _trunkInit = false;
