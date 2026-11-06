@@ -21,6 +21,7 @@ commits:
   - 84b2be0f
   - 14c207b7
   - 0ae539ad
+  - 3d2d12f2
 tests:
   - "gerekmiyor: gorsel; kullanici gozle bakar"
 analytics:
