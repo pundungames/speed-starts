@@ -1,7 +1,7 @@
 ---
 id: T-152
 title: Kollar bacaklar gibi yumusak: tek ayak ve cift ayakta atis yayla, kosuda dirsek sakin
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-151]
 owns_paths:
@@ -49,3 +49,5 @@ Hesap: 0.27 sn'de 128 derecelik salinim sinusle bile 25 derece/kare eder; genlik
 - `_armThrow` = `_armKick`'in `armThrowSpring` (2.6 Hz, 1) yayindan gecmisi; yalniz `StepArm` hop/pair dallari okur, `_armKick` (lean, `_rockKick`) ayni kaldi.
 - `armPumpRate` 0.85, `armPumpWidth` 1.21 (prefab/asset'te yok), `armElbowEase` 0.7: `open` smoothstep ile `t/armElbowCloseAt` arasi karisim. Olculmedi.
 - Tur 2: `armElbowEase` silindi (dirsegi daha cok kapatiyordu); `open` genisletilmemis `arm.drive.Value`dan, dirsek `Step`i yeni `armElbowSpring` (4 Hz, 1) uzerinden. Olculmedi.
+- Olcu (t149-b -> t151-c; kare, ikinci fark): hopSwap kol 20.7/17 -> 8.5/3.4, aralik 74 -> 36 derece (`armThrowSpring`); pairOrder 25.2/16.3 -> 12.7/4.1, kollar arkada kalir (-72..-17); rhythm032 dirsek 14.1 -> 7.6 aralik 22..100; roughRun 18.2 -> 8.4; omuz 9.5 -> 9.1, 13.4 -> 12.6.
+- Kabul alti: omuz 9.1 (8.5), roughRun 12.6 (11), hopSwap aralik 36 (45), slowHop aralik 46 (90): `armThrowSpring` genligi kisti, kullanici gorsun.

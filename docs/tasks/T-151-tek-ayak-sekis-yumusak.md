@@ -1,7 +1,7 @@
 ---
 id: T-151
 title: Tek ayak ve cift ayak sekisi kisa ritimde alcak ve yumusak; kalca ucgen dalga yapmaz
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-149]
 owns_paths:
@@ -55,3 +55,5 @@ Kod: `UpdateBodyHeight` ucus dali (`TryIncoming`, `rise`, `target`, `landHover`)
 - Olculmedi (Unity yok); sayilar kabul listesine gore ilk deneme.
 - Tur 2: `hopContact` 24/158 (prefab'ta yok); `BeginStance`te hop > 0.5, Recover/Mid, `SwingShare` < 0.25, ayak yerde ise yakalama yerine `StartSwing`. Olculmedi.
 - Tur 3: `_sameStreak` (ayni tus art arda, aralik >= pressFollowSame); >= 2 iken `PressStillBusy` sorulmaz. `BeginStance` isaretli toe-off'u silmez (kalkis karesi sicramasi). Olculmedi.
+- Olcu (t149-b -> t151-c): hopSwap kalca 25 -> 8.8 cm, kare 5.8 -> 1.9, ikinci fark 6.3 -> 2.0, denge bacagi 8.8 -> 5.6; spamHop 25 -> 10.7; pairOrder 27 -> 15.8; slowHop 25.5 cm, ayak 4 kare yerde. Alinan basis hopSwap %89, runToHop %95, spamHop %26.
+- Kabulun alti: 0.27 sekiste `R_grounded` tur basina 1 kare (ayak ucu 5-6 kare 0.05 altinda, gozle yerde; bayrak 1 kare). slowHop kalkis karesi ikinci fark 3.5 (2.5 hedef), `hopPushRise` kok tahmini dogrulanmadi. runToHop gecis 6.3 (10.4 idi). Kullanici gorsun.
