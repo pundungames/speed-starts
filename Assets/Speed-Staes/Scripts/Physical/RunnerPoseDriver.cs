@@ -1497,10 +1497,12 @@ namespace SpeedStars.Physical
             leg.swungSincePress = true;
             if (leg.cycle <= 0f) leg.cycle = Mathf.Clamp(2f * (body && body.Sim != null ? body.Sim.StepTime : 0.3f), stepTimeMin, 2f * stepTimeMax);
             // A hop's swing is never shorter than hopTime in all (press to landing), whatever cycle the keys taught.
-            float cycle = Mathf.Lerp(leg.cycle, Mathf.Clamp(leg.cycle, hopTime, Mathf.Max(hopTime, hopTimeMax)), _hop * (1f - _pair));
+            // The timing of a hop from a standstill is the whole hop's from its first swing (_hop is still rising then); the shapes follow _hop.
+            float hopT = _hopQuick ? 1f : _hop * (1f - _pair);
+            float cycle = Mathf.Lerp(leg.cycle, Mathf.Clamp(leg.cycle, hopTime, Mathf.Max(hopTime, hopTimeMax)), hopT);
             float elapsed = Mathf.Min((float)(time - leg.pressedAt), cycle * 0.5f);
-            float lead = hopLead * _hop * (1f - _pair);   // one-key hop: the foot lands this much before the press is due
-            float len = Mathf.Clamp(cycle - elapsed - lead, swingMin, Mathf.Max(swingMin, stepTimeMax));
+            float lead = hopLead * hopT;   // one-key hop: the foot lands this much before the press is due
+            float len = Mathf.Clamp(cycle - elapsed - lead, Mathf.Lerp(swingMin, Mathf.Max(swingMin, hopSwingMin), hopT), Mathf.Max(swingMin, stepTimeMax));
             Enter(leg, LegPhase.Recover, time, len);
             leg.swingT0 = time;
             leg.swingLen = len;
