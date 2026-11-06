@@ -308,6 +308,8 @@ namespace SpeedStars.PlayTests
             s = new Script("oneTap"); double oneAt = s.Alt(0.1f, 0.30f, Tap); s.Strip(oneAt); s.Strip(oneAt + 0.5); s.Strip(oneAt + 1.1); list.Add(s.Build(2.5f));
             // T-154: the same key again and again from a standstill (0.45 s): a hop series from the first press; the strips cover the first second.
             s = new Script("standHops"); double standAt = s.Same(3f, 0.45f, Tap, 1); s.Strip(standAt); s.Strip(standAt + 0.6); list.Add(s.Build(0.5f));
+            // T-154: the hop stops: 3 s of nothing after a 0.3 s hop rhythm; the strip starts when the keys end (the held-out leg lowers softly).
+            s = new Script("hopStop"); s.Same(2.5f, 0.3f, Tap, 1); s.Strip(s.LastRelease); list.Add(s.Build(3f));
             // T-153: the block stance, Marks at 0.3 s, Set at 1.1 s, the first press at 1.9 s; strips on Marks, Set, the first press and 0.55 s later.
             s = new Script("blockStart"); s.BlockStart(); s.Alt(3f, 0.30f, Tap); foreach (float st in new[] { 0.3f, 1.1f, 1.8f, 2.45f }) s.Strips.Add(st); list.Add(s.Build(0.5f));
             s = new Script("blockPair"); s.BlockStart(); s.Pair(2f, 0.35f, Tap, 0.015f, 0.015f, false); foreach (float st in new[] { 1.1f, 1.8f, 2.45f }) s.Strips.Add(st); list.Add(s.Build(0.5f));
