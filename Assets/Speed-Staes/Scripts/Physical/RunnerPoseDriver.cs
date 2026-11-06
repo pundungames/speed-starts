@@ -387,6 +387,9 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running's own swing keys (same meaning as swingKeys; blended in by the plain-run weight). The thigh's peak " +
                  "comes earlier, so a nearly straight leg has time to come down before the touchdown.")]
         public Vector3 runSwingKeys = new Vector3(0.22f, 0.45f, 0.68f);
+        [Tooltip("One-leg hop swing keys (same meaning as swingKeys; blended in by the hop weight): the back kick comes later, so the leg has time to get " +
+                 "far back before it comes round.")]
+        public Vector3 hopSwingKeys = new Vector3(0.36f, 0.62f, 0.84f);
         [Tooltip("From the folded pass to the thigh's peak the knee opens later than the thigh comes forward: 1 = it keeps pace, " +
                  "higher = the leg drives from the hip first and the knee opens late; it is open as the thigh arrives. The ends do not move.")]
         [Range(1f, 4f)] public float kneeOpenDelay = 2f;
@@ -416,6 +419,9 @@ namespace SpeedStars.Physical
         [Tooltip("A foot never stays down longer than this (s), however slowly the body goes over it. Running it only counts " +
                  "while the other leg is not on its way down: the foot waits for the other one.")]
         public float stanceMax = 0.4f;
+        [Tooltip("One-leg hop: the foot stays down this long (s) at most, then the swing starts (at full hop weight; stanceMax blends to it). The rest of " +
+                 "the hop's time (hopTime) is the swing, long enough for the leg to go well back and come round.")]
+        [Min(0.05f)] public float hopStanceMax = 0.11f;
         [Tooltip("The stride (how far the knee drives, how far the foot lands and pushes back) grows from strideMin at x m/s " +
                  "to the full keys at y m/s.")]
         public Vector2 strideSpeed = new Vector2(1.5f, 9f);
@@ -458,8 +464,8 @@ namespace SpeedStars.Physical
         [Header("Hops: one key again and again (one leg hops, the other held out), two keys together (a sack hop)")]
         [Tooltip("One-key hop (blended in by the hop weight): toe-off, how far back the pressed leg goes with the foot down.")]
         public LegAngles hopPushEnd = new LegAngles(-45f, 172f);
-        [Tooltip("One-key hop swing, first key: the leg flexes under the body, no heel kick.")]
-        public LegAngles hopRecover = new LegAngles(-35f, 70f);
+        [Tooltip("One-key hop swing, first key: the leg kicked well back, the knee bent (under 90).")]
+        public LegAngles hopRecover = new LegAngles(-68f, 85f);
         [Tooltip("One-key hop swing, second key: the deepest flex, thigh and knee both small.")]
         public LegAngles hopMid = new LegAngles(15f, 70f);
         [Tooltip("One-key hop swing, third key: the leg opens again going down.")]
@@ -530,10 +536,10 @@ namespace SpeedStars.Physical
         public SpringSettings brakeOutSpring = new SpringSettings(2f, 0.75f);
         [Tooltip("The body's extra rise between two steps (m) at full hop bias, and with two keys pressed together (the legs " +
                  "in step): one leg hopping, or both legs bouncing the body like a sack.")]
-        public float hopRise = 0.26f;
+        public float hopRise = 0.27f;
         [Tooltip("Flight time (s, last foot off to the next touchdown) at which a hop or a pair jump reaches its full hopRise; shorter flights rise less " +
                  "(the share goes with the time to the power 1.5): a quick rhythm bounces low, a slow one high.")]
-        [Min(0.05f)] public float hopRiseTime = 0.45f;
+        [Min(0.05f)] public float hopRiseTime = 0.28f;
         [Tooltip("The hopping leg's push: how far the pelvis rises (m, at full hop weight) through the push, up to the toe-off, so the " +
                  "bounce starts with the push; the flight's arc (hopRise) goes on from there. With it the stance's dip is gone.")]
         public float hopPushRise = 0.07f;
@@ -1455,7 +1461,7 @@ namespace SpeedStars.Physical
             float[] n = leg.knots;
             k[0] = leg.angles;
             n[0] = 0f;
-            Vector3 sk = Vector3.Lerp(swingKeys, runSwingKeys, _plainRun);   // plain running peaks earlier; hop and pair keep swingKeys
+            Vector3 sk = Vector3.Lerp(Vector3.Lerp(swingKeys, hopSwingKeys, _hop * (1f - _pair)), runSwingKeys, _plainRun);   // plain running peaks earlier, a hop's back kick later; a pair keeps swingKeys
             n[1] = Mathf.Clamp(sk.x, 0.02f, 0.9f);
             n[2] = Mathf.Clamp(sk.y, n[1] + 0.02f, 0.95f);
             n[3] = Mathf.Clamp(sk.z, n[2] + 0.02f, 0.98f);
@@ -2197,7 +2203,7 @@ namespace SpeedStars.Physical
             Leg other = leg == leftLeg ? rightLeg : leftLeg;
             // Running, a foot stays until the other takes over (TickLegs); only a leg out of length lifts earlier (SolveStance, StanceCap).
             bool waits = _plainRun > 0.5f && !_idleStock && (ComingDown(other) || other.grounded);
-            if (!waits && (behind >= endBehind || now - leg.pressedAt > stanceMax)) leg.toeOff = true;
+            if (!waits && (behind >= endBehind || now - leg.pressedAt > Mathf.Lerp(stanceMax, hopStanceMax, _hop * (1f - _pair)))) leg.toeOff = true;
         }
 
         /// <summary>
