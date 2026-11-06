@@ -1,7 +1,7 @@
 ---
 id: T-158
 title: Okunakli gecisler: basista govde geri, spam %50, ayak degince calisan basis, ayakta tam sekis, titreme
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-157]
 owns_paths:
@@ -10,14 +10,22 @@ owns_paths:
   - "docs/tasks/T-158-okunakli-gecisler.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits:
+  - 121ba5ee
+  - 6b2efbff
+  - d36bee54
+  - cce0ca29
+  - 9158fe8c
+  - 5dcf6215
+  - 53acfe65
+  - 84b2be0f
 tests:
   - "gerekmiyor: gorsel; kullanici gozle bakar"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -55,4 +63,13 @@ Kullanici 06.11 (T-157 sonrasi): "her harekette inputta ust govde kendini biraz 
 - Yorumlar Ingilizce, "neden"i anlatan. Unity calistirma, derleyici yok; C# 9, imza hatasi yapma. Olcum supervizorde.
 - Commit: `git commit -F <mesaj-dosyasi> -- <yollar>`, mesaj dosyasi scratch'te (`C:\Users\Monster\AppData\Local\Temp\claude\d--Pundun-speed-starts\1c7d0dba-289b-4948-ba09-42f88d086602\scratchpad\`), adinda "main" yok, son satir `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Git'i Bash ile cagir. `git add -A`, push, reset yok. Calisma yeri `D:\Pundun\speed-starts-ik`, dal `agent/ik-kosucu`.
 
+## Ek (kullanici, ayni is)
+**G.** Gecilen bacak adim gibi basar: temas kosu temasi, `swapBehind` 0.25 m arkasinda ya da `swapStanceMax` 0.3 sn sonra toe-off, sonra sekis (`leg.swapStance`).
+**H.** Kisa adimda diz yukari/topuk karna: `tuckPeakFast` (95, 58), `tuckFastPeriod` (0.34 -> 0.22), `leg.cycle`'dan agirlik; tepe daha erken ve `tuckLead` daha uzun.
+
 ## Calisma notu
+- Yapildi: D (`_standLeg` 0.07 sn pair beklemesi, `hopStandWait` ve adim kalkti, bloklar ayni), C+G (`DeferSwap`/`CompleteSwap`: rol ayak degince, `hopSwapTime` yakalama, tam stance), B (`HopBlocked`, `RushSwing`, kapilar 0.5, tampon 0.12), A (`_pressBack` yayi), E (IdleRate 5, hopStandSpring 6, HopMinCatch 0.12, StockTime 0.24), H, F olcum sutunu `hipZ` ve `RunnerDtJitter` (head_pitch zaten `headPitch` olarak vardi).
+- Yeni alanlar: pressBackKick/Max/Spring, hopSwapTime, swapBehind, swapStanceMax, hopSpamShare, hopRushTime, tuckPeakFast, tuckFastPeriod (9); kaldirilan: hopStandWait (1). hopBufferTime 0.25 -> 0.12 ve anlami degisti.
+- YAPILMADI: F'nin ayak zipalamasi (basissiz kalkista `Enter(Rest)` karesinde y/ankleZ sicramasi): kor tahminle pin/Enter koduna dokunmadim, olcumle bakilmali.
+- Supheli: DeferSwap yolu (`_swapLeg`) ve eski bacagin `FreeOtherLeg` zamani; `hopSwingMin` hala tek basista degil spamde de gecerli; `RushSwing` hiz sicramasi; bas basis geri itme isareti (negatif = geri) varsayim.
+- Derleyici yok, hicbir sey olculmedi.
