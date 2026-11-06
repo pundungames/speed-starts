@@ -1,0 +1,48 @@
+---
+id: T-148
+title: Durustan kosuya geciste ilk basista diger bacak kalkar, gercek adim atilir; kollar yuzden iner
+status: todo
+owner: gameplay-agent
+depends_on: [T-147]
+owns_paths:
+  - "Assets/Speed-Staes/Scripts/Physical/RunnerPoseDriver.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/RunnerFormProbeTests.cs"
+  - "docs/tasks/T-148-durustan-kosuya.md"
+touches_scene: false
+branch: agent/ik-kosucu
+commits: []
+tests:
+  - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
+analytics:
+  - "yok: projede analytics yok"
+needs: []
+started:
+finished:
+blocked_reason:
+---
+
+## Hedef
+Kullanici 06.11: "karakterin durur pozisyondan yurumeye kosmaya gecmesi acayip kotu gozukuyor, adam adim bile atamiyor, sacma sapan bir hareket ediyor." Yalniz yaris basi degil: her durustan kalkis. Ilk basistan itibaren gorunur adim atilir.
+
+## Sebep (kayit t147-a, start: L+ 0.483, R+ 0.783, L+ 1.083; kod)
+1. **Ilk basista diger bacak kalkmaz.** `OnTapped` -> `BeginStance(L)`; R `Rest`te kalir, cunku kosuda "diger bacak kendi dongusunde" varsayimi var; durusta dongu yok. 0.48-0.78 arasi iki ayak yerde (`R_footWorldZ` -0.39 sabit), govde 1.1 m/s ile iki ayagin ustunden gecer.
+2. **Ikinci basis bosa gider.** R+ `Enter(Push)` yapar, ama R ayagi kalcanin ~33 cm gerisinde: `UpdateBodyHeight` `legCap`'i yuzunden hemen `toeOff`, `StartSwing`. L de `OtherTakesOver` ile birakir. 0.80'de ikisi birden `Recover`.
+3. **Ayak surunur.** R `Recover` 0.80-1.18: `swingBackLimit` uyluk 24, diz 127; `R_toeY` 0.03-0.08, `R_footWorldZ` -0.14'ten 0.36'ya yerde kayar. Ilk gercek kalkis 1.10 sn (ilk basistan 0.62 sn sonra).
+4. **Kollar yuzde.** `_gaitW` hiza bagli (`gaitSpeed` 1..6): 2 m/s'te ~0.1. Ready pozunun yumruklari yuzun onunde kalir, `armL_swing` 40, dirsek 130.
+
+## Yeni senaryolar (commit 1 ile)
+`start` ikinci serit (1.05). `restart`: kos 2.5 sn, 2.2 sn bekle (hiz 0), yine kos; serit kalkista ve +0.65. `walkStart`: 0.6 sn aralik. `oneTap`: tek basis, 2 sn kuyruk. `holdStand`: durustan tek tus 1.2 sn. `holdBothStand`: durustan iki tus 1.2 sn.
+
+## Kabul kriterleri (start, restart, walkStart)
+- [ ] Ilk basistan 0.12 sn icinde diger ayagin `toeY`si 10 cm ustu; bir sonraki basistan once o ayak basan ayagin en az 25 cm onunde.
+- [ ] Ilk 1.5 sn: iki ayak birden yerde kayma yok; ayak ucu 3 cm altinda iken kare basina 1 cm'den fazla kayan kare sayisi t147-a'nin yarisindan az.
+- [ ] Bir karede sicrama yok: uyluk 30 derece alti, ayak 8 cm/kare alti.
+- [ ] Kol ilk basistan 0.3 sn icinde yuzden iner (`armL_elbow` ve `armR_elbow` 100 alti), kosu salinimi baslar; genlik yavasta dar kalabilir.
+- [ ] `oneTap`: tek adim atar, ayak yere iner, Rest'e doner; tuhaf kalan poz yok.
+- [ ] `pairOrder`, `holdStand`, `holdBothStand`: cift ziplama, tutma, dalis durustan bozulmaz (seritte bakilir). `hopSwap` yerlesik bolum ayni.
+- [ ] Hiz alindiktan sonra (t >= 2.5) rhythm032, slowRun, fastRun, roughRun T-145/T-146 ile ayni. Sim'e dokunulmaz.
+
+## Kapsam disi
+- Fren pozu (T-149).
+
+## Calisma notu
