@@ -584,6 +584,9 @@ namespace SpeedStars.Physical
         public float pressFollowRun = 0.30f;
         [Tooltip("Press gate: it never stays closed longer than this (s) after the last press the pose took, so a slow swing cannot lock out a runner who speeds up.")]
         public float pressGateMax = 0.3f;
+        [Tooltip("One-leg hop: once a hop is on, no press (the same key or the other) is taken by the pose before this long (s) has passed since the last " +
+                 "one taken; the sim counts every press all the same, so it costs no speed. A hop's swing is never shorter either. A run is not gated by it.")]
+        [Min(0.1f)] public float hopTime = 0.42f;
         [Tooltip("How much of each new press-to-press time a leg's cycle takes on (1 = just the last one): one odd press " +
                  "does not jerk the legs.")]
         [Range(0.1f, 1f)] public float stepFollow = 0.5f;
@@ -986,8 +989,6 @@ namespace SpeedStars.Physical
         double _poseLastTime = -10.0;
         float _posePrevGap = 10f;                   // time between the last taken press and the one before (s)
         int _altStreak;                             // keys in turn in a row at a followable pace
-        const int SettledSame = 2;                  // one key again and again at a followable pace, this many repeats in a row: a settled one-leg rhythm, the gate stays open
-        int _sameStreak;                            // the same key pressed again in a row at a followable pace (pressFollowSame)
         const int SettledStreak = 3;                // ...this many make a settled rhythm: the press gate stays open
         int _keyLastLeg = -1;                       // the key pressed last, taken or not (the rhythm's same-key test)
         Spring _bounceChest;                       // the chest's lean in the bounce: follows _bounceLean a little behind (bounceChestSpring)
@@ -1250,9 +1251,6 @@ namespace SpeedStars.Physical
             // Keys in turn at a pace a person's steps follow, three in a row: a settled rhythm. The gate does not refuse there (a half-step phase
             // shift made it refuse every second key for good); the catch lines the step up. Spam (a key's own gap under pressFollowRun) resets it.
             _altStreak = alternating && keyGap >= pressFollowRun ? _altStreak + 1 : 0;
-            // The same key again, read from the keys like the streak above: a settled one-leg rhythm is taken at every press (the gate refused
-            // every second key of a 0.27 s rhythm). Spam (a gap under pressFollowSame) or the other key resets it.
-            _sameStreak = _keyLastLeg == leg && keyGap >= pressFollowSame ? _sameStreak + 1 : 0;
             l.lastKey = time;
             _keyLastLeg = leg;
             bool fromStand = _idleStock;   // read before it is cleared: no key and no press lately, so this press starts the run from a standstill
@@ -1262,11 +1260,14 @@ namespace SpeedStars.Physical
             // hop count. A key pressed together with the first of a pair (within the pair window PairWeight counts, after a pause) is the pair's second key, taken.
             double sinceTaken = time - _poseLastTime;
             bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 1.5f * PairWindow && _posePrevGap >= PoseMinGap * 1.5;
-            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (sinceTaken < PoseMinGap || (!fromStand && _altStreak < SettledStreak && _sameStreak < SettledSame && PressStillBusy(leg, time, sinceTaken, alternating))))
+            // A hop that is on is a hard gate: no press, either key, is taken before hopTime has passed since the last one taken (the pose only;
+            // the sim counts every press, so the gate costs no speed). A pair's second key and a jump are not gated.
+            bool hopShut = !_jumping && !pairSecond && _poseLastTime > -5.0 && sinceTaken < hopTime && HopGateOn();
+            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (hopShut || sinceTaken < PoseMinGap || (!fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating))))
             {
                 l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
                 if (learn && l.cycle > 0f)
-                    l.cycle = Mathf.Lerp(l.cycle, Mathf.Clamp((float)keyGap, stepTimeMin, 2f * Mathf.Max(stepTimeMin, stepTimeMax)), stepFollow);
+                    l.cycle = Mathf.Lerp(l.cycle, Mathf.Clamp((float)keyGap, HopCycleFloor(), 2f * Mathf.Max(stepTimeMin, stepTimeMax)), stepFollow);
                 return;
             }
             // Keys in turn pressed faster than that: the step that is taken is the other leg's of the one before (L R L R every 0.08 s is
@@ -1329,6 +1330,12 @@ namespace SpeedStars.Physical
             }
         }
 
+        /// <summary>A one-leg hop is on: the last press taken repeated a key, not a pair, not a hold. The hard press gate (hopTime) applies.</summary>
+        bool HopGateOn() => _hopTarget > 0.5f && _pair < 0.5f && _heldNow < 0.5f;
+
+        /// <summary>The shortest press-to-press time (cycle) a leg learns: hopTime on a hop (by the hop weight), else stepTimeMin.</summary>
+        float HopCycleFloor() => Mathf.Lerp(stepTimeMin, Mathf.Max(stepTimeMin, hopTime), Mathf.Max(_hop * (1f - _pair), HopGateOn() ? 1f : 0f));
+
         /// <summary>
         /// This leg's own press-to-press time: the swing is timed to end when the next press is due. A pause counts
         /// as the longest cycle; a leg's first press takes the other leg's cycle (or twice the sim's step time).
@@ -1338,7 +1345,7 @@ namespace SpeedStars.Physical
             float max = 2f * Mathf.Max(stepTimeMin, stepTimeMax);
             if (leg.lastPress >= 0.0)
             {
-                float interval = Mathf.Clamp((float)(keyGap >= 0.0 ? keyGap : time - leg.lastPress), stepTimeMin, max);
+                float interval = Mathf.Clamp((float)(keyGap >= 0.0 ? keyGap : time - leg.lastPress), HopCycleFloor(), max);
                 leg.cycle = leg.cycle > 0f ? Mathf.Lerp(leg.cycle, interval, stepFollow) : interval;
             }
             else if (other.cycle > 0f) leg.cycle = other.cycle;
@@ -1441,9 +1448,11 @@ namespace SpeedStars.Physical
             leg.standStep = standing;
             leg.swungSincePress = true;
             if (leg.cycle <= 0f) leg.cycle = Mathf.Clamp(2f * (body && body.Sim != null ? body.Sim.StepTime : 0.3f), stepTimeMin, 2f * stepTimeMax);
-            float elapsed = Mathf.Min((float)(time - leg.pressedAt), leg.cycle * 0.5f);
+            // A hop's swing is never shorter than hopTime in all (press to landing), whatever cycle the keys taught.
+            float cycle = Mathf.Max(leg.cycle, Mathf.Lerp(0f, hopTime, _hop * (1f - _pair)));
+            float elapsed = Mathf.Min((float)(time - leg.pressedAt), cycle * 0.5f);
             float lead = hopLead * _hop * (1f - _pair);   // one-key hop: the foot lands this much before the press is due
-            float len = Mathf.Clamp(leg.cycle - elapsed - lead, swingMin, Mathf.Max(swingMin, stepTimeMax));
+            float len = Mathf.Clamp(cycle - elapsed - lead, swingMin, Mathf.Max(swingMin, stepTimeMax));
             Enter(leg, LegPhase.Recover, time, len);
             leg.swingT0 = time;
             leg.swingLen = len;
@@ -3305,7 +3314,7 @@ namespace SpeedStars.Physical
             _poseLastTime = -10.0;
             _posePrevGap = 10f;
             _keyLastLeg = -1;
-            _altStreak = _sameStreak = 0;
+            _altStreak = 0;
             leftLeg.lastKey = rightLeg.lastKey = -1.0;
             _sitW[0] = _sitW[1] = 0f;
             _armKick = _armThrow = 0f;
