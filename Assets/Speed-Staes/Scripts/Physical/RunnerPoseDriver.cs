@@ -575,6 +575,10 @@ namespace SpeedStars.Physical
         [Tooltip("Fastest the pelvis may go down (m/s) at full one-key hop or pair weight (maxDropSpeed blends to it): the arc comes down " +
                  "as fast as it went up, so the body is low when the foot arrives and the leg does not run out of length on touching.")]
         [Min(0.1f)] public float hopDropSpeed = 3.5f;
+        [Tooltip("Fastest the body height's speed may change (m/s per s) in a run's or a hop's flight. A press that changes the foot coming down moves the " +
+                 "arc's target in one frame; the speed limits alone let the hip turn from rising to falling in a frame (8 cm second difference). " +
+                 "A hop's own arc needs about 65-70; plain running stays well under. Not used in a dive or a hurdle jump.")]
+        [Min(10f)] public float hipMaxAccel = 110f;
 
         [Header("Leg timing (s)")]
         [Tooltip("The reach's time (s), and the push's pace. Quicker with speed (animSpeedUp). Whether a key is a hold is holdAfter's.")]
@@ -1073,6 +1077,8 @@ namespace SpeedStars.Physical
         bool _haveRoot;
         float _rootSpeed;                          // the root's own speed (m/s), smoothed
         const float LandHoldMax = 0.12f;           // the landing's no-rise hold ends after this (s) at the latest
+        float _flightV;                            // the body height's speed (m/s) in the last flight frame, for hipMaxAccel
+        bool _flightVSet;
         bool _landHold;                            // a hop has just landed and the stance has not yet asked for less height than the body has
         float _landHoldT;
         float _hopFlightT;                         // the flight's whole time (s) as the hop's height reads it: followed, so a press changing it does not step the height
@@ -3043,6 +3049,8 @@ namespace SpeedStars.Physical
         /// </summary>
         float UpdateBodyHeight(RunnerSim sim, float dt, Vector3 hip, Quaternion pelvisTilt, float width)
         {
+            bool flightVWas = _flightVSet;   // last frame's flight step is known only if that frame was a flight too
+            _flightVSet = false;
             // Over a hurdle no foot is on the ground to ask for a height: the legs' folding must not sink the body.
             if (sim.JumpInAir)
             {
@@ -3144,6 +3152,19 @@ namespace SpeedStars.Physical
                 if (incoming.phase == LegPhase.Land) target += landHover * (1f - hopWeight);
                 _bodyY.Step(target, flightSpring.frequency, flightSpring.damping, dt);
                 if (!wasBallistic && !_jumping) LimitHeightSpeed(flightPrevY, dt);
+                if (dt > 0f && !wasBallistic && !_jumping && _dive <= 0.3f)
+                {
+                    float v = (_bodyY.Value - flightPrevY) / dt;
+                    if (flightVWas)
+                    {
+                        float dv = hipMaxAccel * dt;
+                        v = Mathf.Clamp(v, _flightV - dv, _flightV + dv);
+                        _bodyY.Value = flightPrevY + v * dt;
+                        _bodyY.Velocity = v;
+                    }
+                    _flightV = v;
+                    _flightVSet = true;
+                }
                 return _bodyY.Value;
             }
 
