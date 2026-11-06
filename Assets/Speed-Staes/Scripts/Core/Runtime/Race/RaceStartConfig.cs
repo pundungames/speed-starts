@@ -47,6 +47,10 @@ namespace SpeedStars.Core.Race
         [Min(0f)]
         [SerializeField] private float introLookHeight = 1.25f;
 
+        [Tooltip("How far the opening camera's look height drops for the low block stance (m): the crouched runner and the hands on the ground stay in the picture.")]
+        [Min(0f)]
+        [SerializeField] private float introStanceLookDrop = 0.45f;
+
         [Tooltip("Vertical field of view there (deg).")]
         [Range(10f, 90f)]
         [SerializeField] private float introFieldOfView = 38f;
@@ -199,6 +203,7 @@ namespace SpeedStars.Core.Race
         public float FinishWordSeconds => finishWordSeconds;
         public Vector3 IntroCameraOffset => introCameraOffset;
         public float IntroLookHeight => introLookHeight;
+        public float IntroStanceLookDrop => introStanceLookDrop;
         public float IntroFieldOfView => introFieldOfView;
         public float IntroHoldSeconds => introHoldSeconds;
         public float IntroSwingSeconds => introSwingSeconds;

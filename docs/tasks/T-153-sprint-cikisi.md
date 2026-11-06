@@ -9,6 +9,8 @@ owns_paths:
   - "Assets/Speed-Staes/Scripts/Bridge/RaceSessionAdapter.cs"
   - "Assets/Speed-Staes/Scripts/Bridge/RaceBots.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/RunnerFormProbeTests.cs"
+  - "Assets/Speed-Staes/Scripts/Bridge/RaceStartCamera.cs"
+  - "Assets/Speed-Staes/Scripts/Core/Runtime/Race/RaceStartConfig.cs"
   - "docs/tasks/T-153-sprint-cikisi.md"
 touches_scene: false
 branch: agent/ik-kosucu
@@ -69,3 +71,4 @@ Kullanici 06.11, 4 kareli sprint cikisi gorseli: "sunlari da yap." Durus su an R
 - Bot stance: `RaceBots.BeginRound` applies the current phase (READY could precede the bots' build, they stayed None until SET). Test: unchanged.
 - Olcu (t153-e): Marks kalca 0.51, govde 80, el (bilek) 0.18, arka diz 0.10; Set kalca 0.67, govde 101, el 0.16, on ayak yerde. Ilk basis: egim 80 -> 52 (0.3 sn) -> 26 (0.9 sn) -> 16 (1.3 sn). Kol -50..59. Hiz ve sim 0.0 fark; `startStance` None iken T-151 sayilari ayni.
 - Kalan: kare hareketi blok cikisi 5 civari; iki tus cikisi ~7. Blok modeli yok. Duz kalkista `driveLeanStand` 18 de geldi. Oyun ici kamera acisi tam takim ekran goruntulerinde bakilacak.
+- Acilis kamerasi: `introStanceLookDrop` 0.45 (RaceStartConfig, asset'te yok), bakis yuksekligi 1.25-0.45; `look` yalniz bir yerde, GO'da slerp ile doner. Olculmedi.

@@ -82,7 +82,7 @@ namespace SpeedStars.Bridge
             Transform cam = _camera.transform;
             Vector3 raceOffset = cam.position - runner.position;
             Vector3 opening = runner.right * config.IntroCameraOffset.x + Vector3.up * config.IntroCameraOffset.y + runner.forward * config.IntroCameraOffset.z;
-            Vector3 look = runner.position + Vector3.up * config.IntroLookHeight - (runner.position + opening);
+            Vector3 look = runner.position + Vector3.up * (config.IntroLookHeight - config.IntroStanceLookDrop) - (runner.position + opening);
 
             cam.position = runner.position + Vector3.Slerp(opening, raceOffset, t); // round the runner, not through it
             cam.rotation = Quaternion.Slerp(Quaternion.LookRotation(look, Vector3.up), cam.rotation, t);
