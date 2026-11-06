@@ -1288,6 +1288,7 @@ namespace SpeedStars.Physical
             if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (hopShut || sinceTaken < PoseMinGap || (!fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating))))
             {
                 l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
+                _lastPress = time;    // a key that is pressed is alive whether the pose takes it or not (else the legs go to the stock pose mid-swing)
                 // The hop's key pressed again but not taken keeps the hop alive (else presses that fall in the air let the repeat window run out).
                 if (hopShut && leg == _hopPrevLeg) _hopPrevTime = time;
                 if (learn && l.cycle > 0f)
@@ -2405,7 +2406,7 @@ namespace SpeedStars.Physical
                 // presses keep coming (stepTimeMax), so with no input it goes straight back to the crouch (no upright
                 // stance on the way) and between presses it stays in the run.
                 _stepNow = sim.Legs[0].Pressed || sim.Legs[1].Pressed || sim.InJump ||
-                           (_lastPress >= 0.0 && now - _lastPress < stepTimeMax);
+                           (_lastPress >= 0.0 && now - _lastPress < Mathf.Lerp(stepTimeMax, HopRepeatWindow, _hop * (1f - _pair)));
                 _stepping = Mathf.Lerp(_stepping, _stepNow ? 1f : 0f, 1f - Mathf.Exp(-stanceBlend * dt));
                 p = PoseData.Lerp(Get(ready, RunnerPoseDefaults.Ready), Get(run, RunnerPoseDefaults.Run),
                     Mathf.SmoothStep(0f, 1f, sim.Speed / Mathf.Max(0.01f, runPoseSpeed)) * _stepping);
