@@ -1,7 +1,7 @@
 ---
 id: T-158
 title: Okunakli gecisler: basista govde geri, spam %50, ayak degince calisan basis, ayakta tam sekis, titreme
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-157]
 owns_paths:
@@ -77,3 +77,4 @@ Kullanici 06.11 (T-157 sonrasi): "her harekette inputta ust govde kendini biraz 
 - Supheli: DeferSwap yolu (`_swapLeg`) ve eski bacagin `FreeOtherLeg` zamani; `hopSwingMin` hala tek basista degil spamde de gecerli; `RushSwing` hiz sicramasi; bas basis geri itme isareti (negatif = geri) varsayim.
 - Derleyici yok, hicbir sey olculmedi.
 - Olcum t158-a sonrasi duzeltmeler: A darbesi hiz biriminde (tepe=kick), H agirligi leg.cycle*0.5, bacak degistirmede tavan (hopSwapTime+0.1), eski ayak adim salinimiyla kalkar ve inince serbest bacaga acilir (FreeOtherLeg + Land), FreeFootRise riseW ile 0.12 sn, holdStand egimi hopBodyW yayindan. Yapilmadi: PinFeet birakma Z sicramasi; spamToRun kilidinin sebebi kodda net bulunamadi (tahmin: _jumping TickLegs durdurur).
+- Olcu (t158-c), kullanici "test etmeden at" dedi, tek kayit: sim 25/25. Kilit bitti (`d_pair` 0; sebep `CompleteSwap` degme anini `lastPress` yaziyordu). `fastRun` tepe 72 / diz 65, `rhythm032` 81, `roughRun` 86 / 56; 85 hedefi `fastRun` da tutmadi. Sekiste basista gogus ~1.2 derece, hedef 4-5 tutmadi; kosuda ~5.
