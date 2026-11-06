@@ -387,12 +387,17 @@ namespace SpeedStars.Physical
         [Tooltip("From the folded pass to the thigh's peak the knee opens later than the thigh comes forward: 1 = it keeps pace, " +
                  "higher = the leg drives from the hip first and the knee opens late; it is open as the thigh arrives. The ends do not move.")]
         [Range(1f, 4f)] public float kneeOpenDelay = 2f;
+        [Tooltip("The hop's and the pair's arm throw goes through a spring of this frequency (damping 1): at a quick rhythm the swing stays small " +
+                 "(~55 deg at 0.27 s, ~100 at 0.5 s, ~125 at 0.7 s), at a slow one it reaches the ends.")]
+        public SpringSettings armThrowSpring = new SpringSettings(2.6f, 1f);
+        [Tooltip("The running elbow's open/close curve: 0 = smooth step (a dead stop in the middle, then a quick turn), 1 = straight line.")]
+        [Range(0f, 1f)] public float armElbowEase = 0.7f;
         [Tooltip("Plain running: how fast the arm follows the leg's drive, in springs per step (the spring's Hz = this / the press-to-press time). " +
                  "The arm swings the length of the step instead of copying the thigh's stops and darts, at every speed alike. Higher = closer to the leg.")]
-        public float armPumpRate = 1f;
+        public float armPumpRate = 0.85f;
         [Tooltip("Plain running: the filtered arm drive is opened by this much around its middle, giving back the width the spring takes " +
                  "(1 = as filtered). The result stays within -0.2..1.2 of the thigh range.")]
-        public float armPumpWidth = 1.12f;
+        public float armPumpWidth = 1.21f;
         [Tooltip("Plain running: the share of the arm's run swing that steps give from the first press, whatever the speed (the gait weight " +
                  "waits for speed, so the arms stayed in the ready pose, fists at the face). 0 = the arms wait for the speed.")]
         [Range(0f, 1f)] public float armStepShare = 0.8f;
@@ -940,6 +945,8 @@ namespace SpeedStars.Physical
         Spring _bounceLean;                        // the trunk's lean in the bounce (deg), through bounceLeanSpring
         float _rockKick;                           // eases up to 1 at a press, back to 0 over the press interval: the run's trunk rock
         float _rideVel;                            // the body height's speed, filtered (m/s): what rideBob reads
+        Spring _armThrowSpring;                    // _armKick through a spring of fixed frequency (armThrowSpring): the arms' throw, smaller at a quick rhythm
+        float _armThrow;
         float _armKick;                            // eases up to 1 after a press (ArmRise), then falls back: the hop's arm throw
         float _armClock = ArmIdle, _armPeriod = ArmPeriodMax;   // seconds since the last press; the last press-to-press time
         float _lastHipY;                           // last frame's final hip height (runner space), for the rise limit
@@ -2419,6 +2426,9 @@ namespace SpeedStars.Physical
             // The fall's steepest slope (1.5 / armFall, 17.6 per s at the fastest period) stays under 1 / ArmRise, so it still tracks.
             float armTarget = 1f - Mathf.SmoothStep(0f, 1f, _armClock / armFall);
             _armKick = Mathf.MoveTowards(_armKick, armTarget, dt / ArmRise);
+            // A fixed frequency makes the swing's size follow the rhythm by itself: the arm cannot reach the far end in a short step.
+            _armThrowSpring.Step(_armKick, armThrowSpring.frequency, armThrowSpring.damping, dt);
+            _armThrow = _armThrowSpring.Value;
             // The run's rock comes back over the whole press interval (a slow rhythm: gently there and back), not in 0.17 s.
             // It stays at the top for the first 0.35 of the fall, so the spring reaches the target even at a fast rhythm.
             float rockFall = Mathf.Max(0.1f, ArmReturnShare * _armPeriod);
@@ -3064,7 +3074,8 @@ namespace SpeedStars.Physical
                 float mid = 0.5f * (armRunBack + armRunFront);
                 float pump = mid + (Mathf.LerpUnclamped(armRunBack, armRunFront, t) - mid) * amp;
                 // The arm going back opens at the elbow too (the back half of the swing), the forward one stays bent with the hand at the chin.
-                float open = 1f - Mathf.SmoothStep(0f, armElbowCloseAt, Mathf.Clamp01(t));
+                float closeT = Mathf.Clamp01(t);
+                float open = 1f - Mathf.Lerp(Mathf.SmoothStep(0f, armElbowCloseAt, closeT), Mathf.Clamp01(closeT / armElbowCloseAt), armElbowEase);
                 float bend = Mathf.Lerp(armElbowLoose, Mathf.Lerp(armElbowRun + armElbowFront, armElbowRunBack, open),
                     Mathf.Lerp(armElbowMinShare, 1f, _speedCurve * form));
                 swing = Mathf.Lerp(swing, pump, _armW);
@@ -3076,7 +3087,7 @@ namespace SpeedStars.Physical
             {
                 // Across, like a stride: the arm opposite the hopping leg (the leg that is not the balance leg) goes back as it pushes,
                 // the arm on its side goes forward; they change as the body comes down. By the balance leg's weight, continuous.
-                float kick = Mathf.Lerp(_armKick, 1f - _armKick, 1f - opposite.idle);
+                float kick = Mathf.Lerp(_armThrow, 1f - _armThrow, 1f - opposite.idle);
                 swing = Mathf.Lerp(swing, Mathf.Lerp(armHopDown, armHopUp, kick), hw);
                 // Thrown up the elbow closes to a right angle at most (the hand stays at the chin, never over the face), coming down it opens.
                 // The elbow opens with the arm going back and closes to a right angle as it comes up (like the run's open curve).
@@ -3087,8 +3098,8 @@ namespace SpeedStars.Physical
             if (pw > 0.001f)
             {
                 // Both arms together, far back loading, up and forward at the push (the same clock as the hop's throw).
-                swing = Mathf.Lerp(swing, Mathf.Lerp(armPairBack, armPairUp, _armKick), pw);
-                elbow = Mathf.Lerp(elbow, Mathf.Lerp(armPairElbow.x, armPairElbow.y, _armKick), pw);
+                swing = Mathf.Lerp(swing, Mathf.Lerp(armPairBack, armPairUp, _armThrow), pw);
+                elbow = Mathf.Lerp(elbow, Mathf.Lerp(armPairElbow.x, armPairElbow.y, _armThrow), pw);
             }
             // Braking: both arms out in front and a little up for balance, the fists away from the face.
             if (!preview && _brake > 0.001f)
@@ -3160,7 +3171,8 @@ namespace SpeedStars.Physical
             _altStreak = 0;
             leftLeg.lastKey = rightLeg.lastKey = -1.0;
             _sitW[0] = _sitW[1] = 0f;
-            _armKick = 0f;
+            _armKick = _armThrow = 0f;
+            _armThrowSpring.Reset();
             _armClock = ArmIdle;
             leftArm.swingT.set = rightArm.swingT.set = false;
             leftArm.driveSet = rightArm.driveSet = false;

@@ -1,7 +1,7 @@
 ---
 id: T-152
 title: Kollar bacaklar gibi yumusak: tek ayak ve cift ayakta atis yayla, kosuda dirsek sakin
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-151]
 owns_paths:
@@ -9,14 +9,14 @@ owns_paths:
   - "docs/tasks/T-152-kollar-yumusak.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits: [(bu commit)]
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -46,3 +46,5 @@ Hesap: 0.27 sn'de 128 derecelik salinim sinusle bile 25 derece/kare eder; genlik
 - [ ] Bacak, kalca, sim 0.0 fark (T-151 uzerine). Fren kolu (`armBrake`) ve kalkis kolu (`armStepShare`) bozulmaz; start, restart, stop seritlerinde bakilir.
 
 ## Calisma notu
+- `_armThrow` = `_armKick`'in `armThrowSpring` (2.6 Hz, 1) yayindan gecmisi; yalniz `StepArm` hop/pair dallari okur, `_armKick` (lean, `_rockKick`) ayni kaldi.
+- `armPumpRate` 0.85, `armPumpWidth` 1.21 (prefab/asset'te yok), `armElbowEase` 0.7: `open` smoothstep ile `t/armElbowCloseAt` arasi karisim. Olculmedi.

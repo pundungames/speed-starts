@@ -1,7 +1,7 @@
 ---
 id: T-151
 title: Tek ayak ve cift ayak sekisi kisa ritimde alcak ve yumusak; kalca ucgen dalga yapmaz
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-149]
 owns_paths:
@@ -10,14 +10,14 @@ owns_paths:
   - "docs/tasks/T-151-tek-ayak-sekis-yumusak.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits: [c86df12a, 14fc2247, 9b44b39a]
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -49,3 +49,7 @@ Kod: `UpdateBodyHeight` ucus dali (`TryIncoming`, `rise`, `target`, `landHover`)
 - Kollar (T-152).
 
 ## Calisma notu
+- Yukseklik: ucus dalinda hop/pair payi `hopRise * Max(_hopBodyW,_pair) * Clamp01((T/hopRiseTime)^1.5) * sin^2(pi w)`, `hopRiseTime` 0.45 (yeni). `T` basista ziplayabildigi icin `_hopFlightT` ile 10/s hizla izlenir (flightSpring 14 Hz adimi yutmaz); kosu payi aynen. `LimitHeightSpeed` degismedi.
+- Ayak: `landHover * (1 - hopWeight)`; `hopLead` 0.05 -> 0.08 (prefab/asset'te kayitli degil, git grep bos). `Land -> Push` esigi (4.5 cm) degismedi: ayak yine de uste kalirsa orayi genisletmek gerekir.
+- Toe-off: grounded `Push` bacagi plain kosu degilse `OtherTakesOver`'a bakmaz; cikis `SolveStance`'te kalcanin gerisinde ve `d >= reach*Overstretch` (uzunluk) ya da `UpdateBodyHeight`'ta `legCap < max(legNeed, bodyY)`. Sureye bagli degil, bu yuzden alcak sekiste ayak erken kalkabilir; olculmedi.
+- Olculmedi (Unity yok); sayilar kabul listesine gore ilk deneme.
