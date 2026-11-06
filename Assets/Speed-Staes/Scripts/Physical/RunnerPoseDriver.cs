@@ -419,9 +419,12 @@ namespace SpeedStars.Physical
         [Tooltip("A foot never stays down longer than this (s), however slowly the body goes over it. Running it only counts " +
                  "while the other leg is not on its way down: the foot waits for the other one.")]
         public float stanceMax = 0.4f;
-        [Tooltip("One-leg hop: the foot stays down this long (s) at most, then the swing starts (at full hop weight; stanceMax blends to it). The rest of " +
-                 "the hop's time (hopTime) is the swing, long enough for the leg to go well back and come round.")]
-        [Min(0.05f)] public float hopStanceMax = 0.11f;
+        [Tooltip("One-leg hop: the foot stays down this long (s) at most from its touchdown, then the swing starts (at full hop weight; stanceMax blends to " +
+                 "it); sooner when the leg runs out of reach (pushEnd). The rest of the hop is the swing, long enough for the leg to go well back and come round.")]
+        [Min(0.05f)] public float hopStanceMax = 0.18f;
+        [Tooltip("One-leg hop: the foot stays down at least this long (s) after it touches (at full hop weight), whenever the press came: the push needs " +
+                 "the time, and a press that came in the air must not lift the foot in the next frame.")]
+        [Min(0.02f)] public float hopStanceMin = 0.09f;
         [Tooltip("A single press from a standstill (no block stance) starts as a step (the knee goes up, as for a run). If no other press has come this long (s) " +
                  "after it and the key is up, it was a hop: the pressed foot hops and the other leg is held out in front. Longer than a quick " +
                  "run's key-to-key time (0.3 s), or the first step of a run would turn into a hop.")]
@@ -469,7 +472,7 @@ namespace SpeedStars.Physical
         [Tooltip("One-key hop (blended in by the hop weight): toe-off, how far back the pressed leg goes with the foot down.")]
         public LegAngles hopPushEnd = new LegAngles(-45f, 172f);
         [Tooltip("One-key hop swing, first key: the leg kicked well back, the knee bent (under 90).")]
-        public LegAngles hopRecover = new LegAngles(-68f, 85f);
+        public LegAngles hopRecover = new LegAngles(-72f, 85f);
         [Tooltip("One-key hop swing, second key: the deepest flex, thigh and knee both small.")]
         public LegAngles hopMid = new LegAngles(15f, 70f);
         [Tooltip("One-key hop swing, third key: the leg opens again going down.")]
@@ -2233,7 +2236,11 @@ namespace SpeedStars.Physical
             Leg other = leg == leftLeg ? rightLeg : leftLeg;
             // Running, a foot stays until the other takes over (TickLegs); only a leg out of length lifts earlier (SolveStance, StanceCap).
             bool waits = _plainRun > 0.5f && !_idleStock && (ComingDown(other) || other.grounded);
-            if (!waits && (behind >= endBehind || now - leg.pressedAt > Mathf.Lerp(stanceMax, hopStanceMax, _hop * (1f - _pair)))) leg.toeOff = true;
+            // A hop counts its stance from the touchdown, not from the press (a press made in the air is older than the stance).
+            float hopW = _hop * (1f - _pair);
+            float since = (float)(now - (hopW > 0.5f ? leg.plantedAt : leg.pressedAt));
+            bool early = hopW > 0.5f && since < hopStanceMin;
+            if (!waits && !early && (behind >= endBehind || since > Mathf.Lerp(stanceMax, hopStanceMax, hopW))) leg.toeOff = true;
         }
 
         /// <summary>
