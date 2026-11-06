@@ -1,7 +1,7 @@
 ---
 id: T-155
 title: Tek tusta kotu girdi hizi cok dusurmesin, basis gelirken hiz sifirlanmasin
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-153]
 owns_paths:
@@ -11,7 +11,7 @@ owns_paths:
   - "docs/tasks/T-155-kotu-girdi-hiz.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [3b7d121f]
+commits: [3b7d121f, 41a34f8d]
 tests:
   - "Assets/Speed-Staes/Tests/PlayMode/RunnerSimRelationTests.cs"
 analytics:
@@ -104,3 +104,4 @@ Once/sonra (tek tus, ayaktan, 100 m sn / oturmus hiz min ort):
 - `hopBias` hiza hala bagli degil (`_repeatRun` ayri sayac). Zor kisim: `human` tek erken basis satiri, probe'un basili kalan bacagi yuzunden iki tusta da "tekrar" uretiyor; seri esigi bunu disarida birakmak icin.
 - Pozun fren beklemesini okumasi gerekirse: bekleme `wait = max(stopDelay, min(stopWaitMax, stopWaitShare x max(son iki aralik)))`; sim'de kamuya acik degil (T-154 notu).
 - Koşulmadi: Unity testleri (3 yeni test `RunnerSimRelationTests` sonunda). Probe: `scripts/runner-olcum/Program.cs` `hop`, `stop`.
+- Unity: `RunnerSimRelationTests` 25/25 yesil (t154-f). Iki tus `gate` ve `human` ciktilari birebir ayni, supervizor de olctu.

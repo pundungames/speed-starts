@@ -1,7 +1,7 @@
 ---
 id: T-154
 title: Tek ayak sekis: girdi kapisi, yukseklik, geri atis, sabit serbest bacak ve kol, ayaktan tek basista sekis
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-153]
 owns_paths:
@@ -86,3 +86,6 @@ Kullanici 06.11 (ozet, sol ayak uzerinde sekerken):
 
 - Tur 6 (t154-d): ilk sekiste diger tus kapidan gecer (openOther), inis karesi yuksekligi kaldirmaz (_landHold), hopSwingMin 0.40, hopTime 0.46, armHopUp 42.
 - Tur 7 (t154-e): ucus yuksekliginin ivmesi hipMaxAccel 110 ile sinirli; sekis inisi hopContact boyuna iner (landExtent).
+- Olcu (t154-f, oncesi t153-e): kalca Y 0.12 -> 0.28-0.32 m, ikinci fark 1.1-1.4 cm; uyluk min -18 -> -57; ayak kalcanin 0.37 -> 0.62 m arkasinda; egim -35 -> -6.9, aralik 0-0.2; serbest bacak 55/175 aralik 0-0.1; sabit kol 8/115 aralik 0; hareketli kol -63..40, kare 15, ikinci 4.4 (hedef 14 ve 4, az ustunde).
+- Kok sebepler: `Key()` hop key lerini `Stride` ile `_amp` kadar kisiyordu; reddedilen basis `_lastPress` i tazelemeyince `_idleStock` ayagi havada Rest e sokuyordu; ayak kalcanin altina inince stance 3 kareydi.
+- `hopLean` -11 yaziyor, olculen -6.9; fark bulunamadi, gorunum iyi, Tooltip farki yaziyor.

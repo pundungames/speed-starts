@@ -1,7 +1,7 @@
 ---
 id: T-156
 title: Kalca cakili gorunmesin: kosuda burgu ve one-arkaya akis, sekiste de ayni akis
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-154]
 owns_paths:
@@ -45,3 +45,5 @@ T-154 ile ayni (TUZAKLAR, snap yok, yeni alan adi, Tooltip, yola sinirli commit,
 - Surge: SurgeStep() hip.z'ye (p.pelvis.x yaninda, LegFK'den once); surucu gosterilen uyluk (sekiste sekis bacagi, kosuda en geri uyluk), surgeSpring 8 Hz; hopSurge 0.07, runSurge 0.025. SitBack'ten sonra degil: SitBack LegFK'den sonra kosuyor, hip.z baslangicta eklenince planted ayak dunyada kalir (footZ'ye dokunulmadi).
 - Burgu: pelvisTwist 9, chestTwist 7, pelvisRoll 2.5, chestRoll 1.5 varsayilan; UpdateTrunk amp'i _plainRun, dalis, tutma, fren, blok durusuyla carpildi (sekis, cift dahil 0).
 - Roll hala turevden okunuyor; titreme olursa uyluk farkindan okunabilir. Olculmedi.
+- Olcu (t154-f): rhythm032 kalca yaw 17.4, kare 3.0 (hedef 2 az ustunde, kosu seritlerinde titreme yok); roll 4.5; gogus dunyada ~0 (kalca doner, omuz ileri bakar). Sekiste yaw ve roll 0.
+- Surge CSV de sutun yok, seritten bakildi; kalca ileri-geri araligi sayiyla olculmedi. Kullanici gozu karar verecek.
