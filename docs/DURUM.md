@@ -7,11 +7,12 @@ MOD: süpervizör
 
 Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakter-ik.md`. Push kullanıcıda.
 
-## 06.11: kullanıcının üç notu kapandı, gözünü bekliyor (`IKTest`)
-- **T-145 bacak:** uyluk yüksekte diz kıvrık, inerken baldır öne (`tuckPeak` 86/82, `shinThrow` 56/160, `tuckThrowKeys`, `tuckLead` 0.05; `Catch`'te diz önce açılır). Tepe / diz / baldır: ritim 81/84/+30, en hızlı 78/82/+25, yavaş 73/90/+25, boğma 69/92/+17.
-- **T-146 kol:** uyluktan gelen sürüş kol başına yaydan geçer, Hz = `armPumpRate` 1 / basış aralığı; `armPumpWidth` 1.12 genişliği geri verir. Kare hareketi ritim 15 → 9.5, en hızlı 21 → 14.5, yavaş 8 → 5.7.
-- **T-147 geçiş:** `_hopBody` (`hopBodySpring` 2 Hz) yalnız girişte yavaş; kalça 8.3 → 3.9 derece/kare, ilk sekiş 26 → 12 cm; Rest'e giren bacağın iki karelik carry'si kalktı. Çıkış (`hopToRun`) ve kol atışı değişmedi.
-- Önce ölçüsü `t144-after`; son kayıt `t147-a`. Kullanıcı bakınca yorumuna göre devam.
+## 06.11: kullanıcı notları kapandı, gözünü bekliyor (`IKTest`, T-145..T-150 `merged`)
+- **T-145 bacak** karna çekilir, baldır öne (`tuckPeak`, `shinThrow`, `tuckLead`). **T-146 kol** adım süresine bağlı yay (`armPumpRate`, `armPumpWidth`). **T-147 tek ayağa giriş** yavaş (`hopBodySpring`).
+- **T-148 duruştan kalkış:** ilk basışta karşı bacak kalkar (`standStep`), kalça `_stepping` ile yükselir (`stanceStepShare`), kollar `armStepShare`.
+- **T-150 girdi kapısı yalnız pozda** (`PressStillBusy`, `pressGateShare`, `pressGateSameShare`, `pressGateMax`, `lastKey`, `_altStreak`); sim her basışı sayar: fizikte reddetmek spam'i 10.4 sn yapar (en iyi 9.8).
+- **T-149 fren pozu:** `_brake`, `brakeLean`, `brakeFront/Back`, `armBrake`, `brakeSpeed`; bitişte `RunnerCooldown` kapatır (`brakePose`). Bitişi gözle kimse görmedi.
+- Son kayıt `t149-b`. Araçlar: `swing_table.py`, `arm_table.py`, CSV `d_posePresses`.
 
 ## Çalışma düzeni
 - Kullanıcı `IKTest`'te (ana klasör, Unity açık). İş `agent/ik-kosucu`'da, worktree `D:\Pundun\speed-starts-ik`. Geçirme: kopyada doğrula, ana klasörde `git merge --ff-only <hash>`. `agent/ik-govde` worktree'si silinebilir.

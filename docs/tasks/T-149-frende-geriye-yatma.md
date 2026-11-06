@@ -1,7 +1,7 @@
 ---
 id: T-149
 title: Frende ayaklar onde, tum govde geriye yatik (cizgi film kaymasi)
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-150]
 owns_paths:
@@ -11,7 +11,10 @@ owns_paths:
   - "docs/tasks/T-149-frende-geriye-yatma.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [014be9a7]
+commits:
+  - 014be9a7
+  - 41935e71
+  - a92f9199
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
@@ -56,3 +59,5 @@ Son tus ~3.8 sn. 4.15'te `_idleStock`, iki bacak `Rest`. Sim freni 4.2-4.9: 8 ->
 - Senaryolar ayri commit (014be9a7): stop +0.65/+1.3, brakeRestart, slowStop.
 - Tur 2: brakeLean 34, brakeSpeed (2.5,5), yaylar 3 Hz/1 ve 2 Hz/0.75; bacaklar (40,172)/(52,118): istenen 36/172 ve 50/118 Extent 1.69 ve 1.62 verirdi, esitlik icin 40 ve 52 (1.61 / 1.60). Olculmedi.
 - `brakePose` seam: `RunnerCooldown` aktifken false, `Restore`da true; fren bitis sekansinda kapali.
+- Olcu (t150-d -> t149-b, stop): kalca egimi -5 -> -42.5, kalca yuksekligi 0.80 -> 0.48, ayak on gap 18 cm, topuk yerde (`footY` 0.15, ayak ucu 0.16). Kare hareketi kalca 5.8 derece, `hipY` 4.3 cm (kabul 5 ve 4, az ustu). Diger senaryolar 0.0 fark; slowStop yatmaz, brakeRestart 0.2 sn yumusak toparlar.
+- `RunnerCooldown` bitiste `brakePose = false`. Bitis gozle bakilmadi, Play duman testleri tam takimda.
