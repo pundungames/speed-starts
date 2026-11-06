@@ -486,7 +486,7 @@ namespace SpeedStars.Physical
         public LegAngles hopFreeLeg = new LegAngles(55f, 175f);
         [Tooltip("The trunk sits back by this much (deg) on one-leg hops (the hips about the heels, a steady lean): the head-led lean and the gait " +
                  "lean fade out as the hop weight rises. The trunk does not rock with the bounce.")]
-        public float hopSitBack = 18f;
+        public float hopSitBack = 21f;
 
         [Header("Start: the blocks (Marks), hips up (Set), the drive out of them (first press on)")]
         [Tooltip("The start's stance, written by the race start (Bridge): None = the driver's own, Marks = on the blocks, Set = hips up. " +
