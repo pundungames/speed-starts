@@ -57,3 +57,5 @@ Kullanici 06.11, 4 kareli sprint cikisi gorseli: "sunlari da yap." Durus su an R
 - Bridge: `RaceSessionAdapter.ApplyStartStance` (surucu bir kez `GetComponentInChildren`), `RaceBots.ApplyStartStance` (Bot.Driver CreateRunner'da). Ready->Marks, Set->Set, Go dokunmaz, digerleri None.
 - Tur 2: drive hiz carpani `SmoothStep(driveSpeed.x, .y, v)` yanlisti (ters-lerp degil, negatif hedef); `SmoothStep(0,1,InverseLerp)`; `UpdateBrake` baştan dogruydu. `blockOutSpring` 2.5 Hz, `driveTime` 1.2, harness her senaryo basinda `startStance`i None yapar, bacak/lean sayilari olculen L=0.436'ya gore.
 - Kol: swing govdeye gore oldugundan duruşta `swing = ParentTilt(arm) + armStance.x` (kol ebeveyninin dunyadaki one egimi); `armStance` artik dikeyden. Olculmedi.
+- Tur 3: `stanceLean.x` 84, `blockOutSpring` 2 Hz, `armDriveQuick` 1.5 / `armDriveWidth` 0.35 (`StepArm`, `_driveW` 0 iken eski). Olculmedi.
+- PlayMode: `FalseStartSmokeTests` iki test (stance READY/SET/GO/ilk basis, FalseStart/yeniden READY); `startStance` reflection ile okunur, bot yoksa atlanir. Calistirilmadi.
