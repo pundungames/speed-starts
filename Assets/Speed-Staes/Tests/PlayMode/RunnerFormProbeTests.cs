@@ -265,6 +265,8 @@ namespace SpeedStars.PlayTests
 
             s = new Script("runToHop"); s.Alt(3f, 0.27f, Tap, 0); s.Strip(s.Same(2f, 0.27f, Tap, 1) + 0.27); list.Add(s.Build(0.5f));
             s = new Script("hopSwap"); s.Same(2.5f, 0.27f, Tap, 1); s.Strip(s.Same(2f, 0.27f, Tap, 0)); list.Add(s.Build(0.5f));
+            // T-151: one key at a slow rhythm (0.45 s): the hop reaches its full height.
+            s = new Script("slowHop"); s.Same(3f, 0.45f, Tap, 1); s.Strips.Add(2.0f); list.Add(s.Build(0.5f));
             s = new Script("hopToRun"); s.Same(2.5f, 0.27f, Tap, 1); s.Strip(s.Alt(2f, 0.27f, Tap)); list.Add(s.Build(0.5f));
 
             s = new Script("runToPair"); s.Alt(3f, 0.27f, Tap); s.Strip(s.Pair(2f, 0.35f, Tap, 0.015f, 0.015f, false)); list.Add(s.Build(0.5f));
