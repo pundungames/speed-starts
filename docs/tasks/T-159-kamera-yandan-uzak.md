@@ -1,7 +1,7 @@
 ---
 id: T-159
 title: Kamera daha yandan baksin, hizlandikca daha cok uzaklassin
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-158]
 owns_paths:
@@ -9,14 +9,14 @@ owns_paths:
   - "docs/tasks/T-159-kamera-yandan-uzak.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits: [5f11204f]
 tests:
   - "gerekmiyor: gorsel; kullanici gozle bakar"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -33,3 +33,5 @@ Kullanici 06.11: "kamera daha yandan baksin ve hizlandikca daha cok uzaklassin."
 Yalniz `owns_paths`. Sahne, prefab yok. `SideFollowCamera`'nin alanlarini baska dosya okuyorsa (grep `Assets`, `RaceStartCamera`, `RaceBots`, `RaceFinishSequence`, `ThemeRunPlayground`, testler) BLOCKED yazma, bana bildir. Unity calistirma. Commit `git commit -F <mesaj-dosyasi> -- <yollar>`, mesaj dosyasi scratch'te, adinda "main" yok, son satir `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## Calisma notu
+sideYaw 4, speedZoomFull 11 / speedZoomDistance 2.4 replace zoomFullSpeed / zoomDistance; Desired, StandingHeight, LateUpdate and tooltips updated. No other reader in Assets .cs (grep).
+Not run in Unity; Race.unity still holds the old names (ignored, harmless).

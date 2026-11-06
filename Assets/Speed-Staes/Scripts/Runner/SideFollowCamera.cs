@@ -20,7 +20,7 @@ namespace SpeedStars.Runner
         [Tooltip("How far the camera looks down at the runner (deg). The camera's fixed height follows from it at full zoom, so the angle is right at running speed and the height never moves with the zoom.")]
         public float pitch = 8f;
         [Tooltip("Turns the camera round the runner toward the runner's front (deg), so the near and far leg and arm can be told apart. 0 is exactly side-on. The follow stays on the run axis.")]
-        public float sideYaw = 12f;
+        public float sideYaw = 4f;
         [Tooltip("Frame the runner slightly left so more track ahead is visible.")]
         public float leadAhead = 0.6f;
         [Tooltip("Height the camera looks at (m).")]
@@ -35,10 +35,10 @@ namespace SpeedStars.Runner
         public float distanceScale = 1f;
 
         [Header("Zoom with speed")]
-        [Tooltip("Speed at which the camera is fully back (m/s).")]
-        public float zoomFullSpeed = 5.8f;
-        [Tooltip("Distance at full zoom, as a multiple of the standing distance.")]
-        public float zoomDistance = 1.7f;
+        [Tooltip("Speed at which the camera is fully back (m/s). It keeps coming back up to this speed, so the faster the runner the further it sits.")]
+        public float speedZoomFull = 11f;
+        [Tooltip("Distance at full zoom (the speed in Speed Zoom Full), as a multiple of the standing distance.")]
+        public float speedZoomDistance = 2.4f;
         [Tooltip("How much of the full zoom each key press asks for at once (0..1).")]
         public float zoomPerPress = 0.15f;
         [Tooltip("How fast the zoom asked for by presses fades (share of the full zoom per second).")]
@@ -137,7 +137,7 @@ namespace SpeedStars.Runner
 
         Vector3 Desired()
         {
-            float back = distance * distanceScale * Mathf.Lerp(1f, zoomDistance, _zoom);
+            float back = distance * distanceScale * Mathf.Lerp(1f, speedZoomDistance, _zoom);
             Vector3 side = Side();
             // The lead is taken along the picture's own horizontal, so the runner sits the same share of the frame left at any yaw.
             Vector3 screenRight = Vector3.Cross(Vector3.up, -side);
@@ -145,7 +145,7 @@ namespace SpeedStars.Runner
         }
 
         /// <summary>The camera's one fixed height (m): what the pitch gives at full zoom, so the picture at running speed is unchanged and presses never move it.</summary>
-        public float StandingHeight => lookHeight + distance * distanceScale * zoomDistance * Mathf.Tan(pitch * Mathf.Deg2Rad);
+        public float StandingHeight => lookHeight + distance * distanceScale * speedZoomDistance * Mathf.Tan(pitch * Mathf.Deg2Rad);
 
         Quaternion Facing() => Quaternion.LookRotation(-Side(), Vector3.up) * Quaternion.Euler(pitch, 0f, 0f);
 
@@ -158,7 +158,7 @@ namespace SpeedStars.Runner
             if (sim != null)
             {
                 _pressZoom = Mathf.Max(0f, _pressZoom - zoomPressFade * dt);
-                float wanted = Mathf.Max(_pressZoom, Mathf.Clamp01(sim.Speed / Mathf.Max(0.01f, zoomFullSpeed)));
+                float wanted = Mathf.Max(_pressZoom, Mathf.Clamp01(sim.Speed / Mathf.Max(0.01f, speedZoomFull)));
                 _zoom = Mathf.SmoothDamp(_zoom, wanted, ref _zoomVelocity, wanted > _zoom ? zoomFlowOutTime : zoomFlowInTime);
                 if (sim.HitWeight > _lastHitWeight) Shake(hitShake, hitShakeTime);
                 _lastHitWeight = sim.HitWeight;
