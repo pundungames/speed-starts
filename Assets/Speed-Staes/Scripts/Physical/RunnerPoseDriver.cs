@@ -401,6 +401,10 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running: the filtered arm drive is opened by this much around its middle, giving back the width the spring takes " +
                  "(1 = as filtered). The result stays within -0.2..1.2 of the thigh range.")]
         public float armPumpWidth = 1.21f;
+        [Tooltip("The launch off the blocks: how much faster the arm follows the leg while the drive is on (x(1 + this * drive weight) on the arm spring's Hz). 0 = as in plain running.")]
+        public float armDriveQuick = 1.5f;
+        [Tooltip("The launch off the blocks: extra opening of the arm swing while the drive is on (added to Arm Pump Width x drive weight). 0 = as in plain running.")]
+        public float armDriveWidth = 0.35f;
         [Tooltip("Plain running: the share of the arm's run swing that steps give from the first press, whatever the speed (the gait weight " +
                  "waits for speed, so the arms stayed in the ready pose, fists at the face). 0 = the arms wait for the speed.")]
         [Range(0f, 1f)] public float armStepShare = 0.8f;
@@ -487,7 +491,7 @@ namespace SpeedStars.Physical
         [Tooltip("Set, the rear leg: the thigh nearly upright, the knee about 110.")]
         public LegAngles setRear = new LegAngles(0f, 100f);
         [Tooltip("The trunk's lean forward (deg, added to the pose's) on the blocks (x) and with the hips up (y). The hips' own limit for it is stanceHipMax.")]
-        public Vector2 stanceLean = new Vector2(76f, 106f);
+        public Vector2 stanceLean = new Vector2(84f, 106f);
         [Tooltip("The hips' forward pitch may reach this much (deg) in the start's stance (pelvisPitchRange.y elsewhere): the hips are over the shoulders.")]
         public float stanceHipMax = 112f;
         [Tooltip("The rear foot's heel is up: toes down by this much (deg) in the start's stance.")]
@@ -497,7 +501,7 @@ namespace SpeedStars.Physical
         [Tooltip("The stance weight coming in (Marks, Set).")]
         public SpringSettings blockInSpring = new SpringSettings(2.5f, 1f);
         [Tooltip("The stance weight going out (the first press): quick, the trunk must be up to the drive's lean within ~0.2 s.")]
-        public SpringSettings blockOutSpring = new SpringSettings(2.5f, 1f);
+        public SpringSettings blockOutSpring = new SpringSettings(2f, 1f);
         [Tooltip("Marks -> Set: the hips come up through this spring.")]
         public SpringSettings blockSetSpring = new SpringSettings(2f, 1f);
         [Tooltip("The drive out of a standstill: the trunk leans forward this much (deg) at its start and straightens as the speed comes.")]
@@ -3188,9 +3192,11 @@ namespace SpeedStars.Physical
                 // Plain running only: the drive goes through a critically damped spring sized by the step time, so a leg that waits
                 // and darts does not make the arm do the same. Not running yet (gait weight low) it sits on the raw drive: no sweep on entry.
                 if (!arm.driveSet || _armW < 0.05f) { arm.drive.Reset(t); arm.driveSet = true; }
-                else if (dt > 0f) arm.drive.Step(t, Mathf.Max(0.1f, armPumpRate) / Mathf.Max(ArmPeriodMin, _armPeriod), 1f, dt);
+                else if (dt > 0f) arm.drive.Step(t, Mathf.Max(0.1f, armPumpRate) / Mathf.Max(ArmPeriodMin, _armPeriod) * (1f + armDriveQuick * _driveW), 1f, dt);
                 float tOpen = Mathf.Lerp(t, arm.drive.Value, _plainRun);   // the elbow reads the drive as filtered, not opened by armPumpWidth
-                t = Mathf.Lerp(t, Mathf.Clamp(0.5f + (arm.drive.Value - 0.5f) * armPumpWidth, -0.2f, 1.2f), _plainRun);
+                // The launch opens the swing wider and quicker (the filter alone left the arms narrow while the legs accelerate).
+                float width = armPumpWidth + armDriveWidth * _driveW;
+                t = Mathf.Lerp(t, Mathf.Clamp(0.5f + (arm.drive.Value - 0.5f) * width, -0.2f, Mathf.Lerp(1.2f, 1.45f, _driveW)), _plainRun);
                 float mid = 0.5f * (armRunBack + armRunFront);
                 float pump = mid + (Mathf.LerpUnclamped(armRunBack, armRunFront, t) - mid) * amp;
                 // The arm going back opens at the elbow too (the back half of the swing), the forward one stays bent with the hand at the chin.
