@@ -12,7 +12,7 @@ owns_paths:
   - "docs/tasks/T-153-sprint-cikisi.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [4826ef02, 239cecba]
+commits: [4826ef02, 239cecba, 27eb46d6]
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips + Play duman testleri supervizorde"
 analytics:
@@ -55,3 +55,5 @@ Kullanici 06.11, 4 kareli sprint cikisi gorseli: "sunlari da yap." Durus su an R
 - Surucu: `RunnerStartStance`, `UpdateStart` (`_stanceW`, `_stanceSet`, `_driveW` yaylari), Rest hedefi marks/set front(sol)/rear, `lean += stanceLean*_stanceW + driveLean*_driveW`, kalca siniri `stanceHipMax`, arka topuk `stanceRearToe`, `armStance`, `StanceHome` ve kol genisligi `_driveW` ile. Ilk alinan basis `startStance`i None yapar; `fromStand` ise surus baslatir (blokta 1, degilse `driveLeanStand/driveLean`).
 - Bacak acilari uzanma esitligiyle secildi (arka ayagin ToeRise'i dahil): Marks on (85,60) arka (25,74); Set on (60,90) arka (15,108). Kol uzunlugu, kalca yuksekligi, eller yere degiyor mu OLCULMEDI; sayilar tahmin.
 - Bridge: `RaceSessionAdapter.ApplyStartStance` (surucu bir kez `GetComponentInChildren`), `RaceBots.ApplyStartStance` (Bot.Driver CreateRunner'da). Ready->Marks, Set->Set, Go dokunmaz, digerleri None.
+- Tur 2: drive hiz carpani `SmoothStep(driveSpeed.x, .y, v)` yanlisti (ters-lerp degil, negatif hedef); `SmoothStep(0,1,InverseLerp)`; `UpdateBrake` baştan dogruydu. `blockOutSpring` 2.5 Hz, `driveTime` 1.2, harness her senaryo basinda `startStance`i None yapar, bacak/lean sayilari olculen L=0.436'ya gore.
+- Kol: swing govdeye gore oldugundan duruşta `swing = ParentTilt(arm) + armStance.x` (kol ebeveyninin dunyadaki one egimi); `armStance` artik dikeyden. Olculmedi.

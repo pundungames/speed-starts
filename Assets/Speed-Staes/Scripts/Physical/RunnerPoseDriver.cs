@@ -479,25 +479,25 @@ namespace SpeedStars.Physical
                  "The first press taken puts it back to None and starts the drive.")]
         [HideInInspector] public RunnerStartStance startStance;
         [Tooltip("Marks, the front leg (the left one): the foot on the block, the knee high, the thigh about level.")]
-        public LegAngles marksFront = new LegAngles(85f, 60f);
+        public LegAngles marksFront = new LegAngles(87f, 55f);
         [Tooltip("Marks, the rear leg: the knee down by the ground, the shin back. Its reach is the front's plus the toe-down foot's rise, so both feet stand.")]
-        public LegAngles marksRear = new LegAngles(25f, 74f);
+        public LegAngles marksRear = new LegAngles(15f, 59f);
         [Tooltip("Set, the front leg: the knee about 90 under the thigh.")]
-        public LegAngles setFront = new LegAngles(60f, 90f);
+        public LegAngles setFront = new LegAngles(62f, 90f);
         [Tooltip("Set, the rear leg: the thigh nearly upright, the knee about 110.")]
-        public LegAngles setRear = new LegAngles(15f, 108f);
+        public LegAngles setRear = new LegAngles(0f, 100f);
         [Tooltip("The trunk's lean forward (deg, added to the pose's) on the blocks (x) and with the hips up (y). The hips' own limit for it is stanceHipMax.")]
-        public Vector2 stanceLean = new Vector2(75f, 95f);
+        public Vector2 stanceLean = new Vector2(76f, 106f);
         [Tooltip("The hips' forward pitch may reach this much (deg) in the start's stance (pelvisPitchRange.y elsewhere): the hips are over the shoulders.")]
-        public float stanceHipMax = 105f;
+        public float stanceHipMax = 112f;
         [Tooltip("The rear foot's heel is up: toes down by this much (deg) in the start's stance.")]
         public float stanceRearToe = 40f;
-        [Tooltip("Start's stance arms (x = upper arm swing, y = elbow; deg, 0 = hanging straight down in the world): straight, the hands on the ground.")]
+        [Tooltip("Start's stance arms (x = upper arm swing, y = elbow; deg) from the vertical: the arm hangs straight down in the world whatever the trunk's lean (the swing is on the trunk), the hands on the ground.")]
         public Vector2 armStance = new Vector2(0f, 8f);
         [Tooltip("The stance weight coming in (Marks, Set).")]
         public SpringSettings blockInSpring = new SpringSettings(2.5f, 1f);
         [Tooltip("The stance weight going out (the first press): quick, the trunk must be up to the drive's lean within ~0.2 s.")]
-        public SpringSettings blockOutSpring = new SpringSettings(3.5f, 1f);
+        public SpringSettings blockOutSpring = new SpringSettings(2.5f, 1f);
         [Tooltip("Marks -> Set: the hips come up through this spring.")]
         public SpringSettings blockSetSpring = new SpringSettings(2f, 1f);
         [Tooltip("The drive out of a standstill: the trunk leans forward this much (deg) at its start and straightens as the speed comes.")]
@@ -505,7 +505,7 @@ namespace SpeedStars.Physical
         [Tooltip("The drive's lean (deg) on a start from a standstill with no block stance (a restart): a small share, not the sprinter's.")]
         public float driveLeanStand = 18f;
         [Tooltip("The drive ends over this time (s) from the first press.")]
-        public float driveTime = 1f;
+        public float driveTime = 1.2f;
         [Tooltip("Speed (m/s) over which the drive's lean goes: nothing left at y.")]
         public Vector2 driveSpeed = new Vector2(3f, 6f);
         [Tooltip("The drive weight coming in (it also opens the arms and holds the hips low).")]
@@ -2567,6 +2567,15 @@ namespace SpeedStars.Physical
             }
         }
 
+        /// <summary>The forward tilt (deg) of the arm's parent bone from its rest, in the runner's frame: a hanging arm turns back with it.</summary>
+        float ParentTilt(Arm arm)
+        {
+            if (!arm.upperArm || !arm.upperArm.parent) return 0f;
+            Quaternion tilt = Quaternion.Inverse(transform.rotation) * arm.upperArm.parent.rotation * Quaternion.Inverse(arm.parentRest);
+            Vector3 up = tilt * Vector3.up;
+            return Mathf.Atan2(up.z, up.y) * Mathf.Rad2Deg;
+        }
+
         /// <summary>
         /// The start's weights. The stance (startStance, written by the race start) is a target of a spring: Marks, then Set over it; a hold, a
         /// dive, the brake, a hop or a pair take it away. The drive (the first press from a standstill) rises quickly and goes by time and speed.
@@ -2589,7 +2598,7 @@ namespace SpeedStars.Physical
                 if (_driveT >= driveTime) _driveOn = false;
                 else if (!_idleStock)
                     target = _driveGain * (1f - Mathf.SmoothStep(0f, 1f, _driveT / Mathf.Max(0.05f, driveTime))) *
-                             (1f - Mathf.SmoothStep(driveSpeed.x, driveSpeed.y, sim.Speed)) * free;
+                             (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(driveSpeed.x, driveSpeed.y, sim.Speed))) * free;
             }
             SpringSettings drive = target > _driveSpring.Value ? driveInSpring : driveOutSpring;
             _driveSpring.Step(target, drive.frequency, drive.damping, dt);
@@ -3214,7 +3223,8 @@ namespace SpeedStars.Physical
             // The start's stance: the arms straight down, the hands on the ground.
             if (!preview && _stanceW > 0.001f)
             {
-                swing = Mathf.Lerp(swing, armStance.x, _stanceW);
+                // The swing is on the trunk (the arm's parent), so the vertical is the parent's tilt plus the swing (read last frame: the spring follows).
+                swing = Mathf.Lerp(swing, ParentTilt(arm) + armStance.x, _stanceW);
                 elbow = Mathf.Lerp(elbow, armStance.y, _stanceW);
             }
             // Braking: both arms out in front and a little up for balance, the fists away from the face.

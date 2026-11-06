@@ -792,6 +792,8 @@ namespace SpeedStars.PlayTests
             {
                 Start = Time.timeAsDouble;
                 _active = true;
+                // A stance left by the last scenario (a block start) must not leak into this one.
+                if (_startStanceField != null) _startStanceField.SetValue(_driver, Enum.ToObject(_startStanceField.FieldType, 0));
                 // Rest heights, measured once while the runner still stands (before the first press).
                 _restToeL = RelY(_toeL); _restToeR = RelY(_toeR); _restFootL = RelY(_footL); _restFootR = RelY(_footR);
                 _csv.Add("t,speed,head,hopY,lastResult,lastEfficiency," + LegColumns("L") + "," + LegColumns("R") +
