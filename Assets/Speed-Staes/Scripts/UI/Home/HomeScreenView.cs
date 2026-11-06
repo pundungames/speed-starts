@@ -87,6 +87,19 @@ namespace SpeedStars.UI.Home
         [Tooltip("Card parts hidden while Race of the Day is selected: the preset name and arrows, Edit racer, Emote, the player name, the stat bars and their icon strip (the day's racer cannot be changed).")]
         [SerializeField] private GameObject[] hiddenForRacerOfTheDay = new GameObject[0];
 
+        [Header("Relay team")]
+        [Tooltip("CharacterCard/RelayLeg: the leg row (label and arrows), shown only while a relay event is selected. Optional.")]
+        [SerializeField] private GameObject relayLegRoot;
+
+        [Tooltip("CharacterCard/RelayLeg/Label: '1st leg' ... '4th leg', the leg the card edits. Optional.")]
+        [SerializeField] private TMP_Text relayLegText;
+
+        [Tooltip("CharacterCard/RelayLeg/Previous: edits the previous leg (wraps around). Optional.")]
+        [SerializeField] private Button previousLegButton;
+
+        [Tooltip("CharacterCard/RelayLeg/Next: edits the next leg (wraps around). Optional.")]
+        [SerializeField] private Button nextLegButton;
+
         [Header("Targets")]
         [Tooltip("Event select screen view (scene object, starts inactive).")]
         [SerializeField] private EventSelectScreenView eventSelectScreen;
@@ -127,7 +140,11 @@ namespace SpeedStars.UI.Home
         private ISevenDayRewards _sevenDay;
         private IRaceOfTheDay _raceOfTheDay;
         private ICosmeticPreview _preview;
+        private IRelayTeam _relayTeam;
         private bool _dailyOutfitShown;
+        private bool _relayShown;
+        private bool _adoptSelectedPreset;
+        private int _presetBeforeRelay;
         private RectTransform _responsiveCard;
         private readonly Vector3[] _playCorners = new Vector3[4];
 
@@ -181,6 +198,13 @@ namespace SpeedStars.UI.Home
             _cosmetics = cosmetics;
         }
 
+        /// <summary>Optional so a scene without the relay team still opens; the leg row then stays hidden and the card is the player's own.</summary>
+        [Inject]
+        public void ConstructHomeRelay([InjectOptional] IRelayTeam relayTeam)
+        {
+            _relayTeam = relayTeam;
+        }
+
         /// <summary>Optional so a scene without the reward services still opens; the daily gift then stays closed and the red dot as built.</summary>
         [Inject]
         public void ConstructHomeRewards([InjectOptional] IDailyGift dailyGift, [InjectOptional] ISevenDayRewards sevenDay)
@@ -207,6 +231,8 @@ namespace SpeedStars.UI.Home
             if (previousRacerButton != null) previousRacerButton.onClick.AddListener(OnPreviousRacer);
             if (nextRacerButton != null) nextRacerButton.onClick.AddListener(OnNextRacer);
             if (emoteButton != null) emoteButton.onClick.AddListener(OnEmote);
+            if (previousLegButton != null) previousLegButton.onClick.AddListener(OnPreviousLeg);
+            if (nextLegButton != null) nextLegButton.onClick.AddListener(OnNextLeg);
         }
 
         private void Start()
@@ -244,11 +270,15 @@ namespace SpeedStars.UI.Home
             if (_settings != null) _settings.Changed += RefreshPlayerName;
             if (_cosmetics != null) _cosmetics.Changed += RefreshPresets;
             if (_sevenDay != null) _sevenDay.Changed += RefreshSevenDayDot;
+            if (_relayTeam != null) _relayTeam.Changed += RefreshRelay;
+            // Coming back from another screen mid-relay: a preset picked there (the wardrobe has preset tabs) is the edited leg's new racer.
+            _adoptSelectedPreset = _relayShown;
             RefreshEventName();
             RefreshSound();
             RefreshPlayerName();
             RefreshPresets();
             RefreshSevenDayDot();
+            _adoptSelectedPreset = false;
         }
 
         protected override void OnDisable()
@@ -258,6 +288,7 @@ namespace SpeedStars.UI.Home
             if (_settings != null) _settings.Changed -= RefreshPlayerName;
             if (_cosmetics != null) _cosmetics.Changed -= RefreshPresets;
             if (_sevenDay != null) _sevenDay.Changed -= RefreshSevenDayDot;
+            if (_relayTeam != null) _relayTeam.Changed -= RefreshRelay;
             base.OnDisable();
         }
 
@@ -274,6 +305,8 @@ namespace SpeedStars.UI.Home
             if (previousRacerButton != null) previousRacerButton.onClick.RemoveListener(OnPreviousRacer);
             if (nextRacerButton != null) nextRacerButton.onClick.RemoveListener(OnNextRacer);
             if (emoteButton != null) emoteButton.onClick.RemoveListener(OnEmote);
+            if (previousLegButton != null) previousLegButton.onClick.RemoveListener(OnPreviousLeg);
+            if (nextLegButton != null) nextLegButton.onClick.RemoveListener(OnNextLeg);
             base.OnDestroy();
         }
 
@@ -315,9 +348,57 @@ namespace SpeedStars.UI.Home
             }
         }
 
+        /// <summary>
+        /// A relay event selected (and it is not the Race of the Day): the leg row shows and the card is the selected leg's racer, so the
+        /// name, stat bars, Edit racer and Emote follow that leg through the selected preset. The player's own preset is remembered when
+        /// the relay starts and comes back when it ends.
+        /// </summary>
+        private void RefreshRelay()
+        {
+            if (_relayTeam == null || _cosmetics == null) return;
+            bool daily = _raceOfTheDay != null && _raceOfTheDay.IsRaceOfTheDay(_selection.Selected);
+            bool relayEvent = _catalog.TryGet(_selection.Selected, out RaceEventDefinition definition) && definition.IsRelay;
+            bool relay = RelayCardRules.ShowsTeam(relayEvent, daily, _relayTeam.LegCount);
+
+            switch (RelayCardRules.Decide(relay, _relayShown))
+            {
+                case RelayCardAction.EnterRelay:
+                    _presetBeforeRelay = _cosmetics.SelectedPreset;
+                    _relayShown = true;
+                    break;
+                case RelayCardAction.LeaveRelay:
+                    _relayShown = false;
+                    _cosmetics.SelectPreset(_presetBeforeRelay);
+                    break;
+            }
+
+            if (relayLegRoot != null) relayLegRoot.SetActive(relay);
+            if (!relay) return;
+            if (_adoptSelectedPreset)
+            {
+                _adoptSelectedPreset = false;
+                if (_cosmetics.SelectedPreset != _relayTeam.GetPreset(_relayTeam.SelectedLeg))
+                    _relayTeam.SetPreset(_relayTeam.SelectedLeg, _cosmetics.SelectedPreset); // raises Changed: this method runs again
+            }
+            if (relayLegText != null) relayLegText.text = HomeTexts.RelayLeg(_relayTeam.SelectedLeg);
+            int preset = _relayTeam.GetPreset(_relayTeam.SelectedLeg);
+            if (_cosmetics.SelectedPreset != preset) _cosmetics.SelectPreset(preset);
+        }
+
+        private void OnPreviousLeg() => StepLeg(-1);
+
+        private void OnNextLeg() => StepLeg(1);
+
+        private void StepLeg(int direction)
+        {
+            if (_relayTeam == null || !_relayShown) return;
+            _relayTeam.SelectLeg(PresetStepper.Step(_relayTeam.SelectedLeg, _relayTeam.LegCount, direction));
+        }
+
         private void RefreshEventName()
         {
             RefreshRacerOfTheDay();
+            RefreshRelay();
             if (racerNameText != null && _cosmetics == null && string.IsNullOrEmpty(racerNameText.text)) racerNameText.text = HomeTexts.DefaultRacerName;
             if (heightText != null && string.IsNullOrEmpty(heightText.text)) heightText.text = HomeTexts.RacerHeight;
             eventNameText.text = _catalog.TryGet(_selection.Selected, out RaceEventDefinition definition)
@@ -358,7 +439,10 @@ namespace SpeedStars.UI.Home
         private void StepPreset(int direction)
         {
             if (_cosmetics == null) return;
-            _cosmetics.SelectPreset(PresetStepper.Step(_cosmetics.SelectedPreset, _cosmetics.PresetCount, direction));
+            int next = PresetStepper.Step(_cosmetics.SelectedPreset, _cosmetics.PresetCount, direction);
+            _cosmetics.SelectPreset(next);
+            // In the relay the arrows choose the racer of the edited leg.
+            if (_relayShown && _relayTeam != null) _relayTeam.SetPreset(_relayTeam.SelectedLeg, next);
         }
 
         /// <summary>The calendar's red dot is on while a 7-day reward waits to be claimed.</summary>
