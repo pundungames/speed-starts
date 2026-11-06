@@ -537,5 +537,70 @@ namespace SpeedStars.PlayTests
                 previous = r.Seconds;
             }
         }
+
+        /// <summary>One key tapped by a fixed gap: the slowest and the mean speed (m/s) between 3 s and 8 s (T-155).</summary>
+        private static (float min, float mean) OneKeySeries(object tuning, float gap)
+        {
+            var s = new Sim(tuning);
+            double next = 0.2, release = -1, t = 0, sum = 0;
+            float min = 99f;
+            int n = 0;
+            while (t < 8.0)
+            {
+                if (t >= next) { s.Press(1); release = t + KeyHold; next += gap; }
+                if (release >= 0 && t >= release) { s.Release(1); release = -1; }
+                s.Advance(Step);
+                t += Step;
+                if (t > 3.0) { min = Mathf.Min(min, s.Speed); sum += s.Speed; n++; }
+            }
+            return (min, (float)(sum / n));
+        }
+
+        [Test]
+        public void OneKeyTappedBadlyOrSlowlySlowsTheRunnerButNeverStopsIt()
+        {
+            object tuning = NewTuning();
+            float best = new[] { 0.20f, 0.25f, 0.30f }.Max(g => OneKeySeries(tuning, g).mean);
+            foreach (float gap in new[] { 0.40f, 0.50f, 0.70f })
+                Assert.Greater(OneKeySeries(tuning, gap).mean, 0.55f * best, $"one key every {gap:0.00} s is slowed to a crawl");
+            foreach (float gap in new[] { 0.70f, 1.00f, 1.40f })
+                Assert.Greater(OneKeySeries(tuning, gap).min, 0.2f * best, $"one key every {gap:0.00} s lets the speed fall to a standstill between taps");
+        }
+
+        [Test]
+        public void MashingOneKeyKeepsMostOfTheBestOneKeyTempo()
+        {
+            object tuning = NewTuning();
+            float best = new[] { 0.20f, 0.25f, 0.30f }.Max(g => OneKeySeries(tuning, g).mean);
+            foreach (float gap in new[] { 0.05f, 0.08f, 0.10f })
+                Assert.Greater(OneKeySeries(tuning, gap).mean, 0.75f * best, $"one key mashed every {gap:0.00} s loses the run");
+        }
+
+        [Test]
+        public void TheBrakeWaitsForTheNextTapOfASlowSeriesButNotAfterOneTap()
+        {
+            object tuning = NewTuning();
+            float SpeedAfterLastTap(int taps, float gap)
+            {
+                var s = new Sim(tuning);
+                s.Advance(0.2f);
+                for (int i = 0; i < taps; i++)
+                {
+                    s.Press(1);
+                    s.Advance(KeyHold);
+                    s.Release(1);
+                    s.Advance(gap - KeyHold);
+                }
+                return s.Speed;   // one gap after the last tap, where the next one would come
+            }
+
+            Assert.Greater(SpeedAfterLastTap(6, 1.0f), 0.5f, "the runner stopped between taps of a slow series");
+            Assert.Less(SpeedAfterLastTap(1, 1.0f), 0.1f, "one tap alone must still stop the runner");
+            var stopped = new Sim(tuning);
+            stopped.Advance(0.2f);
+            for (int i = 0; i < 6; i++) { stopped.Press(1); stopped.Advance(KeyHold); stopped.Release(1); stopped.Advance(1.0f - KeyHold); }
+            stopped.Advance(4f);
+            Assert.Less(stopped.Speed, 0.1f, "the series stopped but the runner keeps going");
+        }
     }
 }

@@ -40,6 +40,11 @@ namespace SpeedStars.Physical
         public float stopBrakeForce = 12f;
         public float stopDelay = 0.6f;
         public float stopRamp = 0.3f;
+        [Tooltip("The brake waits for the next tap of a slow series: at least stopDelay, otherwise stopWaitShare times the longer of the last two gaps between taps, never beyond stopWaitMax (s). " +
+                 "A runner tapping once a second is still running between taps; the first tap of a series has no gap, so stopDelay holds.")]
+        public float stopWaitShare = 1.5f;
+        [Tooltip("Longest wait (s) the brake gives a slow series of taps before the runner is taken to have stopped.")]
+        public float stopWaitMax = 1.6f;
 
         [Header("Stride")]
         [Tooltip("Press → take-off: how long the foot pushes on the ground (s).")]
@@ -84,6 +89,17 @@ namespace SpeedStars.Physical
         [Range(0f, 1f)] public float sameLegStartFactor = 0.75f;
         [Tooltip("Speed (m/s) at which a repeated key has only sameLegFactor.")]
         public float sameLegStartSpeed = 3f;
+        [Tooltip("Same leg again within this time (s) counts as a repeat (a hop, not a new step).")]
+        public float hopWindow = 1.6f;
+        [Tooltip("One-key tapping is the same key repeated this many times in a row (a stray double press among two-key taps is not): from then on lateness and the head no longer spoil the push, and the floor below applies.")]
+        public int hopSeriesAfter = 1;
+        [Tooltip("A repeat this long (s) after the previous tap is one-key tapping at once: a two-key rhythm does not pause on one key that long.")]
+        public float hopSlowGap = 0.6f;
+        [Tooltip("Below this speed (m/s) a repeated key (one-key tapping) pushes at least hopFloorGain: bad one-key input slows the runner, never stops it. Two keys keep tapFloorSpeed.")]
+        public float hopFloorSpeed = 5.6f;
+        [Tooltip("Least push of a repeated key's tap while below hopFloorSpeed, in m/s per second since the previous tap: it covers what friction took in the gap, so a slow series keeps its speed " +
+                 "and a quick one gets little extra (the best one-key tempo is not made faster by the floor).")]
+        public float hopFloorGain = 2.8f;
         [Tooltip("Same leg again: its push is scaled by gap / hopFullGap below this gap (s), so tapping one key faster than this gains nothing.")]
         [Range(0.01f, 1f)] public float hopFullGap = 0.25f;
         [Tooltip("Keys in turn: a press's push is scaled by gap / pressFullGap below this gap (s), so tapping faster than a runner can step gains no more.")]
@@ -347,7 +363,8 @@ namespace SpeedStars.Physical
         public float StepTime => Mathf.Lerp(T.stepTime.x, T.stepTime.y, Speed / T.maxSpeed);
         public int HoldingCount => (Legs[0].Holding ? 1 : 0) + (Legs[1].Holding ? 1 : 0);
 
-        float _pending, _hopVelocity, _launchVelocity, _form, _hopBias;
+        float _pending, _hopVelocity, _launchVelocity, _form, _hopBias, _lastGap, _prevGap;
+        int _repeatRun;   // presses in a row that repeated the same key: one key being tapped, not a stray double
         Spring _head, _headFwd;   // the head angle; where the keys have taken it, coming back with no key down
         Spring _shown, _shownFwd; // the same for the picture (ShownHeadAngle): fixed kick, no strain; nothing reads them in the sim
         double _keyUpTime;        // sim time the last key down came up
@@ -363,7 +380,8 @@ namespace SpeedStars.Physical
         public void Reset()
         {
             Time = 0.0;
-            Speed = Distance = HopY = _hopVelocity = _pending = _form = _hopBias = 0f;
+            Speed = Distance = HopY = _hopVelocity = _pending = _form = _hopBias = _lastGap = _prevGap = 0f;
+            _repeatRun = 0;
             _windupLeft = _jumpLeft = _hitLeft = 0f;
             Energy = T.energyMax;
             Presses = 0;
@@ -409,15 +427,16 @@ namespace SpeedStars.Physical
             float eff;
             bool nearLanding = false;
             float earliness = 0f;   // how far before the landing the press comes, in step times (0 on the ground and in a hop)
-            bool repeat = LastLeg == leg && sinceLast < 1f;
+            bool repeat = LastLeg == leg && sinceLast < T.hopWindow;
+            bool series = repeat && (_repeatRun >= T.hopSeriesAfter || sinceLast >= T.hopSlowGap);
             if (Speed < 0.3f && !Airborne && !launchPending)
             {
                 result = PressResult.Start;
                 eff = 1f;
             }
-            else if (repeat && (Airborne || launchPending))
+            else if (series || (repeat && (Airborne || launchPending)))
             {
-                // A hop has no stride to land from: the press in flight is on time (its rate is limited by hopFullGap below).
+                // A hop has no stride to land from: the press is on time in flight and on the ground alike (its rate is limited by hopFullGap below).
                 result = PressResult.Good;
                 eff = 1f;
             }
@@ -461,7 +480,7 @@ namespace SpeedStars.Physical
             float share = pairSecond ? T.togetherPush : 1f;
             eff *= EnergyFactor();
             // A head that is down spoils the push: it comes back in full only as the head comes up.
-            eff *= HeadUpright;
+            if (!series) eff *= HeadUpright;   // a hop is not a stride: the head is not shown for it, so it does not spoil it
             _head.Velocity += T.headNod * share;
             _shown.Velocity += T.headNod * share;
             // Wasted presses pile strain up a little each (a press cut short by the tapping speed less); on-time ones wear it off, as far
@@ -473,7 +492,12 @@ namespace SpeedStars.Physical
             // Below a floor speed a tap always pushes a little (slow, limping), whatever its timing or the head: never stuck.
             if (!pairSecond && Speed + _pending < T.tapFloorSpeed)
                 gain = Mathf.Max(gain, Mathf.Min(T.tapFloorGain, T.tapFloorSpeed - Speed - _pending));
+            if (series && !pairSecond && Speed + _pending < T.hopFloorSpeed)
+                gain = Mathf.Max(gain, Mathf.Min(T.hopFloorGain * Mathf.Min(sinceLast, T.stopWaitMax), T.hopFloorSpeed - Speed - _pending));
             _pending += gain;
+            _repeatRun = repeat ? _repeatRun + 1 : 0;
+            _prevGap = _lastGap;
+            _lastGap = sinceLast < T.stopWaitMax ? sinceLast : 0f;   // a tap after a long pause starts a new series: no gap
 
             LeanSpring.Velocity += T.leanKick * (1f + T.stumbleKick * (1f - eff)) * share;
             if (!pairSecond) _form += (timing - _form) * T.formFollow;
@@ -685,7 +709,8 @@ namespace SpeedStars.Physical
             // Stumbling is lean beyond what holding asks for (every held foot leans on purpose).
             float poseLean = PoseLean = T.lungeLean * (Legs[0].HoldValue + Legs[1].HoldValue);
             // No key down for a while: the runner has stopped running and brakes (constant, like friction).
-            float idle = (float)(Time - _keyUpTime) - T.stopDelay;
+            float wait = Mathf.Max(T.stopDelay, Mathf.Min(T.stopWaitMax, T.stopWaitShare * Mathf.Max(_lastGap, _prevGap)));
+            float idle = (float)(Time - _keyUpTime) - wait;
             float brake = T.stopBrakeForce * Mathf.SmoothStep(0f, 1f, idle / Mathf.Max(0.001f, T.stopRamp));
             float drag = T.dragConstant + T.dragLinear * Speed + T.dragQuadratic * Speed * Speed + brake + T.holdDrag * maxHold
                          + T.headDrag * Mathf.Clamp01(HeadAngle / Mathf.Max(1f, T.headForwardMax));

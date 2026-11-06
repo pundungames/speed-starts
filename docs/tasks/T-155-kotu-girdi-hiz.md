@@ -1,7 +1,7 @@
 ---
 id: T-155
 title: Tek tusta kotu girdi hizi cok dusurmesin, basis gelirken hiz sifirlanmasin
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-153]
 owns_paths:
@@ -17,8 +17,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -81,3 +81,26 @@ Sim'i Unity'siz olcer. Klasor: `C:\Users\Monster\AppData\Local\Temp\claude\d--Pu
 - [ ] Test eklendi, yeni alanlarda Tooltip.
 
 ## Calisma notu
+
+Once/sonra (tek tus, ayaktan, 100 m sn / oturmus hiz min ort):
+
+| Aralik | Once | Sonra |
+|---|---|---|
+| 0.05 | 31.8 / 3.1 3.3 | 18.9 / 5.4 5.5 |
+| 0.08 | 31.8 / 3.1 3.4 | 19.1 / 5.4 5.5 |
+| 0.10 | 27.1 / 4.4 4.9 | 18.0 / 5.6 6.0 |
+| 0.25 (en iyi) | 16.85 / 4.4 6.0 | 16.35 / 5.3 6.4 |
+| 0.40 | 31.2 / 2.9 3.2 | 20.2 / 4.7 5.3 |
+| 0.50 | 34.6 / 2.4 3.0 | 20.3 / 4.9 5.2 |
+| 0.70 | 36.2 / 1.7 2.6 | 20.9 / 4.7 5.1 |
+| 1.00 | bitmiyor / 0.0 0.8 | 21.9 / 4.0 4.9 |
+| 1.40 | bitmiyor | 23.0 / 2.9 4.6 |
+| 0.5+-0.3 sapmali | 33.0 / 1.8 3.1 | 20.4 / 4.3 5.2 |
+
+`gateprobe gate` iki tus sutunlari ve `human` ciktisi birebir ayni (tek tus sutunlari ve ilk satirlar degisti, beklenen). Tek basis ve ritim <= 0.40 durma suresi ayni (`gateprobe stop`).
+
+- Yeni alanlar (`RunnerTuning`): `hopWindow` 1.6 (eski sabit 1 sn), `hopSeriesAfter` 1, `hopSlowGap` 0.6, `hopFloorSpeed` 5.6, `hopFloorGain` 2.8 (m/s per sn aralik), `stopWaitShare` 1.5, `stopWaitMax` 1.6.
+- Mantik: "seri" = ayni tus ust uste tekrar (ya da 0.6 sn+ aralikli tekrar); seride gec basis ve `HeadUpright` basisi bozmaz, `hopFloor` tabani uygulanir (tek tusa ozgu; iki tusun arada bir cift basisi seri sayilmaz, bu yuzden `human` ayni kaldi). Taban basisi aralikla orantili: en iyi tempoda ek yok, yavasta surtunmenin aldigini geri verir. Fren beklemesi son iki aralikla uzar (`stopWait*`), ilk basista `stopDelay`.
+- `hopBias` hiza hala bagli degil (`_repeatRun` ayri sayac). Zor kisim: `human` tek erken basis satiri, probe'un basili kalan bacagi yuzunden iki tusta da "tekrar" uretiyor; seri esigi bunu disarida birakmak icin.
+- Pozun fren beklemesini okumasi gerekirse: bekleme `wait = max(stopDelay, min(stopWaitMax, stopWaitShare x max(son iki aralik)))`; sim'de kamuya acik degil (T-154 notu).
+- Koşulmadi: Unity testleri (3 yeni test `RunnerSimRelationTests` sonunda). Probe: `scripts/runner-olcum/Program.cs` `hop`, `stop`.

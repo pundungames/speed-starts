@@ -11,7 +11,7 @@ static class P
     public static float PushT = -1f;
     static RunnerTuning T() { var t = new RunnerTuning(); if (Waste >= 0f) t.wasteKickShare = Waste; if (PushT > 0f) t.pushTime = PushT; if (FlatKick) { t.goodKickShare = 1f; t.wasteKickShare = 1f; } t.maxSpeed = 13f; t.pushGain = 1.22f; t.dragQuadratic = 0.032f; t.gravity = 5f; t.headKick = 12f; if (Waste2 >= 0f) t.wasteKickShare = Waste2; t.headReturnDelay = 0.1f; Over(t); return t; }
     // Quick tuning trials: SIM_SET="strainGain=0.09;headKick=10" overrides float fields of RunnerTuning.
-    static string Ovr; static void Over(RunnerTuning t) { var v = Ovr ?? Environment.GetEnvironmentVariable("SIM_SET"); if (string.IsNullOrEmpty(v)) return; foreach (var kv in v.Split(';')) { var a = kv.Split('='); var f = typeof(RunnerTuning).GetField(a[0]); if (f != null) f.SetValue(t, float.Parse(a[1], CultureInfo.InvariantCulture)); } }
+    static string Ovr; static void Over(RunnerTuning t) { var v = Ovr ?? Environment.GetEnvironmentVariable("SIM_SET"); if (string.IsNullOrEmpty(v)) return; foreach (var kv in v.Split(';')) { var a = kv.Split('='); var f = typeof(RunnerTuning).GetField(a[0]); if (f != null) f.SetValue(t, Convert.ChangeType(float.Parse(a[1], CultureInfo.InvariantCulture), f.FieldType)); } }
 
     sealed class R { public string Name; public float T100 = -1, VEnd, VMax, HeadAvg, HeadMax, Eff; public int Good, Early, Late, N; }
 
@@ -372,9 +372,71 @@ static class P
         }
     }
 
+    // One key at a gap (with a jitter): the 100 m, and the speed the press series holds once it has settled.
+    static (float t100, float vMin, float vMean, float head) OneKey(float gap, float jitter, int seed, float startRun)
+    {
+        var s = new RunnerSim(T()); var rnd = new Random(seed);
+        double t = 0, next = 0.2, rel = -1, dt = 1.0 / 240.0; int leg = 1, n = 0; double sum = 0; float vMin = 99f, t100 = -1f, headSum = 0f;
+        while (t < 45)
+        {
+            if (t >= next)
+            {
+                bool run = t < startRun;
+                if (run) { leg = 1 - leg; }
+                s.Press(leg); rel = t + Math.Min(0.05, 0.6 * gap);
+                next += run ? 0.26 : gap + (rnd.NextDouble() * 2 - 1) * jitter;
+            }
+            if (rel >= 0 && t >= rel) { s.Release(0); s.Release(1); rel = -1; }
+            s.Advance((float)dt); t += dt;
+            if (t100 < 0 && s.Distance >= 100f) t100 = (float)t;
+            if (t > startRun + 2.5 && t < startRun + 9) { sum += s.Speed; n++; headSum += s.HeadAngle; vMin = Math.Min(vMin, s.Speed); }
+            if (t > startRun + 9 && t100 > 0) break;
+        }
+        return (t100, vMin, n > 0 ? (float)(sum / n) : 0f, n > 0 ? headSum / n : 0f);
+    }
+
+    static void HopTable()
+    {
+        Console.WriteLine("tek tus: aralik | 100m | hiz min ort | bas ort  (ayaktan) || kosudan gecis min ort");
+        foreach (var g in new[] { 0.05f, 0.08f, 0.10f, 0.12f, 0.15f, 0.18f, 0.20f, 0.25f, 0.30f, 0.35f, 0.40f, 0.45f, 0.50f, 0.60f, 0.70f, 0.80f, 1.00f, 1.40f })
+        {
+            var a = OneKey(g, 0f, 1, 0f); var b = OneKey(g, 0f, 1, 4f);
+            Console.WriteLine($"{g:0.00} | {a.t100:0.00} | {a.vMin:0.0} {a.vMean:0.0} | {a.head:0} || {b.vMin:0.0} {b.vMean:0.0}");
+        }
+        Console.WriteLine("tek tus sapmali (5 tohum): aralik+-sapma | 100m | hiz min ort");
+        foreach (var (g, j) in new[] { (0.20f, 0.10f), (0.30f, 0.15f), (0.40f, 0.20f), (0.50f, 0.30f) })
+        {
+            float t1 = 0f, v1 = 99f, m1 = 0f; for (int i = 1; i <= 5; i++) { var r = OneKey(g, j, i, 0f); t1 += r.t100 / 5f; v1 = Math.Min(v1, r.vMin); m1 += r.vMean / 5f; }
+            Console.WriteLine($"{g:0.00}+-{j:0.00} | {t1:0.00} | {v1:0.0} {m1:0.0}");
+        }
+    }
+
+    // A series of n taps (one key or two) at a gap, then nothing: seconds from the last tap until the runner has stopped, and the speed the next tap would find.
+    static void StopTable()
+    {
+        Console.WriteLine("durma: tus aralik taps | son basistan duruse sn | son basista hiz | araliktaki min hiz");
+        foreach (var keys in new[] { 1, 2 })
+        foreach (var (g, n) in new[] { (0.20f, 12), (0.30f, 10), (0.40f, 8), (0.70f, 6), (1.00f, 5), (1.40f, 5), (1.00f, 1), (0.30f, 1) })
+        {
+            if (keys == 2 && g > 0.4f) continue;
+            var s = new RunnerSim(T()); double t = 0, next = 0.2, rel = -1, lastTap = 0; int leg = 1, k = 0; float vAtLast = 0, vMinGap = 99f; double stop = -1;
+            while (t < 30)
+            {
+                if (k < n && t >= next) { if (keys == 2) leg = 1 - leg; s.Press(leg); rel = t + Math.Min(0.05, 0.6 * g); lastTap = t; vAtLast = s.Speed; k++; next += g; }
+                if (rel >= 0 && t >= rel) { s.Release(0); s.Release(1); rel = -1; }
+                s.Advance(1f / 240f); t += 1.0 / 240;
+                if (k > 3 && k < n && t > 3) vMinGap = Math.Min(vMinGap, s.Speed);
+                if (k >= n && stop < 0 && s.Speed < 0.3f && t > lastTap + 0.1) stop = t - lastTap;
+            }
+            Console.WriteLine($"{keys} tus {g:0.00} x{n} | {(stop < 0 ? ">30" : stop.ToString("0.00"))} | {vAtLast:0.0} | {(vMinGap > 90 ? "-" : vMinGap.ToString("0.0"))}");
+        }
+    }
+
     static void Main(string[] args)
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+        if (args.Length > 0 && args[0] == "hop") { HopTable(); return; }
+        if (args.Length > 0 && args[0] == "stop") { StopTable(); return; }
         if (args.Length > 0 && args[0] == "phased") { if (args.Length > 1) Waste2 = float.Parse(args[1]); Phased(); Table(); return; }
         if (args.Length > 0 && args[0] == "spam") { SpamTable(); return; }
         if (args.Length > 0 && args[0] == "scan") { Scan(); return; }
