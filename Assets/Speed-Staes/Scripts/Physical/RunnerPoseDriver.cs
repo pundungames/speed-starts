@@ -485,6 +485,9 @@ namespace SpeedStars.Physical
         [Tooltip("The body's extra rise between two steps (m) at full hop bias, and with two keys pressed together (the legs " +
                  "in step): one leg hopping, or both legs bouncing the body like a sack.")]
         public float hopRise = 0.26f;
+        [Tooltip("Flight time (s, last foot off to the next touchdown) at which a hop or a pair jump reaches its full hopRise; shorter flights rise less " +
+                 "(the share goes with the time to the power 1.5): a quick rhythm bounces low, a slow one high.")]
+        [Min(0.05f)] public float hopRiseTime = 0.45f;
         [Tooltip("The hopping leg's push: how far the pelvis rises (m, at full hop weight) through the push, up to the toe-off, so the " +
                  "bounce starts with the push; the flight's arc (hopRise) goes on from there. With it the stance's dip is gone.")]
         public float hopPushRise = 0.07f;
@@ -898,6 +901,7 @@ namespace SpeedStars.Physical
         const float LockKnee = 15f;
         const float HopRepeatWindow = 1f;      // the same key again within this (s) is a hop (the sim's repeat)
         const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
+        const float HopTimeFollow = 10f;       // the hop height's flight time follows the real one at this rate (1/s)
         const float IdleRate = 12f;             // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
         const double PoseMinGap = 0.13;        // a press this soon after the last one the pose took is the sim's alone (about 7.7 steps a second)
@@ -975,6 +979,8 @@ namespace SpeedStars.Physical
         Vector3 _lastRootPos;                      // the root last frame
         bool _haveRoot;
         float _rootSpeed;                          // the root's own speed (m/s), smoothed
+        float _hopFlightT;                         // the flight's whole time (s) as the hop's height reads it: followed, so a press changing it does not step the height
+        bool _hopFlightSet;
         float _offY, _flightT;                     // the body's height when the last foot left; seconds since
         bool _ballistic;                           // the body is in free fall (the dive), not in a run's arc
         Spring _bodyY, _lean;                      // the waist top's lean after the head (deg)
@@ -2851,6 +2857,7 @@ namespace SpeedStars.Physical
             {
                 _offY = _bodyY.Value;
                 _flightT = 0f;
+                _hopFlightSet = false;
             }
             _carried = false;
             _flightT += dt;
@@ -2866,9 +2873,20 @@ namespace SpeedStars.Physical
                 float landY = StanceExtent(incoming) + AnkleGround(incoming) - joint.y;
                 float speed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(riseSpeed.x, riseSpeed.y, sim.Speed));
                 float rise = flightRise * speed * Mathf.Lerp(1f - formWeight, 1f, Mathf.Clamp01(sim.Form)) *
-                             Mathf.Lerp(1f, runBounce, _plainRun) +
-                             hopRise * Mathf.Max(_hopBodyW, _pair);
-                float target = Mathf.Lerp(_offY, landY, Mathf.SmoothStep(0f, 1f, w)) + rise * 4f * w * (1f - w);
+                             Mathf.Lerp(1f, runBounce, _plainRun);
+                // A hop's or pair's arc: a sine squared (both ends at rest, a round bottom) and as high as the flight is long (a press that
+                // changes the time to the touchdown moves the whole-flight time, so it is followed, not read raw).
+                float hopPart = 0f;
+                float hopWeight = Mathf.Max(_hopBodyW, _pair);
+                if (hopWeight > 0f)
+                {
+                    float whole = _flightT + remaining;
+                    _hopFlightT = _hopFlightSet ? Mathf.Lerp(_hopFlightT, whole, 1f - Mathf.Exp(-HopTimeFollow * dt)) : whole;
+                    _hopFlightSet = true;
+                    float arc = Mathf.Sin(Mathf.PI * w);
+                    hopPart = hopRise * hopWeight * Mathf.Clamp01(Mathf.Pow(_hopFlightT / Mathf.Max(0.05f, hopRiseTime), 1.5f)) * arc * arc;
+                }
+                float target = Mathf.Lerp(_offY, landY, Mathf.SmoothStep(0f, 1f, w)) + rise * 4f * w * (1f - w) + hopPart;
                 if (incoming.phase == LegPhase.Land) target += landHover;
                 _bodyY.Step(target, flightSpring.frequency, flightSpring.damping, dt);
                 if (!wasBallistic && !_jumping) LimitHeightSpeed(flightPrevY, dt);
