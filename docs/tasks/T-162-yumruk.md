@@ -1,7 +1,7 @@
 ---
 id: T-162
 title: Eller yine yumruk: Serhat'in FBX'i parmaklari acti, prefab'a geri yazilir
-status: blocked
+status: cancelled
 owner: scene-integrator
 depends_on: [T-161]
 owns_paths:
@@ -17,7 +17,7 @@ analytics:
 needs: []
 started:
 finished:
-blocked_reason: teshis curudu: iki FBX'te hicbir kemigin yerel donus/pozisyonu farkli degil
+blocked_reason:
 ---
 
 ## Hedef
@@ -34,3 +34,4 @@ Teshis curursa (parmaklar iki FBX'te ayni) prefab'a yazma, dur ve raporla.
 - Eski (2516ccff) ve yeni FBX kopyada ayni importer ayariyla (Generic, NoAvatar) karsilastirildi: 133 ortak kemik, parmak farki 0, diger fark 0 (>0.5 derece / >1 mm); eskide 1 fazla kemik.
 - Prefab'a yazilmadi. Fark duruş eğrisinde (FBX klibi/bind) ya da baska yerde olabilir; yerel donus farki degil.
 - Gecici dosyalar yalniz kopyada kaldi; repo degismedi.
+- Iptal: sebep FBX degil. `13d3ef87` kaydinda (Serhat'in FBX'i dahil) yumruk var. Eller T-161 katmanindan acildi; parmaklar katmandan cikinca (58a8d9fd, t161-c) kosu, sekis, blok cikisi yumruk.

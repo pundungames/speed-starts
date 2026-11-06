@@ -13,7 +13,7 @@ owns_paths:
   - "docs/tasks/T-161-baslangic-pozlari.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [68880fdd, 22b73d9c]
+commits: [68880fdd, 22b73d9c, 91cd9dc5, 58a8d9fd]
 tests:
   - "gerekmiyor: gorsel; kullanici gozle bakar"
 analytics:
@@ -49,3 +49,4 @@ Yalniz `owns_paths`. Sahne, prefab, asset, `.meta` yazma. Unity calistirma, derl
 - Config Bridge'e `RaceSessionAdapter.StartSettings` ile gelir (RaceBots `session.StartSettings` okur; inject/WIRING yok). Klip yoksa bilesen eklenmez; tek klip varsa ikisi icin o kullanilir.
 - Derlenmedi, Unity calistirilmadi, test yok (gorsel).
 - Klipler 57 yol, 56 eslesti (`B-spineProxy` prefab ta yok). t161-a seritleri: READY klip gibi (bir kol yukarda, klipte bu kemik de anahtarli), SET hips yukari iki el yerde. Test 30/30.
+- Eller acik kaldi (kullanici gordu): parmaklari kimse her kare yazmiyor. Surulmeyen kemikler tabana doner (91cd9dc5), parmaklar katmandan cikti (58a8d9fd); yumruk t161-c kosu, sekis, blok seritlerinde dogrulandi. Stance'siz senaryoda acik kalmasinin tam yolu bulunmadi, parmaklar artik yazilmadigi icin etkisi yok. Klipteki acik el kullanilmiyor.
