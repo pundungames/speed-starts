@@ -1289,7 +1289,9 @@ namespace SpeedStars.Physical
         void BeginStance(Leg leg, double time)
         {
             leg.pressedAt = time;
-            leg.toeOff = false;
+            // A planted foot already flagged to leave (its leg out of length) keeps the flag: clearing it let the stance go on for a frame
+            // with the leg at full stretch (knee 177) and the hip pushed up 4 cm, then the flag came back.
+            if (!(leg.phase == LegPhase.Push && leg.grounded && leg.toeOff)) leg.toeOff = false;
             leg.swungSincePress = false;
             if (leg.phase == LegPhase.Push) return;
             // Hopping, a press just after the toe-off (the swing hardly begun, the foot still on the ground) is not a catch: the catch
