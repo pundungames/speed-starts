@@ -607,13 +607,13 @@ namespace SpeedStars.Physical
         public float pressGateMax = 0.3f;
         [Tooltip("One-leg hop: once a hop is on, no press (the same key or the other) is taken by the pose before this long (s) has passed since the last " +
                  "one taken; the sim counts every press all the same, so it costs no speed. A hop's swing is never shorter either. A run is not gated by it.")]
-        [Min(0.1f)] public float hopTime = 0.42f;
+        [Min(0.1f)] public float hopTime = 0.46f;
         [Tooltip("One-leg hop: a hop's swing is never planned longer than this press-to-press time (s), however slow the key: at a slow rhythm the " +
                  "foot waits on the ground for the next press. Not shorter than hopTime.")]
         [Min(0.1f)] public float hopTimeMax = 0.6f;
         [Tooltip("One-leg hop: the swing (flight) is at least this long (s) at full hop weight, whatever the rhythm taught: the leg needs the time to go " +
                  "well back and come round. A hop's next press waits for the landing anyway.")]
-        [Min(0.12f)] public float hopSwingMin = 0.34f;
+        [Min(0.12f)] public float hopSwingMin = 0.40f;
         [Tooltip("How much of each new press-to-press time a leg's cycle takes on (1 = just the last one): one odd press " +
                  "does not jerk the legs.")]
         [Range(0.1f, 1f)] public float stepFollow = 0.5f;
@@ -869,7 +869,7 @@ namespace SpeedStars.Physical
 
         [Header("One-key hop arms (deg, + = forward): the arm opposite the hopping leg follows that leg, the arm on its side is still")]
         [Tooltip("Upper arm with the hopping leg all the way forward (armHopThigh.y): up and forward.")]
-        public float armHopUp = 60f;
+        public float armHopUp = 42f;
         [Tooltip("Upper arm with the hopping leg all the way back (armHopThigh.x): down and back.")]
         public float armHopDown = -68f;
         [Tooltip("Elbow bend (deg) in the hop: about a right angle, the forearms up in front of the chest.")]
