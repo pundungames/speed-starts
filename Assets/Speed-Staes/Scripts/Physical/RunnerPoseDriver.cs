@@ -908,6 +908,7 @@ namespace SpeedStars.Physical
         float _hopTarget;                         // 1 when that press was the same leg again, 0 when it was the other
         Spring _hopBody;                          // the hop weight's slow twin (hopBodySpring); _hopBodyW is what the body reads
         float _hopBodyW;
+        bool _hopFreed;                           // a hop is open: the leg that is not the pressed one is the balance leg, whatever its idle weight has reached yet
         Spring _hopSpring, _pairSpring, _bothTip;   // the hop and pair weights' springs (gaitBlendSpring); the both-keys tip's (holdTipSpring)
         float _hop, _pair, _dive;                 // one-leg hop weight, two-keys-together weight, hold weight (dive) 0..1
         float _twist, _roll, _lastThighL, _lastThighR, _chestYaw, _chestRoll;
@@ -2059,7 +2060,11 @@ namespace SpeedStars.Physical
                 switch (leg.phase)
                 {
                     case LegPhase.Push: leg.carry = leg.grounded; break;
-                    case LegPhase.Rest: leg.carry = leg.idle < IdleCarry; break;
+                    case LegPhase.Rest:
+                        // The hop frees the other leg into Rest while its idle weight is still near 0: it would count as standing at home for the
+                        // 2 frames the weight takes to pass IdleCarry, and the body would sink to it just before the flight.
+                        leg.carry = leg.idle < IdleCarry && !(_hopFreed && i != _poseLastLeg);
+                        break;
                     case LegPhase.Front:
                     case LegPhase.Reach:
                         // A reaching foot carries the body once it is on the ground (or near it); in the air with its knee folded it does not: the
@@ -2328,6 +2333,7 @@ namespace SpeedStars.Physical
                 _hopPrevTime = at;
             }
             float hopTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
+            _hopFreed = !off && _dive <= 0.3f && hopTarget * (1f - _heldNow) > 0.5f;
             hopTarget *= 1f - _heldNow;   // a real hold ends the hop: else the trunk sits back (hopBackLean) against the forward tip
             hopTarget *= 1f - PairWeight(now);   // a pair gives way: the arms already read _pair, the legs and trunk must too
             // Springs, not a lerp: a lerp is fastest in its first frame (0.26 of the way = 11 deg/frame on the hips via hopBackLean).

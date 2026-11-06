@@ -1,7 +1,7 @@
 ---
 id: T-147
 title: Duz kosudan tek ayaga geciste govde yavas geri oturur, ilk sekis sivri olmaz
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-146]
 owns_paths:
@@ -15,8 +15,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -40,3 +40,6 @@ Kullanici 05.11: "normal kosudan tek bacak kosuya gecerken cok sert puruzlu geci
 - Yerlesik tek ayak sekisinin yuksekligi ve egimi. Kol `hw` karisimi (once govdeye bakilir; olcumde hala sert gorunurse ayri tur).
 
 ## Calisma notu
+- Commit 1 (296e8fec): `_hopBody` yavas yay (`hopBodySpring` 2 Hz), govde `Min(_hopBody, _hop)` okur (cikis eskisi gibi hizli, giris yavas); kalca egimi ayrica `(1 - _heldNow)` ile.
+- Commit 2: carry kok sebebi: hop acilinca digeri `Enter(Rest)` ile serbest birakiliyor ama `idle` 0'dan basliyor; `Rest` carry'si `idle < IdleCarry` oldugu icin ~2 kare "evde duruyor" sayiliyordu. `_hopFreed` (hop hedefi acik, tutma yok) ile basilmayan bacak Rest'te carry etmez.
+- Olculmedi.
