@@ -454,7 +454,7 @@ namespace SpeedStars.Physical
         [Tooltip("Spam: a hop's press taken in the air lets the foot down in this long (s) at least, the same curve played faster; then the next hop starts.")]
         [Min(0.05f)] public float hopRushTime = 0.14f;
         [Tooltip("The hop weight's spring for a hop that began from a standstill (a single press): quick, so the held-out leg opens and the first arc is whole.")]
-        public SpringSettings hopStandSpring = new SpringSettings(10f, 1f);
+        public SpringSettings hopStandSpring = new SpringSettings(6f, 1f);
         [Tooltip("The stride (how far the knee drives, how far the foot lands and pushes back) grows from strideMin at x m/s " +
                  "to the full keys at y m/s.")]
         public Vector2 strideSpeed = new Vector2(1.5f, 9f);
@@ -989,7 +989,9 @@ namespace SpeedStars.Physical
         const float JumpAnkleFade = 10f;       // after a jump the ankles go back to the run's angles this fast (1/s)
         const float FollowRate = 6f;           // a leg changes between turning with the hips and keeping to the ground this fast (1/s)
         const float FoldKeep = 0.6f;           // share of the knee's fold that stays in a short stride (the thigh shrinks more)
-        const float MinCatch = 0.02f;          // a press catching a swinging leg takes at least / at most this long (s)
+        const float MinCatch = 0.02f;
+        const float HopMinCatch = 0.12f;       // a catch in a hop takes at least this long (s): a foot never snaps down
+        const float HopStockReturn = 0.24f;    // a hop's legs go home this slowly (s) at least, whatever stockReturnTime is          // a press catching a swinging leg takes at least / at most this long (s)
         const float MaxCatch = 0.15f;
         const float KneeSpeedFactor = 1.5f;    // the knee may catch up this much faster than the thigh
         const float MaxRootStep = 1.5f;        // a root move longer than this (m) in a frame, or backwards, is a jump (reset, lane), not running
@@ -1016,7 +1018,7 @@ namespace SpeedStars.Physical
         const float HopRepeatWindow = 1f;     // the same key again within this (s) is a hop (the sim's repeat)
         const float HopRetimeShare = 0.25f;    // a hop's press before this share of the swing, foot on the ground: the swing starts again, no catch
         const float HopTimeFollow = 10f;       // the hop height's flight time follows the real one at this rate (1/s)
-        const float IdleRate = 12f;             // a leg turns into the balance leg (and back) this fast (1/s)
+        const float IdleRate = 5f;              // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
         const double PoseMinGap = 0.13;        // a press this soon after the last one the pose took is the sim's alone (about 7.7 steps a second)
         const float PairWindow = 0.04f;        // two presses this close (s) are together (full), twice as far apart are not at all (the sim's togetherWindow)
@@ -1675,7 +1677,7 @@ namespace SpeedStars.Physical
                 return;
             }
             float dur = Mathf.Clamp(Mathf.Max(Mathf.Abs(c.thigh - leg.angles.thigh) / Mathf.Max(1f, catchSpeed),
-                Mathf.Abs(c.knee - leg.angles.knee) / Mathf.Max(1f, catchSpeed * KneeSpeedFactor)), MinCatch, MaxCatch);
+                Mathf.Abs(c.knee - leg.angles.knee) / Mathf.Max(1f, catchSpeed * KneeSpeedFactor)), Mathf.Lerp(MinCatch, HopMinCatch, _hop * (1f - _pair)), MaxCatch);
             dur = Mathf.Max(dur, minCatch);
             Enter(leg, LegPhase.Push, time, dur);
             float spanT = c.thigh - leg.angles.thigh, spanK = c.knee - leg.angles.knee;
@@ -1984,6 +1986,9 @@ namespace SpeedStars.Physical
             _lastPress = -1.0;
         }
 
+        /// <summary>Time for a leg to go home: stockReturnTime, slower while a hop is on (leaving a hop must read).</summary>
+        float StockTime() => _hop * (1f - _pair) > 0.5f ? Mathf.Max(stockReturnTime, HopStockReturn) : stockReturnTime;
+
         Leg Legs(int i) => i == 0 ? leftLeg : rightLeg;
 
         float Speed01() => body && body.Sim != null ? Mathf.Clamp01(body.Sim.Speed / body.Sim.T.maxSpeed) : 0f;
@@ -2034,7 +2039,7 @@ namespace SpeedStars.Physical
                     if (_idleStock && !leg.grounded && (leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid || leg.phase == LegPhase.Reach ||
                                                         leg.phase == LegPhase.Front || leg.phase == LegPhase.Push))
                     {
-                        Enter(leg, LegPhase.Rest, time, stockReturnTime);
+                        Enter(leg, LegPhase.Rest, time, StockTime());
                         continue;
                     }
                     switch (leg.phase)
@@ -2061,10 +2066,10 @@ namespace SpeedStars.Physical
                                     leg.toeOff = false;
                                 if (leg.toeOff)
                                 {
-                                    if (_idleStock) Enter(leg, LegPhase.Rest, time, stockReturnTime);   // no key: the stance ends at home, not in a swing
+                                    if (_idleStock) Enter(leg, LegPhase.Rest, time, StockTime());   // no key: the stance ends at home, not in a swing
                                     // The leg has swung since its press: nothing asked for another swing (a foot that landed before its press and ran out of
                                     // reach, or the other leg's press taking over). It goes home; the next press catches it from there.
-                                    else if (leg.swungSincePress) Enter(leg, LegPhase.Rest, time, _hop * (1f - _pair) > 0.5f ? stockReturnTime : frontHomeTime * SpeedUp());
+                                    else if (leg.swungSincePress) Enter(leg, LegPhase.Rest, time, _hop * (1f - _pair) > 0.5f ? StockTime() : frontHomeTime * SpeedUp());
                                     else StartSwing(leg, time);
                                 }
                             }
@@ -2904,7 +2909,7 @@ namespace SpeedStars.Physical
         {
             Leg other = Legs(1 - hopLeg);
             bool free = other.phase == LegPhase.Rest && !other.grounded;
-            if (other.phase != LegPhase.Hold && !free) Enter(other, LegPhase.Rest, now, stockReturnTime);
+            if (other.phase != LegPhase.Hold && !free) Enter(other, LegPhase.Rest, now, Mathf.Max(stockReturnTime, HopStockReturn));
         }
 
         /// <summary>The forward tilt (deg) of the arm's parent bone from its rest, in the runner's frame: a hanging arm turns back with it.</summary>
