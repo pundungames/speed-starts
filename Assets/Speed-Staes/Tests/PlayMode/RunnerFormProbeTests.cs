@@ -271,7 +271,8 @@ namespace SpeedStars.PlayTests
             s = new Script("start"); s.Alt(3f, 0.30f, Tap); s.Strips.Add(0.40f); s.Strips.Add(1.05f); list.Add(s.Build(0.5f));
 
             s = new Script("runToHop"); s.Alt(3f, 0.27f, Tap, 0); s.Strip(s.Same(2f, 0.27f, Tap, 1) + 0.27); list.Add(s.Build(0.5f));
-            s = new Script("hopSwap"); s.Same(2.5f, 0.27f, Tap, 1); s.Strip(s.Same(2f, 0.27f, Tap, 0)); list.Add(s.Build(0.5f));
+            // T-154: the hard gate (hopTime) takes every second press of a 0.27 s rhythm; the second strip is one hop later, past the gate's 0.42 s.
+            s = new Script("hopSwap"); s.Same(2.5f, 0.27f, Tap, 1); double swapAt = s.Same(2f, 0.27f, Tap, 0); s.Strip(swapAt); s.Strip(swapAt + 0.6); list.Add(s.Build(0.5f));
             // T-151: one key at a slow rhythm (0.45 s): the hop reaches its full height.
             s = new Script("slowHop"); s.Same(3f, 0.45f, Tap, 1); s.Strips.Add(2.0f); list.Add(s.Build(0.5f));
             s = new Script("hopToRun"); s.Same(2.5f, 0.27f, Tap, 1); s.Strip(s.Alt(2f, 0.27f, Tap)); list.Add(s.Build(0.5f));
@@ -303,7 +304,10 @@ namespace SpeedStars.PlayTests
             s = new Script("restart"); s.Alt(2.5f, 0.30f, Tap); s.Next = s.LastRelease + 2.2;
             double again = s.Alt(2.5f, 0.30f, Tap); s.Strip(again); s.Strip(again + 0.65); list.Add(s.Build(0.5f));
             s = new Script("walkStart"); s.Alt(3f, 0.60f, Tap); s.Strips.Add(0.40f); s.Strips.Add(1.05f); list.Add(s.Build(0.5f));
-            s = new Script("oneTap"); s.Strip(s.Alt(0.1f, 0.30f, Tap)); list.Add(s.Build(2f));
+            // T-154: one press from a standstill turns into a hop after hopStandWait, the held-out leg stays for the repeat window, then lowers softly: the tail covers all of it.
+            s = new Script("oneTap"); double oneAt = s.Alt(0.1f, 0.30f, Tap); s.Strip(oneAt); s.Strip(oneAt + 0.5); s.Strip(oneAt + 1.1); list.Add(s.Build(2.5f));
+            // T-154: the same key again and again from a standstill (0.45 s): a hop series from the first press; the strips cover the first second.
+            s = new Script("standHops"); double standAt = s.Same(3f, 0.45f, Tap, 1); s.Strip(standAt); s.Strip(standAt + 0.6); list.Add(s.Build(0.5f));
             // T-153: the block stance, Marks at 0.3 s, Set at 1.1 s, the first press at 1.9 s; strips on Marks, Set, the first press and 0.55 s later.
             s = new Script("blockStart"); s.BlockStart(); s.Alt(3f, 0.30f, Tap); foreach (float st in new[] { 0.3f, 1.1f, 1.8f, 2.45f }) s.Strips.Add(st); list.Add(s.Build(0.5f));
             s = new Script("blockPair"); s.BlockStart(); s.Pair(2f, 0.35f, Tap, 0.015f, 0.015f, false); foreach (float st in new[] { 1.1f, 1.8f, 2.45f }) s.Strips.Add(st); list.Add(s.Build(0.5f));

@@ -1,7 +1,7 @@
 ---
 id: T-154
 title: Tek ayak sekis: girdi kapisi, yukseklik, geri atis, sabit serbest bacak ve kol, ayaktan tek basista sekis
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-153]
 owns_paths:
@@ -10,14 +10,14 @@ owns_paths:
   - "docs/tasks/T-154-tek-ayak-sekis.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits: [86473717, f51c8b3c, fc4367a9, 8608e6ce, 7692878a]
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -75,3 +75,8 @@ Kullanici 06.11 (ozet, sol ayak uzerinde sekerken):
 - [ ] Ekran seritleri: sekiste kol ve bacak istenen gibi.
 
 ## Calisma notu
+- Yapildi: (1) `hopTime` sert kapi + `HopCycleFloor`, `_sameStreak` kalkti; (2) `hopFreeLeg`, `hopSitBack`, hopRock/rideBob/hopSway/balanceLift/balanceLeg/hopBackLean silindi; (3) kol: `armHopThigh`, `armHopFixed`; (4) `hopStanceMax`, `hopSwingKeys`, `hopRecover` (-68,85), `hopRise` 0.27, `hopRiseTime` 0.28; (5) `hopStandWait` ile ayaktan tek basis; (6) `oneTap`, `standHops`, `hopSwap` senaryolari.
+- Derleyici yok, hicbir sey olculmedi. Sayilar tahmin; ince ayar olcumden sonra.
+- Karar: `hopStandWait` 0.34 (oneri 0.2 degil): start/restart/blockStart tus araligi 0.30, 0.2'de ilk adim sekise donerdi. walkStart (0.6 sn aralik) kacinilmaz degisir: 0.34'te sekis, 0.6'da kosu.
+- Blok baslangicinda (`startStance != None`) tek basis sekise donmez (kosu baslangici korunsun).
+- Supheli: hopStanceMax kisa stance yuzunden yukseklik ve itis suresi degisir; `hopSitBack` 18 govde -10..-18'i tutturmak icin tahmin.
