@@ -20,8 +20,8 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: ASSET
-    durum: open
-    not: "FBX'i Assets/Speed-Staes/Animations/Start/RunnerStartPoses.fbx olarak al (Generic, malzeme yok); Readypose ve GOpose.001 kliplerini RaceStartConfig asset'indeki readyPose / setPose alanlarina bagla"
+    durum: closed
+    not: "FBX'i Assets/Speed-Staes/Animations/Start/RunnerStartPoses.fbx olarak al (Generic, malzeme yok); Readypose ve GOpose.001 kliplerini RaceStartConfig asset'indeki readyPose / setPose alanlarina bagla -> FBX bayt bayt kopyalandi, Generic/malzeme yok/NoAvatar/loopTime kapali; klipler Readypose, GOpose.001 (1 kare); RaceStartConfig readyPose/setPose baglandi; 570 egri, 57 yoldan 56 si prefab Animator altinda bulundu (eksik: Rig/B-root/B-spineProxy)"
 started: 2026-11-06
 finished: 2026-11-06
 blocked_reason:
