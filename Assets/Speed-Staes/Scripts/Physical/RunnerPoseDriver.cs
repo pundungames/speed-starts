@@ -422,6 +422,10 @@ namespace SpeedStars.Physical
         [Tooltip("One-leg hop: the foot stays down this long (s) at most, then the swing starts (at full hop weight; stanceMax blends to it). The rest of " +
                  "the hop's time (hopTime) is the swing, long enough for the leg to go well back and come round.")]
         [Min(0.05f)] public float hopStanceMax = 0.11f;
+        [Tooltip("A single press from a standstill (no block stance) starts as a step (the knee goes up, as for a run). If no other press has come this long (s) " +
+                 "after it and the key is up, it was a hop: the pressed foot hops and the other leg is held out in front. Longer than a quick " +
+                 "run's key-to-key time (0.3 s), or the first step of a run would turn into a hop.")]
+        [Min(0.05f)] public float hopStandWait = 0.34f;
         [Tooltip("The stride (how far the knee drives, how far the foot lands and pushes back) grows from strideMin at x m/s " +
                  "to the full keys at y m/s.")]
         public Vector2 strideSpeed = new Vector2(1.5f, 9f);
@@ -1005,6 +1009,8 @@ namespace SpeedStars.Physical
         int _hopPresses, _hopPrevLeg = -1;          // the press count last seen, and the leg of the press before
         double _hopPrevTime = -10.0;
         bool _hopRepeated;                          // the last press taken was the same leg again: the hop is really on
+        int _standLeg = -1, _standPresses;          // the leg of a first press from a standstill that may turn into a hop (hopStandWait), and the press count after it
+        double _standTime;
         float _hopTarget;                         // 1 when that press was the same leg again, 0 when it was the other
         Spring _hopBody;                          // the hop weight's slow twin (hopBodySpring); _hopBodyW is what the body reads
         float _hopBodyW;
@@ -1286,6 +1292,7 @@ namespace SpeedStars.Physical
                 _driveT = 0f;
                 _driveOn = true;
             }
+            bool fromBlocks = startStance != RunnerStartStance.None;
             startStance = RunnerStartStance.None;
             if (use != leg) l.pressedAt = time;
             var used = Legs(use);
@@ -1305,6 +1312,10 @@ namespace SpeedStars.Physical
             if (fromStand && !pairSecond && !_jumping && _plainRun > 0.5f && _hop < 0.5f && !_hopFreed &&
                 stepper.phase == LegPhase.Rest && !stepper.held && !stepper.HeldBack)
                 StartSwing(stepper, time, true);
+            // The same press may turn out to be a hop (UpdateHop): nothing else came within hopStandWait.
+            _standLeg = fromStand && !pairSecond && !_jumping && !fromBlocks ? use : -1;
+            _standTime = time;
+            _standPresses = _posePresses;
         }
 
         /// <summary>
@@ -2552,14 +2563,28 @@ namespace SpeedStars.Physical
                 // The hop opens (or changes leg): the other leg leaves the ground whatever phase it is in, so the switch from a run is the same every time
                 // (a leg that stayed down carried the body and the flight spring never ran: only the pressed foot moved). A planted foot
                 // starts from the angles it was shown with (Enter); the pin lets go by itself once the leg is the balance leg (PinFeet).
-                if (_hopTarget > 0.5f && (wasTarget < 0.5f || swap) && !off && _dive <= 0.3f)
-                {
-                    Leg other = Legs(1 - leg);
-                    bool free = other.phase == LegPhase.Rest && !other.grounded;
-                    if (other.phase != LegPhase.Hold && !free) Enter(other, LegPhase.Rest, now, stockReturnTime);
-                }
+                if (_hopTarget > 0.5f && (wasTarget < 0.5f || swap) && !off && _dive <= 0.3f) FreeOtherLeg(leg, now);
                 _hopPrevLeg = leg;
                 _hopPrevTime = at;
+            }
+            // A single press from a standstill: if nothing else was pressed within hopStandWait and the key is up, it is a hop on that leg. The
+            // step the press began (the other leg lifting) is taken over from where it is: that leg goes on to the held-out leg. Any later press
+            // goes the usual way (the same key: more hops; the other key: a run, as _hopRepeated stays false).
+            if (_standLeg >= 0)
+            {
+                Leg stood = Legs(_standLeg);
+                if (_posePresses != _standPresses || off || _dive > 0.3f || _heldNow > 0.1f || stood.phase == LegPhase.Hold ||
+                    now - _standTime > HopRepeatWindow)
+                    _standLeg = -1;
+                else if (now - _standTime >= hopStandWait && !stood.held)
+                {
+                    _hopTarget = 1f;
+                    _hopRepeated = false;
+                    _hopPrevLeg = _standLeg;
+                    _hopPrevTime = _standTime;
+                    FreeOtherLeg(_standLeg, now);
+                    _standLeg = -1;
+                }
             }
             float hopTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
             _hopFreed = !off && _dive <= 0.3f && hopTarget * (1f - _heldNow) > 0.5f;
@@ -2577,6 +2602,18 @@ namespace SpeedStars.Physical
                 Leg leg = Legs(i);
                 leg.idle = Mathf.MoveTowards(leg.idle, i != _poseLastLeg ? _hop * (1f - _pair) : 0f, IdleRate * dt);
             }
+        }
+
+        /// <summary>
+        /// The hop opens (or changes leg): the other leg leaves the ground whatever phase it is in, so the switch from a run is the same every time
+        /// (a leg that stayed down carried the body and the flight spring never ran: only the pressed foot moved). A planted foot
+        /// starts from the angles it was shown with (Enter); the pin lets go by itself once the leg is the balance leg (PinFeet).
+        /// </summary>
+        void FreeOtherLeg(int hopLeg, double now)
+        {
+            Leg other = Legs(1 - hopLeg);
+            bool free = other.phase == LegPhase.Rest && !other.grounded;
+            if (other.phase != LegPhase.Hold && !free) Enter(other, LegPhase.Rest, now, stockReturnTime);
         }
 
         /// <summary>The forward tilt (deg) of the arm's parent bone from its rest, in the runner's frame: a hanging arm turns back with it.</summary>
@@ -3304,6 +3341,7 @@ namespace SpeedStars.Physical
             _hopBodyW = 0f;
             _pairSpring.Reset();
             _hopPrevLeg = -1;
+            _standLeg = -1;
             _hopRepeated = false;
             _hopPrevTime = -10.0;
             _posePresses = _armPresses = _hopPresses = 0;
