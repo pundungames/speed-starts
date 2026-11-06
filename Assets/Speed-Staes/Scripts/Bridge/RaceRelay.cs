@@ -89,6 +89,8 @@ namespace SpeedStars.Bridge
             public RunnerBody Body;
             public RunnerInput Input;
             public CosmeticApplier Look;
+            public int Index;        // 0-based leg number within its team
+            public bool PlayerTeam;  // this runner belongs to the player's team
             public RelayBatonArms Arms;
             public float StartMeters;
             public BotPressSchedule Schedule;
@@ -134,6 +136,9 @@ namespace SpeedStars.Bridge
         double[] _bestSplits = Array.Empty<double>();
         RaceRelayHud _hud;
         Material _batonMaterial;
+        SpeedStars.Meta.Contracts.IRelayTeam _playerTeam;
+        SpeedStars.Meta.Contracts.ICosmeticService _teamCosmetics;
+        SpeedStars.Meta.Config.CosmeticCatalog _teamCatalog;
 
         /// <summary>True while the current race is a relay (from READY until the next non-relay race).</summary>
         public bool Active { get; private set; }
@@ -175,6 +180,18 @@ namespace SpeedStars.Bridge
                 if (!_hud) _hud = gameObject.AddComponent<RaceRelayHud>();
                 _hud.Bind(this, owner.Session);
             }
+        }
+
+        /// <summary>
+        /// The player's relay team (T-160): each runner of the player's lane wears the outfit of its leg's preset. Called by <see cref="RaceBots"/>
+        /// after <see cref="Bind"/>; without it (or with a null argument) every runner is dressed at random like the NPC teams.
+        /// </summary>
+        public void UseTeam(SpeedStars.Meta.Contracts.IRelayTeam team, SpeedStars.Meta.Contracts.ICosmeticService cosmetics,
+            SpeedStars.Meta.Config.CosmeticCatalog catalog)
+        {
+            _playerTeam = team;
+            _teamCosmetics = cosmetics;
+            _teamCatalog = catalog;
         }
 
         /// <summary>
@@ -500,7 +517,17 @@ namespace SpeedStars.Bridge
             leg.Root.SetActive(true);
             leg.Body.ResetRun(); // back to the spot it woke at, input queue cleared, acceptInput on
             leg.Arms.Clear();
+            if (leg.PlayerTeam && WearTeamOutfit(leg)) return;
             _owner.DressRunner(leg.Look);
+        }
+
+        /// <summary>A leg of the player's team wears its saved preset. False when the team is not wired: the caller dresses it at random.</summary>
+        bool WearTeamOutfit(Leg leg)
+        {
+            if (_playerTeam == null || _teamCosmetics == null || _teamCatalog == null || !leg.Look) return false;
+            leg.Look.Initialize();
+            leg.Look.Apply(_teamCosmetics.GetOutfit(_playerTeam.GetPreset(leg.Index)), _teamCatalog);
+            return true;
         }
 
         /// <summary>One runner copy per team and leg, each placed at its waiting spot before it wakes (RunnerBody reads its start there).</summary>
@@ -526,6 +553,8 @@ namespace SpeedStars.Bridge
                 {
                     float start = RelayRules.LegStartMeters(l, _legMeters, zoneBeforeLineMeters);
                     team.Legs[l] = CreateRunner($"Relay {t + 1}.{l + 1}", lane + forward * start, start, holder.transform);
+                    team.Legs[l].Index = l;
+                    team.Legs[l].PlayerTeam = t == 0;
                 }
                 _teams.Add(team);
             }

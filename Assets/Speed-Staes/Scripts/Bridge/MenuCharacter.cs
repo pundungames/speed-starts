@@ -79,8 +79,16 @@ namespace SpeedStars.Bridge
         public void Initialize()
         {
             if (_applied) return;
-            var root = runner ? runner : gameObject;
+            Freeze(runner ? runner : gameObject);
+            _applied = true;
+        }
 
+        /// <summary>
+        /// Stops a runner copy for the menu: input, sim, replay, tuning HUD and pose driver off, relaxed arms added. Shared with the
+        /// relay stage (<see cref="MenuRelayTeam"/>) so every standing runner is stopped the same way. Safe to call on an inactive copy.
+        /// </summary>
+        public static void Freeze(GameObject root)
+        {
             // Awake of a disabled component still runs, so the driver binds the rig (arm IK off) before it is silenced.
             Disable<RunnerInput>(root);
             Disable<RunnerReplay>(root);
@@ -94,7 +102,6 @@ namespace SpeedStars.Bridge
             }
             // Relaxed arms instead of the T-pose; added on the runner so no scene wiring is needed. Menu instance only.
             if (!root.GetComponent<MenuIdlePose>()) root.AddComponent<MenuIdlePose>().Initialize();
-            _applied = true;
         }
 
         static void Disable<T>(GameObject root) where T : Behaviour
