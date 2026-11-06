@@ -430,6 +430,9 @@ namespace SpeedStars.Physical
         [Tooltip("One-leg hop: no hop, no landing and no press for this long (s) and the runner stops: the legs go to the stock pose and the brake pose " +
                  "follows the speed. A hop is one press; nothing moves on its own after it.")]
         [Min(0.02f)] public float hopStopDelay = 0.2f;
+        [Tooltip("A press on the other key while hopping (a change of leg, or the run after a hop): the pressed foot comes down over at least this long (s), " +
+                 "readably, and the press works (new stance, arm roles, the other leg freed) in the frame it first touches the ground, not before.")]
+        [Min(0.05f)] public float hopSwapTime = 0.18f;
         [Tooltip("One-leg hop: the last key pressed within this long (s) before the hop leg lands (or after) is kept and taken when the foot is down " +
                  "(hopStanceMin): the same key is a new hop, the other key a change of leg. An earlier press (a double tap) is not kept.")]
         [Min(0.02f)] public float hopBufferTime = 0.25f;
@@ -1043,6 +1046,8 @@ namespace SpeedStars.Physical
         double _hopPrevTime = -10.0;
         bool _hopRepeated;                          // the last KEY (taken or not) was the same key again: the hop is really on
         bool _hopOpenPending;                       // the key opened a hop or changed its leg: the press the pose takes next frees the other leg
+        int _swapLeg = -1;                          // the other key's press taken while hopping: its foot is coming down and the press works when it touches
+        double _swapKeyTime;
         int _hopBufLeg = -1;                        // a hop press that came late in the air (kept, taken when the foot is down), and its time
         double _hopBufTime;
         double _motionAt = -10.0;                   // the last time a hop's leg was moving (swing, landing, a stance about to lift)
@@ -1338,6 +1343,18 @@ namespace SpeedStars.Physical
             if (alternating && leg == _poseLastLeg && _hop * (1f - _pair) < 0.5f) use = 1 - leg;
             _hopBufLeg = -1;
             if (_hopWanted) _hopTarget = 1f;   // the pose takes a press that means a hop: only now the hop weight starts to rise
+            // The other key while hopping (a change of leg, or the run after a hop): the foot is put down, readably, but the press works when it touches
+            // (CompleteSwap): until then the hop leg keeps its role, and the arms, the idle weights and the other leg change in one frame, on the ground.
+            if (!_jumping && !pairSecond && !fromStand && _poseLastLeg >= 0 && use != _poseLastLeg && _hop * (1f - _pair) > 0.5f)
+            {
+                if (use != leg) l.pressedAt = time;
+                _swapLeg = use;
+                _swapKeyTime = time;
+                _lastPress = time;
+                _standLeg = -1;
+                BeginStance(Legs(use), time, hopSwapTime);
+                return;
+            }
             _posePrevGap = (float)System.Math.Min(10.0, sinceTaken);
             _poseLastTime = time;
             _poseLastLeg = use;
@@ -1463,6 +1480,20 @@ namespace SpeedStars.Physical
             return false;
         }
 
+        /// <summary>The pressed foot of a change of leg has touched: the press works now (the roles change, the arms throw, the other leg is freed).</summary>
+        void CompleteSwap(double now)
+        {
+            Leg used = Legs(_swapLeg);
+            int leg = _swapLeg;
+            _swapLeg = -1;
+            _posePrevGap = (float)System.Math.Min(10.0, now - _poseLastTime);
+            _poseLastTime = now;
+            _poseLastLeg = leg;
+            _posePresses++;
+            NoteCycle(used, Legs(1 - leg), now, -1.0);
+            used.pressedAt = now;
+        }
+
         /// <summary>
         /// The kept hop press (OnTapped) is taken once the hop leg is down and has stood hopStanceMin, hopTime after the last press taken:
         /// the same key hops again, the other key changes the leg. Only the pose moves; the sim counted the press when it came.
@@ -1534,7 +1565,7 @@ namespace SpeedStars.Physical
         /// The foot goes down. On the ground or hovering in the touchdown pose it is down where it is; a leg still
         /// swinging is caught on its way (StartCatch); one already down just goes on.
         /// </summary>
-        void BeginStance(Leg leg, double time)
+        void BeginStance(Leg leg, double time, float minCatch = 0f)
         {
             leg.pressedAt = time;
             // A planted foot already flagged to leave (its leg out of length) keeps the flag: clearing it let the stance go on for a frame
@@ -1555,7 +1586,7 @@ namespace SpeedStars.Physical
                          (!leg.grounded && leg.ankle.y - AnkleGround(leg) > TouchHeight * 1.5f);
             if (inAir)
             {
-                StartCatch(leg, time);
+                StartCatch(leg, time, minCatch);
                 return;
             }
             Enter(leg, LegPhase.Push, time, 0f);
@@ -1566,7 +1597,7 @@ namespace SpeedStars.Physical
         /// An early press: the swinging leg goes on from its angles and speed to the touchdown pose in a short curve
         /// (as fast as catchSpeed allows), ending at the speed the stance starts at; then the foot is planted.
         /// </summary>
-        void StartCatch(Leg leg, double time)
+        void StartCatch(Leg leg, double time, float minCatch = 0f)
         {
             EnsureBuffers(leg);
             LegAngles c = Key(ContactPose(), hopContact);
@@ -1582,6 +1613,7 @@ namespace SpeedStars.Physical
             }
             float dur = Mathf.Clamp(Mathf.Max(Mathf.Abs(c.thigh - leg.angles.thigh) / Mathf.Max(1f, catchSpeed),
                 Mathf.Abs(c.knee - leg.angles.knee) / Mathf.Max(1f, catchSpeed * KneeSpeedFactor)), MinCatch, MaxCatch);
+            dur = Mathf.Max(dur, minCatch);
             Enter(leg, LegPhase.Push, time, dur);
             float spanT = c.thigh - leg.angles.thigh, spanK = c.knee - leg.angles.knee;
             leg.keys[4] = c;
@@ -2727,6 +2759,12 @@ namespace SpeedStars.Physical
             bool off = preview || sim.InJump;
             // The hop target comes from the keys themselves (NoteIntent, in OnTapped: taken or not, not the sim's slowly built bias). Here only the
             // pose's side: a kept press is taken once the foot is down, and a press the pose took that opened the hop (or changed its leg) frees the other leg.
+            if (_swapLeg >= 0)
+            {
+                Leg sw = Legs(_swapLeg);
+                if (sw.grounded && sw.phase == LegPhase.Push) CompleteSwap(now);
+                else if (off || now - _swapKeyTime > 1f) _swapLeg = -1;
+            }
             TakeBuffered(now);
             if (_posePresses != _hopPresses)
             {
@@ -3562,6 +3600,7 @@ namespace SpeedStars.Physical
             _hopOpenPending = false;
             _hopWanted = false;
             _hopBufLeg = -1;
+            _swapLeg = -1;
             _motionAt = -10.0;
             _hopPrevTime = -10.0;
             _posePresses = _armPresses = _hopPresses = 0;
