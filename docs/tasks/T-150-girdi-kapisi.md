@@ -1,7 +1,7 @@
 ---
 id: T-150
 title: Bir girdinin hareketi bitmeden ayni girdi poz tarafindan kabul edilmez (kosu, tek ayak, cift ayak, gecisler)
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-148]
 owns_paths:
@@ -10,7 +10,12 @@ owns_paths:
   - "docs/tasks/T-150-girdi-kapisi.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits:
+  - 6c710cc1
+  - 785bc809
+  - 7545fdf8
+  - f92e9855
+  - 5da8ea64
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
@@ -61,3 +66,5 @@ Kullanici 06.11: "bir input verdiysem o inputun etkisi bitene kadar o inputu ver
 - Tur 2: ritim tustan ogrenilir (`Leg.lastKey`, `pressFollowSame` 0.22, `pressFollowRun` 0.30): reddedilen basis da `cycle`'i besler, `NoteCycle` anahtar araligini alir; `pairSecond` penceresi 1.5 * PairWindow.
 - Tur 3: `_poseSkippedOther` kalkti; sirali tus `alternating` (bir onceki tus, alinsin alinmasin, digeri ve durak yok) ile okunur: eslem ve `PressStillBusy.sameKey` buna bakar.
 - Tur 4: `_altStreak` (sirali ve tus kendi araligi >= pressFollowRun, art arda 3, `SettledStreak`): oturmus siralı ritimde kapi reddetmez; `PoseMinGap` kalir, spam sayaci sifirlar.
+- Olcu (t150-d; alinan / tus): spamHop 10/38 (0.32 sn, her birinde ayak kalkar), spamRun 13/38, spamPair 16/60, runSpamHop 18/42; rhythm032, slowRun, roughRun, start, restart, stop, pairOrder, runToPair %100; fastRun %96; hopSwap 16/18, runToHop 18/20, hopToRun 16/18: redler yalniz gecis aninda. Sim hizi 0.0 fark.
+- Dort tur: kapi yarim ritme kilitledi (`cycle` kabul edilenden ogreniyordu) -> `lastKey`; yalanci cift -> `pairSecond` 0.06; tus-bacak eslemesi kaydi -> `alternating`; ritim tuslardan yarim adim kayinca tus hep yeni kalkan ayaga denk geldi -> `_altStreak >= 3` kapi karismaz.
