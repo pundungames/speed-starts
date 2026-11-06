@@ -1,7 +1,7 @@
 ---
 id: T-157
 title: Her hareket basistan: basissiz animasyon yok, ham tus niyeti, bacak degistirme calisir
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-154]
 owns_paths:
@@ -10,14 +10,15 @@ owns_paths:
   - "docs/tasks/T-157-basissiz-animasyon-yok.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits:
+  - f693e54c
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -73,3 +74,8 @@ Son basistan sonra baslayan salinimlar (saniye, son basisa gore):
 - Her adim ayri commit: `git commit -F <mesaj-dosyasi> -- <yollar>`, mesaj dosyasi scratch'te (`C:\Users\Monster\AppData\Local\Temp\claude\d--Pundun-speed-starts\1c7d0dba-289b-4948-ba09-42f88d086602\scratchpad\`), adinda "main" yok, son satir `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Git'i Bash ile cagir. `git add -A`, push, reset yok. Calisma yeri `D:\Pundun\speed-starts-ik`, dal `agent/ik-kosucu`.
 
 ## Calisma notu
+- Yapildi: Push toe-off'ta `swungSincePress` ise `Rest` (yeni salinim yok); `NoteIntent` OnTapped'te her ham tusta same/swap/_hopRepeated hesaplar, UpdateHop yalniz alinan basista diger bacagi serbest birakir (`_hopOpenPending`); `use` cevirme yalniz `_hop*(1-_pair)<0.5`.
+- Sekis: `_stepNow` penceresi `Lerp(stepTimeMax, hopStopDelay, hopW)` + `HopMoving` + `hopStopDelay` (0.2); `_idleStock`'ta `_hopTarget` 0. Tampon: `_hopBufLeg` (son tus, inise `hopBufferTime` 0.25 kala), `TakeBuffered` hopStanceMin ve hopTime sonrasi alir, `HopBufferLife` 0.75 sn.
+- Eklenen: 2 alan (`hopStopDelay`, `hopBufferTime`), 1 sabit; kaldirilan: yok (`HopRepeatWindow` hala kullanimda). Senaryolar: fastTap, hopTap, hopSwapSlow.
+- Derleyici yok, hicbir sey olculmedi. Supheli: kosuda `_stepNow` penceresi (stepTimeMax) degismedi, yani kosuda stop hala 0.6 sn; sekiste ritim 0.27'de gec basis tamponlandigi icin sekis aralik hopTime'a yakin kalir; `openOther`'a `!HopLegInAir()` eklendi.
+- Ayaktan sekis (`_standLeg`) ve `openOther` duruyor; `hopMaxAccel`, `_hopQuick`, `_landHold` dokunulmadi.
