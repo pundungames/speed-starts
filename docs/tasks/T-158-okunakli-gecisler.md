@@ -19,6 +19,8 @@ commits:
   - 5dcf6215
   - 53acfe65
   - 84b2be0f
+  - 14c207b7
+  - 0ae539ad
 tests:
   - "gerekmiyor: gorsel; kullanici gozle bakar"
 analytics:
@@ -73,3 +75,4 @@ Kullanici 06.11 (T-157 sonrasi): "her harekette inputta ust govde kendini biraz 
 - YAPILMADI: F'nin ayak zipalamasi (basissiz kalkista `Enter(Rest)` karesinde y/ankleZ sicramasi): kor tahminle pin/Enter koduna dokunmadim, olcumle bakilmali.
 - Supheli: DeferSwap yolu (`_swapLeg`) ve eski bacagin `FreeOtherLeg` zamani; `hopSwingMin` hala tek basista degil spamde de gecerli; `RushSwing` hiz sicramasi; bas basis geri itme isareti (negatif = geri) varsayim.
 - Derleyici yok, hicbir sey olculmedi.
+- Olcum t158-a sonrasi duzeltmeler: A darbesi hiz biriminde (tepe=kick), H agirligi leg.cycle*0.5, bacak degistirmede tavan (hopSwapTime+0.1), eski ayak adim salinimiyla kalkar ve inince serbest bacaga acilir (FreeOtherLeg + Land), FreeFootRise riseW ile 0.12 sn, holdStand egimi hopBodyW yayindan. Yapilmadi: PinFeet birakma Z sicramasi; spamToRun kilidinin sebebi kodda net bulunamadi (tahmin: _jumping TickLegs durdurur).
