@@ -146,9 +146,20 @@ namespace SpeedStars.Bridge
             Save(all, sRot, sPos);
             Restore(all, savedRot, savedPos);
 
+            // Fingers keep the driver's fist: everything under a hand bone (the hand itself stays) is left out.
+            Transform handL = null, handR = null;
+            for (int i = 0; i < n; i++)
+            {
+                if (all[i].name == "B-hand.L") handL = all[i];
+                else if (all[i].name == "B-hand.R") handR = all[i];
+            }
+            var skip = new bool[n];
+            for (int i = 0; i < n; i++)
+                skip[i] = (handL && all[i] != handL && all[i].IsChildOf(handL)) || (handR && all[i] != handR && all[i].IsChildOf(handR));
+
             int kept = 0;
             for (int i = 0; i < n; i++)
-                if (all[i] != root && (Differs(savedRot[i], savedPos[i], rRot[i], rPos[i], out _) || Differs(savedRot[i], savedPos[i], sRot[i], sPos[i], out _)))
+                if (all[i] != root && !skip[i] && (Differs(savedRot[i], savedPos[i], rRot[i], rPos[i], out _) || Differs(savedRot[i], savedPos[i], sRot[i], sPos[i], out _)))
                     kept++;
             if (kept == 0)
             {
@@ -166,7 +177,7 @@ namespace SpeedStars.Bridge
             int k = 0;
             for (int i = 0; i < n; i++)
             {
-                if (all[i] == root) continue;
+                if (all[i] == root || skip[i]) continue;
                 bool movesR, movesS;
                 bool dr = Differs(savedRot[i], savedPos[i], rRot[i], rPos[i], out movesR);
                 bool ds = Differs(savedRot[i], savedPos[i], sRot[i], sPos[i], out movesS);
