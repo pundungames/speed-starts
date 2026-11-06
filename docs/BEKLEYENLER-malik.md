@@ -8,7 +8,7 @@ Her madde `main`'deki koda bakılarak kontrol edildi. Play'de denenmedi.
 | # | Madde | Durum | Kısaca |
 |---|---|---|---|
 | 1 | Engel teması | Kodu yazıldı (03.11), denenmedi | Bacakların bar altından geçmesine bakılıyor |
-| 2 | 4×100m ve Medley | 4×100m NPC'lerle oynanır (03.11), Medley açık | Dört bacağı da NPC koşuyor; oyuncu girdisi karakter dönünce |
+| 2 | 4×100m ve Medley | 4×100m oyuncu takımını oyuncu koşar (06.11), Medley açık | Oyuncu dört etabı sırayla koşar; play'de denenmedi |
 | 3 | UI'a dokunmanın adım sayılmaması | Bizde çözüldü (04.11) | `RunnerInput`'a dokunulmadı: `Scripts/Bridge/RunnerPressGate.cs` kuyruğu süzüyor; Malik isterse kendi girdisine taşır |
 | 3b | Bitişte başa dönmeme, bitiş olayı | Bizde çözüldü (04.11) | `RaceController`'a dokunulmadı: `Scripts/Bridge/RaceFinishGate.cs` çizgiyi önce görür, kontrolcüyü boş bir `RunnerBody` üzerinde bitirir (kayıt için `LastRaceTime` gerek). Malik gerçek bitiş olayı verirse bu sınıf kalkar |
 | 3c | Kulvar ve hızlı durma | Bizde çözüldü (04.11) | `RunnerBody`'nin başlangıcı özel ve sim çabuk duramıyor: `Scripts/Bridge/RunnerRootOffset.cs` kökü `RunnerBody`'den hemen sonra düzeltiyor. Malik başlangıcı ayarlanabilir yaparsa kulvar kısmı oraya taşınır |
@@ -54,9 +54,18 @@ fizik değişmez) ya da yerde atlamayı geçersiz saymak. Hangisi olacağına Ma
 - Fark: bizim fizikte duruştan 7 m/s ~3.5 sn sürüyor (referansta daha kısa); bu yüzden çıkış farkı 20 m (`startGapMeters`),
   Perfect penceresi 4 sn. Play ölçümü: bayrak ~8.5 m/s'de, çizgiden ~5 m önce geçiyor; bacaklar 12.0 / 10.0 / 10.8 / 9.7 sn.
 
+**06.11'de yapılan (oyuncu takımı oyuncuda):**
+- `RaceRelay.ForwardPlayerKeys`: oyuncunun `RunnerInput` kuyruğu (`RunnerPressGate` süzdükten sonra) bayrağı taşıyan koşucuya
+  gider; gizli koşucu tuş almaz. Sıra -150 → -140 (kapıdan sonra, `RunnerBody`'den önce). Geri sayımda kapının yanlış çıkış
+  düşüşü 1. koşucuya gider.
+- Değişim: oyuncunun yukarı kaydırması (`JumpPressed`) = `Swipe`, yalnız sıradaki koşucu çıktıktan sonra. Oyuncu takımında
+  NPC kaydırması kapalı; kaydırmazsa "Late". Sıradaki koşucu yine kendi çıkar.
+- Bayrak geçince eski koşucu oyuncunun basılı tuşlarını bırakır, yeni koşucu NPC tuşlarını bırakır ve oyuncunun bir sonraki
+  basışını bekler (değişimde basılı kalan tuşun bırakılması yeni koşucuya gitmez).
+- Play'de denenmedi.
+
 **Açık:**
-- Oyuncu girdisi (karakter dönünce): oyuncunun dokunuşu bayrağı taşıyan koşucuya gitsin; menüde bacak seçici
-  (`◀ 1st leg ▶`, bacak renkleri, Custom 1–4 koşucu, bacağa göre Edit racer) — UI tarafı.
+- Menüde bacak seçici (`◀ 1st leg ▶`, bacak renkleri, Custom 1–4 koşucu, bacağa göre Edit racer) — UI tarafı.
 - Watch Replay ve Analysis relay'de oyuncunun gizli koşucusunu gösterir (relay izi yok).
 - 32 rig (8×4) telefonda ölçülmedi; aynı anda takım başına ~2–3'ü açık.
 - Kaydırma kuralı videoyla doğrulanmadı (kayıt telefonda `/sdcard/cc_relay2.mp4`, bağlantı koptu): bayrak eli sırası,
