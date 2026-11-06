@@ -50,3 +50,4 @@ Kullanici 06.11: "karakterin durur pozisyondan yurumeye kosmaya gecmesi acayip k
 - Commit 3: `_armW = Max(_speedCurve, armStepShare) * gate` (ayni yumusatma); `StepArm` bunu okur, `_gaitW` baska okuyuculari ayni.
 - Cift basis: kaldirilan bacak ikinci basista `BeginStance` -> `StartCatch` ile iner (ertelenmedi); olculmedi. Belirsiz: kisa ciftte ayak havada kalabilir.
 - Tur 2: `OtherTakesOver` yukselen `standStep` salinimini (tuck tepesine varmadan) 'iniyor' saymaz; basilan ayak planted kalir.
+- Tur 3: kok: `StanceExtent` yuksekligi yalniz hiza bagli `_runHome`'dan geliyordu (0.5-3 m/s), kalkista govde cömelik yukseklikte kaliyordu; `StanceHome() = Max(_runHome, stanceStepShare * _stepping * _plainRun * (1 - _dive))`. Dip/ucus farkini dogrulayamadim (olculmedi).

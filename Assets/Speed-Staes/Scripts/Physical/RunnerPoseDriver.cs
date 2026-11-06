@@ -503,6 +503,9 @@ namespace SpeedStars.Physical
         [Tooltip("How much of each new press-to-press time a leg's cycle takes on (1 = just the last one): one odd press " +
                  "does not jerk the legs.")]
         [Range(0.1f, 1f)] public float stepFollow = 0.5f;
+        [Tooltip("Plain running: the share of the run's stance height that steps give from the first press, whatever the speed " +
+                 "(the speed alone left a start at crouch height). 0 = the height waits for the speed (restToBaseSpeed).")]
+        [Range(0f, 1f)] public float stanceStepShare = 1f;
         [Tooltip("While a key is down, home is the crouch below x m/s and the running home above y. With no key down " +
                  "home is the crouch: the runner heads straight for it, no upright stance on the way.")]
         public Vector2 restToBaseSpeed = new Vector2(0.5f, 3f);
@@ -1923,7 +1926,14 @@ namespace SpeedStars.Physical
             leg.shinLength * Mathf.Cos((a.thigh - (180f - a.knee)) * Mathf.Deg2Rad);
 
         /// <summary>The joint's height over the ground in a stance, before its dip: the crouch standing, the touchdown pose running.</summary>
-        float StanceExtent(Leg leg) => Mathf.Lerp(Extent(leg, crouch), Extent(leg, Stride(ContactPose())), _runHome);
+        float StanceExtent(Leg leg) => Mathf.Lerp(Extent(leg, crouch), Extent(leg, Stride(ContactPose())), StanceHome());
+
+        /// <summary>
+        /// How far the stance height is from the crouch to the run's. It followed the speed alone (_runHome), so a start from a standstill ran
+        /// at crouch height for a second while the legs already stepped: the foot did not clear the ground and the hips rose in steps as the speed
+        /// came. Plain running now takes the run's height with the steps (stanceStepShare); above restToBaseSpeed.y nothing changes.
+        /// </summary>
+        float StanceHome() => Mathf.Max(_runHome, stanceStepShare * _stepping * _plainRun * (1f - _dive));
 
         /// <summary>Plain running's touchdown pose blended in; a hop or a pair keeps contact.</summary>
         LegAngles ContactPose() => LegAngles.Lerp(contact, contactRun, _plainRun);
