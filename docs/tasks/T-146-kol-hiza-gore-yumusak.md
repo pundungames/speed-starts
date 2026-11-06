@@ -1,7 +1,7 @@
 ---
 id: T-146
 title: Duz kosuda kol uylugun kare dalgasini kopyalamaz, adim suresine gore uzun yumusak salinir
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-145]
 owns_paths:
@@ -15,8 +15,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -45,3 +45,6 @@ Arka bacak bekler: `R_thighWorld` 3.80-4.03 sn arasi -45'te sabit. `StepArm` kol
 - Bacak (T-145 kapandi), kosudan tek ayaga gecis (T-147). Kolun hop ve pair saatleri.
 
 ## Calisma notu
+- Yol: `StepArm`'te uyluktan gelen `t` kol basina kritik sonumlu yaydan gecer (`arm.drive`), Hz = `armPumpRate` (yeni, 1.0) / adim suresi (`_armPeriod`); `pump` ve dizin `open`'u `Lerp(ham t, yay, _plainRun)`'dan okur. `hw`, `pw` dallari ve limbSpring/armMaxSpeed degismedi.
+- Gait agirligi < 0.05 iken ya da ilk karede yay ham t'ye oturur; `ResetGait` `driveSet`'i sifirlar.
+- Hiz egrisi eklenmedi; olculmedi. Belirsiz: hizli tarafta aralik (fastRun >= 50) yay yuzunden daralabilir.

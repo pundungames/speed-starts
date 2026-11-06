@@ -287,6 +287,8 @@ namespace SpeedStars.Physical
             [HideInInspector] public float side;
             [HideInInspector] public float swing, elbow;   // this frame's pose (deg)
             [System.NonSerialized] public Track swingT, elbowT;   // what is shown follows the pose's target through these
+            [System.NonSerialized] public Spring drive;           // the run's drive (the thigh's 0..1) through a spring tied to the step time
+            [System.NonSerialized] public bool driveSet;
         }
 
         [Tooltip("The physics this draws (found on this object if empty). The visual never changes speed or timing.")]
@@ -383,6 +385,9 @@ namespace SpeedStars.Physical
         [Tooltip("From the folded pass to the thigh's peak the knee opens later than the thigh comes forward: 1 = it keeps pace, " +
                  "higher = the leg drives from the hip first and the knee opens late; it is open as the thigh arrives. The ends do not move.")]
         [Range(1f, 4f)] public float kneeOpenDelay = 2f;
+        [Tooltip("Plain running: how fast the arm follows the leg's drive, in springs per step (the spring's Hz = this / the press-to-press time). " +
+                 "The arm swings the length of the step instead of copying the thigh's stops and darts, at every speed alike. Higher = closer to the leg.")]
+        public float armPumpRate = 1f;
         [Tooltip("The swing never takes less than this (s).")]
         public float swingMin = 0.12f;
         [Tooltip("A press that comes while the leg is still swinging takes it down to the touchdown pose at up to this " +
@@ -2878,6 +2883,11 @@ namespace SpeedStars.Physical
                 // The opposite leg held out (one-leg hops) does not swing: the arm balances against its own side's leg instead.
                 float drive = Mathf.Lerp(opposite.thighWorld, armThighRange.x + armThighRange.y - own.thighWorld, opposite.idle);
                 float t = Mathf.Clamp(Mathf.InverseLerp(armThighRange.x, armThighRange.y, drive), -0.1f, 1.1f);
+                // Plain running only: the drive goes through a critically damped spring sized by the step time, so a leg that waits
+                // and darts does not make the arm do the same. Not running yet (gait weight low) it sits on the raw drive: no sweep on entry.
+                if (!arm.driveSet || _gaitW < 0.05f) { arm.drive.Reset(t); arm.driveSet = true; }
+                else if (dt > 0f) arm.drive.Step(t, Mathf.Max(0.1f, armPumpRate) / Mathf.Max(ArmPeriodMin, _armPeriod), 1f, dt);
+                t = Mathf.Lerp(t, arm.drive.Value, _plainRun);
                 float mid = 0.5f * (armRunBack + armRunFront);
                 float pump = mid + (Mathf.LerpUnclamped(armRunBack, armRunFront, t) - mid) * amp;
                 // The arm going back opens at the elbow too (the back half of the swing), the forward one stays bent with the hand at the chin.
@@ -2968,6 +2978,7 @@ namespace SpeedStars.Physical
             _armKick = 0f;
             _armClock = ArmIdle;
             leftArm.swingT.set = rightArm.swingT.set = false;
+            leftArm.driveSet = rightArm.driveSet = false;
             _hipFree = false;
             _twist = _roll = _chestYaw = _chestRoll = 0f;
             _trunkInit = false;
