@@ -114,6 +114,7 @@ namespace SpeedStars.PlayTests
             public double Time;
             public int Leg;
             public bool Down;
+            public int Stance;   // T-153: 1 + RunnerStartStance value (0 = a key event): the harness writes the driver startStance, as the Bridge does
         }
 
         private sealed class Scenario
@@ -163,6 +164,12 @@ namespace SpeedStars.PlayTests
             public readonly List<Ev> Events = new List<Ev>();
             public readonly List<float> Strips = new List<float>();
             public double Next = 0.5;
+
+            /// <summary>T-153: the start phase at a scenario time (1 = None, 2 = Marks, 3 = Set: Ev.Stance); the harness writes it to the driver.</summary>
+            public void Stance(double t, int stance) => Events.Add(new Ev { Time = t, Stance = stance });
+
+            /// <summary>Marks at 0.3 s, Set at 1.1 s, the keys from 1.9 s (the caller adds them).</summary>
+            public void BlockStart() { Stance(0.3, 2); Stance(1.1, 3); Next = 1.9; }
             public int LastLeg = -1;
             public double LastRelease;
             private readonly System.Random _rng;
@@ -297,6 +304,11 @@ namespace SpeedStars.PlayTests
             double again = s.Alt(2.5f, 0.30f, Tap); s.Strip(again); s.Strip(again + 0.65); list.Add(s.Build(0.5f));
             s = new Script("walkStart"); s.Alt(3f, 0.60f, Tap); s.Strips.Add(0.40f); s.Strips.Add(1.05f); list.Add(s.Build(0.5f));
             s = new Script("oneTap"); s.Strip(s.Alt(0.1f, 0.30f, Tap)); list.Add(s.Build(2f));
+            // T-153: the block stance, Marks at 0.3 s, Set at 1.1 s, the first press at 1.9 s; strips on Marks, Set, the first press and 0.55 s later.
+            s = new Script("blockStart"); s.BlockStart(); s.Alt(3f, 0.30f, Tap); foreach (float st in new[] { 0.3f, 1.1f, 1.8f, 2.45f }) s.Strips.Add(st); list.Add(s.Build(0.5f));
+            s = new Script("blockPair"); s.BlockStart(); s.Pair(2f, 0.35f, Tap, 0.015f, 0.015f, false); foreach (float st in new[] { 1.1f, 1.8f, 2.45f }) s.Strips.Add(st); list.Add(s.Build(0.5f));
+            s = new Script("blockHold"); s.BlockStart(); s.Held(1.2f, 0.27f, 1); foreach (float st in new[] { 1.1f, 1.8f, 2.45f }) s.Strips.Add(st); list.Add(s.Build(0.5f));
+            s = new Script("blockHop"); s.BlockStart(); s.Same(2.5f, 0.27f, Tap, 1); foreach (float st in new[] { 1.1f, 1.8f, 2.45f }) s.Strips.Add(st); list.Add(s.Build(0.5f));
             s = new Script("holdStand"); s.Strip(s.Held(1.2f, 0.27f, 1)); list.Add(s.Build(0.5f));
             s = new Script("holdBothStand"); s.Strip(s.Held(1.2f, 0.27f, 0, 1)); list.Add(s.Build(0.5f));
 
@@ -662,7 +674,8 @@ namespace SpeedStars.PlayTests
             private readonly List<Renderer> _others;
             private readonly bool[] _othersWere;
             private readonly float _side;
-            private readonly Transform _runner, _hipTarget, _hipsBone, _chestBone, _toeL, _toeR, _footL, _footR;
+            private readonly Transform _runner, _hipTarget, _hipsBone, _chestBone, _toeL, _toeR, _footL, _footR, _handL, _handR;
+            private readonly FieldInfo _startStanceField;
             private readonly FieldInfo _stepping;
             private float _restToeL, _restToeR, _restFootL, _restFootR;
             private readonly object _legL, _legR, _armL, _armR;
@@ -736,6 +749,11 @@ namespace SpeedStars.PlayTests
                 _toeL = FindDeep(_runner, "B-toe.L"); _toeR = FindDeep(_runner, "B-toe.R");
                 _footL = FindDeep(_runner, "B-foot.L"); _footR = FindDeep(_runner, "B-foot.R");
                 _stepping = d.GetField("_stepping", Any);
+                // The hand is the forearm's child (the driver binds no hand bone); the forearm itself if it has none.
+                Transform foreL = FindDeep(_runner, "B-forearm.L"), foreR = FindDeep(_runner, "B-forearm.R");
+                _handL = foreL != null && foreL.childCount > 0 ? foreL.GetChild(0) : foreL;
+                _handR = foreR != null && foreR.childCount > 0 ? foreR.GetChild(0) : foreR;
+                _startStanceField = d.GetField("startStance");
                 Assert.IsNotNull(_toeL, "B-toe.L not found"); Assert.IsNotNull(_toeR, "B-toe.R not found");
                 Assert.IsNotNull(_footL, "B-foot.L not found"); Assert.IsNotNull(_footR, "B-foot.R not found");
                 Assert.IsNotNull(_hipTarget, "RunnerPoseDriver.hipTarget is not bound");
@@ -789,7 +807,7 @@ namespace SpeedStars.PlayTests
             /// <summary>Columns after the form ones: frame, key events, per-leg state and world foot, body state, drawn bones.</summary>
             private static string TransHeader() =>
                 ",frame,events," + TransLegColumns("L") + "," + TransLegColumns("R") +
-                ",d_hop,d_pair,d_dive,d_plainRun,d_amp,d_heldNow,d_carried,d_idleStock,d_ballistic,d_posePresses,d_bodyY,d_bodyYVel,hipBoneH,headPitch";
+                ",d_hop,d_pair,d_dive,d_plainRun,d_amp,d_heldNow,d_carried,d_idleStock,d_ballistic,d_posePresses,d_bodyY,d_bodyYVel,hipBoneH,headPitch,L_handY,R_handY";
 
             /// <summary>One leg's state and its foot and toe in the world: along the run axis and height above the ground.</summary>
             private string TransLeg(object leg, Transform foot, Transform toe, Vector3 forward) =>
@@ -811,7 +829,9 @@ namespace SpeedStars.PlayTests
                     bodyYVel = Convert.ToSingle(spring.GetType().GetField("Velocity").GetValue(spring), CultureInfo.InvariantCulture);
                 }
                 sb.Append(',').Append(F(bodyY)).Append(',').Append(F(bodyYVel)).Append(',').Append(F(_hipsBone.position.y - _groundY))
-                  .Append(',').Append(F(headPitch));
+                  .Append(',').Append(F(headPitch))
+                  .Append(',').Append(F(_handL != null ? _handL.position.y - _groundY : float.NaN))
+                  .Append(',').Append(F(_handR != null ? _handR.position.y - _groundY : float.NaN));
                 return sb.ToString();
             }
 
@@ -938,6 +958,15 @@ namespace SpeedStars.PlayTests
                 while (_evIdx < events.Count && events[_evIdx].Time < t + Dt - 1e-9)
                 {
                     Ev e = events[_evIdx++];
+                    if (e.Stance > 0)
+                    {
+                        // The race start phase, as the Bridge sets it (None, Marks, Set).
+                        if (_startStanceField != null) _startStanceField.SetValue(_driver, Enum.ToObject(_startStanceField.FieldType, e.Stance - 1));
+                        else UnityEngine.Debug.LogWarning("TRANS_FIELD_MISSING RunnerPoseDriver.startStance");
+                        if (_pending.Length > 0) _pending.Append('|');
+                        _pending.Append(e.Stance == 2 ? 'M' : e.Stance == 3 ? 'S' : 'N');
+                        continue;
+                    }
                     _inject.Invoke(_input, new object[] { e.Leg, e.Down, Start + e.Time });
                     _keyDown[e.Leg] = e.Down;
                     if (e.Down) _pressTimes.Add(e.Time);
