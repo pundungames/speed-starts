@@ -48,3 +48,4 @@ Arka bacak bekler: `R_thighWorld` 3.80-4.03 sn arasi -45'te sabit. `StepArm` kol
 - Yol: `StepArm`'te uyluktan gelen `t` kol basina kritik sonumlu yaydan gecer (`arm.drive`), Hz = `armPumpRate` (yeni, 1.0) / adim suresi (`_armPeriod`); `pump` ve dizin `open`'u `Lerp(ham t, yay, _plainRun)`'dan okur. `hw`, `pw` dallari ve limbSpring/armMaxSpeed degismedi.
 - Gait agirligi < 0.05 iken ya da ilk karede yay ham t'ye oturur; `ResetGait` `driveSet`'i sifirlar.
 - Hiz egrisi eklenmedi; olculmedi. Belirsiz: hizli tarafta aralik (fastRun >= 50) yay yuzunden daralabilir.
+- Tur 2: `armPumpWidth` 1.12 filtreli kol surusunu ortasi etrafinda acar (-0.2..1.2 kirpili); `_plainRun` 0'da eski.

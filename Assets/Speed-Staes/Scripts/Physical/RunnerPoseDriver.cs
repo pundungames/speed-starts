@@ -388,6 +388,9 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running: how fast the arm follows the leg's drive, in springs per step (the spring's Hz = this / the press-to-press time). " +
                  "The arm swings the length of the step instead of copying the thigh's stops and darts, at every speed alike. Higher = closer to the leg.")]
         public float armPumpRate = 1f;
+        [Tooltip("Plain running: the filtered arm drive is opened by this much around its middle, giving back the width the spring takes " +
+                 "(1 = as filtered). The result stays within -0.2..1.2 of the thigh range.")]
+        public float armPumpWidth = 1.12f;
         [Tooltip("The swing never takes less than this (s).")]
         public float swingMin = 0.12f;
         [Tooltip("A press that comes while the leg is still swinging takes it down to the touchdown pose at up to this " +
@@ -2887,7 +2890,7 @@ namespace SpeedStars.Physical
                 // and darts does not make the arm do the same. Not running yet (gait weight low) it sits on the raw drive: no sweep on entry.
                 if (!arm.driveSet || _gaitW < 0.05f) { arm.drive.Reset(t); arm.driveSet = true; }
                 else if (dt > 0f) arm.drive.Step(t, Mathf.Max(0.1f, armPumpRate) / Mathf.Max(ArmPeriodMin, _armPeriod), 1f, dt);
-                t = Mathf.Lerp(t, arm.drive.Value, _plainRun);
+                t = Mathf.Lerp(t, Mathf.Clamp(0.5f + (arm.drive.Value - 0.5f) * armPumpWidth, -0.2f, 1.2f), _plainRun);
                 float mid = 0.5f * (armRunBack + armRunFront);
                 float pump = mid + (Mathf.LerpUnclamped(armRunBack, armRunFront, t) - mid) * amp;
                 // The arm going back opens at the elbow too (the back half of the swing), the forward one stays bent with the hand at the chin.
