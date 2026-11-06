@@ -193,6 +193,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float[] knots;             // the keys' times in the swing (0..1)
             [System.NonSerialized] public LegAngles[] tuckKeys, tuckSlope;   // plain running's own swing: start, recover, mid, tucked peak, shin throw, contact
             [System.NonSerialized] public float[] tuckKnots;
+            [System.NonSerialized] public bool standStep;          // this swing is a standing start's first step: it does not go back past where it began
 
             public Vector3 RestBall => restAnkle + ballOffset;
             public double EndTime => phaseTime + duration;
@@ -1131,6 +1132,7 @@ namespace SpeedStars.Physical
                 return;
             }
             l.held = true;
+            bool fromStand = _idleStock;   // read before it is cleared: no key and no press lately, so this press starts the run from a standstill
             _idleStock = false;   // a key is down: the legs are not on their way to the stock pose, not even for the rest of this frame
             // The pose takes only the presses a person's steps can follow. One that comes within PoseMinGap of the last one taken is
             // the sim's alone (it counts it all the same: speed and timing are the sim's): no new stance, no cycle, no throw of the arms, no
@@ -1164,6 +1166,12 @@ namespace SpeedStars.Physical
             }
             _lastPress = time;
             if (!_jumping) BeginStance(used, time);
+            // From a standstill the other leg has no cycle of its own to be in (a run's "it is in its own cycle"): the first press takes a
+            // real step with it, or both feet stay down while the body goes over them. Not a pair's second key, a hop's freed leg, a hold.
+            Leg stepper = Legs(1 - use);
+            if (fromStand && !pairSecond && !_jumping && _plainRun > 0.5f && _hop < 0.5f && !_hopFreed &&
+                stepper.phase == LegPhase.Rest && !stepper.held && !stepper.HeldBack)
+                StartSwing(stepper, time, true);
         }
 
         /// <summary>
@@ -1253,9 +1261,10 @@ namespace SpeedStars.Physical
         /// Toe-off (or the release of a hold): the leg's swing to the touchdown pose, one Hermite curve from where it
         /// is and how fast it is going through recover, mid and kneeDrive, ending when its next press is due.
         /// </summary>
-        void StartSwing(Leg leg, double time)
+        void StartSwing(Leg leg, double time, bool standing = false)
         {
             EnsureBuffers(leg);
+            leg.standStep = standing;
             if (leg.cycle <= 0f) leg.cycle = Mathf.Clamp(2f * (body && body.Sim != null ? body.Sim.StepTime : 0.3f), stepTimeMin, 2f * stepTimeMax);
             float elapsed = Mathf.Min((float)(time - leg.pressedAt), leg.cycle * 0.5f);
             float lead = hopLead * _hop * (1f - _pair);   // one-key hop: the foot lands this much before the press is due
@@ -1276,7 +1285,7 @@ namespace SpeedStars.Physical
             // Lifted, the foot does not travel back through the world: the thigh goes on back only as far as the body's own move carries it.
             leg.swingBackLimit = k[0].thigh - Mathf.Rad2Deg * _rootSpeed * n[1] * len / Mathf.Max(MinExtent, _extent);
             k[1] = RecoverKeyFor(leg);
-            k[2] = MidKey();
+            k[2] = MidKeyFor(leg);
             k[3] = KneeDriveKey();
             k[4] = Key(ContactPose(), hopContact);
             for (int i = 1; i < SwingKeyCount - 1; i++)
@@ -1307,7 +1316,7 @@ namespace SpeedStars.Physical
             n[3] = Mathf.Clamp(tuckThrowKeys.x, n[2] + 0.02f, 0.9f);
             n[4] = Mathf.Clamp(tuckThrowKeys.y, n[3] + 0.02f, 0.97f);
             n[5] = 1f;
-            k[2] = MidKey();
+            k[2] = MidKeyFor(leg);
             k[3] = Key(tuckPeak, hopKneeDrive);
             k[4] = Key(shinThrow, hopKneeDrive);
             k[5] = a[4];
@@ -1333,7 +1342,7 @@ namespace SpeedStars.Physical
             LegAngles[] k = leg.keys, m = leg.slope;
             float[] n = leg.knots;
             k[1] = RecoverKeyFor(leg);
-            k[2] = MidKey();
+            k[2] = MidKeyFor(leg);
             k[3] = KneeDriveKey();
             k[4] = Key(ContactPose(), hopContact);
             for (int i = 1; i < SwingKeyCount - 1; i++)
@@ -1451,6 +1460,14 @@ namespace SpeedStars.Physical
 
         /// <summary>Folded-pass key: plain running passes further back than mid; a hop or pair jump keeps mid.</summary>
         LegAngles MidKey() => Key(LegAngles.Lerp(mid, midRun, _plainRun), hopMid);
+
+        /// <summary>The folded pass of this leg's swing: a standing start's first step does not swing back through it (a leg from the stock stance would go behind the hip first).</summary>
+        LegAngles MidKeyFor(Leg leg)
+        {
+            LegAngles k = MidKey();
+            if (leg.standStep) k.thigh = Mathf.Max(k.thigh, leg.keys[0].thigh);
+            return k;
+        }
 
         /// <summary>The recover key of this leg's swing: running, its thigh is held up to the swing's own back limit (a hop or pair jump: untouched).</summary>
         LegAngles RecoverKeyFor(Leg leg)
