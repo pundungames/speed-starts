@@ -481,7 +481,7 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running at a short step (the leg's press-to-press time at tuckFastPeriod.y or less): the tucked peak, taken whole (the stride's size does not " +
                  "shrink it): the quicker the steps, the higher the knee and the more the heel is drawn up. Blended from tuckPeak by the rhythm.")]
         public LegAngles tuckPeakFast = new LegAngles(95f, 58f);
-        [Tooltip("The rhythm tuckPeakFast follows: the leg's press-to-press time (s). x = no share (a slow step), y = the whole.")]
+        [Tooltip("The step time tuckPeakFast follows (s): half the leg's own press-to-press time (the keys alternate, so a leg is pressed every second step). x = no share (a slow step), y = the whole.")]
         public Vector2 tuckFastPeriod = new Vector2(0.34f, 0.22f);
         [Tooltip("Plain running: the shin thrown forward as the thigh comes down (thigh − (180 − knee) is the shin's angle, " +
                  "+ = ahead of the knee). From here the foot claws back into contactRun. Run weight only.")]
@@ -997,6 +997,7 @@ namespace SpeedStars.Physical
         const float MinCatch = 0.02f;
         const float TuckFastEarly = 0.06f;     // a short step's tucked peak comes this much earlier in the swing (share)
         const float TuckFastLead = 0.6f;       // and the tucked curve is read this much further ahead
+        const float PressBackPeakGain = 0.46f; // a damped spring's peak (deg) per unit of impulse speed (deg/s) x its omega: kick = peak
         const float HopMinCatch = 0.12f;       // a catch in a hop takes at least this long (s): a foot never snaps down
         const float HopStockReturn = 0.24f;    // a hop's legs go home this slowly (s) at least, whatever stockReturnTime is          // a press catching a swinging leg takes at least / at most this long (s)
         const float MaxCatch = 0.15f;
@@ -1777,7 +1778,7 @@ namespace SpeedStars.Physical
         /// and only on the way down the shin is thrown forward, before the foot claws back into the contact pose.
         /// </summary>
         /// <summary>How short this leg's steps are (0 slow .. 1 fast): from its own press-to-press time.</summary>
-        float TuckFastW(Leg leg) => leg.cycle > 0f ? Mathf.Clamp01(Mathf.InverseLerp(tuckFastPeriod.x, tuckFastPeriod.y, leg.cycle)) : 0f;
+        float TuckFastW(Leg leg) => leg.cycle > 0f ? Mathf.Clamp01(Mathf.InverseLerp(tuckFastPeriod.x, tuckFastPeriod.y, leg.cycle * 0.5f)) : 0f;
 
         void FillTuck(Leg leg)
         {
@@ -3663,7 +3664,7 @@ namespace SpeedStars.Physical
             {
                 _backPresses = _posePresses;
                 float w = 2f * Mathf.PI * pressBackSpring.frequency;
-                _pressBack.Velocity -= pressBackKick * w * 1.3f * Mathf.Clamp01((pressBackMax + _pressBack.Value) / Mathf.Max(0.01f, pressBackMax));
+                _pressBack.Velocity -= pressBackKick * w / PressBackPeakGain * Mathf.Clamp01((pressBackMax + _pressBack.Value) / Mathf.Max(0.01f, pressBackMax));
             }
             _pressBack.Step(0f, pressBackSpring.frequency, pressBackSpring.damping, dt);
             baseBend += _pressBack.Value * 0.5f;
