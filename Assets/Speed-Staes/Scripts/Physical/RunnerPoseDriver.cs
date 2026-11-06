@@ -438,9 +438,14 @@ namespace SpeedStars.Physical
         [Min(0.05f)] public float swapBehind = 0.25f;
         [Tooltip("A change of leg: the new foot stays down at most this long (s) from its touchdown (a slow body), then the hop's swing starts.")]
         [Min(0.1f)] public float swapStanceMax = 0.3f;
-        [Tooltip("One-leg hop: the last key pressed within this long (s) before the hop leg lands (or after) is kept and taken when the foot is down " +
-                 "(hopStanceMin): the same key is a new hop, the other key a change of leg. An earlier press (a double tap) is not kept.")]
-        [Min(0.02f)] public float hopBufferTime = 0.25f;
+        [Tooltip("A press the gate refuses is kept when it comes within this long (s) before the gate opens (hopSpamShare of the swing): the last one only, " +
+                 "taken when it opens. An earlier press (a double tap) is dropped.")]
+        [Min(0.02f)] public float hopBufferTime = 0.12f;
+        [Tooltip("Spam: a press before this share of the leg's swing (hop or run) is not taken: it is kept if the share comes within hopBufferTime, else dropped. " +
+                 "From this share on it is taken and the motion is repeated (the swing's rest is shortened, see hopRushTime).")]
+        [Range(0.2f, 0.9f)] public float hopSpamShare = 0.5f;
+        [Tooltip("Spam: a hop's press taken in the air lets the foot down in this long (s) at least, the same curve played faster; then the next hop starts.")]
+        [Min(0.05f)] public float hopRushTime = 0.14f;
         [Tooltip("The hop weight's spring for a hop that began from a standstill (a single press): quick, so the held-out leg opens and the first arc is whole.")]
         public SpringSettings hopStandSpring = new SpringSettings(10f, 1f);
         [Tooltip("The stride (how far the knee drives, how far the foot lands and pushes back) grows from strideMin at x m/s " +
@@ -609,9 +614,9 @@ namespace SpeedStars.Physical
         public float stepTimeMax = 0.6f;
         [Tooltip("Press gate: a key pressed for a leg whose swing is not this far along (0..1 of the swing) is not taken by the pose " +
                  "(the sim still counts it): the shin must have been thrown forward before the next step. A leg on the ground or at rest is always free.")]
-        [Range(0.3f, 0.95f)] public float pressGateShare = 0.6f;
+        [Range(0.3f, 0.95f)] public float pressGateShare = 0.5f;
         [Tooltip("Press gate: the same key again waits until its own swing is this far along (0..1), i.e. the foot is about to land.")]
-        [Range(0.5f, 1f)] public float pressGateSameShare = 0.9f;
+        [Range(0.5f, 1f)] public float pressGateSameShare = 0.5f;
         [Tooltip("The rhythm is learned from the key itself (taken or not): the same key again closer than this (s) is spam, not a rhythm " +
                  "(a hop's 0.27 is learned, a mash's 0.08 is not).")]
         public float pressFollowSame = 0.22f;
@@ -1326,7 +1331,7 @@ namespace SpeedStars.Physical
             // An unestablished hop (the first one from a standstill, not yet repeated on its key) lets the other key through: that is a run starting.
             bool openOther = _hopQuick && !_hopRepeated && leg != _poseLastLeg;
             bool hopShut = !_jumping && !fromStand && !pairSecond && !openOther && _poseLastTime > -5.0 && HopGateOn() &&
-                           (sinceTaken < hopTime || (sinceTaken < HopRepeatWindow && HopLegInAir()));
+                           HopBlocked(time);
             // What the player means is read from the key, taken or not (after the gate: it judged by the intent before this key).
             NoteIntent(leg, time);
             bool busyGate = !hopShut && sinceTaken >= PoseMinGap && !fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating);
@@ -1336,7 +1341,7 @@ namespace SpeedStars.Physical
                 _lastPress = time;    // a key that is pressed is alive whether the pose takes it or not (else the legs go to the stock pose mid-swing)
                 // A hop's press that comes as the foot is about to land (or has just) is kept: the last one only, taken when the foot is down.
                 // The gate of a run keeps it too when the key means a hop: the foot comes down, the press is taken, the hop opens.
-                if (_hopWanted && (hopShut || busyGate) && HopLandsIn(hopShut ? _poseLastLeg : leg, time) <= hopBufferTime) { _hopBufLeg = leg; _hopBufTime = time; }
+                if (_hopWanted && (hopShut || busyGate) && OpensIn(hopShut ? _poseLastLeg : leg, time) <= hopBufferTime) { _hopBufLeg = leg; _hopBufTime = time; }
                 if (learn && l.cycle > 0f)
                     l.cycle = Mathf.Lerp(l.cycle, Mathf.Clamp((float)keyGap, HopCycleFloor(), 2f * Mathf.Max(stepTimeMin, stepTimeMax)), stepFollow);
                 return;
@@ -1350,16 +1355,7 @@ namespace SpeedStars.Physical
             if (_hopWanted) _hopTarget = 1f;   // the pose takes a press that means a hop: only now the hop weight starts to rise
             // The other key while hopping (a change of leg, or the run after a hop): the foot is put down, readably, but the press works when it touches
             // (CompleteSwap): until then the hop leg keeps its role, and the arms, the idle weights and the other leg change in one frame, on the ground.
-            if (!_jumping && !pairSecond && !fromStand && _poseLastLeg >= 0 && use != _poseLastLeg && _hop * (1f - _pair) > 0.5f)
-            {
-                if (use != leg) l.pressedAt = time;
-                _swapLeg = use;
-                _swapKeyTime = time;
-                _lastPress = time;
-                _standLeg = -1;
-                BeginStance(Legs(use), time, hopSwapTime);
-                return;
-            }
+            if (!_jumping && !pairSecond && !fromStand && DeferSwap(use, time)) return;
             _posePrevGap = (float)System.Math.Min(10.0, sinceTaken);
             _poseLastTime = time;
             _poseLastLeg = use;
@@ -1452,17 +1448,34 @@ namespace SpeedStars.Physical
             _hopPrevTime = time;
         }
 
-        /// <summary>Seconds until the hop leg is down (0 when it is, or when no hop leg is moving); large when its stance has not lifted yet.</summary>
-        double HopLandsIn(int leg, double time)
+        /// <summary>Seconds until the press gate opens on this leg (hopSpamShare of its swing; 0 when open); large while its stance has not lifted yet.</summary>
+        double OpensIn(int leg, double time)
         {
             if (leg < 0) return 0.0;
             Leg l = Legs(leg);
             switch (l.phase)
             {
                 case LegPhase.Recover:
-                case LegPhase.Mid: return System.Math.Max(0.0, l.swingT0 + l.swingLen - time);
+                case LegPhase.Mid: return System.Math.Max(0.0, l.swingT0 + hopSpamShare * l.swingLen - time);
                 case LegPhase.Push: return l.grounded && !l.swungSincePress ? 10.0 : 0.0;
                 default: return 0.0;
+            }
+        }
+
+        /// <summary>
+        /// The hop's gate: the hop leg is swinging short of hopSpamShare, standing on a press that has not lifted, or still coming down. Past half the
+        /// swing a press is taken and the motion repeats; on the ground after the landing the gate is open.
+        /// </summary>
+        bool HopBlocked(double time)
+        {
+            Leg l = Legs(_poseLastLeg);
+            switch (l.phase)
+            {
+                case LegPhase.Recover:
+                case LegPhase.Mid: return SwingShare(l, time) < hopSpamShare;
+                case LegPhase.Push: return !l.grounded || !l.swungSincePress;
+                case LegPhase.Land: return HopLegInAir();
+                default: return false;
             }
         }
 
@@ -1483,6 +1496,18 @@ namespace SpeedStars.Physical
                 }
             }
             return false;
+        }
+
+        /// <summary>The other key while hopping: put its foot down readably and keep the roles until it touches. False when this is no change of leg.</summary>
+        bool DeferSwap(int use, double time)
+        {
+            if (_poseLastLeg < 0 || use == _poseLastLeg || _hop * (1f - _pair) <= 0.5f) return false;
+            _swapLeg = use;
+            _swapKeyTime = time;
+            _lastPress = time;
+            _standLeg = -1;
+            BeginStance(Legs(use), time, hopSwapTime);
+            return true;
         }
 
         /// <summary>The pressed foot of a change of leg has touched: the press works now (the roles change, the arms throw, the other leg is freed).</summary>
@@ -1511,13 +1536,13 @@ namespace SpeedStars.Physical
                 _hopBufLeg = -1;
                 return;
             }
-            // The hop on: its leg is the one to wait for (and hopTime from its press). A run's gate: the pressed leg's own foot.
-            int wait = HopGateOn() ? _poseLastLeg : _hopBufLeg;
-            if (HopLegInAir(wait) || now - Legs(wait).plantedAt < hopStanceMin || (HopGateOn() && now - _poseLastTime < hopTime)) return;
+            // The hop on: its gate is the hop's. A run's: the press gate on the pressed leg's own swing.
+            if (HopGateOn() ? HopBlocked(now) : PressStillBusy(_hopBufLeg, now, now - _poseLastTime, false)) return;
             int leg = _hopBufLeg;
             Leg used = Legs(leg);
             _hopBufLeg = -1;
-            _hopTarget = 1f;
+            if (_hopWanted) _hopTarget = 1f;
+            if (!_jumping && DeferSwap(leg, now)) return;
             _posePrevGap = (float)System.Math.Min(10.0, now - _poseLastTime);
             _poseLastTime = now;
             _poseLastLeg = leg;
@@ -1579,6 +1604,13 @@ namespace SpeedStars.Physical
             leg.swungSincePress = false;
             leg.swapStance = minCatch > 0f;
             if (leg.phase == LegPhase.Push) return;
+            // Spam: past half its swing a hop's foot is let down sooner (the rest of the same curve, faster), then the next hop is this press's.
+            if (minCatch <= 0f && _hop * (1f - _pair) > 0.5f && (leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid) &&
+                SwingShare(leg, time) >= hopSpamShare)
+            {
+                RushSwing(leg, time);
+                return;
+            }
             // Hopping, a press just after the toe-off (the swing hardly begun, the foot still on the ground) is not a catch: the catch
             // from a swing of no length moved the hip 8 cm in 4 frames. The leg times its swing again from here and goes on with the key.
             if (_hop * (1f - _pair) > 0.5f && (leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid) && SwingShare(leg, time) < HopRetimeShare &&
@@ -1597,6 +1629,21 @@ namespace SpeedStars.Physical
             }
             Enter(leg, LegPhase.Push, time, 0f);
             leg.grounded = leg.needLock = true;
+        }
+
+        /// <summary>
+        /// The swing's rest is played faster (at least hopRushTime): the clock is rescaled so the share, and so the angles, go on from where they are;
+        /// only the speed steps (the limb springs and the hip's acceleration limit take that).
+        /// </summary>
+        void RushSwing(Leg leg, double time)
+        {
+            float share = SwingShare(leg, time);
+            float remaining = leg.swingLen * (1f - share);
+            float rest = Mathf.Max(hopRushTime, remaining * 0.5f);
+            if (rest >= remaining) return;
+            float len = rest / Mathf.Max(0.05f, 1f - share);
+            leg.swingT0 = time - share * len;
+            leg.swingLen = len;
         }
 
         /// <summary>
