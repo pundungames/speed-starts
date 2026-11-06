@@ -413,13 +413,17 @@ namespace SpeedStars.Physical
         public LegAngles kneeOpenFast = new LegAngles(70f, 170f);
         [Tooltip("Plain running: the thigh's peak with the knee still folded, the heel drawn up toward the belly (the shin is " +
                  "thrown out only after this). Blended in by the run weight; a hop, a pair jump and a hold do not read it.")]
-        public LegAngles tuckPeak = new LegAngles(76f, 92f);
+        public LegAngles tuckPeak = new LegAngles(86f, 82f);
         [Tooltip("Plain running: the shin thrown forward as the thigh comes down (thigh − (180 − knee) is the shin's angle, " +
                  "+ = ahead of the knee). From here the foot claws back into contactRun. Run weight only.")]
-        public LegAngles shinThrow = new LegAngles(55f, 155f);
+        public LegAngles shinThrow = new LegAngles(56f, 160f);
         [Tooltip("Plain running: where the tucked peak and the shin throw fall in the swing's time (0..1; x < y, both after the folded pass). " +
                  "The knee opens between them, so a short fast swing needs them apart (a knee cannot open faster than legMaxSpeed).")]
         public Vector2 tuckThrowKeys = new Vector2(0.66f, 0.84f);
+        [Tooltip("Plain running: the tucked curve is read this far (s) ahead of the swing's clock from the folded pass on, so the shown " +
+                 "angles (which trail their target through the limb springs) reach the peak and the shin throw before the next press. " +
+                 "Eased in between the heel kick and the folded pass, so the swing does not jump.")]
+        public float tuckLead = 0.05f;
         [Tooltip("How much of the stride (and the flight) comes from how well the runner has been running (the sim's " +
                  "Form: presses on time): 0 = speed alone, 1 = a runner with no form takes no stride.")]
         [Range(0f, 1f)] public float formWeight = 0.8f;
@@ -1366,7 +1370,10 @@ namespace SpeedStars.Physical
             }
             // Plain running swings on its own curve (tucked, then the shin thrown); the old one is kept whole for hop and pair.
             if (_plainRun > 0f && leg.tuckKeys != null)
-                at = LegAngles.Lerp(at, SwingSegment(leg.tuckKeys, leg.tuckSlope, leg.tuckKnots, share), _plainRun);
+            {
+                float lead = leg.swingLen > 0f ? tuckLead / leg.swingLen * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(leg.knots[1], leg.knots[2], share)) : 0f;
+                at = LegAngles.Lerp(at, SwingSegment(leg.tuckKeys, leg.tuckSlope, leg.tuckKnots, Mathf.Min(1f, share + lead)), _plainRun);
+            }
             return at;
         }
 
@@ -1387,7 +1394,9 @@ namespace SpeedStars.Physical
         {
             LegAngles c = leg.keys[4], m0 = leg.slope[0], m1 = leg.slope[4];
             // A knee that is opening comes late here too (same rule as the swing); a closing one is left alone.
-            float sk = c.knee > leg.from.knee ? Mathf.Pow(s, kneeOpenDelay) : s;
+            // Plain running opens it early instead (the shin goes ahead first, then the foot claws back to the contact pose).
+            float sk = c.knee > leg.from.knee
+                ? Mathf.Lerp(Mathf.Pow(s, kneeOpenDelay), 1f - Mathf.Pow(1f - s, kneeOpenDelay), _plainRun) : s;
             return new LegAngles(Herm(leg.from.thigh, c.thigh, m0.thigh, m1.thigh, s),
                 Herm(leg.from.knee, c.knee, m0.knee, m1.knee, sk));
         }
