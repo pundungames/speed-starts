@@ -481,7 +481,7 @@ namespace SpeedStars.Physical
         public LegAngles tuckPeak = new LegAngles(86f, 82f);
         [Tooltip("Plain running at a short step (the leg's press-to-press time at tuckFastPeriod.y or less): the tucked peak, taken whole (the stride's size does not " +
                  "shrink it): the quicker the steps, the higher the knee and the more the heel is drawn up. Blended from tuckPeak by the rhythm.")]
-        public LegAngles tuckPeakFast = new LegAngles(95f, 58f);
+        public LegAngles tuckPeakFast = new LegAngles(108f, 45f);
         [Tooltip("The step time tuckPeakFast follows (s): half the leg's own press-to-press time (the keys alternate, so a leg is pressed every second step). x = no share (a slow step), y = the whole.")]
         public Vector2 tuckFastPeriod = new Vector2(0.34f, 0.22f);
         [Tooltip("Plain running: the shin thrown forward as the thigh comes down (thigh − (180 − knee) is the shin's angle, " +
@@ -1542,7 +1542,9 @@ namespace SpeedStars.Physical
             _poseLastTime = now;
             _poseLastLeg = leg;
             _posePresses++;
-            NoteCycle(used, Legs(1 - leg), now, -1.0);
+            // The key's own time is the press time (lastPress is what PairWeight reads): the touch moment as the press time made the next key look
+            // like a pair's second, and the false pair held the old foot's toe-off every frame. The cycle is learned from the keys all the same.
+            NoteCycle(used, Legs(1 - leg), _swapKeyTime, -1.0);
             used.pressedAt = now;
         }
 
@@ -2084,7 +2086,7 @@ namespace SpeedStars.Physical
                                     if (_idleStock) Enter(leg, LegPhase.Rest, time, StockTime());   // no key: the stance ends at home, not in a swing
                                     // The leg has swung since its press: nothing asked for another swing (a foot that landed before its press and ran out of
                                     // reach, or the other leg's press taking over). It goes home; the next press catches it from there.
-                                    else if (leg.swungSincePress) Enter(leg, LegPhase.Rest, time, _hop * (1f - _pair) > 0.5f ? StockTime() : frontHomeTime * SpeedUp());
+                                    else if (leg.swungSincePress && !(_swapLeg >= 0 && _swapLeg != i)) Enter(leg, LegPhase.Rest, time, _hop * (1f - _pair) > 0.5f ? StockTime() : frontHomeTime * SpeedUp());
                                     else StartSwing(leg, time);
                                 }
                             }
@@ -3116,7 +3118,9 @@ namespace SpeedStars.Physical
             // Hopping on one key the head looks ahead (world pitch toward level) whatever the trunk does; alternating keys, pairs and dives have 0 here.
             pitch = Mathf.Lerp(pitch, 0f, _hop * (1f - _pair));
             float neck = Mathf.Clamp(pitch - trunk, -neckMax, neckMax) * NeckShare;
-            spineTipTarget.rotation = rootRot * Quaternion.Euler(trunk + neck, _chestYaw, _chestRoll) * _restSpineTip;
+            // The neck takes the trunk's move back in a hop (the head looks ahead), and with it the press's push back: give that share back.
+            float push = _pressBack.Value * 0.5f * NeckShare * _hop * (1f - _pair);
+            spineTipTarget.rotation = rootRot * Quaternion.Euler(trunk + neck + push, _chestYaw, _chestRoll) * _restSpineTip;
             if (!_headAim || !_headBone || !_lookTarget) return;
 
             _headAim.weight = 1f;
