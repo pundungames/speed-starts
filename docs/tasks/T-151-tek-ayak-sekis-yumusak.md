@@ -53,3 +53,4 @@ Kod: `UpdateBodyHeight` ucus dali (`TryIncoming`, `rise`, `target`, `landHover`)
 - Ayak: `landHover * (1 - hopWeight)`; `hopLead` 0.05 -> 0.08 (prefab/asset'te kayitli degil, git grep bos). `Land -> Push` esigi (4.5 cm) degismedi: ayak yine de uste kalirsa orayi genisletmek gerekir.
 - Toe-off: grounded `Push` bacagi plain kosu degilse `OtherTakesOver`'a bakmaz; cikis `SolveStance`'te kalcanin gerisinde ve `d >= reach*Overstretch` (uzunluk) ya da `UpdateBodyHeight`'ta `legCap < max(legNeed, bodyY)`. Sureye bagli degil, bu yuzden alcak sekiste ayak erken kalkabilir; olculmedi.
 - Olculmedi (Unity yok); sayilar kabul listesine gore ilk deneme.
+- Tur 2: `hopContact` 24/158 (prefab'ta yok); `BeginStance`te hop > 0.5, Recover/Mid, `SwingShare` < 0.25, ayak yerde ise yakalama yerine `StartSwing`. Olculmedi.

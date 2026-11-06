@@ -390,8 +390,8 @@ namespace SpeedStars.Physical
         [Tooltip("The hop's and the pair's arm throw goes through a spring of this frequency (damping 1): at a quick rhythm the swing stays small " +
                  "(~55 deg at 0.27 s, ~100 at 0.5 s, ~125 at 0.7 s), at a slow one it reaches the ends.")]
         public SpringSettings armThrowSpring = new SpringSettings(2.6f, 1f);
-        [Tooltip("The running elbow's open/close curve: 0 = smooth step (a dead stop in the middle, then a quick turn), 1 = straight line.")]
-        [Range(0f, 1f)] public float armElbowEase = 0.7f;
+        [Tooltip("The elbow follows its target through this spring (all the arm poses): a calmer elbow than the limb lag, at a small delay.")]
+        public SpringSettings armElbowSpring = new SpringSettings(4f, 1f);
         [Tooltip("Plain running: how fast the arm follows the leg's drive, in springs per step (the spring's Hz = this / the press-to-press time). " +
                  "The arm swings the length of the step instead of copying the thigh's stops and darts, at every speed alike. Higher = closer to the leg.")]
         public float armPumpRate = 0.85f;
@@ -3079,12 +3079,12 @@ namespace SpeedStars.Physical
                 // and darts does not make the arm do the same. Not running yet (gait weight low) it sits on the raw drive: no sweep on entry.
                 if (!arm.driveSet || _armW < 0.05f) { arm.drive.Reset(t); arm.driveSet = true; }
                 else if (dt > 0f) arm.drive.Step(t, Mathf.Max(0.1f, armPumpRate) / Mathf.Max(ArmPeriodMin, _armPeriod), 1f, dt);
+                float tOpen = Mathf.Lerp(t, arm.drive.Value, _plainRun);   // the elbow reads the drive as filtered, not opened by armPumpWidth
                 t = Mathf.Lerp(t, Mathf.Clamp(0.5f + (arm.drive.Value - 0.5f) * armPumpWidth, -0.2f, 1.2f), _plainRun);
                 float mid = 0.5f * (armRunBack + armRunFront);
                 float pump = mid + (Mathf.LerpUnclamped(armRunBack, armRunFront, t) - mid) * amp;
                 // The arm going back opens at the elbow too (the back half of the swing), the forward one stays bent with the hand at the chin.
-                float closeT = Mathf.Clamp01(t);
-                float open = 1f - Mathf.Lerp(Mathf.SmoothStep(0f, armElbowCloseAt, closeT), Mathf.Clamp01(closeT / armElbowCloseAt), armElbowEase);
+                float open = 1f - Mathf.SmoothStep(0f, armElbowCloseAt, Mathf.Clamp01(tOpen));
                 float bend = Mathf.Lerp(armElbowLoose, Mathf.Lerp(armElbowRun + armElbowFront, armElbowRunBack, open),
                     Mathf.Lerp(armElbowMinShare, 1f, _speedCurve * form));
                 swing = Mathf.Lerp(swing, pump, _armW);
@@ -3124,7 +3124,7 @@ namespace SpeedStars.Physical
                     arm.elbowT.Seed(elbow, 0f);
                 }
                 swing = arm.swingT.Step(swing, dt, limbSpring, armMaxSpeed, armMaxAccel);
-                elbow = arm.elbowT.Step(elbow, dt, limbLag, armMaxSpeed, armMaxAccel);
+                elbow = arm.elbowT.Step(elbow, dt, armElbowSpring, armMaxSpeed, armMaxAccel);
             }
             arm.swing = swing;
             arm.elbow = elbow;

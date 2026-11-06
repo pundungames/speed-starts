@@ -48,3 +48,4 @@ Hesap: 0.27 sn'de 128 derecelik salinim sinusle bile 25 derece/kare eder; genlik
 ## Calisma notu
 - `_armThrow` = `_armKick`'in `armThrowSpring` (2.6 Hz, 1) yayindan gecmisi; yalniz `StepArm` hop/pair dallari okur, `_armKick` (lean, `_rockKick`) ayni kaldi.
 - `armPumpRate` 0.85, `armPumpWidth` 1.21 (prefab/asset'te yok), `armElbowEase` 0.7: `open` smoothstep ile `t/armElbowCloseAt` arasi karisim. Olculmedi.
+- Tur 2: `armElbowEase` silindi (dirsegi daha cok kapatiyordu); `open` genisletilmemis `arm.drive.Value`dan, dirsek `Step`i yeni `armElbowSpring` (4 Hz, 1) uzerinden. Olculmedi.
