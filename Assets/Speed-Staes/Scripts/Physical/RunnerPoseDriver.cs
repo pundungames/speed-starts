@@ -1268,10 +1268,14 @@ namespace SpeedStars.Physical
             bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 1.5f * PairWindow && _posePrevGap >= PoseMinGap * 1.5;
             // A hop that is on is a hard gate: no press, either key, is taken before hopTime has passed since the last one taken (the pose only;
             // the sim counts every press, so the gate costs no speed). A pair's second key and a jump are not gated.
-            bool hopShut = !_jumping && !pairSecond && _poseLastTime > -5.0 && sinceTaken < hopTime && HopGateOn();
+            // The hop leg in the air shuts it for any time: a press there is a catch, which moved the hip 24 cm in six frames. It opens when the foot is down.
+            bool hopShut = !_jumping && !pairSecond && _poseLastTime > -5.0 && HopGateOn() &&
+                           (sinceTaken < hopTime || (sinceTaken < HopRepeatWindow && HopLegInAir()));
             if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (hopShut || sinceTaken < PoseMinGap || (!fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating))))
             {
                 l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
+                // The hop's key pressed again but not taken keeps the hop alive (else presses that fall in the air let the repeat window run out).
+                if (hopShut && leg == _hopPrevLeg) _hopPrevTime = time;
                 if (learn && l.cycle > 0f)
                     l.cycle = Mathf.Lerp(l.cycle, Mathf.Clamp((float)keyGap, HopCycleFloor(), 2f * Mathf.Max(stepTimeMin, stepTimeMax)), stepFollow);
                 return;
@@ -1343,6 +1347,21 @@ namespace SpeedStars.Physical
 
         /// <summary>A one-leg hop is on: the last press taken repeated a key, not a pair, not a hold. The hard press gate (hopTime) applies.</summary>
         bool HopGateOn() => _hopTarget > 0.5f && _pair < 0.5f && _heldNow < 0.5f;
+
+        /// <summary>The hopping leg (the one pressed last) has not landed: swinging, or a touchdown pose still above the ground.</summary>
+        bool HopLegInAir()
+        {
+            if (_poseLastLeg < 0) return false;
+            Leg l = Legs(_poseLastLeg);
+            switch (l.phase)
+            {
+                case LegPhase.Recover:
+                case LegPhase.Mid: return true;
+                case LegPhase.Push: return !l.grounded;
+                case LegPhase.Land: return l.ankle.y - AnkleGround(l) > TouchHeight * 1.5f;
+                default: return false;
+            }
+        }
 
         /// <summary>The shortest press-to-press time (cycle) a leg learns: hopTime on a hop (by the hop weight), else stepTimeMin.</summary>
         float HopCycleFloor() => Mathf.Lerp(stepTimeMin, Mathf.Max(stepTimeMin, hopTime), Mathf.Max(_hop * (1f - _pair), HopGateOn() ? 1f : 0f));
