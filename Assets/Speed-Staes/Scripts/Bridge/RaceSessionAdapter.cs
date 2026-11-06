@@ -21,6 +21,7 @@ namespace SpeedStars.Bridge
         RaceController race;
         [SerializeField, Tooltip("The runner body: input gate, run reset, distance. Empty = race.body.")]
         RunnerBody body;
+        RunnerPoseDriver _driver;
         [SerializeField, Min(0.1f), Tooltip("Cadence window (s): presses per second is the press count of this recent span divided by it.")]
         float cadenceWindowSeconds = 1f;
         [SerializeField, Tooltip("Countdown numbers (READY time, SET wait range). Empty = the config's own defaults.")]
@@ -250,6 +251,7 @@ namespace SpeedStars.Bridge
 
         void OnSequencePhase(RaceStartPhase phase)
         {
+            ApplyStartStance(phase);
             // The gate first, then the event: a view or sound reacting to Go sees input already open (the authoritative start).
             if (phase == RaceStartPhase.Go)
             {
@@ -257,6 +259,23 @@ namespace SpeedStars.Bridge
                 if (race) race.StartClock(); // the race clock runs from GO, the reaction included, as the bots' does
             }
             StartPhaseChanged?.Invoke(phase);
+        }
+
+        /// <summary>
+        /// The player's block stance: READY on the blocks, SET hips up, an aborted start (FAIL, Idle) back to the driver's own; GO leaves it
+        /// to the first press (the driver ends it there). The driver is found once, not per frame.
+        /// </summary>
+        void ApplyStartStance(RaceStartPhase phase)
+        {
+            if (!_driver && body) _driver = body.GetComponentInChildren<RunnerPoseDriver>(true);
+            if (!_driver) return;
+            switch (phase)
+            {
+                case RaceStartPhase.Ready: _driver.startStance = RunnerStartStance.Marks; break;
+                case RaceStartPhase.Set: _driver.startStance = RunnerStartStance.Set; break;
+                case RaceStartPhase.Go: break;
+                default: _driver.startStance = RunnerStartStance.None; break;
+            }
         }
 
         /// <summary>The numbers of the race start, also for the opening camera.</summary>

@@ -119,6 +119,7 @@ namespace SpeedStars.Bridge
             _reactionLeft = 0f;
             _reactionWeight = 0f;
             _active = true;
+            if (_driver) _driver.brakePose = false;   // the root stops on its own curve: a braking lean would lie to a stopped runner
             _root.HoldDistance(_distance);
             ApplyStance();
         }
@@ -232,6 +233,7 @@ namespace SpeedStars.Bridge
         void Restore()
         {
             _active = false;
+            if (_driver) _driver.brakePose = true;
             Speed = 0f;
             if (_driver && _stance && _driver.ready == _stance)
             {

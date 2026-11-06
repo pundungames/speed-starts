@@ -164,7 +164,9 @@ namespace SpeedStars.Tools.Builders
             var follow = camera.GetComponent<SpeedStars.Runner.SideFollowCamera>();
             if (follow == null) return;
             Transform t = follow.target != null ? follow.target : fallbackTarget;
-            camera.transform.position = t.position + t.forward * follow.leadAhead + t.right * follow.distance + Vector3.up * follow.StandingHeight;
+            // Resting pose at the standing distance: its own height, not the camera's fixed (full-zoom) one.
+            float restingHeight = follow.lookHeight + follow.distance * Mathf.Tan(follow.pitch * Mathf.Deg2Rad);
+            camera.transform.position = t.position + t.forward * follow.leadAhead + t.right * follow.distance + Vector3.up * restingHeight;
             camera.transform.rotation = Quaternion.LookRotation(-t.right, Vector3.up)
                 * Quaternion.Euler(follow.pitch, 0f, 0f);
         }

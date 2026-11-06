@@ -1,60 +1,60 @@
-MOD: hızlı
+MOD: süpervizör
 # DURUM — Speed Stars (speed-starts)
 
 > Oturum başı ilk okunan dosya. En fazla 60 satır; her checkpoint'te BAŞTAN yazılır (eklenmez).
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-11-04 (push kullanıcıda)
-**Kullanıcı 04.11: hızlı mod. Küçük iş agent + worktree + kopya olmadan, doğrudan ana klasörde.** MCP bu oturumda yoktu: prefab/sahne için oturumu yeniden aç.
-**Bugün main'e girenler (kopyada EditMode 1238, PlayMode 58 + 7 görüntü testi atlandı):** T-103 Edit modda çentik önizlemesi (Tools → Speed Stars → Notch Preview) · T-104 kostüm kartında fiyat, normal kıyafet Nakit ile alınır · T-105 düğme küçük kalma ve kart şişme (`UiPunch`) · T-106 Results Practice çalışır, Nakit kartı okunur, "Antrenman Alanı" → "Practice".
-**04.11 ek:** tema fiyatları (kullanıcı onayı): Egypt 2.500, Rome 5.000, Pirate Sea 7.500 Nakit, Sky Islands 50 Mor Mücevher, Standard City bedava · GO'dan önce basış = FAIL: oyun yavaşlar, koşucu düşer, geri sayım baştan; bilet yanmaz (kullanıcı) · düğmede başlayan parmak adım sayılmaz (`RunnerPressGate`) · Ayarlar'dan Music, Language, Privacy, Terms, Support kalktı (mağaza öncesi Privacy adresi gerekecek) · `Tools → Speed Stars → Delete Save`. **Ek 2 (kopyada EditMode 1281, PlayMode 62 + 12 görüntü testi atlandı, görüntü testleri ayrıca geçti):** bitiş sekansı: yavaş çekim + `1ST!`, koşucu yavaşlar, ayağa kalkar, kamera önüne döner, emote (yoksa kazanınca kollar havada, kaybedince eğilir), sonra Results; dokunuş atlatır; koşucu sonraki yarışa kadar çizginin ötesinde (`RaceFinishGate`, `RunnerCooldown`, `RaceFinishSequence`, ayarlar `Data/Config/RaceFinishConfig`) · "Emote myself" varsayılan açık · ilk yarışta tutorial: WAIT FOR GO, 4 adım tek tek (oyun neredeyse durur, yalnız istenen taraf sayılır), 2 ipucu; kayda işlenir (`RaceTutorial`, `UI/Widgets/RaceTutorial.prefab`, `Data/Config/RaceTutorialConfig`); `Delete Save` ile tekrar görülür. **Ek 3:** koşucu çizgiden sonra kendi fren eğrisiyle durur, kutlama ancak tam durunca başlar (ayak kayması yok) · saha yolun ortasına dizilir, kulvar yarış başına rastgele, ayarlardaki Lane preference seçimi geçerli; kamera uzak kulvarda geri çekilir (`RunnerRootOffset`, `RaceBots.PrepareLanes`) · her yarış sağ çapraz kameradan açılır, READY'den 1,1 sn sonra (en geç GO'da) yana döner (`RaceStartCamera`, ayarlar `RaceStartConfig`).
+Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakter-ik.md`. Push kullanıcıda.
 
-## Faz 8 (cila) — bugün main'e girenler (son kopya koşusu yeşil: EditMode 1198, PlayMode 52 + 7 atlanan, Zenject)
-- T-081..T-090: ok tuşları, regresyon, ekonomi v2 (ADR `ADR-2026-11-03-ekonomi-v2-referans.md`), 200m/400m/60mH/400mH, ayarlar v2,
-  emote v2, Race of the Day, Practice paneli · e7d269f2 Malik'in 03.11 işi (Watch Replay, kamera, mobil UI).
-- T-091 Malik'in elle ayarları builder'da + EventModal 4. sekme · T-092 Practice'te sonuç/ödül/rekor yok · T-093 High Scores'ta Race
-  of the Day · T-094 Watch Replay duman testleri · T-095 lisans envanteri · T-096 FPS toleransı %0.001 · T-097 ana menü kartı · T-098 replay prefab.
-- T-099 çentik iki yana (inset = max(sol, sağ), yalnız Play'de) · T-100/T-101 TextMeshPro + American Captain: 243 yazı prefab'larda
-  YERİNDE çevrildi (fileID aynı; menü: Tools → Speed Stars → Convert UI Text to TMP), 2 InputField legacy (TTF) · T-102 bütün builder
-  kayıtları `HandEditGuard`'dan: var olan prefab/sahne ezilmez, yamalar yalnız eksiği ekler (kopyada 10 giriş noktası, 36 dosyada fark 0).
+## 06.11: tek ayak sekiş turu, gözünü bekliyor (yereldeki `main`, T-145..T-159 `merged`; push ve `origin/main` birleşimi kullanıcıda)
+- **T-157 (kullanıcı denedi, kural):** her hareket basıştan, basış yoksa direkt stop. Niyet ham tuştan (`NoteIntent`, `_hopWanted`), ağırlık alınan basıştan. Tek basış tamponu (`hopBufferTime`). Sekiş "kendi döngüsü" iptal.
+- **T-154 sekiş:** sert kapı (`hopTime`, ayak havadayken basış alınmaz, kurulu olmayan ilk sekişte diğer tuş geçer), yay 0.3 m, geri atış -57, serbest bacak `hopFreeLeg` sabit, kol biri sabit biri bacağa bağlı, `hopLean`. Dururken tek basış sekiş (`hopStandWait`). `hipMaxAccel`.
+- **T-155 tek tuş hız:** seride taban (`hopFloorSpeed` 4.2, kullanıcı 5.6 için "çok fazla" dedi), geç sayılmaz, baş bozmaz; fren ritme göre bekler (`stopWaitShare`). İki tuş sayıları birebir aynı. **T-156 kalça:** kök üstünde ileri-geri (`hopSurge`, `runSurge`), koşuda burgu.
+- **T-158:** dururken tek basış tam sekiş, spam %50 kapısı, bacak değiştirmede basış ayak değince çalışır ve eski bacak adım gibi çıkar, basışta gövde geri (`pressBackKick`, sekişte hâlâ ~1 derece), hızlıda `tuckPeakFast`. Önceki T-145..T-153.
+- **T-159 kamera:** `sideYaw` 4, `speedZoomFull` 11, `speedZoomDistance` 2.4 (`Race.unity` eski adları tutar, okunmaz). Son kayıt `t158-c`. Değişken kare kaydı: `RunnerDtJitter`, henüz koşulmadı. Araçlar: `swing_table.py`, `arm_table.py`, CSV `d_posePresses`, `L_handY`. Sayı değişince Editor de prefab Reimport (TUZAK).
+
+## Çalışma düzeni
+- Kullanıcı 06.11 `main`'e geçti (ana klasör, Unity açık; `IKTest` kapandı). İş `agent/ik-kosucu`'da, worktree `D:\Pundun\speed-starts-ik`. Geçirme: kopyada doğrula, ana klasörde `git merge --ff-only <hash>`. `agent/ik-govde` worktree'si silinebilir.
+- Kullanıcı: "yapıldıkça bana geçir", süre vaadi verme, input yalnız hedef değiştirir, snap yok. Titreme ve geçiş işinde seri kare al ("kare kare çok aralıklı alıyorsun"). Kör turda tek değişiklik, ayrı commit.
+- Malik'in dalı (`claude/karakter-hareketleri-baec15`) **birleştirilmez** (kullanıcı). Oradan elle alınanlar: tutma ve dalış (T-129), sırt ve kafa (T-144, `UstGovdeAktarim.md` bölüm 2, 4). Malik'in kolları alınmadı. Onun `PhysicalTest.unity` commit'i engelleri siliyor.
+
+## Karakterde oturanlar (05.11, T-128..T-144 `review`)
+- Yerdeki ayak öne gideni bekler (`OtherTakesOver`), çivili ayak basışta yerinde kalır, tutma ancak 0.22 sn sonra (`holdAfter`), `Track` yalnız hızlanmayı sınırlar (fren ×4), ağırlıklar yayla, basma karesinde `plantGap`.
+- Üst gövde: Malik'in zinciri; `RunnerSim.ShownHeadAngle` yalnız görsel (hızı belirleyen `HeadAngle` aynı). Düz koşuda `runRock`, eğim kapalı, burgu T-156 ile açık; tek ayak ve çift zıplama gövdesi bizde.
+- Koşu zıplaması `runBounce` 0.5, basma pozu `contactRun` 30/145, kamera Y sabit (`trackPull`, `trackSpeedSmooth`), fren `stopBrakeForce` 12.
+- Açık: tuş 0.18 sn basılı kalınca gövde kambur (kalça 66°); dalışta kollar yukarıda, önce çift zıplıyor; koşudan çift zıplamaya ~0.25 sn gecikme; tuşsuz süzülmede ayak kayar. Hareket oturunca `PlayerController.md`.
+- Prefab'ta kayıtlı, kod varsayılanı işlemez: `pushEnd`, `recover`, `mid`, `reach`, `holdBack`, `holdSupport`, `hipShare` 0.65, `liftKick` 1.5, `armBack`; sim `stopDelay`, `stopRamp`. Prefab Editor'den kaydedilirse tüm yeni alanlar dosyaya yazılır ve koddan değişmez: yeni ad aç.
+- Tam takım 06.11 (`2516ccff`, T-156 dahil): EditMode 1281/1285, PlayMode 103/108 (3 atlanan); 6 kırmızı, hepsi backlog'da, koşucu dışı.
+
+## Ölçüm
+- Kayıt: `powershell -File scripts/runner-probe.ps1 -Kaynak D:\Pundun\speed-starts-ik -Etiket x -Sahip T-xxx -Filtre RunnerTransitions_WriteFrameStrips` (yaklaşık 1 dk, commit'li hâli ölçer). Çıktı `D:\Pundun\form-probe\x\`: `trans_<senaryo>.csv` her kare, `trans_<senaryo>_strip<i>.png` 40 ardışık kare.
+- Analiz: `python -I scripts/runner-olcum/transition_check.py <önce> [<sonra>]`. Geri oturmada `thigh` sütunu ekrandaki değil: ayak ve kalça konumuyla doğrula.
+- Sim: `scripts/runner-olcum/simprobe.csproj`, `dotnet build -c Release`, exe'yi doğrudan çalıştır.
 
 ## Verilen kararlar
-- Kullanıcı 03.11: "referans oyun ne ise aynısı". Ekonomi: yarış Nakit'i bitirme +10, zorluk bonusu 10 × oyuncu zorluğu, rakip bonusu
-  round(10 × geçilen/toplam); rakipsiz yarış Nakit ve Mor Mücevher vermez. Giyim 500 / kafa 1.000 Nakit (varsayılan kıyafet ücretsiz,
-  giyili öğeler eski kayıtta sahipli sayılır), emote 3×2.500 / 3×5.000 / 3×7.500, reklam +200 Nakit (günde 3), Süreli Bilet 300 Nakit,
-  Adet Bileti Nakit'le satılmaz. Erişim: 100m / Race of the Day / Practice biletsiz; diğer yarışlar biletli (PDF'ten sapma: 100m biletsiz).
-- Gerçek gelir / reklam SDK'sı / IAP şimdilik YOK (oyun Çin müşterisine; kullanıcı 03.11). Eski rekorlar sıfırlanacak (iş yok).
-- TMP + American Captain her yerde, bundan sonra da (kullanıcı 03.11; kurallar §9, ADR). Prefab'lar elle düzenleniyor: builder var olanı ezmez.
-- Installer bağlamaları: kalıcı onay (03.11). Teslim belgesi, telefonda APK denemesi, ana menü hızı: kullanıcı "geç" dedi.
-- Önceki: tema 0 fiyat = bedava; Sky Islands premium ama bedava; ten tonları 8; başlangıç Adet Bileti 3; gün sınırı UTC;
-  günlük build Mono/ARMv7, mağaza build'i IL2CPP.
+- Kullanıcı 03.11: "referans oyun ne ise aynısı". Ekonomi ve fiyatlar `docs/decisions/ADR-2026-11-03-ekonomi-v2-referans.md`. Gerçek gelir, reklam SDK, IAP şimdilik yok (Çin müşterisi). TMP + American Captain her yerde. Builder var olanı ezmez (`-forceOverwriteHandEdits` kullanma).
+- Tema fiyatları: Egypt 2.500, Rome 5.000, Pirate Sea 7.500 Nakit, Sky Islands 50 Mor Mücevher.
+- Installer bağlamaları: kalıcı onay. Teslim belgesi, telefonda APK, ana menü hızı: kullanıcı "geç" dedi. Günlük build Mono/ARMv7, mağaza IL2CPP.
+- Kullanıcı görsün (sim, dokunulmadı): ezmede 100 m 22+ sn; tuş süresi ritim 0.28'de 0.13 sn = 11.1 sn, 0.17 sn = 13.1 sn, 0.20 sn = 29.5 sn.
 
 ## Kullanıcıdan / başkalarından bekleyen
-- Font lisansı ve Çince yedek font: kullanıcı 03.11 "şimdilik bizi ilgilendirmiyor". Uygulama/paket adı, keystore, URL'ler: sonra.
-- Malik: UI üstündeki dokunma adım sayılmasın; engel teması (`docs/ENGEL-TEMAS-NOTU-malik.md`); 4×100m ve Medley; Practice için
-  `RunnerSim` enerji API'si ve ayakta çıkış (T-090); dev bitiş tuşu (F) replay'i bozuyor (T-094); ayak kilidi (soru); bilgi: ReplayControlsView
-  prefab bağlıyor (T-098); `LateStepFeedback` runtime legacy Text'i American Captain değil (TMP'ye geçirirse font tek asset'ten).
-- Serhat: 4abc876a `BridgeCanalRiverside.prefab`'ı yeniden yazdı; `PastelBuildingRow` sahne açılınca bina üretiyor.
-## Gözle bakılacaklar (Editor'de Play)
-- YENİ: her ekranda American Captain (boyut/taşma, BestFit → auto size), 4 kontur preset'i (kalınlık tahmini), READY/SET/GO konturu
-  (`RaceStartConfig` OutlineWidth 0.2), yazılar düz (italik kalktı), Device Simulator'da çentik iki yana (yalnız Play'de).
-- Kazanç dökümü, Nakit "+" reklam penceresi, premium "Spend 300", 200m/400m/engelli, ayarlar, emote mağazası, Practice bitişi,
-  High Scores → DAILY, Watch Replay, Close konumları, ana menü kartı; 30.10'dan beri: tema, karakter döndürme, botlar, liderlik, kostüm.
+- Malik: UI üstündeki dokunma; engel teması; 4×100m ve Medley; dev bitiş tuşu (F) replay'i bozuyor (T-094).
+- Serhat: `BridgeCanalRiverside.prefab`; `PastelBuildingRow` sahne açılınca bina üretiyor; `ThemeRunPlayground.SnapCamera` artık yüksek başlıyor (T-138). Kırmızılar `_backlog.md`'de.
+- Uygulama/paket adı, keystore, Privacy URL: sonra. Telefonda henüz denenmedi.
 
 ## Dikkat
-- Builder'lar artık var olanı ezmiyor (T-102); `-forceOverwriteHandEdits` bayrağını kullanma (Malik'in binaları + kullanıcının ayarları gider).
-- PowerShell'de `git` bozuk (system32 gölgesi): git Bash'ten. Kancada `git commit` + "main" aynı komutta olmaz.
+- PowerShell'de `git` bozuk: git Bash'ten. Kancada `git commit` + "main" aynı komutta olmaz. `ProjectSettings/EditorSettings.asset` kullanıcıda commit'siz, dokunma.
 
 <!-- OTOMATIK:BASLA -->
-_tur-sonu.ps1 2026-11-04 11:14 - otomatik blok, elle yazilan bu blokta kaybolur._
+_tur-sonu.ps1 2026-11-06 13:28 - otomatik blok, elle yazilan bu blokta kaybolur._
 
 - **KAPI TEMIZ (cikis 0)**
 - Acik needs: 3 (DECISION 3)
-- Review kuyrugu: 0
-- Goz bekleyen (merged): 98 - T-106, T-105, T-104, T-103, T-102, T-100, T-101, T-099
+- Review kuyrugu: 28  UYARI: 10 ustu, supervizor kuyrugu birikti
+- Goz bekleyen (merged): 116 - T-153, T-152, T-151, T-149, T-150, T-148, T-147, T-146
 - in-progress: 0 / blocked: 0
-- Uyari: govde-needs 0, test 4, analytics 0 (kapsam: status in-progress/review/merged)
-- GIT: 1 calisma agaci (ana: main); ana agacta commit'siz .prefab/.unity/.asset: 1
+- Uyari: govde-needs 0, test 10, analytics 0 (kapsam: status in-progress/review/merged)
+- GIT: 4 calisma agaci (ana: IKTest); ana agacta commit'siz .prefab/.unity/.asset: 1
 - KOPYALAR: 2 (kopya.ps1 -Liste -Json)
 <!-- OTOMATIK:BITIR -->

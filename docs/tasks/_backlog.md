@@ -25,3 +25,8 @@
 - [emote] emote fiyatlari yer tutucu (Nakit); gercek fiyatlar karara bagli (30.10)
 - [ ] [gorsel] Results `GemReward/Label` ("+3 Purple Gems"): zeminsiz, kontur 0.75, Nakit karti gibi okunmuyor olabilir; `PersonalBest` zemini + kontursuz yazi + `purple_gem_icon` (T-106 kalibi; MCP ile 1 dk) (04.11)
 - [ ] [input] Butun Selectable'lar Navigation=Automatic: basilan dugme secili kalir, ok/Enter tuslari UI'da gezer; dokunmatik oyunda Navigation=None dusunulebilir (04.11)
+- [ ] [test] EditMode kırmızı (04.11, IK dışı): `BuilderGuardTests.NoBuilderWritesAPrefabOrSceneOutsideTheGuard`, `HomeCardBuilderTests` x3 (`HomeScreen has no CharacterCard/...`): HomeScreen elle değişmiş olabilir, prefab mı test mi yanlış bak
+- [ ] [test] `ReferenceUiReviewTests` x2 batchmode'da takılıyor (Serhat, eac6b9f6): `WaitForEndOfFrame`; `yield return null` + elle render ya da batchmode'da atla
+- [ ] [mekanik] Tuş süresi uçurumu: ritim 0.28'de tuş 0.13 sn = 11.1 sn, 0.17 sn = 100 m bitmiyor; klavyede görünür, telefonda dene
+- [ ] [belge] IK işi bitince `PlayerController.md`'yi yeni sisteme göre güncelle (bölüm 4, 8); stale prefab alanları (`stepSlow`, `recoverTime`, `midTime`, `homeTime`) prefab yeniden kaydedilince düşer
+- [ ] [mekanik] Çapraz kamera yalnız şehir temasında görüldü: Egypt, Rome, Pirate Sea, Sky Islands'ta arka plan boşluğuna bak
