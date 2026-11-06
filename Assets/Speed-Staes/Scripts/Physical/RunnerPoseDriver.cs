@@ -3120,7 +3120,10 @@ namespace SpeedStars.Physical
                 float total = _flightT + remaining;
                 float w = total > 1e-4f ? Mathf.Clamp01(_flightT / total) : 1f;
                 Vector3 joint = Joint(incoming, hip, pelvisTilt, width);
-                float landY = StanceExtent(incoming) + AnkleGround(incoming) - joint.y;
+                // A hop comes down to the touchdown pose's own height (hopContact), not the stance's (a slow stance is near the crouch: the spring
+                // took the body to 0.80 while the pose asks for 0.94, and the foot's touch then pushed it up 5 cm). The stance sinks it after the touch.
+                float landExtent = Mathf.Lerp(StanceExtent(incoming), Extent(incoming, Key(ContactPose(), hopContact)), _hop * (1f - _pair));
+                float landY = landExtent + AnkleGround(incoming) - joint.y;
                 float speed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(riseSpeed.x, riseSpeed.y, sim.Speed));
                 float hopWeight = Mathf.Max(_hopQuick ? _hop * (1f - _pair) : _hopBodyW, _pair);
                 float rise = flightRise * speed * Mathf.Lerp(1f - formWeight, 1f, Mathf.Clamp01(sim.Form)) *
