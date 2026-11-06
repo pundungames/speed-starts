@@ -29,6 +29,11 @@ namespace SpeedStars.Bridge
         Quaternion[] _readyRot, _setRot;
         Vector3[] _readyPos, _setPos;
         bool[] _movesPos;
+        // Per bone: the pose nobody drives (the base), and what we wrote last. Equal to what we wrote = nobody else wrote it this frame.
+        Quaternion[] _baseRot, _wroteRot;
+        Vector3[] _basePos, _wrotePos;
+        bool[] _hasWrote;
+        bool _active;
         int _count;
 
         /// <summary>Idempotent: gives the driver and the clips; a missing clip uses the other one. Returns false when there is nothing to lay.</summary>
@@ -41,6 +46,7 @@ namespace SpeedStars.Bridge
             _set = set ? set : ready;
             Animator animator = driver.GetComponentInChildren<Animator>(true);
             _animatorGo = animator ? animator.gameObject : null;
+            if (_active) Release();
             _sampled = false;
             _count = 0;
             return _animatorGo;
@@ -59,20 +65,60 @@ namespace SpeedStars.Bridge
         {
             if (!driver) return;
             float w = driver.StanceWeight;
-            if (w <= 0f) return;
+            if (w <= 0f)
+            {
+                if (_active) Release();
+                return;
+            }
             if (!_sampled) Sample();
             if (_count == 0) return;
+            _active = true;
 
             float set = driver.StanceSetWeight;
             for (int i = 0; i < _count; i++)
             {
                 Transform bone = _bones[i];
                 Quaternion target = Quaternion.Slerp(_readyRot[i], _setRot[i], set);
-                bone.localRotation = Quaternion.Slerp(bone.localRotation, target, w);
+                Quaternion cur = bone.localRotation;
+                if (!_hasWrote[i] || !SameRot(cur, _wroteRot[i])) _baseRot[i] = cur; // the driver or the rig wrote it: that is the base
+                Quaternion rot = Quaternion.Slerp(_baseRot[i], target, w);
+                bone.localRotation = rot;
+                _wroteRot[i] = rot;
                 if (_movesPos[i])
-                    bone.localPosition = Vector3.Lerp(bone.localPosition, Vector3.Lerp(_readyPos[i], _setPos[i], set), w);
+                {
+                    Vector3 curPos = bone.localPosition;
+                    if (!_hasWrote[i] || curPos != _wrotePos[i]) _basePos[i] = curPos;
+                    Vector3 pos = Vector3.Lerp(_basePos[i], Vector3.Lerp(_readyPos[i], _setPos[i], set), w);
+                    bone.localPosition = pos;
+                    _wrotePos[i] = pos;
+                }
+                _hasWrote[i] = true;
             }
         }
+
+        void OnDisable()
+        {
+            if (_active) Release();
+        }
+
+        /// <summary>Weight is 0 (or we are off): bones nobody drives go back to their base, so the clip pose does not stay on them.</summary>
+        void Release()
+        {
+            _active = false;
+            for (int i = 0; i < _count; i++)
+            {
+                if (!_hasWrote[i]) continue;
+                Transform bone = _bones[i];
+                if (bone)
+                {
+                    if (SameRot(bone.localRotation, _wroteRot[i])) bone.localRotation = _baseRot[i];
+                    if (_movesPos[i] && bone.localPosition == _wrotePos[i]) bone.localPosition = _basePos[i];
+                }
+                _hasWrote[i] = false;
+            }
+        }
+
+        static bool SameRot(Quaternion a, Quaternion b) => a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 
         /// <summary>
         /// Once: remember every bone's present pose, sample each clip at 0, keep the bones that differ, put everything back. The root
@@ -114,6 +160,9 @@ namespace SpeedStars.Bridge
             _readyRot = new Quaternion[kept]; _setRot = new Quaternion[kept];
             _readyPos = new Vector3[kept]; _setPos = new Vector3[kept];
             _movesPos = new bool[kept];
+            _baseRot = new Quaternion[kept]; _wroteRot = new Quaternion[kept];
+            _basePos = new Vector3[kept]; _wrotePos = new Vector3[kept];
+            _hasWrote = new bool[kept];
             int k = 0;
             for (int i = 0; i < n; i++)
             {
@@ -126,6 +175,7 @@ namespace SpeedStars.Bridge
                 _readyRot[k] = rRot[i]; _setRot[k] = sRot[i];
                 _readyPos[k] = rPos[i]; _setPos[k] = sPos[i];
                 _movesPos[k] = movesR || movesS;
+                _baseRot[k] = savedRot[i]; _basePos[k] = savedPos[i];
                 k++;
             }
             _count = kept;
