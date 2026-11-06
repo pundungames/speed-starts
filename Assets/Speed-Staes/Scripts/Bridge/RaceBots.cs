@@ -160,6 +160,9 @@ namespace SpeedStars.Bridge
         void ConstructEvents([InjectOptional] RaceEventCatalog events) => _events = events;
 
         [Inject]
+        void ConstructRelayTeam([InjectOptional] IRelayTeam team) => _relayTeam = team;
+
+        [Inject]
         void Construct([InjectOptional] ICosmeticService cosmetics, [InjectOptional] CosmeticCatalog catalog,
             [InjectOptional] IPlayerSettings settings, [InjectOptional] IPersonalBests bests)
         {
@@ -171,6 +174,7 @@ namespace SpeedStars.Bridge
 
         SettingsRunnerAdapter _settingsAdapter;
         RaceRelay _relay;
+        IRelayTeam _relayTeam;
         Renderer[] _hiddenPlayerRenderers = Array.Empty<Renderer>();
 
         void Awake() => Initialize();
@@ -195,6 +199,7 @@ namespace SpeedStars.Bridge
                 _relay = GetComponent<RaceRelay>();
                 if (!_relay) _relay = gameObject.AddComponent<RaceRelay>();
                 _relay.Bind(this);
+                _relay.UseTeam(_relayTeam, _cosmetics, _catalog);
             }
             if (!_initialized && player)
             {

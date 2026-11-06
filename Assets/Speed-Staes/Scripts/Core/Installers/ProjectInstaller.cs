@@ -122,6 +122,7 @@ namespace SpeedStars.Installers
             // T-025: presets, ownership, premium purchase; the preview is what the menu character wears right now.
             Container.Bind<ICosmeticService>().To<CosmeticService>().AsSingle();
             Container.Bind<ICosmeticPreview>().To<CosmeticPreview>().AsSingle();
+            Container.Bind<IRelayTeam>().FromMethod(c => SpeedStars.Meta.Relay.RelayTeamService.Create(c.Container.Resolve<ISaveStore>(), c.Container.Resolve<ICosmeticService>(), c.Container.Resolve<RaceEventCatalog>())).AsSingle();
             // T-023: in the editor and development builds every theme counts as owned (user 28.10: switch directly).
             Container.Bind<IThemeService>().FromMethod(CreateThemes).AsSingle();
             // T-031: music / sfx / language / flag / player name, saved with the progress.
