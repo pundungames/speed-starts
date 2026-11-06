@@ -457,7 +457,7 @@ namespace SpeedStars.Physical
         public LegAngles hopMid = new LegAngles(15f, 70f);
         [Tooltip("One-key hop swing, third key: the leg opens again going down.")]
         public LegAngles hopKneeDrive = new LegAngles(48f, 95f);
-        [Tooltip("One-key hop touchdown: the foot lands under the hips, the leg nearly straight.")]
+        [Tooltip("One-key hop touchdown: the foot lands a little ahead of the hips, the leg nearly straight; it stays down while the body passes over it.")]
         public LegAngles hopContact = new LegAngles(24f, 158f);
         [Tooltip("The balance leg's thigh sways this many degrees (forward while the body rises) with the one-key hop, so it does not look frozen.")]
         public float hopSway = 12f;
@@ -906,6 +906,7 @@ namespace SpeedStars.Physical
         const float LockKnee = 15f;
         const float HopRepeatWindow = 1f;      // the same key again within this (s) is a hop (the sim's repeat)
         const float HopSwaySpeed = 1.5f;       // body rise speed (m/s) at which the balance leg's sway is full
+        const float HopRetimeShare = 0.25f;    // a hop's press before this share of the swing, foot on the ground: the swing starts again, no catch
         const float HopTimeFollow = 10f;       // the hop height's flight time follows the real one at this rate (1/s)
         const float IdleRate = 12f;             // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
@@ -1291,6 +1292,14 @@ namespace SpeedStars.Physical
             leg.toeOff = false;
             leg.swungSincePress = false;
             if (leg.phase == LegPhase.Push) return;
+            // Hopping, a press just after the toe-off (the swing hardly begun, the foot still on the ground) is not a catch: the catch
+            // from a swing of no length moved the hip 8 cm in 4 frames. The leg times its swing again from here and goes on with the key.
+            if (_hop * (1f - _pair) > 0.5f && (leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid) && SwingShare(leg, time) < HopRetimeShare &&
+                (Touching(leg) || leg.ankle.y - AnkleGround(leg) <= TouchHeight * 1.5f))
+            {
+                StartSwing(leg, time);
+                return;
+            }
             // A foot still in the air (a swing, a reach, a hover) is caught on its way down, never put on the ground in one frame.
             bool inAir = leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid ||
                          (!leg.grounded && leg.ankle.y - AnkleGround(leg) > TouchHeight * 1.5f);
