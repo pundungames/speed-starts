@@ -58,3 +58,4 @@ Kullanici 06.11: "bir input verdiysem o inputun etkisi bitene kadar o inputu ver
 - Sayilar: `pressGateShare` 0.6 (diger tus), `pressGateSameShare` 0.9 (ayni tus), `pressGateMax` 0.3 sn (son alinan basistan sonra kapi en cok bu kadar kapali). `PoseMinGap` ve `pairSecond` ayni; `_idleStock` (fromStand) iken kapi acik.
 - Basilan bacak `Recover/Mid`: pay esigin altindaysa red; `Push` + havada (catch) red; ayni tus `Push` yerdeyse ancak arada salinim yaptiysa (`swungSincePress`) serbest. Reddedilen yol eski: `_poseSkippedOther`, `l.pressedAt`; `_posePresses` artmaz.
 - Olculmedi. Belirsiz: fastRun'da (0.20) 0.3 sn tavan ve %90 kabul; hop'ta ayni tus salinim sonunda (0.9) yeterince erken acar mi.
+- Tur 2: ritim tustan ogrenilir (`Leg.lastKey`, `pressFollowSame` 0.22, `pressFollowRun` 0.30): reddedilen basis da `cycle`'i besler, `NoteCycle` anahtar araligini alir; `pairSecond` penceresi 1.5 * PairWindow.

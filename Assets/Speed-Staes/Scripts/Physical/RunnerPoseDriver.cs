@@ -188,7 +188,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float holdPeak;   // the largest real-hold weight reached in this Hold (a tap stays near 0.05)
             [System.NonSerialized] public float cycle;      // this leg's own press-to-press time (s), smoothed; 0 = never pressed
             [System.NonSerialized] public float swingLen;   // the swing's time (s)
-            [System.NonSerialized] public double pressedAt = -10.0, lastPress = -1.0, swingT0;
+            [System.NonSerialized] public double pressedAt = -10.0, lastPress = -1.0, swingT0, lastKey = -1.0;
             [System.NonSerialized] public LegAngles[] keys, slope;   // swing keys (start, recover, mid, drive, contact) and their slopes
             [System.NonSerialized] public float[] knots;             // the keys' times in the swing (0..1)
             [System.NonSerialized] public LegAngles[] tuckKeys, tuckSlope;   // plain running's own swing: start, recover, mid, tucked peak, shin throw, contact
@@ -506,6 +506,11 @@ namespace SpeedStars.Physical
         [Range(0.3f, 0.95f)] public float pressGateShare = 0.6f;
         [Tooltip("Press gate: the same key again waits until its own swing is this far along (0..1), i.e. the foot is about to land.")]
         [Range(0.5f, 1f)] public float pressGateSameShare = 0.9f;
+        [Tooltip("The rhythm is learned from the key itself (taken or not): the same key again closer than this (s) is spam, not a rhythm " +
+                 "(a hop's 0.27 is learned, a mash's 0.08 is not).")]
+        public float pressFollowSame = 0.22f;
+        [Tooltip("Same, keys in turn: a key's own press-to-press time shorter than this (s) is spam (0.20 between keys is 0.40 here and learned; 0.08 is 0.16 and not).")]
+        public float pressFollowRun = 0.30f;
         [Tooltip("Press gate: it never stays closed longer than this (s) after the last press the pose took, so a slow swing cannot lock out a runner who speeds up.")]
         public float pressGateMax = 0.3f;
         [Tooltip("How much of each new press-to-press time a leg's cycle takes on (1 = just the last one): one odd press " +
@@ -907,6 +912,7 @@ namespace SpeedStars.Physical
         int _posePresses, _poseLastLeg = -1;        // the presses the pose took (OnTapped, PoseMinGap), and the leg of the last one
         double _poseLastTime = -10.0;
         float _posePrevGap = 10f;                   // time between the last taken press and the one before (s)
+        int _keyLastLeg = -1;                       // the key pressed last, taken or not (the rhythm's same-key test)
         bool _poseSkippedOther;                     // the other key was pressed (and left to the sim) since the last taken press
         Spring _bounceChest;                       // the chest's lean in the bounce: follows _bounceLean a little behind (bounceChestSpring)
         Spring _bounceLean;                        // the trunk's lean in the bounce (deg), through bounceLeanSpring
@@ -1075,6 +1081,7 @@ namespace SpeedStars.Physical
             leg.swingLen = 0f;
             leg.pressedAt = -10.0;
             leg.lastPress = -1.0;
+            leg.lastKey = -1.0;
             leg.swingT0 = 0.0;
             EnsureBuffers(leg);
         }
@@ -1146,17 +1153,25 @@ namespace SpeedStars.Physical
                 return;
             }
             l.held = true;
+            // The rhythm is read from the key whether the pose takes the press or not: the gate keeps the taken ones apart, and a cycle fed by them
+            // alone learns the gate's own gap and swings slowly forever.
+            double keyGap = l.lastKey >= 0.0 ? time - l.lastKey : -1.0;
+            bool learn = keyGap >= (leg == _keyLastLeg ? pressFollowSame : pressFollowRun);
+            l.lastKey = time;
+            _keyLastLeg = leg;
             bool fromStand = _idleStock;   // read before it is cleared: no key and no press lately, so this press starts the run from a standstill
             _idleStock = false;   // a key is down: the legs are not on their way to the stock pose, not even for the rest of this frame
             // The pose takes only the presses a person's steps can follow. One that comes within PoseMinGap of the last one taken is
             // the sim's alone (it counts it all the same: speed and timing are the sim's): no new stance, no cycle, no throw of the arms, no
             // hop count. A key pressed together with the first of a pair (within the pair window PairWeight counts, after a pause) is the pair's second key, taken.
             double sinceTaken = time - _poseLastTime;
-            bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 2f * PairWindow && _posePrevGap >= PoseMinGap * 1.5;
+            bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 1.5f * PairWindow && _posePrevGap >= PoseMinGap * 1.5;
             if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (sinceTaken < PoseMinGap || (!fromStand && PressStillBusy(leg, time, sinceTaken))))
             {
                 if (leg != _poseLastLeg) _poseSkippedOther = true;
                 l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
+                if (learn && l.cycle > 0f)
+                    l.cycle = Mathf.Lerp(l.cycle, Mathf.Clamp((float)keyGap, stepTimeMin, 2f * Mathf.Max(stepTimeMin, stepTimeMax)), stepFollow);
                 return;
             }
             // Keys in turn pressed faster than that: the step that is taken is the other leg's of the one before (L R L R every 0.08 s is
@@ -1170,7 +1185,7 @@ namespace SpeedStars.Physical
             _posePresses++;
             if (use != leg) l.pressedAt = time;
             var used = Legs(use);
-            NoteCycle(used, Legs(1 - use), time);
+            NoteCycle(used, Legs(1 - use), time, use == leg && learn ? keyGap : -1.0);
             if (pairSecond)
             {
                 Leg first = Legs(1 - use);
@@ -1215,12 +1230,12 @@ namespace SpeedStars.Physical
         /// This leg's own press-to-press time: the swing is timed to end when the next press is due. A pause counts
         /// as the longest cycle; a leg's first press takes the other leg's cycle (or twice the sim's step time).
         /// </summary>
-        void NoteCycle(Leg leg, Leg other, double time)
+        void NoteCycle(Leg leg, Leg other, double time, double keyGap)
         {
             float max = 2f * Mathf.Max(stepTimeMin, stepTimeMax);
             if (leg.lastPress >= 0.0)
             {
-                float interval = Mathf.Clamp((float)(time - leg.lastPress), stepTimeMin, max);
+                float interval = Mathf.Clamp((float)(keyGap >= 0.0 ? keyGap : time - leg.lastPress), stepTimeMin, max);
                 leg.cycle = leg.cycle > 0f ? Mathf.Lerp(leg.cycle, interval, stepFollow) : interval;
             }
             else if (other.cycle > 0f) leg.cycle = other.cycle;
@@ -3063,6 +3078,8 @@ namespace SpeedStars.Physical
             _poseLastTime = -10.0;
             _posePrevGap = 10f;
             _poseSkippedOther = false;
+            _keyLastLeg = -1;
+            leftLeg.lastKey = rightLeg.lastKey = -1.0;
             _sitW[0] = _sitW[1] = 0f;
             _armKick = 0f;
             _armClock = ArmIdle;
