@@ -291,6 +291,13 @@ namespace SpeedStars.PlayTests
             s = new Script("oneTap"); s.Strip(s.Alt(0.1f, 0.30f, Tap)); list.Add(s.Build(2f));
             s = new Script("holdStand"); s.Strip(s.Held(1.2f, 0.27f, 1)); list.Add(s.Build(0.5f));
             s = new Script("holdBothStand"); s.Strip(s.Held(1.2f, 0.27f, 0, 1)); list.Add(s.Build(0.5f));
+
+            // T-150: spam. Keys tapped faster than a step can follow; d_posePresses counts the presses the pose took.
+            s = new Script("spamHop"); double sp = s.Same(3f, 0.08f, 0.04f, 1); s.Strip(sp); s.Strip(sp + 1.0); list.Add(s.Build(0.5f));
+            s = new Script("spamRun"); sp = s.Alt(3f, 0.08f, 0.04f); s.Strip(sp); s.Strip(sp + 1.0); list.Add(s.Build(0.5f));
+            s = new Script("spamPair"); sp = s.Pair(3f, 0.10f, 0.04f, 0.015f, 0.015f, false); s.Strip(sp); s.Strip(sp + 1.0); list.Add(s.Build(0.5f));
+            s = new Script("runSpamHop"); s.Alt(2.5f, 0.27f, Tap); s.Strip(s.Same(2.5f, 0.08f, 0.04f, 1)); list.Add(s.Build(0.5f));
+            s = new Script("spamToRun"); s.Same(2.5f, 0.08f, 0.04f, 1); s.Strip(s.Alt(2f, 0.27f, Tap)); list.Add(s.Build(0.5f));
             return list.ToArray();
         }
 
@@ -659,7 +666,7 @@ namespace SpeedStars.PlayTests
 
             // T-139 (scripted mode): extra reflection, the head bone, the strip state.
             private readonly FieldInfo _lGrounded, _lCarry, _lPinned, _lIdle, _lToeOff;
-            private readonly FieldInfo[] _bodyFields;   // driver: _hop _pair _dive _plainRun _amp _heldNow _carried _idleStock _ballistic
+            private readonly FieldInfo[] _bodyFields;   // driver: _hop _pair _dive _plainRun _amp _heldNow _carried _idleStock _ballistic _posePresses
             private readonly FieldInfo _bodyYField;
             private readonly Transform _headBone;
             private Quaternion _headRest;
@@ -671,7 +678,7 @@ namespace SpeedStars.PlayTests
             private readonly List<Color32[]> _stripCells = new List<Color32[]>();
             private readonly List<string> _stripLines = new List<string>();
             private readonly List<(List<Color32[]> cells, List<string> lines)> _stripsDone = new List<(List<Color32[]>, List<string>)>();
-            private static readonly string[] BodyNames = { "_hop", "_pair", "_dive", "_plainRun", "_amp", "_heldNow", "_carried", "_idleStock", "_ballistic" };
+            private static readonly string[] BodyNames = { "_hop", "_pair", "_dive", "_plainRun", "_amp", "_heldNow", "_carried", "_idleStock", "_ballistic", "_posePresses" };
 
             private readonly List<string> _csv = new List<string>();
             private readonly List<Fr> _frames = new List<Fr>();
@@ -774,7 +781,7 @@ namespace SpeedStars.PlayTests
             /// <summary>Columns after the form ones: frame, key events, per-leg state and world foot, body state, drawn bones.</summary>
             private static string TransHeader() =>
                 ",frame,events," + TransLegColumns("L") + "," + TransLegColumns("R") +
-                ",d_hop,d_pair,d_dive,d_plainRun,d_amp,d_heldNow,d_carried,d_idleStock,d_ballistic,d_bodyY,d_bodyYVel,hipBoneH,headPitch";
+                ",d_hop,d_pair,d_dive,d_plainRun,d_amp,d_heldNow,d_carried,d_idleStock,d_ballistic,d_posePresses,d_bodyY,d_bodyYVel,hipBoneH,headPitch";
 
             /// <summary>One leg's state and its foot and toe in the world: along the run axis and height above the ground.</summary>
             private string TransLeg(object leg, Transform foot, Transform toe, Vector3 forward) =>
