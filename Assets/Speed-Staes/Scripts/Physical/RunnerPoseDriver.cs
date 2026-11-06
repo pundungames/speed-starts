@@ -595,6 +595,9 @@ namespace SpeedStars.Physical
         [Tooltip("One-leg hop: once a hop is on, no press (the same key or the other) is taken by the pose before this long (s) has passed since the last " +
                  "one taken; the sim counts every press all the same, so it costs no speed. A hop's swing is never shorter either. A run is not gated by it.")]
         [Min(0.1f)] public float hopTime = 0.42f;
+        [Tooltip("One-leg hop: a hop's swing is never planned longer than this press-to-press time (s), however slow the key: at a slow rhythm the " +
+                 "foot waits on the ground for the next press. Not shorter than hopTime.")]
+        [Min(0.1f)] public float hopTimeMax = 0.6f;
         [Tooltip("How much of each new press-to-press time a leg's cycle takes on (1 = just the last one): one odd press " +
                  "does not jerk the legs.")]
         [Range(0.1f, 1f)] public float stepFollow = 0.5f;
@@ -1482,7 +1485,7 @@ namespace SpeedStars.Physical
             leg.swungSincePress = true;
             if (leg.cycle <= 0f) leg.cycle = Mathf.Clamp(2f * (body && body.Sim != null ? body.Sim.StepTime : 0.3f), stepTimeMin, 2f * stepTimeMax);
             // A hop's swing is never shorter than hopTime in all (press to landing), whatever cycle the keys taught.
-            float cycle = Mathf.Max(leg.cycle, Mathf.Lerp(0f, hopTime, _hop * (1f - _pair)));
+            float cycle = Mathf.Lerp(leg.cycle, Mathf.Clamp(leg.cycle, hopTime, Mathf.Max(hopTime, hopTimeMax)), _hop * (1f - _pair));
             float elapsed = Mathf.Min((float)(time - leg.pressedAt), cycle * 0.5f);
             float lead = hopLead * _hop * (1f - _pair);   // one-key hop: the foot lands this much before the press is due
             float len = Mathf.Clamp(cycle - elapsed - lead, swingMin, Mathf.Max(swingMin, stepTimeMax));
