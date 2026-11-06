@@ -478,6 +478,11 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running: the thigh's peak with the knee still folded, the heel drawn up toward the belly (the shin is " +
                  "thrown out only after this). Blended in by the run weight; a hop, a pair jump and a hold do not read it.")]
         public LegAngles tuckPeak = new LegAngles(86f, 82f);
+        [Tooltip("Plain running at a short step (the leg's press-to-press time at tuckFastPeriod.y or less): the tucked peak, taken whole (the stride's size does not " +
+                 "shrink it): the quicker the steps, the higher the knee and the more the heel is drawn up. Blended from tuckPeak by the rhythm.")]
+        public LegAngles tuckPeakFast = new LegAngles(95f, 58f);
+        [Tooltip("The rhythm tuckPeakFast follows: the leg's press-to-press time (s). x = no share (a slow step), y = the whole.")]
+        public Vector2 tuckFastPeriod = new Vector2(0.34f, 0.22f);
         [Tooltip("Plain running: the shin thrown forward as the thigh comes down (thigh − (180 − knee) is the shin's angle, " +
                  "+ = ahead of the knee). From here the foot claws back into contactRun. Run weight only.")]
         public LegAngles shinThrow = new LegAngles(56f, 160f);
@@ -990,6 +995,8 @@ namespace SpeedStars.Physical
         const float FollowRate = 6f;           // a leg changes between turning with the hips and keeping to the ground this fast (1/s)
         const float FoldKeep = 0.6f;           // share of the knee's fold that stays in a short stride (the thigh shrinks more)
         const float MinCatch = 0.02f;
+        const float TuckFastEarly = 0.06f;     // a short step's tucked peak comes this much earlier in the swing (share)
+        const float TuckFastLead = 0.6f;       // and the tucked curve is read this much further ahead
         const float HopMinCatch = 0.12f;       // a catch in a hop takes at least this long (s): a foot never snaps down
         const float HopStockReturn = 0.24f;    // a hop's legs go home this slowly (s) at least, whatever stockReturnTime is          // a press catching a swinging leg takes at least / at most this long (s)
         const float MaxCatch = 0.15f;
@@ -1769,16 +1776,20 @@ namespace SpeedStars.Physical
         /// the same start, recover and folded pass, then the thigh peaks with the knee still folded (the leg drawn to the belly),
         /// and only on the way down the shin is thrown forward, before the foot claws back into the contact pose.
         /// </summary>
+        /// <summary>How short this leg's steps are (0 slow .. 1 fast): from its own press-to-press time.</summary>
+        float TuckFastW(Leg leg) => leg.cycle > 0f ? Mathf.Clamp01(Mathf.InverseLerp(tuckFastPeriod.x, tuckFastPeriod.y, leg.cycle)) : 0f;
+
         void FillTuck(Leg leg)
         {
             LegAngles[] a = leg.keys, k = leg.tuckKeys, m = leg.tuckSlope;
             float[] n = leg.tuckKnots;
             for (int i = 0; i < 3; i++) { k[i] = a[i]; n[i] = leg.knots[i]; }
-            n[3] = Mathf.Clamp(tuckThrowKeys.x, n[2] + 0.02f, 0.9f);
+            float fast = TuckFastW(leg);
+            n[3] = Mathf.Clamp(tuckThrowKeys.x - TuckFastEarly * fast, n[2] + 0.02f, 0.9f);   // a short step reaches its peak earlier
             n[4] = Mathf.Clamp(tuckThrowKeys.y, n[3] + 0.02f, 0.97f);
             n[5] = 1f;
             k[2] = MidKeyFor(leg);
-            k[3] = Key(tuckPeak, hopKneeDrive);
+            k[3] = LegAngles.Lerp(Key(tuckPeak, hopKneeDrive), LegAngles.Lerp(tuckPeakFast, hopKneeDrive, _hop * (1f - _pair)), fast);
             k[4] = Key(shinThrow, hopKneeDrive);
             k[5] = a[4];
             m[0] = leg.slope[0];
@@ -1855,7 +1866,7 @@ namespace SpeedStars.Physical
             // Plain running swings on its own curve (tucked, then the shin thrown); the old one is kept whole for hop and pair.
             if (_plainRun > 0f && leg.tuckKeys != null)
             {
-                float lead = leg.swingLen > 0f ? tuckLead / leg.swingLen * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, leg.knots[2], share)) : 0f;
+                float lead = leg.swingLen > 0f ? tuckLead * (1f + TuckFastLead * TuckFastW(leg)) / leg.swingLen * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, leg.knots[2], share)) : 0f;
                 at = LegAngles.Lerp(at, SwingSegment(leg.tuckKeys, leg.tuckSlope, leg.tuckKnots, Mathf.Min(1f, share + lead)), _plainRun);
             }
             return at;
