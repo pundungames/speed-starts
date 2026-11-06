@@ -10,7 +10,7 @@ owns_paths:
   - "docs/tasks/T-154-tek-ayak-sekis.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [86473717, f51c8b3c, fc4367a9, 8608e6ce, 7692878a, 1b9018c4, 793ffc9b, cc3474d4, 0f13ed11, 3cbf6f03, a0e7f7e1, 9a6dc2ab, 5a500f03, 4afdece3, f009f0c8, 962294c1, 1c670498, 242e9207]
+commits: [86473717, f51c8b3c, fc4367a9, 8608e6ce, 7692878a, 1b9018c4, 793ffc9b, cc3474d4, 0f13ed11, 3cbf6f03, a0e7f7e1, 9a6dc2ab, 5a500f03, 4afdece3, f009f0c8, 962294c1, 1c670498, 242e9207, 643591d7, da2611a3, 11dcd68f, 83cd12ce]
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
@@ -80,3 +80,6 @@ Kullanici 06.11 (ozet, sol ayak uzerinde sekerken):
 - Karar: `hopStandWait` 0.34 (oneri 0.2 degil): start/restart/blockStart tus araligi 0.30, 0.2'de ilk adim sekise donerdi. walkStart (0.6 sn aralik) kacinilmaz degisir: 0.34'te sekis, 0.6'da kosu.
 - Blok baslangicinda (`startStance != None`) tek basis sekise donmez (kosu baslangici korunsun).
 - Supheli: hopStanceMax kisa stance yuzunden yukseklik ve itis suresi degisir; `hopSitBack` 18 govde -10..-18'i tutturmak icin tahmin.
+- Tur 2-4 (olcum t154-a/b/c): kapi havadayken kapali, stance dokunustan, hopStanceMin/Max, hopTimeMax, hopSwingMin, hopLean (mutlak), kol yayi (armHopFollow 4 Hz), hopStandWait 0.15 + _hopQuick.
+- Tur 5: Key() artik Lerp(Stride(key), hopKey) (hop key'leri amp ile kuculmez); hopRecover (-58,110), hopKneeDrive (40,100); zamanli toe-off yalniz basis istemis ayakta (swungSincePress) - tek basis tek sekis.
+- hopLean olculen -6.9 vs hedef -11: kaynagini bulamadim (kod: toplam egim = pelvisPitch + lean = hopLean), Tooltip'te yazili.
