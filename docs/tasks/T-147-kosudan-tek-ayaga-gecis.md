@@ -1,7 +1,7 @@
 ---
 id: T-147
 title: Duz kosudan tek ayaga geciste govde yavas geri oturur, ilk sekis sivri olmaz
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-146]
 owns_paths:
@@ -9,7 +9,9 @@ owns_paths:
   - "docs/tasks/T-147-kosudan-tek-ayaga-gecis.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits:
+  - 296e8fec
+  - 3c49adcb
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
@@ -43,3 +45,6 @@ Kullanici 05.11: "normal kosudan tek bacak kosuya gecerken cok sert puruzlu geci
 - Commit 1 (296e8fec): `_hopBody` yavas yay (`hopBodySpring` 2 Hz), govde `Min(_hopBody, _hop)` okur (cikis eskisi gibi hizli, giris yavas); kalca egimi ayrica `(1 - _heldNow)` ile.
 - Commit 2: carry kok sebebi: hop acilinca digeri `Enter(Rest)` ile serbest birakiliyor ama `idle` 0'dan basliyor; `Rest` carry'si `idle < IdleCarry` oldugu icin ~2 kare "evde duruyor" sayiliyordu. `_hopFreed` (hop hedefi acik, tutma yok) ile basilmayan bacak Rest'te carry etmez.
 - Olculmedi.
+- Olcu (t146-b -> t147-a, runToHop): kalca kare hareketi 8.3 -> 3.9, -27 dereceye 0.18 -> 0.32 sn; ilk sekis tepesi 26 cm -> 12 cm, kare hareketi 5.2 -> 3.6; carry cokusu yok. pairToHop kalca 8.1 -> 3.5.
+- Duran durum: `hopSwap` 2.47-2.93 sn birebir ayni, duerustan ilk sekiste uyluk sicramasi 34.8 -> 14.4 (carry duzeltmesi). holdOne, holdBoth, pairOrder, runToPair 0 fark.
+- Kabulun alti: yerlesik sekisin kendi kalkisi (+5.3 cm/kare, ikinci fark 7-8) 0.27 sn tusta pencereye giriyor; o kapsam disi. Kol hop atisi 20 derece/kare, cikis `hopToRun` kalca 8.3: kullanici gorsun.

@@ -5,13 +5,13 @@ MOD: süpervizör
 > İlk satır geçerli moddur: `MOD: süpervizör` ya da `MOD: hızlı` (bkz. docs/CALISMA-KURALLARI.md §14 A).
 > Geçmiş: `docs/checkpoints/`. Alttaki OTOMATIK bölümü `scripts/tur-sonu.ps1 -DurumYaz` yazar; elle düzenleme.
 
-Son güncelleme: 2026-11-05 gün sonu. Son checkpoint `docs/checkpoints/2026-11-05-karakter-ik.md`. Push kullanıcıda; `IKTest` origin'in 58 commit önünde.
+Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakter-ik.md`. Push kullanıcıda.
 
-## YARIN İLK İŞ: kullanıcının üç notu (05.11 gün sonu, kod yazılmadı)
-Her biri ayrı commit, önce ve sonra seri kare kaydı (`t144-after` hazır önce-ölçüsü). Geri kalanına kullanıcı "her şey çok güzel oldu" dedi: bozma.
-1. **Bacak:** "bacağını öne atarken basmadan önce karın tarafına doğru iyice çekip sonrasında kaval kemiğini ileri doğru atması lazım." Ölçü (`rhythm032`, 3.18-3.45 sn): uyluk 66° tepeye varırken diz çoktan 128-161°, yani bacak açık gidiyor. İstenen: uyluk yüksekte, diz kıvrık (karna çekili), sonra uyluk inerken baldır öne fırlar. T-133'ün "tepede diz tam açık" isteğinin yerine geçer. T-134 uyluğu "balerin" diye indirmişti, ama balerin düz bacaktandı: diz kıvrıkken uyluk yeniden yükselebilir. Bakılacak: `kneeOpen`, `kneeOpenFast`, `runSwingKeys`, `kneeOpenDelay`, `contactRun`.
-2. **Kol:** "çok robot kol gibi hareket ediyor. hızına göre ayarlaman lazım, yavaş koşarken direkt tak tak diye geçiş olmasın." Ölçü (`slowRun`, 3.7 m/s): kol 0.15-0.2 sn'de 40° gidip sonra düz bekliyor (−28 → +16, dirsek 27 → 98): uyluğun kare dalgasını kopyalıyor. Bakılacak: `StepArm` kolu `opposite.thighWorld`'den sürüyor; `limbSpring` 14 Hz ve `limbLag` 10 Hz yavaşta çok sert; `armSlowAmp`, `_speedCurve`. Fikir: yay ve genlik hıza bağlı, yavaşta uzun yumuşak salınım.
-3. **Tek ayağa geçiş:** "normal koşudan tek bacak koşuya geçerken çok sert pürüzlü geçiyor." Ölçü (`runToHop`, 4.00-4.13 sn): kalça 0.13 sn'de +23° → −19°, 8°/kare; kalça yüksekliği 7 cm/kare iner, sonra kalkar. Bakılacak: `hopBackLean` 42 `gaitBlendSpring` 5 Hz ile geliyor, `stockReturnTime` 0.16, `SitBack`.
+## 06.11: kullanıcının üç notu kapandı, gözünü bekliyor (`IKTest`)
+- **T-145 bacak:** uyluk yüksekte diz kıvrık, inerken baldır öne (`tuckPeak` 86/82, `shinThrow` 56/160, `tuckThrowKeys`, `tuckLead` 0.05; `Catch`'te diz önce açılır). Tepe / diz / baldır: ritim 81/84/+30, en hızlı 78/82/+25, yavaş 73/90/+25, boğma 69/92/+17.
+- **T-146 kol:** uyluktan gelen sürüş kol başına yaydan geçer, Hz = `armPumpRate` 1 / basış aralığı; `armPumpWidth` 1.12 genişliği geri verir. Kare hareketi ritim 15 → 9.5, en hızlı 21 → 14.5, yavaş 8 → 5.7.
+- **T-147 geçiş:** `_hopBody` (`hopBodySpring` 2 Hz) yalnız girişte yavaş; kalça 8.3 → 3.9 derece/kare, ilk sekiş 26 → 12 cm; Rest'e giren bacağın iki karelik carry'si kalktı. Çıkış (`hopToRun`) ve kol atışı değişmedi.
+- Önce ölçüsü `t144-after`; son kayıt `t147-a`. Kullanıcı bakınca yorumuna göre devam.
 
 ## Çalışma düzeni
 - Kullanıcı `IKTest`'te (ana klasör, Unity açık). İş `agent/ik-kosucu`'da, worktree `D:\Pundun\speed-starts-ik`. Geçirme: kopyada doğrula, ana klasörde `git merge --ff-only <hash>`. `agent/ik-govde` worktree'si silinebilir.
