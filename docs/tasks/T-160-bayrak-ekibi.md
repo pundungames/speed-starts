@@ -1,7 +1,7 @@
 ---
 id: T-160
 title: Bayrak yarisi ekibi: ana ekranda 4 kisilik ekip, ayak secimi, yarista ayni ekip
-status: review
+status: merged
 owner: ui-agent
 depends_on: [T-159]
 owns_paths:
@@ -32,10 +32,10 @@ needs:
     durum: closed
     not: "Home.unity: 'Relay Team' nesnesi (MenuRelayTeam, runnerPrefab, mainRunner, 3 slot). Builder: Tools > Speed Stars > Build > Home scene - add the relay team stage (patch). Slotlar ana karakterin yanina konur, sahnede tasinir. Yeni .cs dosyalarinin .meta'lari Unity acilinca olusur. -> builder kopyada calisti (HOME_RELAY_TEAM_OK); Relay Team: runnerPrefab, mainRunner, 3 slot dolu; .meta dosyalari geldi"
   - tip: WIRING
-    durum: open
+    durum: closed
     not: "ProjectInstaller -> IRelayTeam: Container.Bind<IRelayTeam>().FromMethod(c => SpeedStars.Meta.Relay.RelayTeamService.Create(c.Container.Resolve<ISaveStore>(), c.Container.Resolve<ICosmeticService>(), c.Container.Resolve<RaceEventCatalog>())).AsSingle();  (ICosmeticService satirindan sonra)"
   - tip: WIRING
-    durum: open
+    durum: closed
     not: "RaceBots (Scripts/Bridge/RaceBots.cs, owns_paths disinda) -> RaceRelay.UseTeam: [Inject] void ConstructRelayTeam([InjectOptional] IRelayTeam team) alani sakla; _relay.Bind(this) satirindan hemen sonra _relay.UseTeam(_relayTeam, _cosmetics, _catalog); (Awake'te _relay yaratildigi yer, satir ~197). Bu olmadan yaris takimi eskisi gibi rastgele giyinir."
 started: 2026-11-06
 finished: 2026-11-06
@@ -84,3 +84,4 @@ Ayak degistirince kiyafet degisimi aninda ama kucuk bir geri bildirimle (ana kar
 - Sahne: `MenuRelayTeam` (Bridge) kendi kendine gorunur (Home ustte + bayrak, Race of the Day degil); UI asmdef Bridge'i goremedigi icin HomeScreenView ile baglanti yok.
 - Yaris: `RaceRelay.UseTeam` seam'i acildi; `RaceBots` owns_paths disinda oldugu icin cagri WIRING maddesinde.
 - Zorlandigim yer: derleyici/Unity yok, hicbir sey calistirilmadi; builder yerlesimi (satir ve slot konumu) gorulmeden tahmin, kullanici tasir.
+- WIRING: `ProjectInstaller` `IRelayTeam`, `RaceBots` `UseTeam` (7a22f2a4). Malik a670ea7b ile birlesti (oyuncu tum takimi kosuyor); tek cakisma `Build` icinde, ikisi de tutuldu. Testler 30/30 (t161-a). Ana ekrani kimse gormedi, satir ve slot yerleri tahmin: kullanici bakacak.

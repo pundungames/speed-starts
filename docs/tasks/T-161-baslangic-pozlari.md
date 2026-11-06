@@ -1,7 +1,7 @@
 ---
 id: T-161
 title: Yaris baslangic pozlari FBX'ten: Readypose READY'de, GOpose SET'te
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-153]
 owns_paths:
@@ -13,7 +13,7 @@ owns_paths:
   - "docs/tasks/T-161-baslangic-pozlari.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits: [68880fdd, 22b73d9c]
 tests:
   - "gerekmiyor: gorsel; kullanici gozle bakar"
 analytics:
@@ -48,3 +48,4 @@ Yalniz `owns_paths`. Sahne, prefab, asset, `.meta` yazma. Unity calistirma, derl
 - `RunnerStartPose` (Bridge, calisma aninda eklenir, order 200): klipleri ilk w>0 karede bir kere orneklenir, degisen kemikler (esikli) saklanir; her kare Slerp/Lerp(simdiki, Lerp(ready,set,StanceSetWeight), StanceWeight). Surucuye yalniz `StanceWeight`/`StanceSetWeight` eklendi.
 - Config Bridge'e `RaceSessionAdapter.StartSettings` ile gelir (RaceBots `session.StartSettings` okur; inject/WIRING yok). Klip yoksa bilesen eklenmez; tek klip varsa ikisi icin o kullanilir.
 - Derlenmedi, Unity calistirilmadi, test yok (gorsel).
+- Klipler 57 yol, 56 eslesti (`B-spineProxy` prefab ta yok). t161-a seritleri: READY klip gibi (bir kol yukarda, klipte bu kemik de anahtarli), SET hips yukari iki el yerde. Test 30/30.
