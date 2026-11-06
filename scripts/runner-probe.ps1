@@ -17,6 +17,9 @@ Write-Output "KOPYA $kopya"
 try {
     & powershell -NoProfile -File "$root\scripts\kopya.ps1" -Senkron -Ad $kopya -Kaynak $src -HeadOnly -Sahip $Sahip
     if ($LASTEXITCODE -ne 0) { Write-Output "SENKRON HATASI $LASTEXITCODE"; exit 31 }
+    # A prefab's import bakes the script's field defaults; a default changed with no field added or removed does not re-import it,
+    # and the run measures the old number. A changed hash forces the import (the next Senkron puts the file back).
+    Add-Content -LiteralPath "$kopya\Assets\Speed-Staes\Prefabs\Character\HumanCharacterDummy_F.prefab" -Value ''
 
     $unityArgs = @('-batchmode', '-projectPath', "`"$kopya`"", '-runTests', '-testPlatform', 'PlayMode',
         '-testFilter', "`"$Filtre`"", '-testResults', "`"$out\result.xml`"", '-logFile', "`"$out\unity.log`"",
