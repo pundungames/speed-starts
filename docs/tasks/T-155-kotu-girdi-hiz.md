@@ -105,3 +105,21 @@ Once/sonra (tek tus, ayaktan, 100 m sn / oturmus hiz min ort):
 - Pozun fren beklemesini okumasi gerekirse: bekleme `wait = max(stopDelay, min(stopWaitMax, stopWaitShare x max(son iki aralik)))`; sim'de kamuya acik degil (T-154 notu).
 - Koşulmadi: Unity testleri (3 yeni test `RunnerSimRelationTests` sonunda). Probe: `scripts/runner-olcum/Program.cs` `hop`, `stop`.
 - Unity: `RunnerSimRelationTests` 25/25 yesil (t154-f). Iki tus `gate` ve `human` ciktilari birebir ayni, supervizor de olctu.
+
+### Ek (kullanici: "hizi cok fazla oldu") - tablo yeniden ayarlandi
+`hopFloorSpeed` 5.6 -> 4.2, `hopFloorGain` 2.8 -> 2, `stopWaitShare` 1.5 -> 1.2. `gate`/`human` iki tus yine birebir ayni. Tek tus, ayaktan (100 m / min ort):
+
+| Aralik | Ilk tur | Ek sonrasi |
+|---|---|---|
+| 0.05 | 18.9 / 5.4 5.5 | 22.3 / 4.7 4.9 |
+| 0.10 | 18.0 / 5.6 6.0 | 18.7 / 4.7 5.6 |
+| 0.25 | 16.35 / 5.3 6.4 | 16.84 / 4.4 6.0 |
+| 0.30 | 17.9 / 5.1 5.8 | 18.6 / 3.9 5.4 |
+| 0.40 | 20.2 / 4.7 5.3 | 22.1 / 3.4 4.6 |
+| 0.50 | 20.3 / 4.9 5.2 | 25.1 / 3.2 4.2 |
+| 0.70 | 20.9 / 4.7 5.1 | 27.2 / 3.6 3.9 |
+| 1.00 | 21.9 / 4.0 4.9 | 28.5 / 2.8 3.7 |
+| 1.40 | 23.0 / 2.9 4.6 | 29.8 / 2.0 3.5 |
+
+Durma: tek basis 0.83 sn (ayni), ritim <= 0.40 ayni, 1.0 aralikli seri son basistan 1.62 sn'de duruyor.
+

@@ -42,7 +42,7 @@ namespace SpeedStars.Physical
         public float stopRamp = 0.3f;
         [Tooltip("The brake waits for the next tap of a slow series: at least stopDelay, otherwise stopWaitShare times the longer of the last two gaps between taps, never beyond stopWaitMax (s). " +
                  "A runner tapping once a second is still running between taps; the first tap of a series has no gap, so stopDelay holds.")]
-        public float stopWaitShare = 1.5f;
+        public float stopWaitShare = 1.2f;
         [Tooltip("Longest wait (s) the brake gives a slow series of taps before the runner is taken to have stopped.")]
         public float stopWaitMax = 1.6f;
 
@@ -96,10 +96,10 @@ namespace SpeedStars.Physical
         [Tooltip("A repeat this long (s) after the previous tap is one-key tapping at once: a two-key rhythm does not pause on one key that long.")]
         public float hopSlowGap = 0.6f;
         [Tooltip("Below this speed (m/s) a repeated key (one-key tapping) pushes at least hopFloorGain: bad one-key input slows the runner, never stops it. Two keys keep tapFloorSpeed.")]
-        public float hopFloorSpeed = 5.6f;
+        public float hopFloorSpeed = 4.2f;
         [Tooltip("Least push of a repeated key's tap while below hopFloorSpeed, in m/s per second since the previous tap: it covers what friction took in the gap, so a slow series keeps its speed " +
                  "and a quick one gets little extra (the best one-key tempo is not made faster by the floor).")]
-        public float hopFloorGain = 2.8f;
+        public float hopFloorGain = 2f;
         [Tooltip("Same leg again: its push is scaled by gap / hopFullGap below this gap (s), so tapping one key faster than this gains nothing.")]
         [Range(0.01f, 1f)] public float hopFullGap = 0.25f;
         [Tooltip("Keys in turn: a press's push is scaled by gap / pressFullGap below this gap (s), so tapping faster than a runner can step gains no more.")]
