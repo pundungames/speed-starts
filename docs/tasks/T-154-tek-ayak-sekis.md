@@ -10,7 +10,7 @@ owns_paths:
   - "docs/tasks/T-154-tek-ayak-sekis.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [86473717, f51c8b3c, fc4367a9, 8608e6ce, 7692878a]
+commits: [86473717, f51c8b3c, fc4367a9, 8608e6ce, 7692878a, 1b9018c4, 793ffc9b, cc3474d4, 0f13ed11, 3cbf6f03, a0e7f7e1, 9a6dc2ab, 5a500f03, 4afdece3, f009f0c8, 962294c1, 1c670498, 242e9207]
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
