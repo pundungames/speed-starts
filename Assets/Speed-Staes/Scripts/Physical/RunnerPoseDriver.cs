@@ -428,9 +428,11 @@ namespace SpeedStars.Physical
                  "the time, and a press that came in the air must not lift the foot in the next frame.")]
         [Min(0.02f)] public float hopStanceMin = 0.09f;
         [Tooltip("A single press from a standstill (no block stance) starts as a step (the knee goes up, as for a run). If no other press has come this long (s) " +
-                 "after it and the key is up, it was a hop: the pressed foot hops and the other leg is held out in front. Longer than a quick " +
-                 "run's key-to-key time (0.3 s), or the first step of a run would turn into a hop.")]
-        [Min(0.05f)] public float hopStandWait = 0.34f;
+                 "after it and the key is up, it was a hop: the pressed foot hops and the other leg is held out in front. A run's first step " +
+                 "then lasts a moment longer than a hop's wait, which is fine as long as nothing snaps.")]
+        [Min(0.05f)] public float hopStandWait = 0.15f;
+        [Tooltip("The hop weight's spring for a hop that began from a standstill (a single press): quick, so the held-out leg opens and the first arc is whole.")]
+        public SpringSettings hopStandSpring = new SpringSettings(10f, 1f);
         [Tooltip("The stride (how far the knee drives, how far the foot lands and pushes back) grows from strideMin at x m/s " +
                  "to the full keys at y m/s.")]
         public Vector2 strideSpeed = new Vector2(1.5f, 9f);
@@ -1022,6 +1024,7 @@ namespace SpeedStars.Physical
         bool _hopRepeated;                          // the last press taken was the same leg again: the hop is really on
         int _standLeg = -1, _standPresses;          // the leg of a first press from a standstill that may turn into a hop (hopStandWait), and the press count after it
         double _standTime;
+        bool _hopQuick;                             // the hop began from a standstill: its weight follows hopStandSpring and its arc takes the weight whole
         float _hopTarget;                         // 1 when that press was the same leg again, 0 when it was the other
         Spring _hopBody;                          // the hop weight's slow twin (hopBodySpring); _hopBodyW is what the body reads
         float _hopBodyW;
@@ -2607,8 +2610,7 @@ namespace SpeedStars.Physical
             if (_standLeg >= 0)
             {
                 Leg stood = Legs(_standLeg);
-                if (_posePresses != _standPresses || off || _dive > 0.3f || _heldNow > 0.1f || stood.phase == LegPhase.Hold ||
-                    now - _standTime > HopRepeatWindow)
+                if (_posePresses != _standPresses || off || _dive > 0.3f || _heldNow > 0.1f || now - _standTime > HopRepeatWindow)
                     _standLeg = -1;
                 else if (now - _standTime >= hopStandWait && !stood.held)
                 {
@@ -2616,6 +2618,7 @@ namespace SpeedStars.Physical
                     _hopRepeated = false;
                     _hopPrevLeg = _standLeg;
                     _hopPrevTime = _standTime;
+                    _hopQuick = true;   // the first hop from a standstill: its weight comes in quickly (hopStandSpring) and its arc is whole
                     FreeOtherLeg(_standLeg, now);
                     _standLeg = -1;
                 }
@@ -2624,8 +2627,10 @@ namespace SpeedStars.Physical
             _hopFreed = !off && _dive <= 0.3f && hopTarget * (1f - _heldNow) > 0.5f;
             hopTarget *= 1f - _heldNow;   // a real hold ends the hop: else the trunk sits back (hopSitBack) against the forward tip
             hopTarget *= 1f - PairWeight(now);   // a pair gives way: the arms already read _pair, the legs and trunk must too
+            if (hopTarget < 0.5f) _hopQuick = false;
             // Springs, not a lerp: a lerp is fastest in its first frame (0.26 of the way = 11 deg/frame on the hips via hopSitBack).
-            _hopSpring.Step(off ? 0f : hopTarget, gaitBlendSpring.frequency, gaitBlendSpring.damping, dt);
+            SpringSettings hopIn = _hopQuick ? hopStandSpring : gaitBlendSpring;
+            _hopSpring.Step(off ? 0f : hopTarget, hopIn.frequency, hopIn.damping, dt);
             _pairSpring.Step(off ? 0f : PairWeight(now), gaitBlendSpring.frequency, gaitBlendSpring.damping, dt);
             _hop = Mathf.Clamp01(_hopSpring.Value);
             _hopBody.Step(off ? 0f : hopTarget, hopBodySpring.frequency, hopBodySpring.damping, dt);
@@ -3084,7 +3089,7 @@ namespace SpeedStars.Physical
                 Vector3 joint = Joint(incoming, hip, pelvisTilt, width);
                 float landY = StanceExtent(incoming) + AnkleGround(incoming) - joint.y;
                 float speed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(riseSpeed.x, riseSpeed.y, sim.Speed));
-                float hopWeight = Mathf.Max(_hopBodyW, _pair);
+                float hopWeight = Mathf.Max(_hopQuick ? _hop * (1f - _pair) : _hopBodyW, _pair);
                 float rise = flightRise * speed * Mathf.Lerp(1f - formWeight, 1f, Mathf.Clamp01(sim.Form)) *
                              Mathf.Lerp(1f, runBounce, _plainRun);
                 // A hop's or pair's arc: a sine squared (both ends at rest, a round bottom) and as high as the flight is long (a press that
@@ -3380,6 +3385,7 @@ namespace SpeedStars.Physical
             _pairSpring.Reset();
             _hopPrevLeg = -1;
             _standLeg = -1;
+            _hopQuick = false;
             _hopRepeated = false;
             _hopPrevTime = -10.0;
             _posePresses = _armPresses = _hopPresses = 0;
