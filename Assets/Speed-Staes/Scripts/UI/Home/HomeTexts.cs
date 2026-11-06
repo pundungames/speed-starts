@@ -27,6 +27,16 @@ namespace SpeedStars.UI.Home
         public const string DefaultPlayerName = "Player";
         public const string RacerHeight = "Height: 5'9\"";
 
+        /// <summary>"1st leg", "2nd leg", "3rd leg", "4th leg": the relay leg the card edits (<paramref name="leg"/> is 0-based).</summary>
+        public static string RelayLeg(int leg)
+        {
+            int number = Math.Max(1, leg + 1);
+            int lastTwo = number % 100;
+            int last = number % 10;
+            string suffix = lastTwo >= 11 && lastTwo <= 13 ? "th" : last == 1 ? "st" : last == 2 ? "nd" : last == 3 ? "rd" : "th";
+            return number.ToString(CultureInfo.InvariantCulture) + suffix + " leg";
+        }
+
         /// <summary>"2/3": amount held over the cap (resource bar and entry gate).</summary>
         public static string TicketCount(int count, int cap) => $"{count}/{cap}";
 
