@@ -12,6 +12,8 @@ touches_scene: false
 branch: agent/ik-kosucu
 commits:
   - f693e54c
+  - 6d82e6ef
+  - 8ce551f9
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
@@ -79,3 +81,4 @@ Son basistan sonra baslayan salinimlar (saniye, son basisa gore):
 - Eklenen: 2 alan (`hopStopDelay`, `hopBufferTime`), 1 sabit; kaldirilan: yok (`HopRepeatWindow` hala kullanimda). Senaryolar: fastTap, hopTap, hopSwapSlow.
 - Derleyici yok, hicbir sey olculmedi. Supheli: kosuda `_stepNow` penceresi (stepTimeMax) degismedi, yani kosuda stop hala 0.6 sn; sekiste ritim 0.27'de gec basis tamponlandigi icin sekis aralik hopTime'a yakin kalir; `openOther`'a `!HopLegInAir()` eklendi.
 - Ayaktan sekis (`_standLeg`) ve `openOther` duruyor; `hopMaxAccel`, `_hopQuick`, `_landHold` dokunulmadi.
+- Olcum t157-a sonrasi: openOther'dan `!HopLegInAir()` kalkti; niyet `_hopWanted`, agirlik hedefi `_hopTarget` ayrildi (yalniz alinan ya da tampondan alinan basista 1; kosu niyetinde aninda 0); kosu kapisi (`PressStillBusy`) reddettigi sekis tusunu da tamponlar.
