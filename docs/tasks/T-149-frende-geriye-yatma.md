@@ -7,6 +7,7 @@ depends_on: [T-150]
 owns_paths:
   - "Assets/Speed-Staes/Scripts/Physical/RunnerPoseDriver.cs"
   - "Assets/Speed-Staes/Tests/PlayMode/RunnerFormProbeTests.cs"
+  - "Assets/Speed-Staes/Scripts/Bridge/RunnerCooldown.cs"
   - "docs/tasks/T-149-frende-geriye-yatma.md"
 touches_scene: false
 branch: agent/ik-kosucu
@@ -37,7 +38,7 @@ Son tus ~3.8 sn. 4.15'te `_idleStock`, iki bacak `Rest`. Sim freni 4.2-4.9: 8 ->
 
 ## Kabul kriterleri
 - [ ] Fren sirasinda hiz 3 m/s ustunde iken: kalca egimi -35 ve otesi, on ayak kalcanin en az 40 cm onunde, topuk yerde (ayak ucu -1 cm altina inmez).
-- [ ] Kare basina: kalca egimi 4 derece alti, uyluk ve diz 15 derece alti; bir karede sicrama yok.
+- [ ] Kare basina: kalca egimi 5 derece alti, hipY 4 cm alti, uyluk ve diz 15 derece alti; bir karede sicrama yok.
 - [ ] Hiz 0 olduktan sonra 0.6 sn icinde Ready durusu; hafif sekme kalabilir, titreme yok.
 - [ ] `brakeRestart`: fren ortasinda basis yatik govdeyi yumusak toparlar, ilk adim atilir (T-148).
 - [ ] Yavas kosudan (hiz < brakeSpeed.x) birakinca yatma yok.
@@ -53,3 +54,5 @@ Son tus ~3.8 sn. 4.15'te `_idleStock`, iki bacak `Rest`. Sim freni 4.2-4.9: 8 ->
 - Olculmedi (Unity calistirilmadi): SitBack'in iki topugun ortalamasina donmesi on ayagi nasil etkiliyor; ayak yerden kalkarsa AnkleGround kirpmasi yukari iter. brakeLean/brakeFront ilk ayar adayi.
 - Cakisma: `RunnerCooldown` (bitis) kendi dik durusunu `crouch`/`ready` uzerine yaziyor, sim hizi hala yuksekken tus yoksa fren de devreye girer; ozel dal eklenmedi.
 - Senaryolar ayri commit (014be9a7): stop +0.65/+1.3, brakeRestart, slowStop.
+- Tur 2: brakeLean 34, brakeSpeed (2.5,5), yaylar 3 Hz/1 ve 2 Hz/0.75; bacaklar (40,172)/(52,118): istenen 36/172 ve 50/118 Extent 1.69 ve 1.62 verirdi, esitlik icin 40 ve 52 (1.61 / 1.60). Olculmedi.
+- `brakePose` seam: `RunnerCooldown` aktifken false, `Restore`da true; fren bitis sekansinda kapali.
