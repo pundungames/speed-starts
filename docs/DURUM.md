@@ -25,7 +25,7 @@ Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakte
 - Koşu zıplaması `runBounce` 0.5, basma pozu `contactRun` 30/145, kamera Y sabit (`trackPull`, `trackSpeedSmooth`), fren `stopBrakeForce` 12.
 - Açık: tuş 0.18 sn basılı kalınca gövde kambur (kalça 66°); tek ayakta gövde ~30° geride, denge ayağı alçak; dalışta kollar yukarıda, önce çift zıplıyor; koşudan çift zıplamaya ~0.25 sn gecikme; tuşsuz süzülmede ayak kayar. Hareket oturunca `PlayerController.md`.
 - Prefab'ta kayıtlı, kod varsayılanı işlemez: `pushEnd`, `recover`, `mid`, `reach`, `holdBack`, `holdSupport`, `hipShare` 0.65, `liftKick` 1.5, `armBack`; sim `stopDelay`, `stopRamp`. Prefab Editor'den kaydedilirse tüm yeni alanlar dosyaya yazılır ve koddan değişmez: yeni ad aç.
-- Tam takım 06.11 (`51d680fa`): EditMode 1281/1285, PlayMode 98/103 (3 atlanan); 6 kırmızı, hepsi backlog'da, koşucu dışı.
+- Tam takım 06.11 (`6bd5340c`, T-145..T-150 dahil): EditMode 1281/1285, PlayMode 98/103 (3 atlanan); 6 kırmızı, hepsi backlog'da, koşucu dışı.
 
 ## Ölçüm
 - Kayıt: `powershell -File scripts/runner-probe.ps1 -Kaynak D:\Pundun\speed-starts-ik -Etiket x -Sahip T-xxx -Filtre RunnerTransitions_WriteFrameStrips` (yaklaşık 1 dk, commit'li hâli ölçer). Çıktı `D:\Pundun\form-probe\x\`: `trans_<senaryo>.csv` her kare, `trans_<senaryo>_strip<i>.png` 40 ardışık kare.
@@ -47,12 +47,12 @@ Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakte
 - PowerShell'de `git` bozuk: git Bash'ten. Kancada `git commit` + "main" aynı komutta olmaz. `ProjectSettings/EditorSettings.asset` kullanıcıda commit'siz, dokunma.
 
 <!-- OTOMATIK:BASLA -->
-_tur-sonu.ps1 2026-11-06 11:18 - otomatik blok, elle yazilan bu blokta kaybolur._
+_tur-sonu.ps1 2026-11-06 12:22 - otomatik blok, elle yazilan bu blokta kaybolur._
 
 - **KAPI TEMIZ (cikis 0)**
 - Acik needs: 3 (DECISION 3)
 - Review kuyrugu: 28  UYARI: 10 ustu, supervizor kuyrugu birikti
-- Goz bekleyen (merged): 110 - T-147, T-146, T-145, T-114, T-115, T-113, T-111, T-109
+- Goz bekleyen (merged): 113 - T-149, T-150, T-148, T-147, T-146, T-145, T-114, T-115
 - in-progress: 0 / blocked: 0
 - Uyari: govde-needs 0, test 10, analytics 0 (kapsam: status in-progress/review/merged)
 - GIT: 4 calisma agaci (ana: IKTest); ana agacta commit'siz .prefab/.unity/.asset: 1
