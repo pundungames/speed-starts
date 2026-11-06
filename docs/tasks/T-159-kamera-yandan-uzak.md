@@ -1,7 +1,7 @@
 ---
 id: T-159
 title: Kamera daha yandan baksin, hizlandikca daha cok uzaklassin
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-158]
 owns_paths:
@@ -9,7 +9,7 @@ owns_paths:
   - "docs/tasks/T-159-kamera-yandan-uzak.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [5f11204f]
+commits: [5f11204f, 4d5010d8]
 tests:
   - "gerekmiyor: gorsel; kullanici gozle bakar"
 analytics:
