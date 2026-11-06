@@ -913,7 +913,6 @@ namespace SpeedStars.Physical
         double _poseLastTime = -10.0;
         float _posePrevGap = 10f;                   // time between the last taken press and the one before (s)
         int _keyLastLeg = -1;                       // the key pressed last, taken or not (the rhythm's same-key test)
-        bool _poseSkippedOther;                     // the other key was pressed (and left to the sim) since the last taken press
         Spring _bounceChest;                       // the chest's lean in the bounce: follows _bounceLean a little behind (bounceChestSpring)
         Spring _bounceLean;                        // the trunk's lean in the bounce (deg), through bounceLeanSpring
         float _rockKick;                           // eases up to 1 at a press, back to 0 over the press interval: the run's trunk rock
@@ -1157,6 +1156,8 @@ namespace SpeedStars.Physical
             // alone learns the gate's own gap and swings slowly forever.
             double keyGap = l.lastKey >= 0.0 ? time - l.lastKey : -1.0;
             bool learn = keyGap >= (leg == _keyLastLeg ? pressFollowSame : pressFollowRun);
+            // Keys in turn are read from the keys themselves: the key before this one (taken or not) was the other one.
+            bool alternating = _keyLastLeg >= 0 && _keyLastLeg != leg && time - Legs(1 - leg).lastKey < stepTimeMax;   // not across a pause
             l.lastKey = time;
             _keyLastLeg = leg;
             bool fromStand = _idleStock;   // read before it is cleared: no key and no press lately, so this press starts the run from a standstill
@@ -1166,9 +1167,8 @@ namespace SpeedStars.Physical
             // hop count. A key pressed together with the first of a pair (within the pair window PairWeight counts, after a pause) is the pair's second key, taken.
             double sinceTaken = time - _poseLastTime;
             bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 1.5f * PairWindow && _posePrevGap >= PoseMinGap * 1.5;
-            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (sinceTaken < PoseMinGap || (!fromStand && PressStillBusy(leg, time, sinceTaken))))
+            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (sinceTaken < PoseMinGap || (!fromStand && PressStillBusy(leg, time, sinceTaken, alternating))))
             {
-                if (leg != _poseLastLeg) _poseSkippedOther = true;
                 l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
                 if (learn && l.cycle > 0f)
                     l.cycle = Mathf.Lerp(l.cycle, Mathf.Clamp((float)keyGap, stepTimeMin, 2f * Mathf.Max(stepTimeMin, stepTimeMax)), stepFollow);
@@ -1177,8 +1177,7 @@ namespace SpeedStars.Physical
             // Keys in turn pressed faster than that: the step that is taken is the other leg's of the one before (L R L R every 0.08 s is
             // still a run, not one leg hopping); one key pressed again and again stays one leg.
             int use = leg;
-            if (_poseSkippedOther && leg == _poseLastLeg) use = 1 - leg;
-            _poseSkippedOther = false;
+            if (alternating && leg == _poseLastLeg) use = 1 - leg;
             _posePrevGap = (float)System.Math.Min(10.0, sinceTaken);
             _poseLastTime = time;
             _poseLastLeg = use;
@@ -1208,12 +1207,12 @@ namespace SpeedStars.Physical
         /// count). Judged on the leg the press would move: a swing not far enough along, a foot being caught, or the pressed foot's own push
         /// not yet swung. A leg on the ground (after its swing), landed, or at rest is free; never closed longer than pressGateMax.
         /// </summary>
-        bool PressStillBusy(int leg, double time, double sinceTaken)
+        bool PressStillBusy(int leg, double time, double sinceTaken, bool alternating)
         {
             if (sinceTaken >= pressGateMax) return false;
-            int would = _poseSkippedOther && leg == _poseLastLeg ? 1 - leg : leg;
+            int would = alternating && leg == _poseLastLeg ? 1 - leg : leg;
             Leg l = Legs(would);
-            bool sameKey = would == _poseLastLeg;
+            bool sameKey = !alternating && would == _poseLastLeg;
             switch (l.phase)
             {
                 case LegPhase.Recover:
@@ -3077,7 +3076,6 @@ namespace SpeedStars.Physical
             _poseLastLeg = -1;
             _poseLastTime = -10.0;
             _posePrevGap = 10f;
-            _poseSkippedOther = false;
             _keyLastLeg = -1;
             leftLeg.lastKey = rightLeg.lastKey = -1.0;
             _sitW[0] = _sitW[1] = 0f;
