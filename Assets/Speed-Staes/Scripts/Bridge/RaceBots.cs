@@ -76,6 +76,7 @@ namespace SpeedStars.Bridge
             public float PrevDistance;
             public RunnerHurdles Hurdles;
             public BotJumpDriver Jumper;
+            public RunnerPoseDriver Driver;   // found once at creation: the start's stance is written to it
         }
 
         readonly List<Bot> _bots = new List<Bot>();
@@ -274,6 +275,7 @@ namespace SpeedStars.Bridge
             var bot = new Bot { Root = root, Start = _basePosition }; // the middle line; its lane comes with each round
             bot.Input = root.GetComponentInChildren<RunnerInput>(true);
             bot.Body = root.GetComponentInChildren<RunnerBody>(true);
+            bot.Driver = root.GetComponentInChildren<RunnerPoseDriver>(true);
             if (bot.Body == null || bot.Input == null)
                 throw new InvalidOperationException($"'{runnerPrefab.name}' has no RunnerBody / RunnerInput; a bot cannot run on it.");
 
@@ -314,9 +316,25 @@ namespace SpeedStars.Bridge
 
         void OnStartPhase(RaceStartPhase phase)
         {
+            ApplyStartStance(phase);
             if (phase == RaceStartPhase.Ready) BeginRound();
             else if (phase == RaceStartPhase.Go) StartRace();
             // Idle (the player finished / the countdown was cancelled): the bots keep running, the order keeps updating.
+        }
+
+        /// <summary>The block stance of the start, the same for every bot as for the player: READY on the blocks, SET hips up; GO leaves it to the first press.</summary>
+        void ApplyStartStance(RaceStartPhase phase)
+        {
+            RunnerStartStance stance;
+            switch (phase)
+            {
+                case RaceStartPhase.Ready: stance = RunnerStartStance.Marks; break;
+                case RaceStartPhase.Set: stance = RunnerStartStance.Set; break;
+                case RaceStartPhase.Go: return;
+                default: stance = RunnerStartStance.None; break;
+            }
+            for (int i = 0; i < _bots.Count; i++)
+                if (_bots[i].Driver) _bots[i].Driver.startStance = stance;
         }
 
         /// <summary>A new race: plan the field, put everybody on the line, clear the order.</summary>

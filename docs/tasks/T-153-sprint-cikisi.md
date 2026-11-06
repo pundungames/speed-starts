@@ -1,7 +1,7 @@
 ---
 id: T-153
 title: Yaris basi sprint dizisi: blok durusu (READY), kalca yukari (SET), cikis ve one yatik ivmelenme (GO)
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-152]
 owns_paths:
@@ -12,14 +12,14 @@ owns_paths:
   - "docs/tasks/T-153-sprint-cikisi.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits: [4826ef02, 239cecba]
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips + Play duman testleri supervizorde"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -51,3 +51,7 @@ Kullanici 06.11, 4 kareli sprint cikisi gorseli: "sunlari da yap." Durus su an R
 - [ ] Play duman testleri: yeni kirmizi yok; FAIL (false start) sonrasi yeniden READY'de poz gelir, yaris sonu ve yeniden baslama bozulmaz.
 
 ## Calisma notu
+- Senaryolar: `blockStart/blockPair/blockHold/blockHop`; harness `Ev.Stance` ile surucunun `startStance`ini yazar (Bridge gibi); CSV'ye `L_handY/R_handY` (onkol kemiginin cocugu).
+- Surucu: `RunnerStartStance`, `UpdateStart` (`_stanceW`, `_stanceSet`, `_driveW` yaylari), Rest hedefi marks/set front(sol)/rear, `lean += stanceLean*_stanceW + driveLean*_driveW`, kalca siniri `stanceHipMax`, arka topuk `stanceRearToe`, `armStance`, `StanceHome` ve kol genisligi `_driveW` ile. Ilk alinan basis `startStance`i None yapar; `fromStand` ise surus baslatir (blokta 1, degilse `driveLeanStand/driveLean`).
+- Bacak acilari uzanma esitligiyle secildi (arka ayagin ToeRise'i dahil): Marks on (85,60) arka (25,74); Set on (60,90) arka (15,108). Kol uzunlugu, kalca yuksekligi, eller yere degiyor mu OLCULMEDI; sayilar tahmin.
+- Bridge: `RaceSessionAdapter.ApplyStartStance` (surucu bir kez `GetComponentInChildren`), `RaceBots.ApplyStartStance` (Bot.Driver CreateRunner'da). Ready->Marks, Set->Set, Go dokunmaz, digerleri None.
