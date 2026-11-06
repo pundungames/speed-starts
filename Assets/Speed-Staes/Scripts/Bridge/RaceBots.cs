@@ -342,6 +342,8 @@ namespace SpeedStars.Bridge
         {
             if (!_runnersReady) { _roundPending = true; return; }
             _roundPending = false;
+            // READY may have come before the bots were built: they take the phase that is current now.
+            if (session) ApplyStartStance(session.StartPhase);
             if (_laneCount == 0) PrepareLanes(); // a scene that starts rounds without the session's request
             _racing = false;
             _playerFinished = false;

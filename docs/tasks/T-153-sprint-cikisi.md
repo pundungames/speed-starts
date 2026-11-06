@@ -59,3 +59,4 @@ Kullanici 06.11, 4 kareli sprint cikisi gorseli: "sunlari da yap." Durus su an R
 - Kol: swing govdeye gore oldugundan duruşta `swing = ParentTilt(arm) + armStance.x` (kol ebeveyninin dunyadaki one egimi); `armStance` artik dikeyden. Olculmedi.
 - Tur 3: `stanceLean.x` 84, `blockOutSpring` 2 Hz, `armDriveQuick` 1.5 / `armDriveWidth` 0.35 (`StepArm`, `_driveW` 0 iken eski). Olculmedi.
 - PlayMode: `FalseStartSmokeTests` iki test (stance READY/SET/GO/ilk basis, FalseStart/yeniden READY); `startStance` reflection ile okunur, bot yoksa atlanir. Calistirilmadi.
+- Bot stance: `RaceBots.BeginRound` applies the current phase (READY could precede the bots' build, they stayed None until SET). Test: unchanged.
