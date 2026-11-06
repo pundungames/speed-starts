@@ -835,10 +835,10 @@ namespace SpeedStars.Physical
         [Tooltip("Share of the full-speed elbow bend that even the slowest run keeps (0..1): the elbow works at a jog, not only at a sprint.")]
         [Range(0f, 1f)] public float armElbowMinShare = 0.85f;
 
-        [Header("One-key hop arms (deg, + = forward): both arms throw the body up with each press")]
-        [Tooltip("Upper arm at the top of the throw (right after a press): up and forward.")]
+        [Header("One-key hop arms (deg, + = forward): the arm opposite the hopping leg follows that leg, the arm on its side is still")]
+        [Tooltip("Upper arm with the hopping leg all the way forward (armHopThigh.y): up and forward.")]
         public float armHopUp = 60f;
-        [Tooltip("Upper arm as the body comes down: down and back.")]
+        [Tooltip("Upper arm with the hopping leg all the way back (armHopThigh.x): down and back.")]
         public float armHopDown = -68f;
         [Tooltip("Elbow bend (deg) in the hop: about a right angle, the forearms up in front of the chest.")]
         public float armHopElbow = 90f;
@@ -847,6 +847,12 @@ namespace SpeedStars.Physical
         [Tooltip("The throw falls back after the press's snap in at most 1/x s (shorter when the presses come faster: it is " +
                  "down before the next one): the attack is instant, the return soft.")]
         public float armHopReturn = 6f;
+        [Tooltip("The hopping leg's shown thigh (deg) at which the swinging arm is all the way back (x) and all the way forward (y): the arm is " +
+                 "tied to the leg, not to the press clock, so the two swing together.")]
+        public Vector2 armHopThigh = new Vector2(-50f, 20f);
+        [Tooltip("The arm on the hopping leg's side (x = upper arm swing, y = elbow; deg): still and bent, close to the body. Blended in by the " +
+                 "free leg's weight, so the two arms change roles smoothly when the hop changes leg.")]
+        public Vector2 armHopFixed = new Vector2(8f, 115f);
 
         [Header("Two keys together (the sack hop): both arms swing together, the trunk takes part")]
         [Tooltip("Both arms loading, back (deg, − = back): they go back this far before the push and are thrown up and forward (armHopUp) at it.")]
@@ -2551,9 +2557,9 @@ namespace SpeedStars.Physical
             }
             float hopTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
             _hopFreed = !off && _dive <= 0.3f && hopTarget * (1f - _heldNow) > 0.5f;
-            hopTarget *= 1f - _heldNow;   // a real hold ends the hop: else the trunk sits back (hopBackLean) against the forward tip
+            hopTarget *= 1f - _heldNow;   // a real hold ends the hop: else the trunk sits back (hopSitBack) against the forward tip
             hopTarget *= 1f - PairWeight(now);   // a pair gives way: the arms already read _pair, the legs and trunk must too
-            // Springs, not a lerp: a lerp is fastest in its first frame (0.26 of the way = 11 deg/frame on the hips via hopBackLean).
+            // Springs, not a lerp: a lerp is fastest in its first frame (0.26 of the way = 11 deg/frame on the hips via hopSitBack).
             _hopSpring.Step(off ? 0f : hopTarget, gaitBlendSpring.frequency, gaitBlendSpring.damping, dt);
             _pairSpring.Step(off ? 0f : PairWeight(now), gaitBlendSpring.frequency, gaitBlendSpring.damping, dt);
             _hop = Mathf.Clamp01(_hopSpring.Value);
@@ -3206,14 +3212,16 @@ namespace SpeedStars.Physical
             float hw = preview ? 0f : _hop * (1f - _pair);
             if (hw > 0.001f)
             {
-                // Across, like a stride: the arm opposite the hopping leg (the leg that is not the balance leg) goes back as it pushes,
-                // the arm on its side goes forward; they change as the body comes down. By the balance leg's weight, continuous.
-                float kick = Mathf.Lerp(_armThrow, 1f - _armThrow, 1f - opposite.idle);
-                swing = Mathf.Lerp(swing, Mathf.Lerp(armHopDown, armHopUp, kick), hw);
-                // Thrown up the elbow closes to a right angle at most (the hand stays at the chin, never over the face), coming down it opens.
+                // The arm opposite the hopping leg follows that leg's shown thigh (back with it, forward with it; the limb spring below is the
+                // only lag), not the press clock: the two cannot drift apart. The arm on the hopping leg's side is still, bent. Which is which
+                // goes by the opposite leg's balance weight (idle), so a hop that changes leg changes the roles smoothly.
+                float legT = Mathf.Clamp01(Mathf.InverseLerp(armHopThigh.x, armHopThigh.y, opposite.thighWorld));
+                float hopSwing = Mathf.Lerp(Mathf.Lerp(armHopDown, armHopUp, legT), armHopFixed.x, opposite.idle);
                 // The elbow opens with the arm going back and closes to a right angle as it comes up (like the run's open curve).
-                float hopOpen = 1f - Mathf.SmoothStep(0f, 0.45f, kick);
-                elbow = Mathf.Lerp(elbow, Mathf.Lerp(armHopElbow, armHopElbowBack, hopOpen), hw);
+                float hopOpen = 1f - Mathf.SmoothStep(0f, 0.45f, legT);
+                float hopElbow = Mathf.Lerp(Mathf.Lerp(armHopElbow, armHopElbowBack, hopOpen), armHopFixed.y, opposite.idle);
+                swing = Mathf.Lerp(swing, hopSwing, hw);
+                elbow = Mathf.Lerp(elbow, hopElbow, hw);
             }
             float pw = preview ? 0f : _pair;
             if (pw > 0.001f)
