@@ -476,11 +476,11 @@ namespace SpeedStars.Physical
         [Tooltip("One-key hop (blended in by the hop weight): toe-off, how far back the pressed leg goes with the foot down.")]
         public LegAngles hopPushEnd = new LegAngles(-45f, 172f);
         [Tooltip("One-key hop swing, first key: the leg kicked well back, the knee bent (under 90).")]
-        public LegAngles hopRecover = new LegAngles(-85f, 85f);
+        public LegAngles hopRecover = new LegAngles(-58f, 110f);
         [Tooltip("One-key hop swing, second key: the deepest flex, thigh and knee both small.")]
         public LegAngles hopMid = new LegAngles(15f, 70f);
         [Tooltip("One-key hop swing, third key: the leg opens again going down.")]
-        public LegAngles hopKneeDrive = new LegAngles(48f, 95f);
+        public LegAngles hopKneeDrive = new LegAngles(40f, 100f);
         [Tooltip("One-key hop touchdown: the foot lands a little ahead of the hips, the leg nearly straight; it stays down while the body passes over it.")]
         public LegAngles hopContact = new LegAngles(30f, 165f);
         [Tooltip("The leg the hops leave out (not the one pressed again and again): held out in front, straight and still (thigh, knee; deg), " +
@@ -1915,7 +1915,7 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>A stride key blended toward its hop shape by the one-key hop weight (0 running, pairs and dives: the key itself).</summary>
-        LegAngles Key(LegAngles key, LegAngles hopKey) => Stride(LegAngles.Lerp(key, hopKey, _hop * (1f - _pair)));
+        LegAngles Key(LegAngles key, LegAngles hopKey) => LegAngles.Lerp(Stride(key), hopKey, _hop * (1f - _pair));   // the hop keys have their own size: the stride's amp does not shrink them
 
         /// <summary>The balance leg: held out in front, straight and still (the body bounces, the leg does not sway with it).</summary>
         LegAngles Balance() => hopFreeLeg;
