@@ -431,6 +431,13 @@ namespace SpeedStars.Physical
         [Tooltip("One-leg hop: no hop, no landing and no press for this long (s) and the runner stops: the legs go to the stock pose and the brake pose " +
                  "follows the speed. A hop is one press; nothing moves on its own after it.")]
         [Min(0.02f)] public float hopStopDelay = 0.2f;
+        [Tooltip("Every press the pose takes (run, hop, pair) pushes the upper body (waist, chest, neck; not the hips or the legs) back this far (deg) at its peak: " +
+                 "an impulse on the spring's speed, so nothing snaps. Presses in a row add up to pressBackMax at most.")]
+        [Range(0f, 12f)] public float pressBackKick = 5f;
+        [Tooltip("Largest push back the presses add up to (deg).")]
+        [Range(1f, 20f)] public float pressBackMax = 8f;
+        [Tooltip("The push back's spring: a little under critical damping, about 4-5 Hz: the peak comes in ~0.1 s, the way back takes ~0.3 s.")]
+        public SpringSettings pressBackSpring = new SpringSettings(4.5f, 0.85f);
         [Tooltip("A press on the other key while hopping (a change of leg, or the run after a hop): the pressed foot comes down over at least this long (s), " +
                  "readably, and the press works (new stance, arm roles, the other leg freed) in the frame it first touches the ground, not before.")]
         [Min(0.05f)] public float hopSwapTime = 0.18f;
@@ -1043,6 +1050,8 @@ namespace SpeedStars.Physical
         const int SettledStreak = 3;                // ...this many make a settled rhythm: the press gate stays open
         int _keyLastLeg = -1;                       // the key pressed last, taken or not (the rhythm's same-key test)
         Spring _bounceChest;                       // the chest's lean in the bounce: follows _bounceLean a little behind (bounceChestSpring)
+        Spring _pressBack;                         // the upper body's push back on every press the pose takes (pressBackKick), through pressBackSpring
+        int _backPresses;
         Spring _bounceLean;                        // the trunk's lean in the bounce (deg), through bounceLeanSpring
         float _rockKick;                           // eases up to 1 at a press, back to 0 over the press interval: the run's trunk rock
         Spring _armThrowSpring;                    // _armKick through a spring of fixed frequency (armThrowSpring): the arms' throw, smaller at a quick rhythm
@@ -3633,6 +3642,16 @@ namespace SpeedStars.Physical
             // and the feet do not move with the upper body.
             baseBend += _bounceLean.Value * 0.4f;
             bend += _bounceChest.Value;
+            // Every press the pose took pushes the upper body back: the impulse is on the speed (peak ~pressBackKick, less as the sum nears the cap).
+            if (_posePresses != _backPresses)
+            {
+                _backPresses = _posePresses;
+                float w = 2f * Mathf.PI * pressBackSpring.frequency;
+                _pressBack.Velocity -= pressBackKick * w * 1.3f * Mathf.Clamp01((pressBackMax + _pressBack.Value) / Mathf.Max(0.01f, pressBackMax));
+            }
+            _pressBack.Step(0f, pressBackSpring.frequency, pressBackSpring.damping, dt);
+            baseBend += _pressBack.Value * 0.5f;
+            bend += _pressBack.Value * 0.5f;
             // The pelvis takes a small share in the hop, so the rock goes from the seat to the head (the legs' turn is not touched).
             lean += _bounceLean.Value * pelvisRockShare * hw;
         }
@@ -3641,6 +3660,8 @@ namespace SpeedStars.Physical
         {
             _bounceLean.Reset();
             _bounceChest.Reset();
+            _pressBack.Reset();
+            _backPresses = 0;
             _gaitW = _armW = _speedCurve = _hop = _pair = _hopTarget = _pairTargetLast = 0f;
             _hopSpring.Reset();
             _stanceSpring.Reset();
