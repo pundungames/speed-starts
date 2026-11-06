@@ -392,6 +392,9 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running: the filtered arm drive is opened by this much around its middle, giving back the width the spring takes " +
                  "(1 = as filtered). The result stays within -0.2..1.2 of the thigh range.")]
         public float armPumpWidth = 1.12f;
+        [Tooltip("Plain running: the share of the arm's run swing that steps give from the first press, whatever the speed (the gait weight " +
+                 "waits for speed, so the arms stayed in the ready pose, fists at the face). 0 = the arms wait for the speed.")]
+        [Range(0f, 1f)] public float armStepShare = 0.8f;
         [Tooltip("The swing never takes less than this (s).")]
         public float swingMin = 0.12f;
         [Tooltip("A press that comes while the leg is still swinging takes it down to the touchdown pose at up to this " +
@@ -888,7 +891,7 @@ namespace SpeedStars.Physical
         const float HoldRealPeak = 0.5f;       // a Hold whose real weight reached this was really held (a tap's ~0.3 weight gives ~0.05)
         const float HoldTippedLean = 30f;     // the hips leaned this far (deg) when a held leg is let go: it comes in under the body
 
-        float _gaitW, _speedCurve;                  // gait weight 0..1 (the arms read it); speed curve 0..1
+        float _gaitW, _armW, _speedCurve;                  // gait weight 0..1 (the arms read it); speed curve 0..1
         int _armPresses;
         int _posePresses, _poseLastLeg = -1;        // the presses the pose took (OnTapped, PoseMinGap), and the leg of the last one
         double _poseLastTime = -10.0;
@@ -2909,7 +2912,7 @@ namespace SpeedStars.Physical
             float back = preview ? 0f : legBack;
             float swing = Mathf.Lerp(pose.swing, armBack, back);
             float elbow = Mathf.Lerp(pose.elbow, elbowBack, back);
-            if (!preview && _gaitW > 0.001f && body && body.Sim != null)
+            if (!preview && _armW > 0.001f && body && body.Sim != null)
             {
                 float form = Mathf.Lerp(formFloor, 1f, body.Sim.Form);
                 float amp = Mathf.Lerp(armSlowAmp, 1f, _speedCurve) * form;
@@ -2918,7 +2921,7 @@ namespace SpeedStars.Physical
                 float t = Mathf.Clamp(Mathf.InverseLerp(armThighRange.x, armThighRange.y, drive), -0.1f, 1.1f);
                 // Plain running only: the drive goes through a critically damped spring sized by the step time, so a leg that waits
                 // and darts does not make the arm do the same. Not running yet (gait weight low) it sits on the raw drive: no sweep on entry.
-                if (!arm.driveSet || _gaitW < 0.05f) { arm.drive.Reset(t); arm.driveSet = true; }
+                if (!arm.driveSet || _armW < 0.05f) { arm.drive.Reset(t); arm.driveSet = true; }
                 else if (dt > 0f) arm.drive.Step(t, Mathf.Max(0.1f, armPumpRate) / Mathf.Max(ArmPeriodMin, _armPeriod), 1f, dt);
                 t = Mathf.Lerp(t, Mathf.Clamp(0.5f + (arm.drive.Value - 0.5f) * armPumpWidth, -0.2f, 1.2f), _plainRun);
                 float mid = 0.5f * (armRunBack + armRunFront);
@@ -2927,8 +2930,8 @@ namespace SpeedStars.Physical
                 float open = 1f - Mathf.SmoothStep(0f, armElbowCloseAt, Mathf.Clamp01(t));
                 float bend = Mathf.Lerp(armElbowLoose, Mathf.Lerp(armElbowRun + armElbowFront, armElbowRunBack, open),
                     Mathf.Lerp(armElbowMinShare, 1f, _speedCurve * form));
-                swing = Mathf.Lerp(swing, pump, _gaitW);
-                elbow = Mathf.Lerp(elbow, bend, _gaitW);
+                swing = Mathf.Lerp(swing, pump, _armW);
+                elbow = Mathf.Lerp(elbow, bend, _armW);
             }
             // One-key hop: both arms throw up and forward with the press, down and back as the body comes down.
             float hw = preview ? 0f : _hop * (1f - _pair);
@@ -2995,7 +2998,7 @@ namespace SpeedStars.Physical
         {
             _bounceLean.Reset();
             _bounceChest.Reset();
-            _gaitW = _speedCurve = _hop = _pair = _hopTarget = _pairTargetLast = 0f;
+            _gaitW = _armW = _speedCurve = _hop = _pair = _hopTarget = _pairTargetLast = 0f;
             _rideVel = 0f;
             _hopSpring.Reset();
             _hopBody.Reset();
@@ -3032,6 +3035,9 @@ namespace SpeedStars.Physical
             float gate = _stepping * (_ballistic ? 0f : 1f) * (sim.InJump ? 0f : 1f) *
                          (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(HoldGaitFrom, HoldGaitTo, holdW)));
             _gaitW = Mathf.Lerp(_gaitW, _speedCurve * gate, 1f - Mathf.Exp(-GaitBlend * dt));
+            // The arms leave the ready pose (fists at the face) with the first steps, not with the speed: from a standstill the gait weight
+            // stays near 0 for a second. Same gate and blend; the swing's width still follows the speed.
+            _armW = Mathf.Lerp(_armW, Mathf.Max(_speedCurve, armStepShare) * gate, 1f - Mathf.Exp(-GaitBlend * dt));
         }
 
         /// <summary>
