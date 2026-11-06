@@ -7,6 +7,7 @@ import os
 import sys
 
 DEFAULT = ['slowRun', 'rhythm032', 'fastRun', 'roughRun']
+MIN_FRAMES = 12   # shorter 'swings' are a stance cut short, not a swing; they pull the average down
 
 
 def swings(path):
@@ -21,7 +22,7 @@ def swings(path):
                     cur = []
                 cur.append(r)
             elif cur is not None:
-                if len(cur) >= 4:
+                if len(cur) >= MIN_FRAMES:
                     out.append((side, cur))
                 cur = None
     return sorted(out, key=lambda s: float(s[1][0]['t']))

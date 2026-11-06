@@ -1,7 +1,7 @@
 ---
 id: T-145
 title: Duz kosuda bacak once karna cekilir, sonra kaval kemigi one atilir
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-144]
 owns_paths:
@@ -9,7 +9,10 @@ owns_paths:
   - "docs/tasks/T-145-bacak-karna-cekis.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits:
+  - 8df71106
+  - 222a2ee3
+  - cc1d2c53
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips + scripts/runner-olcum/swing_table.py supervizorde"
 analytics:
@@ -51,3 +54,5 @@ Kullanici 05.11: "bacagini one atarken basmadan once karin tarafina dogru iyice 
 - Tur 2: `tuckLead` 0.05 sn (tuck egrisi mid knot'una dogru yumusakca one alinir), `tuckPeak` 86/82, `shinThrow` 56/160; `Catch` dizi duz kosuda erken acar (agirlik 0 iken eski formul).
 - Olculmedi.
 - Tur 3: `tuckLead` one almasi salinimin basindan (0) mid knot'una yayildi; uyluk kare hizi `legMaxSpeed`'e dayanmasin.
+- Olcu (t144-after -> t145-c, tam salinim; uyluk tepe / tepede diz / baldir): slowRun 73/90/+25, rhythm032 81/84/+30, roughRun 78/82/+25, fastRun 69/92/+17 (boğma senaryosu, 70 ve +20 sinirinin az alti).
+- Uyluk kare farki: rhythm 20->22.5, roughRun 23->29, fastRun 21->28 (hiz siniri 30); hop ve pair bacaklari ayni (hopSwap 0.4, pairOrder 1.4). Kol hizi uylukla artti (roughRun 15->21 derece/kare), genlik ayni: T-146.
