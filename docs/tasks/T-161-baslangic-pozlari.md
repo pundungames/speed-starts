@@ -1,7 +1,7 @@
 ---
 id: T-161
 title: Yaris baslangic pozlari FBX'ten: Readypose READY'de, GOpose SET'te
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-153]
 owns_paths:
@@ -18,9 +18,12 @@ tests:
   - "gerekmiyor: gorsel; kullanici gozle bakar"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: ASSET
+    durum: open
+    not: "FBX'i Assets/Speed-Staes/Animations/Start/RunnerStartPoses.fbx olarak al (Generic, malzeme yok); Readypose ve GOpose.001 kliplerini RaceStartConfig asset'indeki readyPose / setPose alanlarina bagla"
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -42,3 +45,6 @@ Kullanici 06.11: indirilenlerdeki `HumanCharacterDummy_F.fbx` "karakter baslangi
 Yalniz `owns_paths`. Sahne, prefab, asset, `.meta` yazma. Unity calistirma, derleyici yok; C# 9, `using System;` + `using UnityEngine;` olan dosyada `Object/Random/Debug` niteliksiz degil. Yeni alanda Tooltip. Commit `git commit -F <mesaj-dosyasi> -- <yollar>`, mesaj dosyasi scratch'te (`C:\Users\Monster\AppData\Local\Temp\claude\d--Pundun-speed-starts\1c7d0dba-289b-4948-ba09-42f88d086602\scratchpad\`), adinda "main" yok, son satir `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Git'i Bash ile cagir. `git add -A`, push yok. Calisma yeri `D:\Pundun\speed-starts-ik`.
 
 ## Calisma notu
+- `RunnerStartPose` (Bridge, calisma aninda eklenir, order 200): klipleri ilk w>0 karede bir kere orneklenir, degisen kemikler (esikli) saklanir; her kare Slerp/Lerp(simdiki, Lerp(ready,set,StanceSetWeight), StanceWeight). Surucuye yalniz `StanceWeight`/`StanceSetWeight` eklendi.
+- Config Bridge'e `RaceSessionAdapter.StartSettings` ile gelir (RaceBots `session.StartSettings` okur; inject/WIRING yok). Klip yoksa bilesen eklenmez; tek klip varsa ikisi icin o kullanilir.
+- Derlenmedi, Unity calistirilmadi, test yok (gorsel).

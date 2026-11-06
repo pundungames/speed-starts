@@ -63,6 +63,13 @@ namespace SpeedStars.Core.Race
         [Min(0.01f)]
         [SerializeField] private float introSwingSeconds = 1f;
 
+        [Header("Start poses (clips from the character FBX; empty = the driver's computed stance)")]
+        [Tooltip("READY pose (on the blocks), sampled at time 0. Empty = the computed stance stays.")]
+        [SerializeField] private AnimationClip readyPose;
+
+        [Tooltip("SET pose (hips up), sampled at time 0. Empty = the computed stance stays.")]
+        [SerializeField] private AnimationClip setPose;
+
         [Header("READY")]
         [Tooltip("READY slides in from above and settles (seconds).")]
         [Min(0.01f)]
@@ -183,6 +190,8 @@ namespace SpeedStars.Core.Race
         [Min(0.01f)]
         [SerializeField] private float reducedFadeSeconds = 0.08f;
 
+        public AnimationClip ReadyPose => readyPose;
+        public AnimationClip SetPose => setPose;
         public float ReadySeconds => readySeconds;
         public float SetWaitMinSeconds => setWaitMinSeconds;
         public float SetWaitMaxSeconds => setWaitMaxSeconds;

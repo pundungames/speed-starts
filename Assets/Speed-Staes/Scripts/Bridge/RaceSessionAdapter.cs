@@ -269,6 +269,7 @@ namespace SpeedStars.Bridge
         {
             if (!_driver && body) _driver = body.GetComponentInChildren<RunnerPoseDriver>(true);
             if (!_driver) return;
+            if (phase == RaceStartPhase.Ready || phase == RaceStartPhase.Set) RunnerStartPose.Ensure(_driver, StartConfig()); // the FBX poses, if the config has clips
             switch (phase)
             {
                 case RaceStartPhase.Ready: _driver.startStance = RunnerStartStance.Marks; break;

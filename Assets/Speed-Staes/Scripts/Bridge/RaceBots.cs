@@ -338,8 +338,13 @@ namespace SpeedStars.Bridge
                 case RaceStartPhase.Go: return;
                 default: stance = RunnerStartStance.None; break;
             }
+            RaceStartConfig startConfig = session ? session.StartSettings : null;
             for (int i = 0; i < _bots.Count; i++)
-                if (_bots[i].Driver) _bots[i].Driver.startStance = stance;
+            {
+                if (!_bots[i].Driver) continue;
+                if (stance != RunnerStartStance.None) RunnerStartPose.Ensure(_bots[i].Driver, startConfig);
+                _bots[i].Driver.startStance = stance;
+            }
         }
 
         /// <summary>A new race: plan the field, put everybody on the line, clear the order.</summary>

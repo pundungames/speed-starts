@@ -1105,6 +1105,11 @@ namespace SpeedStars.Physical
         [HideInInspector] public bool brakePose = true;
         Spring _stanceSpring, _stanceSetSpring, _driveSpring;   // the start stance weight, its Set share, the drive weight
         float _stanceW, _stanceSet, _driveW;       // 0..1 each; _driveW holds the launch's gain
+
+        /// <summary>How much of the start stance is on (0 = none). Read-only, for a pose laid over the rig after this driver.</summary>
+        public float StanceWeight => _stanceW;
+        /// <summary>The Set share of the start stance (0 = Marks, 1 = Set).</summary>
+        public float StanceSetWeight => _stanceSet;
         float _driveT, _driveGain;                 // seconds since the launch, the launch's size (1 off the blocks)
         bool _driveOn;
         Spring _brakeSpring;                       // the braking weight's spring (brakeInSpring / brakeOutSpring)
