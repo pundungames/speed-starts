@@ -491,6 +491,13 @@ namespace SpeedStars.Physical
                  "hop-body weight, hopBodySpring). The tilt measured on the hip bone is a few degrees more upright than this (about 4 at -11); " +
                  "that offset was measured, its source not found. No rock with the bounce.")]
         public float hopLean = -11f;
+        [Tooltip("The hips glide forward and back over the root (m): forward at the push's end (the back leg furthest behind), back toward the landing. " +
+                 "One-leg hop, at full hop weight. Read from the shown thigh, through surgeSpring; planted feet stay in the world.")]
+        public float hopSurge = 0.07f;
+        [Tooltip("Same for plain running (m, at full gait): the hips follow the rearmost thigh. 0 in a hold, a dive, the brake and the blocks' stance.")]
+        public float runSurge = 0.025f;
+        [Tooltip("The surge goes through this spring (damping 1): it follows the legs a moment behind, smooth.")]
+        public SpringSettings surgeSpring = new SpringSettings(8f, 1f);
 
         [Header("Start: the blocks (Marks), hips up (Set), the drive out of them (first press on)")]
         [Tooltip("The start's stance, written by the race start (Bridge): None = the driver's own, Marks = on the blocks, Set = hips up. " +
@@ -2485,7 +2492,7 @@ namespace SpeedStars.Physical
             FollowHips(rightLeg, leftLeg, legTurn, hipPitch, dt);
             UpdateTrunk(sim, dt, hipPitch, ref pelvisTilt);
             if (!preview) PoseJump(sim);
-            Vector3 hip = _restHip + new Vector3(0f, 0f, p.pelvis.x);
+            Vector3 hip = _restHip + new Vector3(0f, 0f, p.pelvis.x + SurgeStep(dt));
             for (int i = 0; i < 2; i++)
             {
                 Leg leg = Legs(i);
@@ -3393,6 +3400,7 @@ namespace SpeedStars.Physical
             _brakeSpring.Reset();
             _brake = _brakeRaw = 0f;
             _hopBody.Reset();
+            _surge.Reset();
             _hopBodyW = 0f;
             _pairSpring.Reset();
             _hopPrevLeg = -1;
@@ -3434,6 +3442,31 @@ namespace SpeedStars.Physical
             // The arms leave the ready pose (fists at the face) with the first steps, not with the speed: from a standstill the gait weight
             // stays near 0 for a second. Same gate and blend; the swing's width still follows the speed.
             _armW = Mathf.Lerp(_armW, Mathf.Max(_speedCurve, armStepShare) * gate, 1f - Mathf.Exp(-GaitBlend * dt));
+        }
+
+        const float HopSurgeCenter = -15f, HopSurgeHalf = 45f;   // the hopping thigh (deg) at which the surge is 0, and the distance to full forward / back
+        const float RunSurgeCenter = -20f, RunSurgeHalf = 30f;   // the same for the rearmost thigh of a run
+        Spring _surge;
+
+        /// <summary>
+        /// The hips' forward-and-back glide over the root (m): forward when the pushing leg is furthest behind, back as it comes round. From the shown
+        /// thighs (the hop's leg, or a run's rearmost), through a spring; none when a hold, a dive, the brake or the stance has the body.
+        /// </summary>
+        float SurgeStep(float dt)
+        {
+            float target = 0f;
+            if (!preview)
+            {
+                float hw = _hop * (1f - _pair);
+                float hopThigh = _poseLastLeg >= 0 ? Legs(_poseLastLeg).thighWorld : HopSurgeCenter;
+                float hopDrive = Mathf.Clamp((HopSurgeCenter - hopThigh) / HopSurgeHalf, -1f, 1f);
+                float rear = Mathf.Min(leftLeg.thighWorld, rightLeg.thighWorld);
+                float runDrive = Mathf.Clamp((RunSurgeCenter - rear) / RunSurgeHalf, -1f, 1f);
+                target = (runSurge * _gaitW * _plainRun * runDrive + hopSurge * hw * hopDrive) *
+                         (1f - _dive) * (1f - _heldNow) * (1f - _brake) * (1f - _stanceW);
+            }
+            _surge.Step(target, surgeSpring.frequency, surgeSpring.damping, dt);
+            return _surge.Value;
         }
 
         /// <summary>
