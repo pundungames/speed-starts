@@ -1072,6 +1072,9 @@ namespace SpeedStars.Physical
         Vector3 _lastRootPos;                      // the root last frame
         bool _haveRoot;
         float _rootSpeed;                          // the root's own speed (m/s), smoothed
+        const float LandHoldMax = 0.12f;           // the landing's no-rise hold ends after this (s) at the latest
+        bool _landHold;                            // a hop has just landed and the stance has not yet asked for less height than the body has
+        float _landHoldT;
         float _hopFlightT;                         // the flight's whole time (s) as the hop's height reads it: followed, so a press changing it does not step the height
         bool _hopFlightSet;
         float _offY, _flightT;                     // the body's height when the last foot left; seconds since
@@ -3071,6 +3074,15 @@ namespace SpeedStars.Physical
                     }
                     else need = Mathf.Max(need, LegNeed(leg));
                 }
+                // A hop's landing is one move: the frame the foot takes the body (flight -> stance) the stance's ask must not lift the body above where
+                // the flight left it (it did, 2 cm, then dropped 5); it may only ask for less until it has been below once.
+                if (!_carried) { _landHold = _hop * (1f - _pair) > 0.3f; _landHoldT = 0f; }
+                if (_landHold)
+                {
+                    _landHoldT += dt;
+                    if (need <= _bodyY.Value || _landHoldT > LandHoldMax) _landHold = false;
+                    else need = _bodyY.Value;
+                }
                 need = Mathf.Min(need, cap);
                 if (!_heightSet) _bodyY.Reset(need);
                 _heightSet = true;
@@ -3403,6 +3415,7 @@ namespace SpeedStars.Physical
             _brake = _brakeRaw = 0f;
             _hopBody.Reset();
             _surge.Reset();
+            _landHold = false;
             _hopBodyW = 0f;
             _pairSpring.Reset();
             _hopPrevLeg = -1;
