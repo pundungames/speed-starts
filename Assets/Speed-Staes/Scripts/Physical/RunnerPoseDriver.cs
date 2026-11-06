@@ -2257,7 +2257,10 @@ namespace SpeedStars.Physical
             float hopW = _hop * (1f - _pair);
             float since = (float)(now - (hopW > 0.5f ? leg.plantedAt : leg.pressedAt));
             bool early = hopW > 0.5f && since < hopStanceMin;
-            if (!waits && !early && (behind >= endBehind || since > Mathf.Lerp(stanceMax, hopStanceMax, hopW))) leg.toeOff = true;
+            // The time only lifts a foot a press asked to lift (swungSincePress is false from the press until the swing): a landing no key followed
+            // waits on the ground until its reach runs out (endBehind, StanceCap, Overstretch), so one press is one hop.
+            bool timed = hopW <= 0.5f || !leg.swungSincePress;
+            if (!waits && !early && (behind >= endBehind || (timed && since > Mathf.Lerp(stanceMax, hopStanceMax, hopW)))) leg.toeOff = true;
         }
 
         /// <summary>
