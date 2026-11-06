@@ -1,7 +1,7 @@
 ---
 id: T-146
 title: Duz kosuda kol uylugun kare dalgasini kopyalamaz, adim suresine gore uzun yumusak salinir
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-145]
 owns_paths:
@@ -9,7 +9,9 @@ owns_paths:
   - "docs/tasks/T-146-kol-hiza-gore-yumusak.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits:
+  - 7d439ca8
+  - 798ca5bd
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips + scripts/runner-olcum/arm_table.py supervizorde"
 analytics:
@@ -49,3 +51,5 @@ Arka bacak bekler: `R_thighWorld` 3.80-4.03 sn arasi -45'te sabit. `StepArm` kol
 - Gait agirligi < 0.05 iken ya da ilk karede yay ham t'ye oturur; `ResetGait` `driveSet`'i sifirlar.
 - Hiz egrisi eklenmedi; olculmedi. Belirsiz: hizli tarafta aralik (fastRun >= 50) yay yuzunden daralabilir.
 - Tur 2: `armPumpWidth` 1.12 filtreli kol surusunu ortasi etrafinda acar (-0.2..1.2 kirpili); `_plainRun` 0'da eski.
+- Olcu (t145-c -> t146-b; aralik / kare hareketi): slowRun 63/8.0 -> 57/5.7, rhythm032 86/15 -> 88/9.5, fastRun 63/15.5 -> 58/9.7, roughRun 89/21.4 -> 90/14.5. Dirsek kare hareketi ritimde 21 -> 14, yavasta 12.5 -> 8.3.
+- Kabulun alti kalanlar: slowRun 5.7 (4.5; en buyukleri 2.2-2.4 sn, 3 m/s ivmede) ve durgun pay 0.17 (0.12; saf sinus ~0.11), roughRun 14.5 (13), rhythm032 9.5 (9). Genisligi geri vermek icin kabul edildi (`armPumpWidth`). hopSwap, pairOrder ayni.
