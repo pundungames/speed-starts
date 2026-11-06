@@ -1,0 +1,56 @@
+---
+id: T-150
+title: Bir girdinin hareketi bitmeden ayni girdi poz tarafindan kabul edilmez (kosu, tek ayak, cift ayak, gecisler)
+status: todo
+owner: gameplay-agent
+depends_on: [T-148]
+owns_paths:
+  - "Assets/Speed-Staes/Scripts/Physical/RunnerPoseDriver.cs"
+  - "Assets/Speed-Staes/Tests/PlayMode/RunnerFormProbeTests.cs"
+  - "docs/tasks/T-150-girdi-kapisi.md"
+touches_scene: false
+branch: agent/ik-kosucu
+commits: []
+tests:
+  - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
+analytics:
+  - "yok: projede analytics yok"
+needs: []
+started:
+finished:
+blocked_reason:
+---
+
+## Hedef
+Kullanici 06.11: "bir input verdiysem o inputun etkisi bitene kadar o inputu vermemi engelle, kabul etme. tek bacak ustunde sekerken spamlarsam inputu kabul etme, animasyon bitsin oyle kabul et. tum her sey icin gecerli olsun: kosma, ziplama, tek ayak, cift ayak, her seye gecisler smooth olur bu sayede."
+
+## Karar: yalniz poz
+`OnTapped`'teki kapi genisler; `RunnerBody` -> `Sim.Press` degismez, sim her basisi sayar. Olcum (`simprobe`, ayni kapiyi fizige koyunca): saniyede 20 basan iki tus oyuncusu 100 m 40+ sn yerine 10.39 sn, vmax 12.1 (en iyi oyuncu 9.78, ritim 0.28 = 11.13). Fizige koymak ezme cezasini kaldirir, spam en iyi oyun olur. Kullanici isterse ayri denge isi.
+
+## Bugunku kapi
+`OnTapped`: sabit `PoseMinGap` 0.13 sn, `_poseSkippedOther` adim sirasini korur, `pairSecond` istisna. Sabit sure yerine hareketin bitip bitmedigi sorulacak.
+
+## "Etki bitti" tanimi
+- **Ayni tus (tek ayak):** son alinan bacak yere dondu ya da donmek uzere: `grounded`, ya da ayak `TouchHeight` payinda, ya da salinimin sonuna yakin. Havadayken ve itis bitmeden red.
+- **Diger tus (kosu):** o bacagin salinimi baldir atisini gorecek kadar ilerledi (`pressGateShare`, Tooltip'li, ~0.6, salinim payi), ya da yerde, ya da `Rest`. Yoksa red, `_poseSkippedOther`.
+- **Iki tus (cift ayak):** son cift havadayken red; bir ayak inince acik. `pairSecond` istisnasi kalir.
+- **Durus:** `_idleStock` iken kapi acik.
+- En az `PoseMinGap` her zaman.
+- Reddedilen basis kuyruga girmez. `l.held` ve `l.pressedAt` aynen (tutma calisir). `Enter`, `NoteCycle`, kol saati, hop hedefi sayilmaz.
+
+## Yeni senaryolar
+`spamHop`: tek tus 3 sn, 0.08 aralik. `spamRun`: sirali 3 sn, 0.08. `spamPair`: iki tus 3 sn, 0.10. `runSpamHop`: kos 2.5 sn sonra tek tus spam 2.5 sn. `spamToRun`: tek tus spam 2.5 sn sonra sirali 0.27. Seritler gecis anlarinda. Kabul edilen basis sayisi icin CSV'ye `d_posePresses` sutunu.
+
+## Kabul kriterleri
+- [ ] Ritim bozulmaz: rhythm032, slowRun, roughRun, `runToHop` duzenli kismi, `pairOrder`: basislarin hepsi alinir. fastRun (0.20) en az %90.
+- [ ] `spamHop`: kabul edilen basis arasi ayak yere doner; her alinan basisin ardindan ayak en az 15 cm kalkar ve iner. Spamsiz 0.27 sn sekisle ayni gorunur.
+- [ ] `spamRun`: bacaklar sirayla adim atar, tek bacakta sekmeye donmez, ayak ucu yerde kaymaz.
+- [ ] Bir karede: uyluk 30 derece alti, kalca egimi 4 derece alti, spam senaryolarinda kalca yuksekligi ikinci farki t147-a'nin spam oncesi degerinden buyuk degil.
+- [ ] Gecisler: runToHop, hopToRun, runToPair, pairToRun, pairToHop kare farklari artmaz, seritte kesik salinim yok.
+- [ ] Tutma ve dalis: holdOne, holdBoth, holdStand, holdBothStand ayni. T-148 `start`, `restart`, `walkStart` ilk adimi bozulmaz.
+- [ ] Sim degismez: `simprobe` ve scenario hiz sutunlari ayni.
+
+## Kapsam disi
+- Sim, hiz, ezme, Good/Late hesabi, fren (T-149).
+
+## Calisma notu

@@ -1,7 +1,7 @@
 ---
 id: T-148
 title: Durustan kosuya geciste ilk basista diger bacak kalkar, gercek adim atilir; kollar yuzden iner
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-147]
 owns_paths:
@@ -10,7 +10,12 @@ owns_paths:
   - "docs/tasks/T-148-durustan-kosuya.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits:
+  - 8c104752
+  - 2433b47d
+  - 0aa72028
+  - 696cd313
+  - a30f6ef2
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
@@ -51,3 +56,5 @@ Kullanici 06.11: "karakterin durur pozisyondan yurumeye kosmaya gecmesi acayip k
 - Cift basis: kaldirilan bacak ikinci basista `BeginStance` -> `StartCatch` ile iner (ertelenmedi); olculmedi. Belirsiz: kisa ciftte ayak havada kalabilir.
 - Tur 2: `OtherTakesOver` yukselen `standStep` salinimini (tuck tepesine varmadan) 'iniyor' saymaz; basilan ayak planted kalir.
 - Tur 3: kok: `StanceExtent` yuksekligi yalniz hiza bagli `_runHome`'dan geliyordu (0.5-3 m/s), kalkista govde cömelik yukseklikte kaliyordu; `StanceHome() = Max(_runHome, stanceStepShare * _stepping * _plainRun * (1 - _dive))`. Dip/ucus farkini dogrulayamadim (olculmedi).
+- Olcu (t147-a -> t148-c, start): L planted kalir; R toe 0.03 -> 0.16, ilk adim 34 cm, sonraki 0.9 m; ilk kalkis 1.10 -> 0.60 sn; kalca 0.796 -> 0.917 tek hareket 0.2 sn, kare hareketi 4.2 -> 1.8 cm, geri dusme 9 cm -> 1 cm. Dirsek 100 alti +0.37 sn (kabul +0.3).
+- Kok: kalca yuksekligi `_runHome` (hiz 0.5-3 m/s); kalkista 1 m/s. `StanceHome` artik `_stepping`i de okur. Ilk tahminim (`contactRun` ile stance farki) yanlisti, agent kodu okuyup duzeltti.
