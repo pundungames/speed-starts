@@ -190,6 +190,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float holdBoth;   // 0..1: the other key is held too (the dive's legs stay in line)
             [System.NonSerialized] public float holdPeak;   // the largest real-hold weight reached in this Hold (a tap stays near 0.05)
             [System.NonSerialized] public float cycle;      // this leg's own press-to-press time (s), smoothed; 0 = never pressed
+            [System.NonSerialized] public float riseW;      // the free-foot floor's weight (0..1), see FreeRiseTime
             [System.NonSerialized] public bool swapStance;   // this stance is a change of leg's: a whole step's stance (behind the hip), then the hop's swing
             [System.NonSerialized] public float swingLen;   // the swing's time (s)
             [System.NonSerialized] public double pressedAt = -10.0, lastPress = -1.0, swingT0, lastKey = -1.0;
@@ -998,6 +999,8 @@ namespace SpeedStars.Physical
         const float TuckFastEarly = 0.06f;     // a short step's tucked peak comes this much earlier in the swing (share)
         const float TuckFastLead = 0.6f;       // and the tucked curve is read this much further ahead
         const float PressBackPeakGain = 0.46f; // a damped spring's peak (deg) per unit of impulse speed (deg/s) x its omega: kick = peak
+        const float SwapGrace = 0.1f;          // a change of leg's foot is down this long (s) after hopSwapTime at the latest
+        const float FreeRiseTime = 0.12f;      // a foot coming off the ground into Rest gets its free-foot floor over this long (s), not in one frame
         const float HopMinCatch = 0.12f;       // a catch in a hop takes at least this long (s): a foot never snaps down
         const float HopStockReturn = 0.24f;    // a hop's legs go home this slowly (s) at least, whatever stockReturnTime is          // a press catching a swinging leg takes at least / at most this long (s)
         const float MaxCatch = 0.15f;
@@ -2105,6 +2108,7 @@ namespace SpeedStars.Physical
                             break;
                         case LegPhase.Land:
                             if (!_stepNow) Enter(leg, LegPhase.Rest, time, frontHomeTime * SpeedUp());
+                            else if (_hopFreed && i != _poseLastLeg) Enter(leg, LegPhase.Rest, time, StockTime());   // the freed leg's swing ends in the balance pose, not planted
                             else if (partner.phase != LegPhase.Hold && partner.phase != LegPhase.Reach && leg.ankle.y - AnkleGround(leg) <= TouchHeight * 1.5f)
                             {
                                 // A foot that lands before its press (a hop's swing ends hopLead early, or any late press) is planted
@@ -2718,7 +2722,7 @@ namespace SpeedStars.Physical
                 UpdateGait(sim, dt);
                 UpdateBounceLean(dt, ref lean, ref baseBend, ref bend);
                 // Hopping on one leg the hips' total tilt (the pose's plus the lean) goes to hopLean, whatever else asked for (SitBack below).
-                lean = Mathf.Lerp(lean, hopLean - p.pelvisPitch, _hopBodyW * (1f - _heldNow));
+                lean = Mathf.Lerp(lean, hopLean - p.pelvisPitch, _hopBodyW);   // a hold takes the weight away through its spring (hopTarget), not in a frame
                 lean += Mathf.Lerp(stanceLean.x, stanceLean.y, _stanceSet) * _stanceW + driveLean * _driveW;   // the blocks / the drive: forward (the opposite of the brake)
                 lean -= brakeLean * _brakeRaw;                       // braking the whole body lies back about the heels (SitBack below)
                 lean += jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
@@ -2770,7 +2774,11 @@ namespace SpeedStars.Physical
                 leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + HeelLift(leg) + ToeRise(leg) * _stanceW);
                 // A held or swinging foot is posed toes down after the IK: its ball stands under the ankle's level, so the
                 // ankle floor is the foot's own pitch's, not just the heel's (the ball went 4 cm under in holds and swings).
-                if (!preview && !leg.grounded && !leg.carry) leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + FreeFootRise(leg, 0f));
+                // The free-foot floor comes in over FreeRiseTime for a foot that has just come off the ground into Rest (3 cm in one frame, then back
+                // down when carry returned); a swing or a catch has it whole at once.
+                bool freeNow = !preview && !leg.grounded && !leg.carry;
+                leg.riseW = !freeNow ? 0f : leg.phase == LegPhase.Rest ? Mathf.MoveTowards(leg.riseW, 1f, dt / FreeRiseTime) : 1f;
+                if (freeNow) leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + FreeFootRise(leg, 0f) * leg.riseW);
             }
             leftLeg.rock = rightLeg.rock = 0f;
             if (backLean < 0f) SitBack(ref hip, backLean);
@@ -2784,7 +2792,7 @@ namespace SpeedStars.Physical
             {
                 Leg leg = Legs(i);
                 if (backLean < 0f) leg.ankle.y = Mathf.Max(leg.ankle.y, AnkleGround(leg));
-                if (!preview && !leg.grounded && !leg.carry) leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + FreeFootRise(leg, Mathf.Min(0f, backLean)));
+                if (!preview && !leg.grounded && !leg.carry) leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + FreeFootRise(leg, Mathf.Min(0f, backLean)) * leg.riseW);
             }
             if (!preview) ShowPlantedAngles(hip, pelvisTilt, p.width, backLean, legTurn);
             PinFeet(hip, backLean < 0f ? Quaternion.Euler(backLean, 0f, 0f) * pelvisTilt : pelvisTilt, p.width, dt);
@@ -2850,7 +2858,8 @@ namespace SpeedStars.Physical
             if (_swapLeg >= 0)
             {
                 Leg sw = Legs(_swapLeg);
-                if (sw.grounded && sw.phase == LegPhase.Push) CompleteSwap(now);
+                // A foot that has had hopSwapTime + SwapGrace to come down counts as down (like CatchGrace): the press works, the body does not wait on it.
+                if (sw.phase == LegPhase.Push && (sw.grounded || now - _swapKeyTime >= hopSwapTime + SwapGrace)) CompleteSwap(now);
                 else if (off || now - _swapKeyTime > 1f) _swapLeg = -1;
             }
             TakeBuffered(now);
@@ -2921,7 +2930,10 @@ namespace SpeedStars.Physical
         {
             Leg other = Legs(1 - hopLeg);
             bool free = other.phase == LegPhase.Rest && !other.grounded;
-            if (other.phase != LegPhase.Hold && !free) Enter(other, LegPhase.Rest, now, Mathf.Max(stockReturnTime, HopStockReturn));
+            // A foot that stands on the ground leaves with a step's swing (heel up, knee folded, forward) and opens into the balance leg when it lands
+            // (TickLegs Land); a Rest from the ground dragged it along the floor. No press: no swing (the idle stock goes home).
+            if (other.phase == LegPhase.Push && other.grounded && !_idleStock) StartSwing(other, now);
+            else if (other.phase != LegPhase.Hold && !free) Enter(other, LegPhase.Rest, now, Mathf.Max(stockReturnTime, HopStockReturn));
         }
 
         /// <summary>The forward tilt (deg) of the arm's parent bone from its rest, in the runner's frame: a hanging arm turns back with it.</summary>
