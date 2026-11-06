@@ -547,7 +547,7 @@ namespace SpeedStars.PlayTests
             int n = 0;
             while (t < 8.0)
             {
-                if (t >= next) { s.Press(1); release = t + KeyHold; next += gap; }
+                if (t >= next) { s.Press(1); release = t + Mathf.Min(KeyHold, 0.6f * gap); next += gap; }   // key up before the next tap, or that tap is dropped
                 if (release >= 0 && t >= release) { s.Release(1); release = -1; }
                 s.Advance(Step);
                 t += Step;
