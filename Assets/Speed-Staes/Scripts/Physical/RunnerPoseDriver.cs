@@ -806,16 +806,16 @@ namespace SpeedStars.Physical
         public Vector2 gaitSpeed = new Vector2(1f, 6f);
         [Tooltip("Pelvis turn about the vertical (deg) at full gait with the legs a full stride apart: the hip of the leg " +
                  "that is forward goes forward. 0 = off (the trunk only pitches); raise it to turn the twist back on.")]
-        public float pelvisTwist = 0f;
+        public float pelvisTwist = 9f;
         [Tooltip("The chest's tip turns the other way by this much (deg) at full gait. B-chest, in the middle of the " +
                  "twist chain, takes about 60% of the way from the pelvis's turn to this. 0 = off.")]
-        public float chestTwist = 0f;
+        public float chestTwist = 7f;
         [Tooltip("Thigh difference (deg) that counts as a full stride for the twist.")]
         public float twistThighRange = 90f;
         [Tooltip("Pelvis roll (deg) at full gait: the hip drops on the side of the leg that is swinging forward. 0 = off.")]
-        public float pelvisRoll = 0f;
+        public float pelvisRoll = 2.5f;
         [Tooltip("The chest rolls the other way by this much (deg) at full gait. 0 = off.")]
-        public float chestRoll = 0f;
+        public float chestRoll = 1.5f;
         [Tooltip("Lowest share of the gait that bad running (the sim's Form 0) keeps: twist, roll and arm width " +
                  "scale between this and 1 with Form.")]
         [Range(0f, 1f)] public float formFloor = 0.5f;
@@ -3464,7 +3464,8 @@ namespace SpeedStars.Physical
             float k = 1f - Mathf.Exp(-TwistBlend * dt), kr = 1f - Mathf.Exp(-RollBlend * dt);
             _twist = Mathf.Lerp(_twist, Mathf.Clamp((rt - lt) / Mathf.Max(1f, twistThighRange), -1f, 1f), k);
             _roll = Mathf.Lerp(_roll, Mathf.Clamp((rateL - rateR) / (2f * RollRate), -1f, 1f), kr);
-            float amp = _gaitW * Mathf.Lerp(formFloor, 1f, sim.Form);
+            // Only plain running turns: a hop, a pair, a hold, a dive, the brake and the blocks' stance give 0 (the weights fade it).
+            float amp = _gaitW * Mathf.Lerp(formFloor, 1f, sim.Form) * _plainRun * (1f - _dive) * (1f - _heldNow) * (1f - _brake) * (1f - _stanceW);
             // + yaw takes the right hip back, so the forward right leg (rt > lt) asks for a negative one.
             float yaw = -pelvisTwist * _twist * amp;
             float roll = pelvisRoll * _roll * amp;   // + roll drops the left hip
