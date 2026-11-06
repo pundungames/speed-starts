@@ -1,7 +1,7 @@
 ---
 id: T-145
 title: Duz kosuda bacak once karna cekilir, sonra kaval kemigi one atilir
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-144]
 owns_paths:
@@ -15,8 +15,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -43,3 +43,8 @@ Kullanici 05.11: "bacagini one atarken basmadan once karin tarafina dogru iyice 
 - Kosudan tek ayaga gecis (T-147). Govde zinciri, zemin kirpma, kamera.
 
 ## Calisma notu
+- Yol: ikinci bir 6 anahtarli egri (`tuckKeys`: baslangic, recover, mid, tepe 76/92, firlatma 55/155, contact), eski 5 anahtarli egri aynen duruyor; `EvalSwing` ikisini `_plainRun` ile karistiriyor (agirlik 0 iken eski egri birebir).
+- Yeni alanlar: `tuckPeak`, `shinThrow`, `tuckThrowKeys` (0.66, 0.84); hepsi Tooltip'li, prefab/sahnede yok (git grep).
+- Hizli kosuda dizin acilmasi: 17 kare ~0.28 sn; 0.66..0.84 = ~50 ms, 92 -> 155 = 63 derece, ortalama ~1250 deg/s (legMaxSpeed 1800 altinda); Hermite tepesi ~1.5x ile sinira yakin.
+- Catch/Land/knots[1..2] eski diziden okumaya devam ediyor; kol, sim, govde dokunulmadi. Olculmedi.
+- Belirsiz: fastRun'da uyluk tepesi 70+ yay/Track altinda tutar mi (olcum bekliyor); kol genligi uyluga bagli degisebilir (T-146).

@@ -191,6 +191,8 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public double pressedAt = -10.0, lastPress = -1.0, swingT0;
             [System.NonSerialized] public LegAngles[] keys, slope;   // swing keys (start, recover, mid, drive, contact) and their slopes
             [System.NonSerialized] public float[] knots;             // the keys' times in the swing (0..1)
+            [System.NonSerialized] public LegAngles[] tuckKeys, tuckSlope;   // plain running's own swing: start, recover, mid, tucked peak, shin throw, contact
+            [System.NonSerialized] public float[] tuckKnots;
 
             public Vector3 RestBall => restAnkle + ballOffset;
             public double EndTime => phaseTime + duration;
@@ -409,6 +411,15 @@ namespace SpeedStars.Physical
         public LegAngles kneeOpen = new LegAngles(78f, 170f);
         [Tooltip("Plain running at fast-stride speed: the knee drive (kneeOpen's faster pair).")]
         public LegAngles kneeOpenFast = new LegAngles(70f, 170f);
+        [Tooltip("Plain running: the thigh's peak with the knee still folded, the heel drawn up toward the belly (the shin is " +
+                 "thrown out only after this). Blended in by the run weight; a hop, a pair jump and a hold do not read it.")]
+        public LegAngles tuckPeak = new LegAngles(76f, 92f);
+        [Tooltip("Plain running: the shin thrown forward as the thigh comes down (thigh − (180 − knee) is the shin's angle, " +
+                 "+ = ahead of the knee). From here the foot claws back into contactRun. Run weight only.")]
+        public LegAngles shinThrow = new LegAngles(55f, 155f);
+        [Tooltip("Plain running: where the tucked peak and the shin throw fall in the swing's time (0..1; x < y, both after the folded pass). " +
+                 "The knee opens between them, so a short fast swing needs them apart (a knee cannot open faster than legMaxSpeed).")]
+        public Vector2 tuckThrowKeys = new Vector2(0.66f, 0.84f);
         [Tooltip("How much of the stride (and the flight) comes from how well the runner has been running (the sim's " +
                  "Form: presses on time): 0 = speed alone, 1 = a runner with no form takes no stride.")]
         [Range(0f, 1f)] public float formWeight = 0.8f;
@@ -1042,6 +1053,9 @@ namespace SpeedStars.Physical
             leg.keys = new LegAngles[SwingKeyCount];
             leg.slope = new LegAngles[SwingKeyCount];
             leg.knots = new float[SwingKeyCount];
+            leg.tuckKeys = new LegAngles[TuckKeyCount];
+            leg.tuckSlope = new LegAngles[TuckKeyCount];
+            leg.tuckKnots = new float[TuckKeyCount];
         }
 
         void BindArm(Arm arm, float side, string upperName, string foreName)
@@ -1081,6 +1095,7 @@ namespace SpeedStars.Physical
         // ---- Leg phases, on the sim's clock. ----
 
         const int SwingKeyCount = 5;   // start, recover, mid, drive, contact
+        const int TuckKeyCount = 6;    // start, recover, mid, tucked peak, shin throw, contact
 
         /// <summary>
         /// A press puts that leg's foot down (BeginStance); a release of a held leg sends it into its swing.
@@ -1258,6 +1273,36 @@ namespace SpeedStars.Physical
                 LimitSlope(leg.kneeRate * len * d0, k[1].knee - k[0].knee) / d0);
             m[SwingKeyCount - 1] = new LegAngles(
                 LimitSlope(StanceRate() * len * d1, k[4].thigh - k[3].thigh) / d1, 0f);
+            FillTuck(leg);
+        }
+
+        /// <summary>
+        /// Plain running's own swing curve (blended over the old one by the run weight, so at weight 0 the old curve is untouched):
+        /// the same start, recover and folded pass, then the thigh peaks with the knee still folded (the leg drawn to the belly),
+        /// and only on the way down the shin is thrown forward, before the foot claws back into the contact pose.
+        /// </summary>
+        void FillTuck(Leg leg)
+        {
+            LegAngles[] a = leg.keys, k = leg.tuckKeys, m = leg.tuckSlope;
+            float[] n = leg.tuckKnots;
+            for (int i = 0; i < 3; i++) { k[i] = a[i]; n[i] = leg.knots[i]; }
+            n[3] = Mathf.Clamp(tuckThrowKeys.x, n[2] + 0.02f, 0.9f);
+            n[4] = Mathf.Clamp(tuckThrowKeys.y, n[3] + 0.02f, 0.97f);
+            n[5] = 1f;
+            k[2] = MidKey();
+            k[3] = Key(tuckPeak, hopKneeDrive);
+            k[4] = Key(shinThrow, hopKneeDrive);
+            k[5] = a[4];
+            m[0] = leg.slope[0];
+            for (int i = 1; i < TuckKeyCount - 1; i++)
+            {
+                float span = n[i + 1] - n[i - 1];
+                m[i] = new LegAngles(KeySlope(k[i - 1].thigh, k[i].thigh, k[i + 1].thigh, span),
+                    KeySlope(k[i - 1].knee, k[i].knee, k[i + 1].knee, span));
+            }
+            float d1 = 1f - n[4];
+            m[TuckKeyCount - 1] = new LegAngles(
+                LimitSlope(StanceRate() * leg.swingLen * d1, k[5].thigh - k[4].thigh) / d1, 0f);
         }
 
         /// <summary>
@@ -1279,6 +1324,7 @@ namespace SpeedStars.Physical
                 m[i] = new LegAngles(KeySlope(k[i - 1].thigh, k[i].thigh, k[i + 1].thigh, span),
                     KeySlope(k[i - 1].knee, k[i].knee, k[i + 1].knee, span));
             }
+            FillTuck(leg);
         }
 
         /// <summary>The slope (angle per unit of the swing) through a key: Catmull-Rom, flat at a peak or a trough.</summary>
@@ -1310,25 +1356,28 @@ namespace SpeedStars.Physical
         /// </summary>
         LegAngles EvalSwing(Leg leg, float share)
         {
-            LegAngles at = SwingSegment(leg, share);
+            LegAngles at = SwingSegment(leg.keys, leg.slope, leg.knots, share);
             // The leg drives from the hip first; the knee opens late on that way and is open as the thigh arrives.
             float from = leg.knots[2], to = leg.knots[3];   // the folded pass, the thigh's peak
             if (share > from && share < to)
             {
                 float u = (share - from) / Mathf.Max(1e-4f, to - from);
-                at.knee = SwingSegment(leg, from + (to - from) * Mathf.Pow(u, kneeOpenDelay)).knee;
+                at.knee = SwingSegment(leg.keys, leg.slope, leg.knots, from + (to - from) * Mathf.Pow(u, kneeOpenDelay)).knee;
             }
+            // Plain running swings on its own curve (tucked, then the shin thrown); the old one is kept whole for hop and pair.
+            if (_plainRun > 0f && leg.tuckKeys != null)
+                at = LegAngles.Lerp(at, SwingSegment(leg.tuckKeys, leg.tuckSlope, leg.tuckKnots, share), _plainRun);
             return at;
         }
 
         /// <summary>The Hermite segment between the two keys around this share.</summary>
-        static LegAngles SwingSegment(Leg leg, float share)
+        static LegAngles SwingSegment(LegAngles[] keys, LegAngles[] slope, float[] knots, float share)
         {
             int i = 0;
-            while (i < SwingKeyCount - 2 && share > leg.knots[i + 1]) i++;
-            float dt = Mathf.Max(1e-4f, leg.knots[i + 1] - leg.knots[i]);
-            float u = Mathf.Clamp01((share - leg.knots[i]) / dt);
-            LegAngles a = leg.keys[i], b = leg.keys[i + 1], ma = leg.slope[i], mb = leg.slope[i + 1];
+            while (i < keys.Length - 2 && share > knots[i + 1]) i++;
+            float dt = Mathf.Max(1e-4f, knots[i + 1] - knots[i]);
+            float u = Mathf.Clamp01((share - knots[i]) / dt);
+            LegAngles a = keys[i], b = keys[i + 1], ma = slope[i], mb = slope[i + 1];
             return new LegAngles(Herm(a.thigh, b.thigh, ma.thigh * dt, mb.thigh * dt, u),
                 Herm(a.knee, b.knee, ma.knee * dt, mb.knee * dt, u));
         }
