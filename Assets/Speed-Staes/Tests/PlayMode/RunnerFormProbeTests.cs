@@ -282,7 +282,13 @@ namespace SpeedStars.PlayTests
             s = new Script("holdOne"); s.Alt(2.5f, 0.27f, Tap, 0); double h = s.Held(1.2f, 0.27f, 1); s.Strip(h); s.Strip(h + 1.2); s.Alt(1.5f, 0.27f, Tap); list.Add(s.Build(0.5f));
             s = new Script("holdBoth"); s.Alt(2.5f, 0.27f, Tap, 0); h = s.Held(1.2f, 0.27f, 0, 1); s.Strip(h); s.Strip(h + 1.2); s.Alt(1.5f, 0.27f, Tap); list.Add(s.Build(0.5f));
 
-            s = new Script("stop"); s.Alt(3f, 0.27f, Tap); s.Strip(s.LastRelease); list.Add(s.Build(2.5f));
+            // T-149: the stop also at 0.65 s and 1.3 s after the last key (the braking lean, then its way back to the stance).
+            s = new Script("stop"); s.Alt(3f, 0.27f, Tap); s.Strip(s.LastRelease); s.Strip(s.LastRelease + 0.65); s.Strip(s.LastRelease + 1.3); list.Add(s.Build(2.5f));
+            // A press in the middle of the brake: the lean must come up softly and the first step must be taken (T-148).
+            s = new Script("brakeRestart"); s.Alt(3f, 0.27f, Tap); s.Next = s.LastRelease + 0.8;
+            double brakePress = s.Alt(2f, 0.27f, Tap); s.Strip(brakePress); s.Strip(brakePress + 0.65); list.Add(s.Build(0.5f));
+            // Slow running slows down by itself: below brakeSpeed the body must not lie back.
+            s = new Script("slowStop"); s.Alt(3f, 0.60f, Tap); s.Strip(s.LastRelease); s.Strip(s.LastRelease + 0.65); list.Add(s.Build(2f));
 
             // T-148: from a standstill. restart: run, stand 2.2 s (speed 0), run again; the strips start at the second take-off and 0.65 s on.
             s = new Script("restart"); s.Alt(2.5f, 0.30f, Tap); s.Next = s.LastRelease + 2.2;
