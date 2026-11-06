@@ -11,7 +11,7 @@ owns_paths:
   - "docs/tasks/T-155-kotu-girdi-hiz.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [3b7d121f, 41a34f8d]
+commits: [3b7d121f, 41a34f8d, f2b7882d]
 tests:
   - "Assets/Speed-Staes/Tests/PlayMode/RunnerSimRelationTests.cs"
 analytics:

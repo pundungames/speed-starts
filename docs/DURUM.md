@@ -7,11 +7,12 @@ MOD: süpervizör
 
 Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakter-ik.md`. Push kullanıcıda.
 
-## 06.11: tek ayak sekiş turu, gözünü bekliyor (`IKTest`, T-145..T-156 `merged`)
-- **T-154 sekiş:** sert kapı (`hopTime`, ayak havadayken basış alınmaz, kurulu olmayan ilk sekişte diğer tuş geçer), kendi döngüsü (basış canlı tutar), yay 0.3 m, geri atış -57, serbest bacak `hopFreeLeg` sabit, kol biri sabit biri bacağa bağlı, `hopLean`. Dururken tek basış sekiş (`hopStandWait`). `hipMaxAccel`.
-- **T-155 tek tuş hız:** seride taban (`hopFloorSpeed`), geç sayılmaz, baş bozmaz; fren ritme göre bekler (`stopWaitShare`). İki tuş sayıları birebir aynı. **T-156 kalça:** kök üstünde ileri-geri (`hopSurge`, `runSurge`), koşuda burgu.
-- Önceki: T-145 bacak, T-146 kol, T-147 tek ayağa giriş, T-148 duruştan adım, T-149 fren pozu, T-150 girdi kapısı yalnız pozda (fizikte reddetmek spam i 10.4 sn yapar), T-151 sekiş yayı, T-152 kol yayı, T-153 sprint çıkışı (READY, SET, `_driveW`).
-- Son kayıt `t154-f`. Araçlar: `swing_table.py`, `arm_table.py`, CSV `d_posePresses`, `L_handY`. Sayı değişince Editor de prefab Reimport (TUZAK).
+## 06.11: tek ayak sekiş turu, gözünü bekliyor (`IKTest`, T-145..T-157 `merged`)
+- **T-157 (kullanıcı denedi, kural):** her hareket basıştan, basış yoksa direkt stop. Niyet ham tuştan (`NoteIntent`, `_hopWanted`), ağırlık alınan basıştan. Tek basış tamponu (`hopBufferTime`). Sekiş "kendi döngüsü" iptal.
+- **T-154 sekiş:** sert kapı (`hopTime`, ayak havadayken basış alınmaz, kurulu olmayan ilk sekişte diğer tuş geçer), yay 0.3 m, geri atış -57, serbest bacak `hopFreeLeg` sabit, kol biri sabit biri bacağa bağlı, `hopLean`. Dururken tek basış sekiş (`hopStandWait`). `hipMaxAccel`.
+- **T-155 tek tuş hız:** seride taban (`hopFloorSpeed` 4.2, kullanıcı 5.6 için "çok fazla" dedi), geç sayılmaz, baş bozmaz; fren ritme göre bekler (`stopWaitShare`). İki tuş sayıları birebir aynı. **T-156 kalça:** kök üstünde ileri-geri (`hopSurge`, `runSurge`), koşuda burgu.
+- Önceki: T-145..T-153 (bacak, kol, duruştan adım, fren pozu, girdi kapısı yalnız pozda, sprint çıkışı).
+- Son kayıt `t157-b`. Araçlar: `swing_table.py`, `arm_table.py`, CSV `d_posePresses`, `L_handY`. Sayı değişince Editor de prefab Reimport (TUZAK).
 
 ## Çalışma düzeni
 - Kullanıcı `IKTest`'te (ana klasör, Unity açık). İş `agent/ik-kosucu`'da, worktree `D:\Pundun\speed-starts-ik`. Geçirme: kopyada doğrula, ana klasörde `git merge --ff-only <hash>`. `agent/ik-govde` worktree'si silinebilir.

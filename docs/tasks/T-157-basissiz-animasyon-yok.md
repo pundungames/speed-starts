@@ -1,7 +1,7 @@
 ---
 id: T-157
 title: Her hareket basistan: basissiz animasyon yok, ham tus niyeti, bacak degistirme calisir
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-154]
 owns_paths:
@@ -82,3 +82,5 @@ Son basistan sonra baslayan salinimlar (saniye, son basisa gore):
 - Derleyici yok, hicbir sey olculmedi. Supheli: kosuda `_stepNow` penceresi (stepTimeMax) degismedi, yani kosuda stop hala 0.6 sn; sekiste ritim 0.27'de gec basis tamponlandigi icin sekis aralik hopTime'a yakin kalir; `openOther`'a `!HopLegInAir()` eklendi.
 - Ayaktan sekis (`_standLeg`) ve `openOther` duruyor; `hopMaxAccel`, `_hopQuick`, `_landHold` dokunulmadi.
 - Olcum t157-a sonrasi: openOther'dan `!HopLegInAir()` kalkti; niyet `_hopWanted`, agirlik hedefi `_hopTarget` ayrildi (yalniz alinan ya da tampondan alinan basista 1; kosu niyetinde aninda 0); kosu kapisi (`PressStillBusy`) reddettigi sekis tusunu da tamponlar.
+- Olcu (t157-b): son basistan sonra en fazla 1 salinim her senaryoda (`stop` 2 -> 1, `fastRun` 3 -> 1, `hopStop` 2 -> 0, `fastTap` 0). `hopSwapSlow` degisimde `d_hop` 1. Iki tusla baslangic her tus alinir (`start` 0.5, 0.8, 1.1). `blockHop` snap gitti. Sim testleri 25/25.
+- Bilerek: basis bitince ayak kosu hizinda yerde kayar (fren pozu yolu, `slide` sayilari son basistan sonra buyuk). Tus gelirken ritimli kosu kaymasi eskiyle ayni; 0.6 sn ve ustu yavas ritimde (`walkStart`, `slowRun`) basislar arasi kayan kare artti, tepe azaldi.
