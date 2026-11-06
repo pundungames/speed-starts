@@ -912,6 +912,8 @@ namespace SpeedStars.Physical
         int _posePresses, _poseLastLeg = -1;        // the presses the pose took (OnTapped, PoseMinGap), and the leg of the last one
         double _poseLastTime = -10.0;
         float _posePrevGap = 10f;                   // time between the last taken press and the one before (s)
+        int _altStreak;                             // keys in turn in a row at a followable pace
+        const int SettledStreak = 3;                // ...this many make a settled rhythm: the press gate stays open
         int _keyLastLeg = -1;                       // the key pressed last, taken or not (the rhythm's same-key test)
         Spring _bounceChest;                       // the chest's lean in the bounce: follows _bounceLean a little behind (bounceChestSpring)
         Spring _bounceLean;                        // the trunk's lean in the bounce (deg), through bounceLeanSpring
@@ -1158,6 +1160,9 @@ namespace SpeedStars.Physical
             bool learn = keyGap >= (leg == _keyLastLeg ? pressFollowSame : pressFollowRun);
             // Keys in turn are read from the keys themselves: the key before this one (taken or not) was the other one.
             bool alternating = _keyLastLeg >= 0 && _keyLastLeg != leg && time - Legs(1 - leg).lastKey < stepTimeMax;   // not across a pause
+            // Keys in turn at a pace a person's steps follow, three in a row: a settled rhythm. The gate does not refuse there (a half-step phase
+            // shift made it refuse every second key for good); the catch lines the step up. Spam (a key's own gap under pressFollowRun) resets it.
+            _altStreak = alternating && keyGap >= pressFollowRun ? _altStreak + 1 : 0;
             l.lastKey = time;
             _keyLastLeg = leg;
             bool fromStand = _idleStock;   // read before it is cleared: no key and no press lately, so this press starts the run from a standstill
@@ -1167,7 +1172,7 @@ namespace SpeedStars.Physical
             // hop count. A key pressed together with the first of a pair (within the pair window PairWeight counts, after a pause) is the pair's second key, taken.
             double sinceTaken = time - _poseLastTime;
             bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 1.5f * PairWindow && _posePrevGap >= PoseMinGap * 1.5;
-            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (sinceTaken < PoseMinGap || (!fromStand && PressStillBusy(leg, time, sinceTaken, alternating))))
+            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (sinceTaken < PoseMinGap || (!fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating))))
             {
                 l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
                 if (learn && l.cycle > 0f)
@@ -3077,6 +3082,7 @@ namespace SpeedStars.Physical
             _poseLastTime = -10.0;
             _posePrevGap = 10f;
             _keyLastLeg = -1;
+            _altStreak = 0;
             leftLeg.lastKey = rightLeg.lastKey = -1.0;
             _sitW[0] = _sitW[1] = 0f;
             _armKick = 0f;

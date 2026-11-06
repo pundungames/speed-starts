@@ -60,3 +60,4 @@ Kullanici 06.11: "bir input verdiysem o inputun etkisi bitene kadar o inputu ver
 - Olculmedi. Belirsiz: fastRun'da (0.20) 0.3 sn tavan ve %90 kabul; hop'ta ayni tus salinim sonunda (0.9) yeterince erken acar mi.
 - Tur 2: ritim tustan ogrenilir (`Leg.lastKey`, `pressFollowSame` 0.22, `pressFollowRun` 0.30): reddedilen basis da `cycle`'i besler, `NoteCycle` anahtar araligini alir; `pairSecond` penceresi 1.5 * PairWindow.
 - Tur 3: `_poseSkippedOther` kalkti; sirali tus `alternating` (bir onceki tus, alinsin alinmasin, digeri ve durak yok) ile okunur: eslem ve `PressStillBusy.sameKey` buna bakar.
+- Tur 4: `_altStreak` (sirali ve tus kendi araligi >= pressFollowRun, art arda 3, `SettledStreak`): oturmus siralı ritimde kapi reddetmez; `PoseMinGap` kalir, spam sayaci sifirlar.
