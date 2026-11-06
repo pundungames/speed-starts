@@ -422,7 +422,7 @@ namespace SpeedStars.Physical
         public Vector2 tuckThrowKeys = new Vector2(0.66f, 0.84f);
         [Tooltip("Plain running: the tucked curve is read this far (s) ahead of the swing's clock from the folded pass on, so the shown " +
                  "angles (which trail their target through the limb springs) reach the peak and the shin throw before the next press. " +
-                 "Eased in between the heel kick and the folded pass, so the swing does not jump.")]
+                 "Eased in from the swing's start to the folded pass, so the swing does not jump and the thigh is not rushed.")]
         public float tuckLead = 0.05f;
         [Tooltip("How much of the stride (and the flight) comes from how well the runner has been running (the sim's " +
                  "Form: presses on time): 0 = speed alone, 1 = a runner with no form takes no stride.")]
@@ -1371,7 +1371,7 @@ namespace SpeedStars.Physical
             // Plain running swings on its own curve (tucked, then the shin thrown); the old one is kept whole for hop and pair.
             if (_plainRun > 0f && leg.tuckKeys != null)
             {
-                float lead = leg.swingLen > 0f ? tuckLead / leg.swingLen * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(leg.knots[1], leg.knots[2], share)) : 0f;
+                float lead = leg.swingLen > 0f ? tuckLead / leg.swingLen * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, leg.knots[2], share)) : 0f;
                 at = LegAngles.Lerp(at, SwingSegment(leg.tuckKeys, leg.tuckSlope, leg.tuckKnots, Mathf.Min(1f, share + lead)), _plainRun);
             }
             return at;

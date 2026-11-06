@@ -50,3 +50,4 @@ Kullanici 05.11: "bacagini one atarken basmadan once karin tarafina dogru iyice 
 - Belirsiz: fastRun'da uyluk tepesi 70+ yay/Track altinda tutar mi (olcum bekliyor); kol genligi uyluga bagli degisebilir (T-146).
 - Tur 2: `tuckLead` 0.05 sn (tuck egrisi mid knot'una dogru yumusakca one alinir), `tuckPeak` 86/82, `shinThrow` 56/160; `Catch` dizi duz kosuda erken acar (agirlik 0 iken eski formul).
 - Olculmedi.
+- Tur 3: `tuckLead` one almasi salinimin basindan (0) mid knot'una yayildi; uyluk kare hizi `legMaxSpeed`'e dayanmasin.
