@@ -79,6 +79,9 @@ namespace SpeedStars.Physical
     /// (UpdateTrunk): off by default (pelvisTwist, pelvisRoll, chestTwist, chestRoll 0), the plain run's trunk only pitches,
     /// down the head-led chain (UpdateLean) with no gait lean, press kick, rock or ride bob on top. A hop and a pair keep theirs.
     /// </summary>
+    /// <summary>The race start's stance the Bridge asks for before the first press: the blocks (Marks), hips up (Set). None = the driver's own.</summary>
+    public enum RunnerStartStance { None, Marks, Set }
+
     [DefaultExecutionOrder(-50)]
     public sealed class RunnerPoseDriver : MonoBehaviour
     {
@@ -470,6 +473,45 @@ namespace SpeedStars.Physical
         [Tooltip("The trunk sits back by this much (deg) on one-leg hops: the head-led lean and the gait lean fade out as the " +
                  "hop bias rises.")]
         public float hopBackLean = 42f;
+
+        [Header("Start: the blocks (Marks), hips up (Set), the drive out of them (first press on)")]
+        [Tooltip("The start's stance, written by the race start (Bridge): None = the driver's own, Marks = on the blocks, Set = hips up. " +
+                 "The first press taken puts it back to None and starts the drive.")]
+        [HideInInspector] public RunnerStartStance startStance;
+        [Tooltip("Marks, the front leg (the left one): the foot on the block, the knee high, the thigh about level.")]
+        public LegAngles marksFront = new LegAngles(85f, 60f);
+        [Tooltip("Marks, the rear leg: the knee down by the ground, the shin back. Its reach is the front's plus the toe-down foot's rise, so both feet stand.")]
+        public LegAngles marksRear = new LegAngles(25f, 74f);
+        [Tooltip("Set, the front leg: the knee about 90 under the thigh.")]
+        public LegAngles setFront = new LegAngles(60f, 90f);
+        [Tooltip("Set, the rear leg: the thigh nearly upright, the knee about 110.")]
+        public LegAngles setRear = new LegAngles(15f, 108f);
+        [Tooltip("The trunk's lean forward (deg, added to the pose's) on the blocks (x) and with the hips up (y). The hips' own limit for it is stanceHipMax.")]
+        public Vector2 stanceLean = new Vector2(75f, 95f);
+        [Tooltip("The hips' forward pitch may reach this much (deg) in the start's stance (pelvisPitchRange.y elsewhere): the hips are over the shoulders.")]
+        public float stanceHipMax = 105f;
+        [Tooltip("The rear foot's heel is up: toes down by this much (deg) in the start's stance.")]
+        public float stanceRearToe = 40f;
+        [Tooltip("Start's stance arms (x = upper arm swing, y = elbow; deg, 0 = hanging straight down in the world): straight, the hands on the ground.")]
+        public Vector2 armStance = new Vector2(0f, 8f);
+        [Tooltip("The stance weight coming in (Marks, Set).")]
+        public SpringSettings blockInSpring = new SpringSettings(2.5f, 1f);
+        [Tooltip("The stance weight going out (the first press): quick, the trunk must be up to the drive's lean within ~0.2 s.")]
+        public SpringSettings blockOutSpring = new SpringSettings(3.5f, 1f);
+        [Tooltip("Marks -> Set: the hips come up through this spring.")]
+        public SpringSettings blockSetSpring = new SpringSettings(2f, 1f);
+        [Tooltip("The drive out of a standstill: the trunk leans forward this much (deg) at its start and straightens as the speed comes.")]
+        public float driveLean = 45f;
+        [Tooltip("The drive's lean (deg) on a start from a standstill with no block stance (a restart): a small share, not the sprinter's.")]
+        public float driveLeanStand = 18f;
+        [Tooltip("The drive ends over this time (s) from the first press.")]
+        public float driveTime = 1f;
+        [Tooltip("Speed (m/s) over which the drive's lean goes: nothing left at y.")]
+        public Vector2 driveSpeed = new Vector2(3f, 6f);
+        [Tooltip("The drive weight coming in (it also opens the arms and holds the hips low).")]
+        public SpringSettings driveInSpring = new SpringSettings(4f, 1f);
+        [Tooltip("The drive weight going out.")]
+        public SpringSettings driveOutSpring = new SpringSettings(2.5f, 1f);
 
         [Header("Braking: keys up at speed, the body slides on its heels, leaning back (cartoon stop)")]
         [Tooltip("Speed (m/s) over which the braking pose comes in with no key: nothing below x (a slow run just stops), all of it at y.")]
@@ -974,6 +1016,10 @@ namespace SpeedStars.Physical
         float _stepping;                           // 1 = running stance (presses keep coming), 0 = none: Ready crouch
         /// <summary>Set by the finish cooldown: its root stops on its own curve while the sim speed stays high, so no braking pose then.</summary>
         [HideInInspector] public bool brakePose = true;
+        Spring _stanceSpring, _stanceSetSpring, _driveSpring;   // the start stance weight, its Set share, the drive weight
+        float _stanceW, _stanceSet, _driveW;       // 0..1 each; _driveW holds the launch's gain
+        float _driveT, _driveGain;                 // seconds since the launch, the launch's size (1 off the blocks)
+        bool _driveOn;
         Spring _brakeSpring;                       // the braking weight's spring (brakeInSpring / brakeOutSpring)
         float _brake, _brakeRaw;                   // braking weight 0..1 (legs, arms) and the same unclamped, a bob below 0 / above 1 leans the trunk (brakeLean)
         bool _idleStock;                    // this frame: no key and no press lately: the legs go to the waiting stance, no step of their own
@@ -1227,6 +1273,15 @@ namespace SpeedStars.Physical
             _poseLastTime = time;
             _poseLastLeg = use;
             _posePresses++;
+            // The first press from a standstill starts the drive (the trunk leans into it); off the blocks it is the sprinter's, else a small share.
+            // A stance the race start put on ends with this press.
+            if (fromStand && !_jumping)
+            {
+                _driveGain = startStance != RunnerStartStance.None ? 1f : driveLeanStand / Mathf.Max(1f, driveLean);
+                _driveT = 0f;
+                _driveOn = true;
+            }
+            startStance = RunnerStartStance.None;
             if (use != leg) l.pressedAt = time;
             var used = Legs(use);
             NoteCycle(used, Legs(1 - use), time, use == leg && learn ? keyGap : -1.0);
@@ -1781,6 +1836,13 @@ namespace SpeedStars.Physical
                 default:
                 {
                     LegAngles rest = LegAngles.Lerp(Home(), Balance(), leg.idle);
+                    if (_stanceW > 0f)
+                    {
+                        // The start's stance: the front leg (the left one) on the block, the rear one behind; Set lifts the hips through its own share.
+                        bool front = leg == leftLeg;
+                        LegAngles block = LegAngles.Lerp(front ? marksFront : marksRear, front ? setFront : setRear, _stanceSet);
+                        rest = LegAngles.Lerp(rest, block, _stanceW);
+                    }
                     if (_brake <= 0f) return rest;
                     // Braking: the leg that pressed last stays a little behind, the other slides out in front.
                     bool back = _poseLastLeg >= 0 && leg == Legs(_poseLastLeg);
@@ -1868,6 +1930,7 @@ namespace SpeedStars.Physical
                 default:   // Rest
                     leg.angles = LegAngles.Lerp(leg.from, Target(leg, ownHold, otherHold), ease);
                     pitch = leg.fromPitch * (1f - ease);
+                    if (_stanceW > 0f && leg != leftLeg) pitch = Mathf.Lerp(pitch, stanceRearToe, _stanceW);   // the rear heel up, the toes on the ground
                     break;
             }
             leg.angles.knee = Mathf.Min(leg.angles.knee, maxKnee);
@@ -2042,7 +2105,7 @@ namespace SpeedStars.Physical
         /// at crouch height for a second while the legs already stepped: the foot did not clear the ground and the hips rose in steps as the speed
         /// came. Plain running now takes the run's height with the steps (stanceStepShare); above restToBaseSpeed.y nothing changes.
         /// </summary>
-        float StanceHome() => Mathf.Max(_runHome, stanceStepShare * _stepping * _plainRun * (1f - _dive));
+        float StanceHome() => Mathf.Max(_runHome, stanceStepShare * _stepping * _plainRun * (1f - _dive) * (1f - _driveW));
 
         /// <summary>Plain running's touchdown pose blended in; a hop or a pair keeps contact.</summary>
         LegAngles ContactPose() => LegAngles.Lerp(contact, contactRun, _plainRun);
@@ -2304,6 +2367,7 @@ namespace SpeedStars.Physical
             _bothHeld = leftLeg.phase == LegPhase.Hold && rightLeg.phase == LegPhase.Hold ? Mathf.Min(_holdL, _holdR) * _heldNow : 0f;
             UpdateHop(sim, now, dt);
             UpdateBrake(sim, dt);
+            UpdateStart(sim, dt);
 
             // 2. Legs: phases → angles → knee and ankle points (a planted foot's legs are solved after the height).
             TickLegs(now);
@@ -2328,6 +2392,7 @@ namespace SpeedStars.Physical
                 UpdateGait(sim, dt);
                 UpdateBounceLean(dt, ref lean, ref baseBend, ref bend);
                 lean -= hopBackLean * _hopBodyW * (1f - _heldNow);   // hopping on one leg the trunk sits back (SitBack below)
+                lean += Mathf.Lerp(stanceLean.x, stanceLean.y, _stanceSet) * _stanceW + driveLean * _driveW;   // the blocks / the drive: forward (the opposite of the brake)
                 lean -= brakeLean * _brakeRaw;                       // braking the whole body lies back about the heels (SitBack below)
                 lean += jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
             }
@@ -2336,7 +2401,7 @@ namespace SpeedStars.Physical
             // 3. Forward the hips take their part of the lean (the waist bends the rest on them), within
             //    pelvisPitchRange. Back, the whole body leans about the feet on the ground (below, after the height).
             float backLean = Mathf.Min(0f, lean);
-            float hipPitch = Mathf.Clamp(p.pelvisPitch + lean - backLean, pelvisPitchRange.x, pelvisPitchRange.y);
+            float hipPitch = Mathf.Clamp(p.pelvisPitch + lean - backLean, pelvisPitchRange.x, Mathf.Lerp(pelvisPitchRange.y, stanceHipMax, _stanceW));
             // The lean part only (the pose's own tilt does not turn the legs).
             float legTurn = hipPitch - p.pelvisPitch;
             _legTurn = legTurn;
@@ -2375,7 +2440,7 @@ namespace SpeedStars.Physical
                 Leg leg = Legs(i);
                 leg.knee.y += bodyY;
                 leg.ankle.y += bodyY;
-                leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + HeelLift(leg));
+                leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + HeelLift(leg) + ToeRise(leg) * _stanceW);
                 // A held or swinging foot is posed toes down after the IK: its ball stands under the ankle's level, so the
                 // ankle floor is the foot's own pitch's, not just the heel's (the ball went 4 cm under in holds and swings).
                 if (!preview && !leg.grounded && !leg.carry) leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + FreeFootRise(leg, 0f));
@@ -2500,6 +2565,35 @@ namespace SpeedStars.Physical
                 Leg leg = Legs(i);
                 leg.idle = Mathf.MoveTowards(leg.idle, i != _poseLastLeg ? _hop * (1f - _pair) : 0f, IdleRate * dt);
             }
+        }
+
+        /// <summary>
+        /// The start's weights. The stance (startStance, written by the race start) is a target of a spring: Marks, then Set over it; a hold, a
+        /// dive, the brake, a hop or a pair take it away. The drive (the first press from a standstill) rises quickly and goes by time and speed.
+        /// Input only moves the targets.
+        /// </summary>
+        void UpdateStart(RunnerSim sim, float dt)
+        {
+            float free = (1f - _heldNow) * (1f - _dive) * (1f - _hop) * (1f - _pair) * (1f - _brake);
+            bool on = !preview && startStance != RunnerStartStance.None && !sim.InJump;
+            SpringSettings stance = on && _stanceSpring.Value < 1f ? blockInSpring : blockOutSpring;
+            _stanceSpring.Step(on ? free : 0f, stance.frequency, stance.damping, dt);
+            _stanceW = Mathf.Clamp01(_stanceSpring.Value);
+            _stanceSetSpring.Step(on && startStance == RunnerStartStance.Set ? 1f : 0f, blockSetSpring.frequency, blockSetSpring.damping, dt);
+            _stanceSet = Mathf.Clamp01(_stanceSetSpring.Value);
+
+            float target = 0f;
+            if (_driveOn && !preview)
+            {
+                _driveT += dt;
+                if (_driveT >= driveTime) _driveOn = false;
+                else if (!_idleStock)
+                    target = _driveGain * (1f - Mathf.SmoothStep(0f, 1f, _driveT / Mathf.Max(0.05f, driveTime))) *
+                             (1f - Mathf.SmoothStep(driveSpeed.x, driveSpeed.y, sim.Speed)) * free;
+            }
+            SpringSettings drive = target > _driveSpring.Value ? driveInSpring : driveOutSpring;
+            _driveSpring.Step(target, drive.frequency, drive.damping, dt);
+            _driveW = Mathf.Clamp01(_driveSpring.Value);
         }
 
         /// <summary>
@@ -2945,7 +3039,7 @@ namespace SpeedStars.Physical
         /// (folding under the body getting up, the knee lifts it through the height springs, not at once).
         /// </summary>
         float LegNeed(Leg leg) =>
-            Mathf.Max(_ground + HeelLift(leg) - leg.ankle.y, _sole + kneeRest - leg.knee.y);
+            Mathf.Max(_ground + HeelLift(leg) + ToeRise(leg) * _stanceW - leg.ankle.y, _sole + kneeRest - leg.knee.y);
 
         /// <summary>
         /// Nothing goes into the ground: the pelvis (MinPelvis), the knees and feet of legs that do not carry (a
@@ -3078,7 +3172,7 @@ namespace SpeedStars.Physical
             if (!preview && _armW > 0.001f && body && body.Sim != null)
             {
                 float form = Mathf.Lerp(formFloor, 1f, body.Sim.Form);
-                float amp = Mathf.Lerp(armSlowAmp, 1f, _speedCurve) * form;
+                float amp = Mathf.Lerp(Mathf.Lerp(armSlowAmp, 1f, _speedCurve) * form, 1f, _driveW);   // the drive swings the arms wide
                 // The opposite leg held out (one-leg hops) does not swing: the arm balances against its own side's leg instead.
                 float drive = Mathf.Lerp(opposite.thighWorld, armThighRange.x + armThighRange.y - own.thighWorld, opposite.idle);
                 float t = Mathf.Clamp(Mathf.InverseLerp(armThighRange.x, armThighRange.y, drive), -0.1f, 1.1f);
@@ -3116,6 +3210,12 @@ namespace SpeedStars.Physical
                 // Both arms together, far back loading, up and forward at the push (the same clock as the hop's throw).
                 swing = Mathf.Lerp(swing, Mathf.Lerp(armPairBack, armPairUp, _armThrow), pw);
                 elbow = Mathf.Lerp(elbow, Mathf.Lerp(armPairElbow.x, armPairElbow.y, _armThrow), pw);
+            }
+            // The start's stance: the arms straight down, the hands on the ground.
+            if (!preview && _stanceW > 0.001f)
+            {
+                swing = Mathf.Lerp(swing, armStance.x, _stanceW);
+                elbow = Mathf.Lerp(elbow, armStance.y, _stanceW);
             }
             // Braking: both arms out in front and a little up for balance, the fists away from the face.
             if (!preview && _brake > 0.001f)
@@ -3171,6 +3271,11 @@ namespace SpeedStars.Physical
             _gaitW = _armW = _speedCurve = _hop = _pair = _hopTarget = _pairTargetLast = 0f;
             _rideVel = 0f;
             _hopSpring.Reset();
+            _stanceSpring.Reset();
+            _stanceSetSpring.Reset();
+            _driveSpring.Reset();
+            _stanceW = _stanceSet = _driveW = _driveT = _driveGain = 0f;
+            _driveOn = false;
             _brakeSpring.Reset();
             _brake = _brakeRaw = 0f;
             _hopBody.Reset();
