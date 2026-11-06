@@ -7,7 +7,7 @@ MOD: süpervizör
 
 Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakter-ik.md`. Push kullanıcıda.
 
-## 06.11: tek ayak sekiş turu, gözünü bekliyor (yereldeki `main`, T-145..T-159 `merged`; push ve `origin/main` birleşimi kullanıcıda)
+## 06.11: tek ayak sekiş turu, gözünü bekliyor (`main`, T-145..T-159 `merged`, kullanıcı push etti)
 - **T-157 (kullanıcı denedi, kural):** her hareket basıştan, basış yoksa direkt stop. Niyet ham tuştan (`NoteIntent`, `_hopWanted`), ağırlık alınan basıştan. Tek basış tamponu (`hopBufferTime`). Sekiş "kendi döngüsü" iptal.
 - **T-154 sekiş:** sert kapı (`hopTime`, ayak havadayken basış alınmaz, kurulu olmayan ilk sekişte diğer tuş geçer), yay 0.3 m, geri atış -57, serbest bacak `hopFreeLeg` sabit, kol biri sabit biri bacağa bağlı, `hopLean`. Dururken tek basış sekiş (`hopStandWait`). `hipMaxAccel`.
 - **T-155 tek tuş hız:** seride taban (`hopFloorSpeed` 4.2, kullanıcı 5.6 için "çok fazla" dedi), geç sayılmaz, baş bozmaz; fren ritme göre bekler (`stopWaitShare`). İki tuş sayıları birebir aynı. **T-156 kalça:** kök üstünde ileri-geri (`hopSurge`, `runSurge`), koşuda burgu.
@@ -25,7 +25,7 @@ Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakte
 - Koşu zıplaması `runBounce` 0.5, basma pozu `contactRun` 30/145, kamera Y sabit (`trackPull`, `trackSpeedSmooth`), fren `stopBrakeForce` 12.
 - Açık: tuş 0.18 sn basılı kalınca gövde kambur (kalça 66°); dalışta kollar yukarıda, önce çift zıplıyor; koşudan çift zıplamaya ~0.25 sn gecikme; tuşsuz süzülmede ayak kayar. Hareket oturunca `PlayerController.md`.
 - Prefab'ta kayıtlı, kod varsayılanı işlemez: `pushEnd`, `recover`, `mid`, `reach`, `holdBack`, `holdSupport`, `hipShare` 0.65, `liftKick` 1.5, `armBack`; sim `stopDelay`, `stopRamp`. Prefab Editor'den kaydedilirse tüm yeni alanlar dosyaya yazılır ve koddan değişmez: yeni ad aç.
-- Tam takım 06.11 (`2516ccff`, T-156 dahil): EditMode 1281/1285, PlayMode 103/108 (3 atlanan); 6 kırmızı, hepsi backlog'da, koşucu dışı.
+- Tam takım 06.11 (`13d3ef87`, birleşik `main`): EditMode 4 kırmızı, PlayMode 101/110 (7 atlanan: 3 ölçüm, 4 yarış testi bilet yüzünden); 6 kırmızı hep aynı, koşucu dışı.
 
 ## Ölçüm
 - Kayıt: `powershell -File scripts/runner-probe.ps1 -Kaynak D:\Pundun\speed-starts-ik -Etiket x -Sahip T-xxx -Filtre RunnerTransitions_WriteFrameStrips` (yaklaşık 1 dk, commit'li hâli ölçer). Çıktı `D:\Pundun\form-probe\x\`: `trans_<senaryo>.csv` her kare, `trans_<senaryo>_strip<i>.png` 40 ardışık kare.

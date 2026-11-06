@@ -30,3 +30,5 @@
 - [ ] [mekanik] Tuş süresi uçurumu: ritim 0.28'de tuş 0.13 sn = 11.1 sn, 0.17 sn = 100 m bitmiyor; klavyede görünür, telefonda dene
 - [ ] [belge] IK işi bitince `PlayerController.md`'yi yeni sisteme göre güncelle (bölüm 4, 8); stale prefab alanları (`stepSlow`, `recoverTime`, `midTime`, `homeTime`) prefab yeniden kaydedilince düşer
 - [ ] [mekanik] Çapraz kamera yalnız şehir temasında görüldü: Egypt, Rome, Pirate Sea, Sky Islands'ta arka plan boşluğuna bak
+- Yarış testleri atlanıyor (06.11, `9d9f2b1e` "100m event requires an Entry Ticket" sonrası): `Race100m_ReplayPlayedToItsEnd...`, `Race100m_RunnerStaysPastTheLine...`, `Race100m_WatchReplay...`, `Results_NavButtons...` "The event catalog has no free playable event with opponents." ile çalışmadan geçiyor. Bilet verip koşturmalı.
+- Bot "aynı ayak iki kere" hatası (`BotPressSchedule`) artık kısa tek ayak sekişi başlatır (T-157 niyet kuralı); yarışta göze batarsa kapat.
