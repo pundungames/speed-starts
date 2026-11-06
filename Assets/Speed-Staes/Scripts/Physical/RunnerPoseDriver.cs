@@ -496,7 +496,7 @@ namespace SpeedStars.Physical
         public float hopStanceDip = 0.06f;
         [Tooltip("One-key hop: the swing ends this much earlier than the next press is due (s, at full hop weight), so the foot is down " +
                  "and planted when the press comes and the push has room: the stance is the time between touchdown and toe-off.")]
-        public float hopLead = 0.05f;
+        public float hopLead = 0.08f;
         [Tooltip("Fastest the hip may rise (m/s) at full one-key hop weight (both rise limits, maxRiseSpeed and hipRiseMax, blend to it): " +
                  "the bounce's arc is steeper than a run's and the run's limits flattened its top.")]
         [Min(0.1f)] public float hopHipRiseMax = 3.2f;
@@ -2872,12 +2872,12 @@ namespace SpeedStars.Physical
                 Vector3 joint = Joint(incoming, hip, pelvisTilt, width);
                 float landY = StanceExtent(incoming) + AnkleGround(incoming) - joint.y;
                 float speed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(riseSpeed.x, riseSpeed.y, sim.Speed));
+                float hopWeight = Mathf.Max(_hopBodyW, _pair);
                 float rise = flightRise * speed * Mathf.Lerp(1f - formWeight, 1f, Mathf.Clamp01(sim.Form)) *
                              Mathf.Lerp(1f, runBounce, _plainRun);
                 // A hop's or pair's arc: a sine squared (both ends at rest, a round bottom) and as high as the flight is long (a press that
                 // changes the time to the touchdown moves the whole-flight time, so it is followed, not read raw).
                 float hopPart = 0f;
-                float hopWeight = Mathf.Max(_hopBodyW, _pair);
                 if (hopWeight > 0f)
                 {
                     float whole = _flightT + remaining;
@@ -2887,7 +2887,8 @@ namespace SpeedStars.Physical
                     hopPart = hopRise * hopWeight * Mathf.Clamp01(Mathf.Pow(_hopFlightT / Mathf.Max(0.05f, hopRiseTime), 1.5f)) * arc * arc;
                 }
                 float target = Mathf.Lerp(_offY, landY, Mathf.SmoothStep(0f, 1f, w)) + rise * 4f * w * (1f - w) + hopPart;
-                if (incoming.phase == LegPhase.Land) target += landHover;
+                // A hop or a pair puts the foot down on the ground, no hover: the press finds it planted and the stance has its frames.
+                if (incoming.phase == LegPhase.Land) target += landHover * (1f - hopWeight);
                 _bodyY.Step(target, flightSpring.frequency, flightSpring.damping, dt);
                 if (!wasBallistic && !_jumping) LimitHeightSpeed(flightPrevY, dt);
                 return _bodyY.Value;
