@@ -46,6 +46,9 @@ namespace SpeedStars.PlayTests
     /// </summary>
     public sealed class RunnerFormProbeTests
     {
+        /// <summary>T-158: true = every recorded frame is 1/60 x [0.7..1.3] (seeded), like a player's uneven frames; false = steady 1/60.</summary>
+        public static bool RunnerDtJitter;
+
         private const int Fps = 60;
         private const float Dt = 1f / Fps;
         private const int Cols = 4;
@@ -545,10 +548,13 @@ namespace SpeedStars.PlayTests
                 run.Begin();
                 // Samples are taken in LateUpdate (after the rig and the driver's own LateUpdate); without the hook, right after the frame.
                 if (hook != null) hook.OnLate = run.Sample;
+                // A player's frames are not even: with RunnerDtJitter every frame is 1/60 x 0.7..1.3 (seeded), else the recording is a steady 1/60.
+                var jitter = new System.Random(20261106);
                 while (true)
                 {
                     double t = Time.timeAsDouble - run.Start;
                     if (t >= scenario.Duration) break;
+                    if (RunnerDtJitter) Time.captureDeltaTime = Dt * (0.7f + 0.6f * (float)jitter.NextDouble());
                     run.Tick(t);
                     yield return null;
                     if (hook == null) run.Sample();
@@ -686,6 +692,7 @@ namespace SpeedStars.PlayTests
             private readonly List<Renderer> _others;
             private readonly bool[] _othersWere;
             private readonly float _side;
+            private float _hipZ;
             private readonly Transform _runner, _hipTarget, _hipsBone, _chestBone, _toeL, _toeR, _footL, _footR, _handL, _handR;
             private readonly FieldInfo _startStanceField;
             private readonly FieldInfo _stepping;
@@ -821,7 +828,7 @@ namespace SpeedStars.PlayTests
             /// <summary>Columns after the form ones: frame, key events, per-leg state and world foot, body state, drawn bones.</summary>
             private static string TransHeader() =>
                 ",frame,events," + TransLegColumns("L") + "," + TransLegColumns("R") +
-                ",d_hop,d_pair,d_dive,d_plainRun,d_amp,d_heldNow,d_carried,d_idleStock,d_ballistic,d_posePresses,d_bodyY,d_bodyYVel,hipBoneH,headPitch,L_handY,R_handY";
+                ",d_hop,d_pair,d_dive,d_plainRun,d_amp,d_heldNow,d_carried,d_idleStock,d_ballistic,d_posePresses,d_bodyY,d_bodyYVel,hipBoneH,headPitch,L_handY,R_handY,hipZ";
 
             /// <summary>One leg's state and its foot and toe in the world: along the run axis and height above the ground.</summary>
             private string TransLeg(object leg, Transform foot, Transform toe, Vector3 forward) =>
@@ -845,7 +852,8 @@ namespace SpeedStars.PlayTests
                 sb.Append(',').Append(F(bodyY)).Append(',').Append(F(bodyYVel)).Append(',').Append(F(_hipsBone.position.y - _groundY))
                   .Append(',').Append(F(headPitch))
                   .Append(',').Append(F(_handL != null ? _handL.position.y - _groundY : float.NaN))
-                  .Append(',').Append(F(_handR != null ? _handR.position.y - _groundY : float.NaN));
+                  .Append(',').Append(F(_handR != null ? _handR.position.y - _groundY : float.NaN))
+                  .Append(',').Append(F(_hipZ));   // the hip target's place along the runner's own forward (the hip's surge)
                 return sb.ToString();
             }
 
@@ -1023,6 +1031,7 @@ namespace SpeedStars.PlayTests
                 float trunkLean = Mathf.Atan2(trunk.z, trunk.y) * Mathf.Rad2Deg;
                 Vector3 hipLocal = _runner.InverseTransformPoint(_hipTarget.position);
                 float hipPitch = Wrap((runnerInv * _hipTarget.rotation).eulerAngles.x);
+                _hipZ = hipLocal.z;
 
                 string legL = ReadLeg(_legL, out float thL, out float twL, out float kneeL, out float kaL, out float azL, out float heldL, out bool holdL);
                 string legR = ReadLeg(_legR, out float thR, out float twR, out float kneeR, out float kaR, out float azR, out float heldR, out bool holdR);

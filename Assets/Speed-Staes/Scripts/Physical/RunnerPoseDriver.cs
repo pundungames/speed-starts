@@ -1343,7 +1343,7 @@ namespace SpeedStars.Physical
             // hop count. A key pressed together with the first of a pair (within the pair window PairWeight counts, after a pause) is the pair's second key, taken.
             double sinceTaken = time - _poseLastTime;
             bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 1.5f * PairWindow && _posePrevGap >= PoseMinGap * 1.5;
-            // A hop that is on is a hard gate: no press, either key, is taken before hopTime has passed since the last one taken (the pose only;
+            // A hop that is on is a gate: no press, either key, is taken before the hop leg's swing is hopSpamShare along (HopBlocked) (the pose only;
             // the sim counts every press, so the gate costs no speed). A pair's second key and a jump are not gated.
             // The hop leg in the air shuts it for any time: a press there is a catch, which moved the hip 24 cm in six frames. It opens when the foot is down.
             // An unestablished hop (the first one from a standstill, not yet repeated on its key) lets the other key through: that is a run starting.
@@ -1435,7 +1435,7 @@ namespace SpeedStars.Physical
             }
         }
 
-        /// <summary>A one-leg hop is on: the last press taken repeated a key, not a pair, not a hold. The hard press gate (hopTime) applies.</summary>
+        /// <summary>A one-leg hop is on: the last press taken repeated a key, not a pair, not a hold. The hop gate (HopBlocked) applies.</summary>
         bool HopGateOn() => _hopTarget > 0.5f && _pair < 0.5f && _heldNow < 0.5f;
 
         /// <summary>
@@ -1543,7 +1543,7 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
-        /// The kept hop press (OnTapped) is taken once the hop leg is down and has stood hopStanceMin, hopTime after the last press taken:
+        /// The kept hop press (OnTapped) is taken once the gate has opened (the hop leg is hopSpamShare along its swing, or down):
         /// the same key hops again, the other key changes the leg. Only the pose moves; the sim counted the press when it came.
         /// </summary>
         void TakeBuffered(double now)
