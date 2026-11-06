@@ -1,7 +1,7 @@
 ---
 id: T-149
 title: Frende ayaklar onde, tum govde geriye yatik (cizgi film kaymasi)
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-150]
 owns_paths:
@@ -10,14 +10,14 @@ owns_paths:
   - "docs/tasks/T-149-frende-geriye-yatma.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: []
+commits: [014be9a7]
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -48,3 +48,8 @@ Son tus ~3.8 sn. 4.15'te `_idleStock`, iki bacak `Rest`. Sim freni 4.2-4.9: 8 ->
 - Sim freni, kayma tozu, ses.
 
 ## Calisma notu
+- Yapildi: `_brake` agirligi (`UpdateBrake`, hedef = `_idleStock` x hiz SmoothStep(brakeSpeed) x tus/hop/pair/dive/hold yok; giris 4 Hz/1, cikis 2.5 Hz/0.7); `lean -= brakeLean * _brakeRaw`; Rest hedefi `brakeFront`/`brakeBack`; kollarda `armBrake`. `_brake` 0 iken eski yol ayni.
+- Bacak acilari kalcadan ayni dikey erisimde secildi (crouch 1.53L, front 46/168 -> 1.52L, back 55/110 -> 1.54L), iki ayak da yerde kalsin diye; gorevdeki 60/170 ve 38/150 farkli yukseklikte olurdu.
+- Olculmedi (Unity calistirilmadi): SitBack'in iki topugun ortalamasina donmesi on ayagi nasil etkiliyor; ayak yerden kalkarsa AnkleGround kirpmasi yukari iter. brakeLean/brakeFront ilk ayar adayi.
+- Cakisma: `RunnerCooldown` (bitis) kendi dik durusunu `crouch`/`ready` uzerine yaziyor, sim hizi hala yuksekken tus yoksa fren de devreye girer; ozel dal eklenmedi.
+- Senaryolar ayri commit (014be9a7): stop +0.65/+1.3, brakeRestart, slowStop.

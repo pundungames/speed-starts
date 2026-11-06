@@ -465,6 +465,23 @@ namespace SpeedStars.Physical
         [Tooltip("The trunk sits back by this much (deg) on one-leg hops: the head-led lean and the gait lean fade out as the " +
                  "hop bias rises.")]
         public float hopBackLean = 42f;
+
+        [Header("Braking: keys up at speed, the body slides on its heels, leaning back (cartoon stop)")]
+        [Tooltip("Speed (m/s) over which the braking pose comes in with no key: nothing below x (a slow run just stops), all of it at y.")]
+        public Vector2 brakeSpeed = new Vector2(1.5f, 4f);
+        [Tooltip("How far the whole body leans back (deg) at full braking. Past waistBackMax it is the sit-back about the heels: the line stays straight.")]
+        public float brakeLean = 45f;
+        [Tooltip("Braking, the leg that did not press last: out in front, nearly straight, the heel on the ground. Its extent matches " +
+                 "brakeBack's and the crouch's, so both feet stay on the ground.")]
+        public LegAngles brakeFront = new LegAngles(46f, 168f);
+        [Tooltip("Braking, the leg that pressed last: a little behind the other one, the knee bent.")]
+        public LegAngles brakeBack = new LegAngles(55f, 110f);
+        [Tooltip("Braking arms (x = upper arm swing, y = elbow; deg, + = forward): out in front for balance, the fists away from the face.")]
+        public Vector2 armBrake = new Vector2(50f, 50f);
+        [Tooltip("The braking weight coming in (keys up at speed): quick, no overshoot.")]
+        public SpringSettings brakeInSpring = new SpringSettings(4f, 1f);
+        [Tooltip("The braking weight going out (stopped, or a key down): slower and underdamped, so the body bobs a little as it settles in the stance.")]
+        public SpringSettings brakeOutSpring = new SpringSettings(2.5f, 0.7f);
         [Tooltip("The body's extra rise between two steps (m) at full hop bias, and with two keys pressed together (the legs " +
                  "in step): one leg hopping, or both legs bouncing the body like a sack.")]
         public float hopRise = 0.26f;
@@ -941,7 +958,9 @@ namespace SpeedStars.Physical
         float _ground, _sole, _profileW, _runHome;
         float _restWaist;                          // B-spine's bend on the hips at rest (deg)
         float _stepping;                           // 1 = running stance (presses keep coming), 0 = none: Ready crouch
-        bool _idleStock;                           // this frame: no key and no press lately: the legs go to the waiting stance, no step of their own
+        Spring _brakeSpring;                       // the braking weight's spring (brakeInSpring / brakeOutSpring)
+        float _brake, _brakeRaw;                   // braking weight 0..1 (legs, arms) and the same unclamped, a bob below 0 / above 1 leans the trunk (brakeLean)
+        bool _idleStock;                    // this frame: no key and no press lately: the legs go to the waiting stance, no step of their own
         bool _stepNow;                             // this frame: a key is down, a jump, or the last press is within stepTimeMax
         bool _jumping;                             // this frame: in a hurdle jump (wind-up included): the old rules, no planted feet
         double _lastPress = -1.0;                  // sim time of the last press
@@ -1728,7 +1747,14 @@ namespace SpeedStars.Physical
                 }
                 case LegPhase.Push:
                 case LegPhase.Hold: return LegAngles.Lerp(pushEnd, holdBack, ownHold);
-                default: return LegAngles.Lerp(Home(), Balance(), leg.idle);
+                default:
+                {
+                    LegAngles rest = LegAngles.Lerp(Home(), Balance(), leg.idle);
+                    if (_brake <= 0f) return rest;
+                    // Braking: the leg that pressed last stays a little behind, the other slides out in front.
+                    bool back = _poseLastLeg >= 0 && leg == Legs(_poseLastLeg);
+                    return LegAngles.Lerp(rest, back ? brakeBack : brakeFront, _brake);
+                }
             }
         }
 
@@ -2246,6 +2272,7 @@ namespace SpeedStars.Physical
             // Both keys: the weaker one, and no more than the real hold (quick presses on both must not tip the pair).
             _bothHeld = leftLeg.phase == LegPhase.Hold && rightLeg.phase == LegPhase.Hold ? Mathf.Min(_holdL, _holdR) * _heldNow : 0f;
             UpdateHop(sim, now, dt);
+            UpdateBrake(sim, dt);
 
             // 2. Legs: phases → angles → knee and ankle points (a planted foot's legs are solved after the height).
             TickLegs(now);
@@ -2270,6 +2297,7 @@ namespace SpeedStars.Physical
                 UpdateGait(sim, dt);
                 UpdateBounceLean(dt, ref lean, ref baseBend, ref bend);
                 lean -= hopBackLean * _hopBodyW * (1f - _heldNow);   // hopping on one leg the trunk sits back (SitBack below)
+                lean -= brakeLean * _brakeRaw;                       // braking the whole body lies back about the heels (SitBack below)
                 lean += jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
             }
             else _hipsNow = 0f;
@@ -2438,6 +2466,24 @@ namespace SpeedStars.Physical
                 Leg leg = Legs(i);
                 leg.idle = Mathf.MoveTowards(leg.idle, i != _poseLastLeg ? _hop * (1f - _pair) : 0f, IdleRate * dt);
             }
+        }
+
+        /// <summary>
+        /// The braking weight: keys up (the legs are on their way to the stock pose) and still fast, by speed alone. A key, a hop, a pair, a
+        /// hold, a dive or a jump make the target 0; it only moves the target, the spring does the rest (quick in, slower and bobbing out).
+        /// </summary>
+        void UpdateBrake(RunnerSim sim, float dt)
+        {
+            float target = 0f;
+            if (!preview && _idleStock && !sim.InJump)
+            {
+                target = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(brakeSpeed.x, brakeSpeed.y, sim.Speed)) *
+                         (1f - _hop) * (1f - _pair) * (1f - _dive) * (1f - _heldNow);
+            }
+            SpringSettings spring = target > _brakeSpring.Value ? brakeInSpring : brakeOutSpring;
+            _brakeSpring.Step(target, spring.frequency, spring.damping, dt);
+            _brakeRaw = Mathf.Clamp(_brakeSpring.Value, -0.2f, 1.1f);
+            _brake = Mathf.Clamp01(_brakeSpring.Value);
         }
 
         /// <summary>
@@ -3023,6 +3069,12 @@ namespace SpeedStars.Physical
                 swing = Mathf.Lerp(swing, Mathf.Lerp(armPairBack, armPairUp, _armKick), pw);
                 elbow = Mathf.Lerp(elbow, Mathf.Lerp(armPairElbow.x, armPairElbow.y, _armKick), pw);
             }
+            // Braking: both arms out in front and a little up for balance, the fists away from the face.
+            if (!preview && _brake > 0.001f)
+            {
+                swing = Mathf.Lerp(swing, armBrake.x, _brake);
+                elbow = Mathf.Lerp(elbow, armBrake.y, _brake);
+            }
             if (!preview && dt > 0f)
             {
                 if (!arm.swingT.set)
@@ -3071,6 +3123,8 @@ namespace SpeedStars.Physical
             _gaitW = _armW = _speedCurve = _hop = _pair = _hopTarget = _pairTargetLast = 0f;
             _rideVel = 0f;
             _hopSpring.Reset();
+            _brakeSpring.Reset();
+            _brake = _brakeRaw = 0f;
             _hopBody.Reset();
             _hopBodyW = 0f;
             _pairSpring.Reset();
