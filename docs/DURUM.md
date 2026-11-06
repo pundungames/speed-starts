@@ -24,7 +24,7 @@ Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakte
 - Koşu zıplaması `runBounce` 0.5, basma pozu `contactRun` 30/145, kamera Y sabit (`trackPull`, `trackSpeedSmooth`), fren `stopBrakeForce` 12.
 - Açık: tuş 0.18 sn basılı kalınca gövde kambur (kalça 66°); dalışta kollar yukarıda, önce çift zıplıyor; koşudan çift zıplamaya ~0.25 sn gecikme; tuşsuz süzülmede ayak kayar. Hareket oturunca `PlayerController.md`.
 - Prefab'ta kayıtlı, kod varsayılanı işlemez: `pushEnd`, `recover`, `mid`, `reach`, `holdBack`, `holdSupport`, `hipShare` 0.65, `liftKick` 1.5, `armBack`; sim `stopDelay`, `stopRamp`. Prefab Editor'den kaydedilirse tüm yeni alanlar dosyaya yazılır ve koddan değişmez: yeni ad aç.
-- Tam takım 06.11 (`75c57922`, T-153 dahil, kamera ayarı öncesi): EditMode 1281/1285, PlayMode 100/105 (3 atlanan); 6 kırmızı, hepsi backlog'da, koşucu dışı.
+- Tam takım 06.11 (`2516ccff`, T-156 dahil): EditMode 1281/1285, PlayMode 103/108 (3 atlanan); 6 kırmızı, hepsi backlog'da, koşucu dışı.
 
 ## Ölçüm
 - Kayıt: `powershell -File scripts/runner-probe.ps1 -Kaynak D:\Pundun\speed-starts-ik -Etiket x -Sahip T-xxx -Filtre RunnerTransitions_WriteFrameStrips` (yaklaşık 1 dk, commit'li hâli ölçer). Çıktı `D:\Pundun\form-probe\x\`: `trans_<senaryo>.csv` her kare, `trans_<senaryo>_strip<i>.png` 40 ardışık kare.
