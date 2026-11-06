@@ -14,11 +14,12 @@ namespace SpeedStars.Bridge
     /// Malik's runner prefab driven like the bots (<see cref="BotPressSchedule"/> through <c>RunnerInput.Inject</c>). The first leg
     /// starts from the blocks at GO; every other runner waits a zone length before its leg line, sets off when its incoming runner
     /// comes close, keeps below the incoming speed until the baton reaches it, then runs its leg (rules: <see cref="RelayRules"/>).
-    /// The player's lane is a team too, run by NPCs for now (the player's own runner is hidden; the camera and the world follow the
-    /// baton). Owned by <see cref="RaceBots"/>, which plans the teams, hands the order to the standings and tells the session the
+    /// The player's lane is a team too, and the player runs all of it: the player's keys (after <see cref="RunnerPressGate"/>) go to
+    /// whichever runner holds the baton, and the player's swipe up (the jump input) is the handoff. The next runner still sets off on
+    /// its own. The player's own runner stays hidden on the start line; the camera and the world follow the baton. Owned by <see cref="RaceBots"/>, which plans the teams, hands the order to the standings and tells the session the
     /// finish. Nothing in Malik's code is changed: runners are placed before they wake, and only his public API is used.
     /// </summary>
-    [DefaultExecutionOrder(-150)] // with RaceBots: after RunnerInput (-200), before RunnerBody (-100)
+    [DefaultExecutionOrder(-140)] // after RunnerInput (-200) and the player's RunnerPressGate (-150), before RunnerBody (-100)
     public sealed class RaceRelay : MonoBehaviour
     {
         [Header("Field")]
@@ -96,6 +97,8 @@ namespace SpeedStars.Bridge
             public bool Running;
             public double StartTime;
             public double HandedOverAt = -1.0;
+            public readonly bool[] PlayerHeld = new bool[2]; // the player's keys this runner was given and not yet released
+            public Behaviour[] Feedback = Array.Empty<Behaviour>(); // the player's step feedback (perfect / early / late / momentum); player's team only
 
             public float Position => StartMeters + (Body && Body.Sim != null ? Body.Sim.Distance : 0f);
             public float Speed => Body && Body.Sim != null ? Body.Sim.Speed : 0f;
@@ -230,6 +233,7 @@ namespace SpeedStars.Bridge
                     else leg.Root.SetActive(false);
                 }
                 if (plan != null) team.Legs[0].Schedule = Schedule(plan, plan.ReactionSeconds);
+                for (int l = 0; l < team.Legs.Length; l++) SetFeedback(team.Legs[l], l == 0);
                 GiveBaton(team, 0);
                 team.Baton.gameObject.SetActive(plan != null);
             }
@@ -295,6 +299,7 @@ namespace SpeedStars.Bridge
 
         void Update()
         {
+            ForwardPlayerKeys();
             if (!_racing) return;
             double now = Time.timeAsDouble;
             foreach (Team team in _teams)
@@ -304,7 +309,7 @@ namespace SpeedStars.Bridge
                     if (team.Legs[l].HandedOverAt >= 0.0 && team.Legs[l].Root.activeSelf) Drive(team.Legs[l], now, null); // slowing down behind
                 if (team.Finished) continue;
                 Leg holder = Baton(team);
-                Drive(holder, now, null);
+                if (!team.IsPlayer) Drive(holder, now, null); // the player's holder runs on the player's keys
 
                 if (team.Holder >= team.Legs.Length - 1) continue;
                 Leg next = team.Legs[team.Holder + 1];
@@ -318,6 +323,61 @@ namespace SpeedStars.Bridge
                 }
                 if (next.Running) Drive(next, now, holder);
             }
+        }
+
+        /// <summary>
+        /// The player's keys, as the press gate left them in the player's queue (false start, UI touches and the finish already
+        /// handled there), go to the runner that holds the player's baton; the hidden player's own runner gets none. A release goes
+        /// only to the runner that got the press, so a key still held across a handoff does nothing to the new runner until the next
+        /// press. Runs before RunnerBody (-100), which would otherwise take the queue. In the countdown only releases and the gate's
+        /// false-start fall come through, so the first runner falls as the player's runner would.
+        /// </summary>
+        void ForwardPlayerKeys()
+        {
+            if (!Active || !_owner || !_owner.Player || !_owner.Player.input) return;
+            RunnerInput source = _owner.Player.input;
+            Team team = PlayerTeam();
+            Leg holder = team != null && !team.Finished ? Baton(team) : null;
+            while (source.TryDequeue(out TapEvent tap))
+            {
+                if (holder == null || tap.Leg < 0 || tap.Leg > 1) continue;
+                if (!tap.Pressed && !holder.PlayerHeld[tap.Leg]) continue;
+                holder.PlayerHeld[tap.Leg] = tap.Pressed;
+                holder.Input.Inject(tap.Leg, tap.Pressed, tap.Time);
+            }
+        }
+
+        /// <summary>The player's swipe up (the jump input): the handoff of the player's team.</summary>
+        void OnPlayerSwipe()
+        {
+            if (_racing && PlayerTeam() is Team team) Swipe(team, Time.timeAsDouble);
+        }
+
+        /// <summary>
+        /// The player's step feedback (the perfect step burst and the others) is on only on the runner that runs on the player's keys,
+        /// as on the player's own runner in a sprint, and only with particle effects on in the settings. NPC teams have none.
+        /// </summary>
+        void SetFeedback(Leg leg, bool on)
+        {
+            bool show = on && _owner.ParticleEffectsOn;
+            foreach (Behaviour effect in leg.Feedback)
+                if (effect && effect.enabled != show) effect.enabled = show;
+        }
+
+        /// <summary>Lets go of the player's keys that this runner still holds (it gave the baton away).</summary>
+        static void ReleasePlayerKeys(Leg leg, double now)
+        {
+            for (int side = 0; side < leg.PlayerHeld.Length; side++)
+            {
+                if (!leg.PlayerHeld[side]) continue;
+                leg.PlayerHeld[side] = false;
+                leg.Input.Inject(side, false, now);
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (Active && _owner && _owner.Player && _owner.Player.input) _owner.Player.input.JumpPressed -= OnPlayerSwipe;
         }
 
         void LateUpdate()
@@ -377,7 +437,7 @@ namespace SpeedStars.Bridge
             // From the moment it sets off until the baton is in its hand, the next runner runs with that hand held back.
             next.Arms.Set(RelayBatonArms.Reach.Take, RightHand(team.Holder + 1));
 
-            if (!team.SwipeDecided && gap <= npcSwipeGapMeters)
+            if (!team.IsPlayer && !team.SwipeDecided && gap <= npcSwipeGapMeters) // the player's team swipes on the player's input
             {
                 team.SwipeDecided = true;
                 if (_random.NextDouble() >= npcMissChance) Swipe(team, now);
@@ -391,11 +451,12 @@ namespace SpeedStars.Bridge
 
         /// <summary>
         /// Swipe up: the baton arm reaches forward and the free arm back, for <see cref="swipeSeconds"/> (the next runner already
-        /// holds its hand back). NPC teams call it themselves; the player's input will call it for the player's team.
+        /// holds its hand back). NPC teams call it themselves; the player's swipe up calls it for the player's team. Only once the next
+        /// runner has set off: before that there is nobody to reach for.
         /// </summary>
         void Swipe(Team team, double now)
         {
-            if (team.Finished || team.Holder >= team.Legs.Length - 1) return;
+            if (team.Finished || team.Holder >= team.Legs.Length - 1 || !team.Legs[team.Holder + 1].Running) return;
             team.SwipeUntil = now + swipeSeconds;
             Baton(team).Arms.Set(RelayBatonArms.Reach.Give, RightHand(team.Holder));
         }
@@ -414,6 +475,16 @@ namespace SpeedStars.Bridge
             EndReach(team);
             next.Arms.Set(RelayBatonArms.Reach.None, false); // the baton is in its hand: the arm swings again
             team.SwipeDecided = false;
+            if (team.IsPlayer)
+            {
+                // The player's keys leave with the baton: the old runner lets go of them, the new one drops its NPC keys and waits for the player's next press.
+                ReleasePlayerKeys(incoming, now);
+                next.Input.Inject(0, false, now);
+                next.Input.Inject(1, false, now);
+            }
+            // The step feedback follows the player's keys: the slowing-down presses behind are not the player's.
+            SetFeedback(incoming, false);
+            SetFeedback(next, true);
             GiveBaton(team, team.Holder + 1);
             // Slows down running: a slower schedule from now on, until it is put away.
             incoming.HandedOverAt = now;
@@ -499,6 +570,7 @@ namespace SpeedStars.Bridge
         {
             leg.Root.SetActive(true);
             leg.Body.ResetRun(); // back to the spot it woke at, input queue cleared, acceptInput on
+            leg.PlayerHeld[0] = leg.PlayerHeld[1] = false;
             leg.Arms.Clear();
             _owner.DressRunner(leg.Look);
         }
@@ -526,12 +598,24 @@ namespace SpeedStars.Bridge
                 {
                     float start = RelayRules.LegStartMeters(l, _legMeters, zoneBeforeLineMeters);
                     team.Legs[l] = CreateRunner($"Relay {t + 1}.{l + 1}", lane + forward * start, start, holder.transform);
+                    if (t == 0) AddPlayerFeedback(team.Legs[l]); // the player's team: the player's step feedback, as on the player's runner
                 }
                 _teams.Add(team);
             }
             Destroy(holder);
             _builtLegs = _legCount;
             _builtLegMeters = _legMeters;
+        }
+
+        static void AddPlayerFeedback(Leg leg)
+        {
+            leg.Body.EnablePlayerFeedback();
+            GameObject root = leg.Body.gameObject;
+            leg.Feedback = new Behaviour[]
+            {
+                root.GetComponent<PerfectStepFeedback>(), root.GetComponent<EarlyStepFeedback>(), root.GetComponent<LateStepFeedback>(),
+                root.GetComponent<MomentumWindFeedback>(),
+            };
         }
 
         Leg CreateRunner(string runnerName, Vector3 position, float startMeters, Transform holder)
@@ -562,6 +646,12 @@ namespace SpeedStars.Bridge
             if (Active == active) return;
             Active = active;
             _owner.SetPlayerHidden(active);
+            RunnerInput playerInput = _owner.Player ? _owner.Player.input : null;
+            if (playerInput)
+            {
+                if (active) playerInput.JumpPressed += OnPlayerSwipe;
+                else playerInput.JumpPressed -= OnPlayerSwipe;
+            }
             if (!active) _owner.FollowRunner(null, snap: true);
             ActiveChanged?.Invoke();
         }

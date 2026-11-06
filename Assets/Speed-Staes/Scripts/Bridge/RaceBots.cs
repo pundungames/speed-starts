@@ -649,6 +649,9 @@ namespace SpeedStars.Bridge
             _hiddenPlayerRenderers = Array.Empty<Renderer>();
         }
 
+        /// <summary>The settings' particle effects (on without settings): the relay's step feedback on the player's team follows it.</summary>
+        internal bool ParticleEffectsOn => _settings == null || _settings.ParticleEffects;
+
         /// <summary>The player's relay team crossed the finish: the session ends the race with this time.</summary>
         internal void RelayPlayerFinished(double seconds)
         {
