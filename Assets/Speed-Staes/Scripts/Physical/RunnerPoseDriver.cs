@@ -193,6 +193,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float[] knots;             // the keys' times in the swing (0..1)
             [System.NonSerialized] public LegAngles[] tuckKeys, tuckSlope;   // plain running's own swing: start, recover, mid, tucked peak, shin throw, contact
             [System.NonSerialized] public float[] tuckKnots;
+            [System.NonSerialized] public bool swungSincePress;    // the leg has left the ground since the press the pose took (the press gate reads it)
             [System.NonSerialized] public bool standStep;          // this swing is a standing start's first step: it does not go back past where it began
 
             public Vector3 RestBall => restAnkle + ballOffset;
@@ -500,6 +501,13 @@ namespace SpeedStars.Physical
         [Tooltip("Presses further apart than this (s) end the run stance and the swing is never longer: sparser presses " +
                  "swing for this long and then wait in the touchdown pose. A leg's cycle is at most twice this.")]
         public float stepTimeMax = 0.6f;
+        [Tooltip("Press gate: a key pressed for a leg whose swing is not this far along (0..1 of the swing) is not taken by the pose " +
+                 "(the sim still counts it): the shin must have been thrown forward before the next step. A leg on the ground or at rest is always free.")]
+        [Range(0.3f, 0.95f)] public float pressGateShare = 0.6f;
+        [Tooltip("Press gate: the same key again waits until its own swing is this far along (0..1), i.e. the foot is about to land.")]
+        [Range(0.5f, 1f)] public float pressGateSameShare = 0.9f;
+        [Tooltip("Press gate: it never stays closed longer than this (s) after the last press the pose took, so a slow swing cannot lock out a runner who speeds up.")]
+        public float pressGateMax = 0.3f;
         [Tooltip("How much of each new press-to-press time a leg's cycle takes on (1 = just the last one): one odd press " +
                  "does not jerk the legs.")]
         [Range(0.1f, 1f)] public float stepFollow = 0.5f;
@@ -1145,7 +1153,7 @@ namespace SpeedStars.Physical
             // hop count. A key pressed together with the first of a pair (within the pair window PairWeight counts, after a pause) is the pair's second key, taken.
             double sinceTaken = time - _poseLastTime;
             bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 2f * PairWindow && _posePrevGap >= PoseMinGap * 1.5;
-            if (!_jumping && _poseLastTime > -5.0 && sinceTaken < PoseMinGap && !pairSecond)
+            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (sinceTaken < PoseMinGap || (!fromStand && PressStillBusy(leg, time, sinceTaken))))
             {
                 if (leg != _poseLastLeg) _poseSkippedOther = true;
                 l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
@@ -1181,6 +1189,29 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
+        /// The press gate: the motion the pose took a press for is not over, so this press is the sim's alone (no stance, no cycle, no hop
+        /// count). Judged on the leg the press would move: a swing not far enough along, a foot being caught, or the pressed foot's own push
+        /// not yet swung. A leg on the ground (after its swing), landed, or at rest is free; never closed longer than pressGateMax.
+        /// </summary>
+        bool PressStillBusy(int leg, double time, double sinceTaken)
+        {
+            if (sinceTaken >= pressGateMax) return false;
+            int would = _poseSkippedOther && leg == _poseLastLeg ? 1 - leg : leg;
+            Leg l = Legs(would);
+            bool sameKey = would == _poseLastLeg;
+            switch (l.phase)
+            {
+                case LegPhase.Recover:
+                case LegPhase.Mid:
+                    return SwingShare(l, time) < (sameKey ? pressGateSameShare : pressGateShare);
+                case LegPhase.Push:
+                    return !l.grounded || (sameKey && !l.swungSincePress);
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
         /// This leg's own press-to-press time: the swing is timed to end when the next press is due. A pause counts
         /// as the longest cycle; a leg's first press takes the other leg's cycle (or twice the sim's step time).
         /// </summary>
@@ -1205,6 +1236,7 @@ namespace SpeedStars.Physical
         {
             leg.pressedAt = time;
             leg.toeOff = false;
+            leg.swungSincePress = false;
             if (leg.phase == LegPhase.Push) return;
             // A foot still in the air (a swing, a reach, a hover) is caught on its way down, never put on the ground in one frame.
             bool inAir = leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid ||
@@ -1279,6 +1311,7 @@ namespace SpeedStars.Physical
         {
             EnsureBuffers(leg);
             leg.standStep = standing;
+            leg.swungSincePress = true;
             if (leg.cycle <= 0f) leg.cycle = Mathf.Clamp(2f * (body && body.Sim != null ? body.Sim.StepTime : 0.3f), stepTimeMin, 2f * stepTimeMax);
             float elapsed = Mathf.Min((float)(time - leg.pressedAt), leg.cycle * 0.5f);
             float lead = hopLead * _hop * (1f - _pair);   // one-key hop: the foot lands this much before the press is due

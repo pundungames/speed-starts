@@ -1,7 +1,7 @@
 ---
 id: T-150
 title: Bir girdinin hareketi bitmeden ayni girdi poz tarafindan kabul edilmez (kosu, tek ayak, cift ayak, gecisler)
-status: todo
+status: review
 owner: gameplay-agent
 depends_on: [T-148]
 owns_paths:
@@ -16,8 +16,8 @@ tests:
 analytics:
   - "yok: projede analytics yok"
 needs: []
-started:
-finished:
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -54,3 +54,7 @@ Kullanici 06.11: "bir input verdiysem o inputun etkisi bitene kadar o inputu ver
 - Sim, hiz, ezme, Good/Late hesabi, fren (T-149).
 
 ## Calisma notu
+- Commit 1 6c710cc1: spamHop, spamRun, spamPair, runSpamHop, spamToRun + `d_posePresses` sutunu. Commit 2: `PressStillBusy` kapisi (yalniz poz; sim ve `RunnerBody` ayni).
+- Sayilar: `pressGateShare` 0.6 (diger tus), `pressGateSameShare` 0.9 (ayni tus), `pressGateMax` 0.3 sn (son alinan basistan sonra kapi en cok bu kadar kapali). `PoseMinGap` ve `pairSecond` ayni; `_idleStock` (fromStand) iken kapi acik.
+- Basilan bacak `Recover/Mid`: pay esigin altindaysa red; `Push` + havada (catch) red; ayni tus `Push` yerdeyse ancak arada salinim yaptiysa (`swungSincePress`) serbest. Reddedilen yol eski: `_poseSkippedOther`, `l.pressedAt`; `_posePresses` artmaz.
+- Olculmedi. Belirsiz: fastRun'da (0.20) 0.3 sn tavan ve %90 kabul; hop'ta ayni tus salinim sonunda (0.9) yeterince erken acar mi.
