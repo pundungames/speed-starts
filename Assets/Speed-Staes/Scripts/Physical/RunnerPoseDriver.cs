@@ -1052,7 +1052,8 @@ namespace SpeedStars.Physical
         int _standLeg = -1, _standPresses;          // the leg of a first press from a standstill that may turn into a hop (hopStandWait), and the press count after it
         double _standTime;
         bool _hopQuick;                             // the hop began from a standstill: its weight follows hopStandSpring and its arc takes the weight whole
-        float _hopTarget;                         // 1 when that press was the same leg again, 0 when it was the other
+        float _hopTarget;                         // the hop weight's target: 1 once the pose took a press that meant a hop, 0 as soon as a key means a run
+        bool _hopWanted;                          // what the last key means (NoteIntent): a hop; the weight follows only when the pose takes the press
         Spring _hopBody;                          // the hop weight's slow twin (hopBodySpring); _hopBodyW is what the body reads
         float _hopBodyW;
         bool _hopFreed;                           // a hop is open: the leg that is not the pressed one is the balance leg, whatever its idle weight has reached yet
@@ -1320,14 +1321,15 @@ namespace SpeedStars.Physical
             bool hopShut = !_jumping && !fromStand && !pairSecond && !openOther && _poseLastTime > -5.0 && HopGateOn() &&
                            (sinceTaken < hopTime || (sinceTaken < HopRepeatWindow && HopLegInAir()));
             // What the player means is read from the key, taken or not (after the gate: it judged by the intent before this key).
-            double hopLandsIn = HopLandsIn(time);
             NoteIntent(leg, time);
-            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (hopShut || sinceTaken < PoseMinGap || (!fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating))))
+            bool busyGate = !hopShut && sinceTaken >= PoseMinGap && !fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating);
+            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (hopShut || sinceTaken < PoseMinGap || busyGate))
             {
                 l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
                 _lastPress = time;    // a key that is pressed is alive whether the pose takes it or not (else the legs go to the stock pose mid-swing)
                 // A hop's press that comes as the foot is about to land (or has just) is kept: the last one only, taken when the foot is down.
-                if (hopShut && _hopTarget > 0.5f && hopLandsIn <= hopBufferTime) { _hopBufLeg = leg; _hopBufTime = time; }
+                // The gate of a run keeps it too when the key means a hop: the foot comes down, the press is taken, the hop opens.
+                if (_hopWanted && (hopShut || busyGate) && HopLandsIn(hopShut ? _poseLastLeg : leg, time) <= hopBufferTime) { _hopBufLeg = leg; _hopBufTime = time; }
                 if (learn && l.cycle > 0f)
                     l.cycle = Mathf.Lerp(l.cycle, Mathf.Clamp((float)keyGap, HopCycleFloor(), 2f * Mathf.Max(stepTimeMin, stepTimeMax)), stepFollow);
                 return;
@@ -1338,6 +1340,7 @@ namespace SpeedStars.Physical
             int use = leg;
             if (alternating && leg == _poseLastLeg && _hop * (1f - _pair) < 0.5f) use = 1 - leg;
             _hopBufLeg = -1;
+            if (_hopWanted) _hopTarget = 1f;   // the pose takes a press that means a hop: only now the hop weight starts to rise
             _posePrevGap = (float)System.Math.Min(10.0, sinceTaken);
             _poseLastTime = time;
             _poseLastLeg = use;
@@ -1410,18 +1413,19 @@ namespace SpeedStars.Physical
         void NoteIntent(int leg, double time)
         {
             bool within = time - _hopPrevTime < HopRepeatWindow;
-            float wasTarget = within ? _hopTarget : 0f;
+            float wasTarget = within && _hopWanted ? 1f : 0f;
             bool together = leftLeg.lastKey >= 0.0 && rightLeg.lastKey >= 0.0 &&
                             System.Math.Abs(leftLeg.lastKey - rightLeg.lastKey) < 2f * PairWindow;
             bool same = within && leg == _hopPrevLeg && !together && _pair < 0.5f;
             // A change of key in a hop is a hop on the other leg, not a step of a run: dropping the hop for one press brought both
             // feet down and up together. Two changes in a row (the last key was itself a change) are a run.
             bool swap = within && !same && !together && _hopRepeated && wasTarget > 0.5f;
-            _hopTarget = same || swap ? 1f : 0f;
+            _hopWanted = same || swap;
             _hopRepeated = same;
-            if (_hopTarget > 0.5f) _hopOpenPending |= wasTarget < 0.5f || swap;
+            if (_hopWanted) _hopOpenPending |= wasTarget < 0.5f || swap;
             else
             {
+                _hopTarget = 0f;
                 _hopOpenPending = false;
                 _hopBufLeg = -1;
             }
@@ -1430,10 +1434,10 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>Seconds until the hop leg is down (0 when it is, or when no hop leg is moving); large when its stance has not lifted yet.</summary>
-        double HopLandsIn(double time)
+        double HopLandsIn(int leg, double time)
         {
-            if (_poseLastLeg < 0) return 0.0;
-            Leg l = Legs(_poseLastLeg);
+            if (leg < 0) return 0.0;
+            Leg l = Legs(leg);
             switch (l.phase)
             {
                 case LegPhase.Recover:
@@ -1469,15 +1473,18 @@ namespace SpeedStars.Physical
         void TakeBuffered(double now)
         {
             if (_hopBufLeg < 0) return;
-            if (now - _hopBufTime > HopBufferLife || !HopGateOn() || _jumping || _poseLastLeg < 0)
+            if (now - _hopBufTime > HopBufferLife || !_hopWanted || _jumping || _poseLastLeg < 0 || _pair > 0.5f || _heldNow > 0.5f)
             {
                 _hopBufLeg = -1;
                 return;
             }
-            if (HopLegInAir() || now - Legs(_poseLastLeg).plantedAt < hopStanceMin || now - _poseLastTime < hopTime) return;
+            // The hop on: its leg is the one to wait for (and hopTime from its press). A run's gate: the pressed leg's own foot.
+            int wait = HopGateOn() ? _poseLastLeg : _hopBufLeg;
+            if (HopLegInAir(wait) || now - Legs(wait).plantedAt < hopStanceMin || (HopGateOn() && now - _poseLastTime < hopTime)) return;
             int leg = _hopBufLeg;
             Leg used = Legs(leg);
             _hopBufLeg = -1;
+            _hopTarget = 1f;
             _posePrevGap = (float)System.Math.Min(10.0, now - _poseLastTime);
             _poseLastTime = now;
             _poseLastLeg = leg;
@@ -1490,10 +1497,12 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>The hopping leg (the one pressed last) has not landed: swinging, or a touchdown pose still above the ground.</summary>
-        bool HopLegInAir()
+        bool HopLegInAir() => HopLegInAir(_poseLastLeg);
+
+        bool HopLegInAir(int leg)
         {
-            if (_poseLastLeg < 0) return false;
-            Leg l = Legs(_poseLastLeg);
+            if (leg < 0) return false;
+            Leg l = Legs(leg);
             switch (l.phase)
             {
                 case LegPhase.Recover:
@@ -2735,6 +2744,7 @@ namespace SpeedStars.Physical
             if (_idleStock)
             {
                 _hopTarget = 0f;
+                _hopWanted = false;
                 _hopRepeated = false;
                 _hopOpenPending = false;
                 _hopBufLeg = -1;
@@ -2750,6 +2760,7 @@ namespace SpeedStars.Physical
                 else if (now - _standTime >= hopStandWait && !stood.held)
                 {
                     _hopTarget = 1f;
+                    _hopWanted = true;
                     _hopRepeated = false;
                     _hopPrevLeg = _standLeg;
                     _hopPrevTime = _standTime;
@@ -3553,6 +3564,7 @@ namespace SpeedStars.Physical
             _hopQuick = false;
             _hopRepeated = false;
             _hopOpenPending = false;
+            _hopWanted = false;
             _hopBufLeg = -1;
             _motionAt = -10.0;
             _hopPrevTime = -10.0;
