@@ -10,7 +10,7 @@ owns_paths:
   - "docs/tasks/T-151-tek-ayak-sekis-yumusak.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [c86df12a, 14fc2247, 9b44b39a]
+commits: [c86df12a, 14fc2247, 9b44b39a, a2035100, b2231290, a99f5145, f6621997]
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
@@ -54,3 +54,4 @@ Kod: `UpdateBodyHeight` ucus dali (`TryIncoming`, `rise`, `target`, `landHover`)
 - Toe-off: grounded `Push` bacagi plain kosu degilse `OtherTakesOver`'a bakmaz; cikis `SolveStance`'te kalcanin gerisinde ve `d >= reach*Overstretch` (uzunluk) ya da `UpdateBodyHeight`'ta `legCap < max(legNeed, bodyY)`. Sureye bagli degil, bu yuzden alcak sekiste ayak erken kalkabilir; olculmedi.
 - Olculmedi (Unity yok); sayilar kabul listesine gore ilk deneme.
 - Tur 2: `hopContact` 24/158 (prefab'ta yok); `BeginStance`te hop > 0.5, Recover/Mid, `SwingShare` < 0.25, ayak yerde ise yakalama yerine `StartSwing`. Olculmedi.
+- Tur 3: `_sameStreak` (ayni tus art arda, aralik >= pressFollowSame); >= 2 iken `PressStillBusy` sorulmaz. `BeginStance` isaretli toe-off'u silmez (kalkis karesi sicramasi). Olculmedi.

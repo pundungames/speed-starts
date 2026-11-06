@@ -9,7 +9,7 @@ owns_paths:
   - "docs/tasks/T-152-kollar-yumusak.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [ed9349e7]
+commits: [ed9349e7, 72340517, a99f5145]
 tests:
   - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips supervizorde"
 analytics:
