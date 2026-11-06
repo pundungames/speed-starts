@@ -29,7 +29,7 @@ namespace SpeedStars.Tools.Builders
             GameObject root = PrefabUtility.LoadPrefabContents(UiPrefabPaths.HomeScreen);
             try
             {
-                if (root.transform.Find(CardPath + "/" + RowName) != null)
+                if (root.transform.Find("CharacterCard/" + RowName) != null)
                     UnityEngine.Debug.Log($"UiHomeRelayRow: '{UiPrefabPaths.HomeScreen}' already has '{RowName}'; left as it is.");
                 else
                 {
@@ -51,24 +51,26 @@ namespace SpeedStars.Tools.Builders
                 ?? throw new InvalidOperationException("UiHomeRelayRow: the HomeScreen root has no HomeScreenView.");
             Transform content = homeRoot.transform.Find(CardPath)
                 ?? throw new InvalidOperationException($"UiHomeRelayRow: HomeScreen has no {CardPath}.");
-            Transform select = Required(content, "Select");
-            Transform previous = Required(content, "Previous");
-            Transform next = Required(content, "Next");
+            // The prefab is hand-edited: Previous/Next/Name/Plate live under CharacterCard/Select, not Content. The whole Select
+            // is copied as the row (one pill with its two arrows), minus the racer's face.
+            Transform card = content.parent;
+            Transform select = Required(card, "Select");
 
-            var row = new GameObject(RowName, typeof(RectTransform)) { layer = content.gameObject.layer };
+            var row = UnityEngine.Object.Instantiate(select.gameObject, card, false);
+            row.name = RowName;
+            row.SetActive(true);
             var rowRect = (RectTransform)row.transform;
-            rowRect.SetParent(content, false);
-            rowRect.anchorMin = Vector2.zero;
-            rowRect.anchorMax = Vector2.one;
-            rowRect.offsetMin = rowRect.offsetMax = Vector2.zero;
-            rowRect.localScale = Vector3.one;
-
-            float drop = ((RectTransform)content).rect.height * DropFraction;
-            Transform pill = Copy(select, row.transform, "Select", drop);
-            Transform portrait = pill.Find("Portrait");
-            if (portrait != null) UnityEngine.Object.DestroyImmediate(portrait.gameObject); // the name pill without the racer's face
-            Transform back = Copy(previous, row.transform, "Previous", drop);
-            Transform forward = Copy(next, row.transform, "Next", drop);
+            float drop = ((RectTransform)card).rect.height * DropFraction;
+            rowRect.offsetMin += new Vector2(0f, -drop);
+            rowRect.offsetMax += new Vector2(0f, -drop);
+            foreach (string face in new[] { "Portrait", "Icon" })
+            {
+                Transform part = row.transform.Find(face);
+                if (part != null) UnityEngine.Object.DestroyImmediate(part.gameObject);
+            }
+            Transform pill = row.transform;
+            Transform back = Required(row.transform, "Previous");
+            Transform forward = Required(row.transform, "Next");
 
             TMP_Text label = pill.GetComponentInChildren<TMP_Text>(true)
                 ?? throw new InvalidOperationException("UiHomeRelayRow: the card's name pill has no TMP_Text to copy.");
@@ -87,7 +89,7 @@ namespace SpeedStars.Tools.Builders
         }
 
         private static Transform Required(Transform parent, string name) =>
-            parent.Find(name) ?? throw new InvalidOperationException($"UiHomeRelayRow: {CardPath} has no '{name}'.");
+            parent.Find(name) ?? throw new InvalidOperationException($"UiHomeRelayRow: {parent.name} has no '{name}'.");
 
         /// <summary>A copy of a card part under the row, moved down by <paramref name="drop"/> canvas units.</summary>
         private static Transform Copy(Transform source, Transform parent, string name, float drop)
