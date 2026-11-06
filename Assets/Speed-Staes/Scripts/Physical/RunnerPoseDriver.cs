@@ -190,6 +190,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float holdBoth;   // 0..1: the other key is held too (the dive's legs stay in line)
             [System.NonSerialized] public float holdPeak;   // the largest real-hold weight reached in this Hold (a tap stays near 0.05)
             [System.NonSerialized] public float cycle;      // this leg's own press-to-press time (s), smoothed; 0 = never pressed
+            [System.NonSerialized] public bool swapStance;   // this stance is a change of leg's: a whole step's stance (behind the hip), then the hop's swing
             [System.NonSerialized] public float swingLen;   // the swing's time (s)
             [System.NonSerialized] public double pressedAt = -10.0, lastPress = -1.0, swingT0, lastKey = -1.0;
             [System.NonSerialized] public LegAngles[] keys, slope;   // swing keys (start, recover, mid, drive, contact) and their slopes
@@ -433,6 +434,10 @@ namespace SpeedStars.Physical
         [Tooltip("A press on the other key while hopping (a change of leg, or the run after a hop): the pressed foot comes down over at least this long (s), " +
                  "readably, and the press works (new stance, arm roles, the other leg freed) in the frame it first touches the ground, not before.")]
         [Min(0.05f)] public float hopSwapTime = 0.18f;
+        [Tooltip("A change of leg: the new foot lifts when it is this far behind the hip (m) on its stance, like a step's; the reach limit lifts it sooner.")]
+        [Min(0.05f)] public float swapBehind = 0.25f;
+        [Tooltip("A change of leg: the new foot stays down at most this long (s) from its touchdown (a slow body), then the hop's swing starts.")]
+        [Min(0.1f)] public float swapStanceMax = 0.3f;
         [Tooltip("One-leg hop: the last key pressed within this long (s) before the hop leg lands (or after) is kept and taken when the foot is down " +
                  "(hopStanceMin): the same key is a new hop, the other key a change of leg. An earlier press (a double tap) is not kept.")]
         [Min(0.02f)] public float hopBufferTime = 0.25f;
@@ -1572,6 +1577,7 @@ namespace SpeedStars.Physical
             // with the leg at full stretch (knee 177) and the hip pushed up 4 cm, then the flag came back.
             if (!(leg.phase == LegPhase.Push && leg.grounded && leg.toeOff)) leg.toeOff = false;
             leg.swungSincePress = false;
+            leg.swapStance = minCatch > 0f;
             if (leg.phase == LegPhase.Push) return;
             // Hopping, a press just after the toe-off (the swing hardly begun, the foot still on the ground) is not a catch: the catch
             // from a swing of no length moved the hip 8 cm in 4 frames. The leg times its swing again from here and goes on with the key.
@@ -1600,7 +1606,8 @@ namespace SpeedStars.Physical
         void StartCatch(Leg leg, double time, float minCatch = 0f)
         {
             EnsureBuffers(leg);
-            LegAngles c = Key(ContactPose(), hopContact);
+            // A change of leg lands like a step of a run: the foot comes down in front (the run's contact), then goes back under the body.
+            LegAngles c = minCatch > 0f ? ContactPose() : Key(ContactPose(), hopContact);
             // Already there (the touchdown pose, or the foot on the ground past the fold): nothing to catch, plant it now.
             // A catch of even a few frames would slide the foot along the ground at the body's speed. A foot still in the
             // air is not down: it is caught and planted when it touches, or the body would drop to it in one frame.
@@ -1656,6 +1663,7 @@ namespace SpeedStars.Physical
             EnsureBuffers(leg);
             leg.standStep = standing;
             leg.swungSincePress = true;
+            leg.swapStance = false;
             if (leg.cycle <= 0f) leg.cycle = Mathf.Clamp(2f * (body && body.Sim != null ? body.Sim.StepTime : 0.3f), stepTimeMin, 2f * stepTimeMax);
             // A hop's swing is never shorter than hopTime in all (press to landing), whatever cycle the keys taught.
             // The timing of a hop from a standstill is the whole hop's from its first swing (_hop is still rising then); the shapes follow _hop.
@@ -2424,6 +2432,13 @@ namespace SpeedStars.Physical
             // The time only lifts a foot a press asked to lift (swungSincePress is false from the press until the swing): a landing no key followed
             // waits on the ground until its reach runs out (endBehind, StanceCap, Overstretch), so one press is one hop.
             bool timed = hopW <= 0.5f || !leg.swungSincePress;
+            // A change of leg's stance is a step's: the foot goes back behind the hip (swapBehind) or at most swapStanceMax, then the hop's swing.
+            if (leg.swapStance && hopW > 0.5f && !waits)
+            {
+                early = since < hopStanceMin;
+                if (!early && (behind >= Mathf.Min(endBehind, swapBehind) || since > swapStanceMax)) leg.toeOff = true;
+                return;
+            }
             if (!waits && !early && (behind >= endBehind || (timed && since > Mathf.Lerp(stanceMax, hopStanceMax, hopW)))) leg.toeOff = true;
         }
 
