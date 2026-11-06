@@ -433,10 +433,6 @@ namespace SpeedStars.Physical
         [Tooltip("One-leg hop: the last key pressed within this long (s) before the hop leg lands (or after) is kept and taken when the foot is down " +
                  "(hopStanceMin): the same key is a new hop, the other key a change of leg. An earlier press (a double tap) is not kept.")]
         [Min(0.02f)] public float hopBufferTime = 0.25f;
-        [Tooltip("A single press from a standstill (no block stance) starts as a step (the knee goes up, as for a run). If no other press has come this long (s) " +
-                 "after it and the key is up, it was a hop: the pressed foot hops and the other leg is held out in front. A run's first step " +
-                 "then lasts a moment longer than a hop's wait, which is fine as long as nothing snaps.")]
-        [Min(0.05f)] public float hopStandWait = 0.15f;
         [Tooltip("The hop weight's spring for a hop that began from a standstill (a single press): quick, so the held-out leg opens and the first arc is whole.")]
         public SpringSettings hopStandSpring = new SpringSettings(10f, 1f);
         [Tooltip("The stride (how far the knee drives, how far the foot lands and pushes back) grows from strideMin at x m/s " +
@@ -995,6 +991,7 @@ namespace SpeedStars.Physical
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
         const float LockKnee = 15f;
+        const float StandPairWait = 0.07f;     // a first press from a standstill opens the hop this long (s) after the key, past the pair window (1.5 x PairWindow)
         const float HopBufferLife = 0.75f;     // a kept hop press that has not been taken by then (s) is dropped
         const float HopRepeatWindow = 1f;     // the same key again within this (s) is a hop (the sim's repeat)
         const float HopRetimeShare = 0.25f;    // a hop's press before this share of the swing, foot on the ground: the swing starts again, no catch
@@ -1049,7 +1046,7 @@ namespace SpeedStars.Physical
         int _hopBufLeg = -1;                        // a hop press that came late in the air (kept, taken when the foot is down), and its time
         double _hopBufTime;
         double _motionAt = -10.0;                   // the last time a hop's leg was moving (swing, landing, a stance about to lift)
-        int _standLeg = -1, _standPresses;          // the leg of a first press from a standstill that may turn into a hop (hopStandWait), and the press count after it
+        int _standLeg = -1, _standPresses;          // the leg of a first press from a standstill that may turn into a hop (StandPairWait), and the press count after it
         double _standTime;
         bool _hopQuick;                             // the hop began from a standstill: its weight follows hopStandSpring and its arc takes the weight whole
         float _hopTarget;                         // the hop weight's target: 1 once the pose took a press that meant a hop, 0 as soon as a key means a run
@@ -1367,13 +1364,13 @@ namespace SpeedStars.Physical
             }
             _lastPress = time;
             if (!_jumping) BeginStance(used, time);
-            // From a standstill the other leg has no cycle of its own to be in (a run's "it is in its own cycle"): the first press takes a
-            // real step with it, or both feet stay down while the body goes over them. Not a pair's second key, a hop's freed leg, a hold.
+            // Off the blocks the other leg has no cycle of its own to be in (a run's "it is in its own cycle"): the first press takes a
+            // real step with it. Standing, the first press is a whole hop instead (UpdateHop): no step of its own, the run starts on the other key.
             Leg stepper = Legs(1 - use);
-            if (fromStand && !pairSecond && !_jumping && _plainRun > 0.5f && _hop < 0.5f && !_hopFreed &&
+            if (fromStand && fromBlocks && !pairSecond && !_jumping && _plainRun > 0.5f && _hop < 0.5f && !_hopFreed &&
                 stepper.phase == LegPhase.Rest && !stepper.held && !stepper.HeldBack)
                 StartSwing(stepper, time, true);
-            // The same press may turn out to be a hop (UpdateHop): nothing else came within hopStandWait.
+            // The same press is a hop (UpdateHop) unless the other key follows within StandPairWait: a pair.
             _standLeg = fromStand && !pairSecond && !_jumping && !fromBlocks ? use : -1;
             _standTime = time;
             _standPresses = _posePresses;
@@ -2749,15 +2746,14 @@ namespace SpeedStars.Physical
                 _hopOpenPending = false;
                 _hopBufLeg = -1;
             }
-            // A single press from a standstill: if nothing else was pressed within hopStandWait and the key is up, it is a hop on that leg. The
-            // step the press began (the other leg lifting) is taken over from where it is: that leg goes on to the held-out leg. Any later press
-            // goes the usual way (the same key: more hops; the other key: a run, as _hopRepeated stays false).
+            // A first press from a standstill is a whole hop on that leg, whatever the key does after (a held key goes the hold's way, holdAfter):
+            // the other leg opens to the held-out leg over the hop weight's spring. Only a pair's second key within StandPairWait cancels it.
+            // Any later press goes the usual way (the same key: more hops; the other key: a run, as _hopRepeated stays false).
             if (_standLeg >= 0)
             {
-                Leg stood = Legs(_standLeg);
                 if (_posePresses != _standPresses || off || _dive > 0.3f || _heldNow > 0.1f || now - _standTime > HopRepeatWindow)
                     _standLeg = -1;
-                else if (now - _standTime >= hopStandWait && !stood.held)
+                else if (now - _standTime >= StandPairWait)
                 {
                     _hopTarget = 1f;
                     _hopWanted = true;

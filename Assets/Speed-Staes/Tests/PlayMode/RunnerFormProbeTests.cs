@@ -304,7 +304,7 @@ namespace SpeedStars.PlayTests
             s = new Script("restart"); s.Alt(2.5f, 0.30f, Tap); s.Next = s.LastRelease + 2.2;
             double again = s.Alt(2.5f, 0.30f, Tap); s.Strip(again); s.Strip(again + 0.65); list.Add(s.Build(0.5f));
             s = new Script("walkStart"); s.Alt(3f, 0.60f, Tap); s.Strips.Add(0.40f); s.Strips.Add(1.05f); list.Add(s.Build(0.5f));
-            // T-154: one press from a standstill turns into a hop after hopStandWait, the held-out leg stays for the repeat window, then lowers softly: the tail covers all of it.
+            // T-154: one press from a standstill is a whole hop from the press (StandPairWait), the held-out leg stays for the repeat window, then lowers softly: the tail covers all of it.
             s = new Script("oneTap"); double oneAt = s.Alt(0.1f, 0.30f, Tap); s.Strip(oneAt); s.Strip(oneAt + 0.5); s.Strip(oneAt + 1.1); list.Add(s.Build(2.5f));
             // T-154: the same key again and again from a standstill (0.45 s): a hop series from the first press; the strips cover the first second.
             s = new Script("standHops"); double standAt = s.Same(3f, 0.45f, Tap, 1); s.Strip(standAt); s.Strip(standAt + 0.6); list.Add(s.Build(0.5f));
