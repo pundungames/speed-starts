@@ -486,8 +486,10 @@ namespace SpeedStars.Physical
         [Tooltip("The leg the hops leave out (not the one pressed again and again): held out in front, straight and still (thigh, knee; deg), " +
                  "in the air, balancing; it carries nothing and does not sway with the bounce. Blended in by the hop weight.")]
         public LegAngles hopFreeLeg = new LegAngles(55f, 175f);
-        [Tooltip("The hips' tilt (deg, + = forward; the pose's own pelvis tilt included) on one-leg hops: an absolute value, the same from a standstill, in a " +
-                 "run's rhythm or in spam, because the head-led lean, the gait lean and the pose's tilt are blended out as the hop weight rises. No rock with the bounce.")]
+        [Tooltip("The hips' target tilt (deg, + = forward; the pose's own pelvis tilt included) on one-leg hops: the same from a standstill, in a " +
+                 "run's rhythm or in spam, because the head-led lean, the gait lean and the pose's tilt are blended out as the hop weight rises (the slow " +
+                 "hop-body weight, hopBodySpring). The tilt measured on the hip bone is a few degrees more upright than this (about 4 at -11); " +
+                 "that offset was measured, its source not found. No rock with the bounce.")]
         public float hopLean = -11f;
 
         [Header("Start: the blocks (Marks), hips up (Set), the drive out of them (first press on)")]
@@ -875,7 +877,7 @@ namespace SpeedStars.Physical
         public Vector2 armHopThigh = new Vector2(-40f, 20f);
         [Tooltip("The hop arm's drive (the hopping thigh, 0..1) goes through this spring (damping 1) before the limb spring: the arm swings smoothly " +
                  "with the leg a moment behind it (about 2/(2*pi*Hz) s), not in the leg's every dart.")]
-        public SpringSettings armHopFollow = new SpringSettings(4.5f, 1f);
+        public SpringSettings armHopFollow = new SpringSettings(4f, 1f);
         [Tooltip("The arm on the hopping leg's side (x = upper arm swing, y = elbow; deg): still and bent, close to the body. Blended in by the " +
                  "free leg's weight, so the two arms change roles smoothly when the hop changes leg.")]
         public Vector2 armHopFixed = new Vector2(8f, 115f);
