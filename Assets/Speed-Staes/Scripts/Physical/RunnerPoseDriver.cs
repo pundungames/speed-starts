@@ -546,6 +546,9 @@ namespace SpeedStars.Physical
         [Tooltip("The one-leg hop and two-keys-together weights follow their targets through this spring (damping 1: no overshoot). " +
                  "A spring starts slowly: no first-frame jump of the hips or legs.")]
         public SpringSettings gaitBlendSpring = new SpringSettings(5f, 1f);
+        [Tooltip("The hop weight the body (hip lean and the flight's rise) reads: a slow spring on the same target as the hop weight, so the first " +
+                 "hop after a run does not snap the hips back or throw the body up in a few frames. It never leads the hop weight (leaving is as fast as before).")]
+        public SpringSettings hopBodySpring = new SpringSettings(2f, 1f);
         [Tooltip("Both keys really held tip the body on by this much more (deg, squared by the weight: quick presses on " +
                  "both barely count): the dive goes on to level (pelvisPitchRange.y).")]
         public float bothLean = 55f;
@@ -903,6 +906,8 @@ namespace SpeedStars.Physical
         double _hopPrevTime = -10.0;
         bool _hopRepeated;                          // the last press taken was the same leg again: the hop is really on
         float _hopTarget;                         // 1 when that press was the same leg again, 0 when it was the other
+        Spring _hopBody;                          // the hop weight's slow twin (hopBodySpring); _hopBodyW is what the body reads
+        float _hopBodyW;
         Spring _hopSpring, _pairSpring, _bothTip;   // the hop and pair weights' springs (gaitBlendSpring); the both-keys tip's (holdTipSpring)
         float _hop, _pair, _dive;                 // one-leg hop weight, two-keys-together weight, hold weight (dive) 0..1
         float _twist, _roll, _lastThighL, _lastThighR, _chestYaw, _chestRoll;
@@ -2169,7 +2174,7 @@ namespace SpeedStars.Physical
                 _hipsNow = lean;
                 UpdateGait(sim, dt);
                 UpdateBounceLean(dt, ref lean, ref baseBend, ref bend);
-                lean -= hopBackLean * _hop;   // hopping on one leg the trunk sits back (SitBack below)
+                lean -= hopBackLean * _hopBodyW * (1f - _heldNow);   // hopping on one leg the trunk sits back (SitBack below)
                 lean += jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
             }
             else _hipsNow = 0f;
@@ -2329,6 +2334,8 @@ namespace SpeedStars.Physical
             _hopSpring.Step(off ? 0f : hopTarget, gaitBlendSpring.frequency, gaitBlendSpring.damping, dt);
             _pairSpring.Step(off ? 0f : PairWeight(now), gaitBlendSpring.frequency, gaitBlendSpring.damping, dt);
             _hop = Mathf.Clamp01(_hopSpring.Value);
+            _hopBody.Step(off ? 0f : hopTarget, hopBodySpring.frequency, hopBodySpring.damping, dt);
+            _hopBodyW = Mathf.Min(Mathf.Clamp01(_hopBody.Value), _hop);
             _pair = Mathf.Clamp01(_pairSpring.Value);
             for (int i = 0; i < 2; i++)
             {
@@ -2716,7 +2723,7 @@ namespace SpeedStars.Physical
                 float speed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(riseSpeed.x, riseSpeed.y, sim.Speed));
                 float rise = flightRise * speed * Mathf.Lerp(1f - formWeight, 1f, Mathf.Clamp01(sim.Form)) *
                              Mathf.Lerp(1f, runBounce, _plainRun) +
-                             hopRise * Mathf.Max(_hop, _pair);
+                             hopRise * Mathf.Max(_hopBodyW, _pair);
                 float target = Mathf.Lerp(_offY, landY, Mathf.SmoothStep(0f, 1f, w)) + rise * 4f * w * (1f - w);
                 if (incoming.phase == LegPhase.Land) target += landHover;
                 _bodyY.Step(target, flightSpring.frequency, flightSpring.damping, dt);
@@ -2968,6 +2975,8 @@ namespace SpeedStars.Physical
             _gaitW = _speedCurve = _hop = _pair = _hopTarget = _pairTargetLast = 0f;
             _rideVel = 0f;
             _hopSpring.Reset();
+            _hopBody.Reset();
+            _hopBodyW = 0f;
             _pairSpring.Reset();
             _hopPrevLeg = -1;
             _hopRepeated = false;
