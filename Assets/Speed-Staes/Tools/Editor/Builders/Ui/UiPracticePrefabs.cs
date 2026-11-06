@@ -32,7 +32,8 @@ namespace SpeedStars.Tools.Builders
         private const float OptionGap = 6f;
         private const float BoxSize = 60f;
         private const float RightInset = -50f;       // the right margin of the HUD's button row
-        private const float TopInset = -190f;        // under that row
+        private const float TopInset = -587f;        // under the right HUD column (Telemetry, Energy, Cadence: bottom at -563) with a 24 gap
+        private const float ContentScale = 0.85f;    // so the panel still fits under that column on the shortest HUD (1080 high)
         private const float FontSize = 40f;
         private const float CaptionSize = 38f;
 
@@ -89,6 +90,7 @@ namespace SpeedStars.Tools.Builders
             float height = Pad * 2f + rows * RowHeight + (rows - 1f) * RowGap;
             RectTransform content = Kit.Node(root, "Content");
             Kit.Anchor(content, topRight, topRight, new Vector2(RightInset, TopInset), new Vector2(PanelWidth, height));
+            content.localScale = new Vector3(ContentScale, ContentScale, 1f);
             Kit.Panel(content.gameObject, Kit.SoftColor, frame: true, raycast: true);
 
             float innerWidth = PanelWidth - Pad * 2f;

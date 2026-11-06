@@ -120,6 +120,9 @@ namespace SpeedStars.UI.Race
         private void PrepareWord()
         {
             if (wordText == null) return;
+            // Centre the visible glyphs, independent of font bearings and baseline metrics.
+            wordText.horizontalAlignment = HorizontalAlignmentOptions.Geometry;
+            wordText.verticalAlignment = VerticalAlignmentOptions.Geometry;
             wordText.fontMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline); // fontMaterial is this word's instance
             wordText.outlineWidth = config.OutlineWidth;
             wordText.outlineColor = config.OutlineColor;

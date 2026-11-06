@@ -128,6 +128,32 @@ namespace SpeedStars.UI.Home
         private IRaceOfTheDay _raceOfTheDay;
         private ICosmeticPreview _preview;
         private bool _dailyOutfitShown;
+        private RectTransform _responsiveCard;
+        private readonly Vector3[] _playCorners = new Vector3[4];
+
+        private void LateUpdate() => RefreshCharacterCardLayout();
+
+        public void RefreshCharacterCardLayout()
+        {
+            if (_responsiveCard == null)
+                _responsiveCard = transform.Find("CharacterCard") as RectTransform;
+            if (_responsiveCard == null || playButton == null) return;
+
+            // The card's top-right pivot stays fixed. Uniform scaling preserves the
+            // artwork and text while leaving a clear gap above the Play button.
+            var parent = _responsiveCard.parent as RectTransform;
+            var playRect = playButton.transform as RectTransform;
+            if (parent == null || playRect == null || _responsiveCard.rect.height <= 0f) return;
+            playRect.GetWorldCorners(_playCorners);
+            float playTop = parent.InverseTransformPoint(_playCorners[1]).y;
+            float cardTop = parent.InverseTransformPoint(
+                _responsiveCard.TransformPoint(new Vector3(_responsiveCard.rect.xMax, _responsiveCard.rect.yMax, 0f))).y;
+            float availableHeight = Mathf.Max(0f, cardTop - playTop - 24f);
+            float scale = Mathf.Min(1f, availableHeight / _responsiveCard.rect.height);
+            var fittedScale = new Vector3(scale, scale, 1f);
+            if (_responsiveCard.localScale != fittedScale)
+                _responsiveCard.localScale = fittedScale;
+        }
 
         /// <summary>Optional so a scene without Race of the Day still opens; the card then never changes.</summary>
         [Inject]

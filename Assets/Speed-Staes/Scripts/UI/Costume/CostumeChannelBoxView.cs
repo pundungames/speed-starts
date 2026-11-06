@@ -22,6 +22,8 @@ namespace SpeedStars.UI.Costume
         [Tooltip("Highlight behind the frame (a ring around the box): shown while the picker edits this channel.")]
         [SerializeField] private GameObject selectedHighlight;
 
+        [SerializeField] private GameObject normalFrame;
+
         private Tween _punch;
         private Vector3 _baseScale = Vector3.one;
         private bool _baseKnown;
@@ -59,6 +61,7 @@ namespace SpeedStars.UI.Costume
         public void SetSelected(bool selected)
         {
             selectedHighlight.SetActive(selected);
+            if (normalFrame != null) normalFrame.SetActive(!selected);
         }
 
         /// <summary>A short scale punch on a tap: numbers from the motion config; no motion config = no punch.</summary>

@@ -7,7 +7,22 @@ Shader "Speed Stars/Desert Pixel Paint" {
  #include "ThemeAerial.cginc"
  float4 _Color,_PaintShadow,_PaintLight;float _Glow,_PixelSize,_Grain,_PaintProfile,_ClusterStrength,_PixelSnap;
  struct v2f{float4 pos:SV_POSITION;float3 local:TEXCOORD0;float3 normal:TEXCOORD1;float3 world:TEXCOORD2;};
- v2f vert(appdata_base v){v2f o;o.pos=UnityObjectToClipPos(v.vertex);float2 grid=float2(360*_ScreenParams.x/max(1,_ScreenParams.y),360);float2 snapped=(floor((o.pos.xy/max(.0001,o.pos.w)*.5+.5)*grid)+.5)/grid;float2 clip=(snapped*2-1)*o.pos.w;o.pos.xy=lerp(o.pos.xy,clip,_PixelSnap);float3 objectScale=float3(length(mul((float3x3)unity_ObjectToWorld,float3(1,0,0))),length(mul((float3x3)unity_ObjectToWorld,float3(0,1,0))),length(mul((float3x3)unity_ObjectToWorld,float3(0,0,1))));o.world=mul(unity_ObjectToWorld,v.vertex).xyz;o.local=v.vertex.xyz*objectScale;o.normal=UnityObjectToWorldNormal(v.normal);return o;}
+ v2f vert(appdata_base v){
+  v2f o;
+  o.pos=UnityObjectToClipPos(v.vertex);
+  // Preserve every material's authored pixel silhouette strength.
+  // Never divide by a clamped negative w: vertices behind the camera would explode.
+  float eyeDepth=-UnityObjectToViewPos(v.vertex).z;
+  if(_PixelSnap>0 && eyeDepth>_ProjectionParams.y && o.pos.w>0.0001){
+   float2 grid=float2(360*_ScreenParams.x/max(1,_ScreenParams.y),360);
+   float2 snapped=(floor((o.pos.xy/o.pos.w*.5+.5)*grid)+.5)/grid;
+   float2 clip=(snapped*2-1)*o.pos.w;
+   float nearFade=smoothstep(_ProjectionParams.y,_ProjectionParams.y*2,eyeDepth);
+   o.pos.xy=lerp(o.pos.xy,clip,saturate(_PixelSnap)*nearFade);
+  }
+  float3 objectScale=float3(length(mul((float3x3)unity_ObjectToWorld,float3(1,0,0))),length(mul((float3x3)unity_ObjectToWorld,float3(0,1,0))),length(mul((float3x3)unity_ObjectToWorld,float3(0,0,1))));
+  o.world=mul(unity_ObjectToWorld,v.vertex).xyz;o.local=v.vertex.xyz*objectScale;o.normal=UnityObjectToWorldNormal(v.normal);return o;
+ }
  float hash(float3 p){p=frac(p*.1031);p+=dot(p,p.yzx+33.33);return frac((p.x+p.y)*p.z);}
  float cluster(float2 p){float2 id=floor(p),f=frac(p);f=f*f*(3-2*f);return lerp(lerp(hash(float3(id,17)),hash(float3(id+float2(1,0),17)),f.x),lerp(hash(float3(id+float2(0,1),17)),hash(float3(id+1,17)),f.x),f.y);}
  fixed4 frag(v2f i):SV_Target{
