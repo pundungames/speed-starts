@@ -294,6 +294,8 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public Track swingT, elbowT;   // what is shown follows the pose's target through these
             [System.NonSerialized] public Spring drive;           // the run's drive (the thigh's 0..1) through a spring tied to the step time
             [System.NonSerialized] public bool driveSet;
+            [System.NonSerialized] public Spring hopDrive;        // the one-leg hop's drive (the hopping thigh's 0..1) through armHopFollow
+            [System.NonSerialized] public bool hopDriveSet;
         }
 
         [Tooltip("The physics this draws (found on this object if empty). The visual never changes speed or timing.")]
@@ -865,7 +867,10 @@ namespace SpeedStars.Physical
         public float armHopReturn = 6f;
         [Tooltip("The hopping leg's shown thigh (deg) at which the swinging arm is all the way back (x) and all the way forward (y): the arm is " +
                  "tied to the leg, not to the press clock, so the two swing together.")]
-        public Vector2 armHopThigh = new Vector2(-50f, 20f);
+        public Vector2 armHopThigh = new Vector2(-40f, 20f);
+        [Tooltip("The hop arm's drive (the hopping thigh, 0..1) goes through this spring (damping 1) before the limb spring: the arm swings smoothly " +
+                 "with the leg a moment behind it (about 2/(2*pi*Hz) s), not in the leg's every dart.")]
+        public SpringSettings armHopFollow = new SpringSettings(4.5f, 1f);
         [Tooltip("The arm on the hopping leg's side (x = upper arm swing, y = elbow; deg): still and bent, close to the body. Blended in by the " +
                  "free leg's weight, so the two arms change roles smoothly when the hop changes leg.")]
         public Vector2 armHopFixed = new Vector2(8f, 115f);
@@ -3287,7 +3292,10 @@ namespace SpeedStars.Physical
                 // The arm opposite the hopping leg follows that leg's shown thigh (back with it, forward with it; the limb spring below is the
                 // only lag), not the press clock: the two cannot drift apart. The arm on the hopping leg's side is still, bent. Which is which
                 // goes by the opposite leg's balance weight (idle), so a hop that changes leg changes the roles smoothly.
-                float legT = Mathf.Clamp01(Mathf.InverseLerp(armHopThigh.x, armHopThigh.y, opposite.thighWorld));
+                float legRaw = Mathf.Clamp01(Mathf.InverseLerp(armHopThigh.x, armHopThigh.y, opposite.thighWorld));
+                if (!arm.hopDriveSet) { arm.hopDrive.Reset(legRaw); arm.hopDriveSet = true; }
+                else if (dt > 0f) arm.hopDrive.Step(legRaw, armHopFollow.frequency, armHopFollow.damping, dt);
+                float legT = Mathf.Clamp01(arm.hopDrive.Value);
                 float hopSwing = Mathf.Lerp(Mathf.Lerp(armHopDown, armHopUp, legT), armHopFixed.x, opposite.idle);
                 // The elbow opens with the arm going back and closes to a right angle as it comes up (like the run's open curve).
                 float hopOpen = 1f - Mathf.SmoothStep(0f, 0.45f, legT);
@@ -3295,6 +3303,7 @@ namespace SpeedStars.Physical
                 swing = Mathf.Lerp(swing, hopSwing, hw);
                 elbow = Mathf.Lerp(elbow, hopElbow, hw);
             }
+            else arm.hopDriveSet = false;
             float pw = preview ? 0f : _pair;
             if (pw > 0.001f)
             {
