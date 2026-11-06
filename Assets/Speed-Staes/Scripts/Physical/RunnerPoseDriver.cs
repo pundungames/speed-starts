@@ -427,6 +427,12 @@ namespace SpeedStars.Physical
         [Tooltip("One-leg hop: the foot stays down at least this long (s) after it touches (at full hop weight), whenever the press came: the push needs " +
                  "the time, and a press that came in the air must not lift the foot in the next frame.")]
         [Min(0.02f)] public float hopStanceMin = 0.09f;
+        [Tooltip("One-leg hop: no hop, no landing and no press for this long (s) and the runner stops: the legs go to the stock pose and the brake pose " +
+                 "follows the speed. A hop is one press; nothing moves on its own after it.")]
+        [Min(0.02f)] public float hopStopDelay = 0.2f;
+        [Tooltip("One-leg hop: the last key pressed within this long (s) before the hop leg lands (or after) is kept and taken when the foot is down " +
+                 "(hopStanceMin): the same key is a new hop, the other key a change of leg. An earlier press (a double tap) is not kept.")]
+        [Min(0.02f)] public float hopBufferTime = 0.25f;
         [Tooltip("A single press from a standstill (no block stance) starts as a step (the knee goes up, as for a run). If no other press has come this long (s) " +
                  "after it and the key is up, it was a hop: the pressed foot hops and the other leg is held out in front. A run's first step " +
                  "then lasts a moment longer than a hop's wait, which is fine as long as nothing snaps.")]
@@ -989,7 +995,8 @@ namespace SpeedStars.Physical
         const float TouchHeight = 0.03f;       // a swinging foot this near the ground (m), past the fold, is down: a press plants it at once
         const float LockThigh = 10f;           // ... and so is a leg this near the touchdown pose (deg): no catch
         const float LockKnee = 15f;
-        const float HopRepeatWindow = 1f;      // the same key again within this (s) is a hop (the sim's repeat)
+        const float HopBufferLife = 0.75f;     // a kept hop press that has not been taken by then (s) is dropped
+        const float HopRepeatWindow = 1f;     // the same key again within this (s) is a hop (the sim's repeat)
         const float HopRetimeShare = 0.25f;    // a hop's press before this share of the swing, foot on the ground: the swing starts again, no catch
         const float HopTimeFollow = 10f;       // the hop height's flight time follows the real one at this rate (1/s)
         const float IdleRate = 12f;             // a leg turns into the balance leg (and back) this fast (1/s)
@@ -1037,7 +1044,11 @@ namespace SpeedStars.Physical
         readonly float[] _sitW = new float[2];       // each leg's share in the sit-back pivot (blends over sitPivotBlend)
         int _hopPresses, _hopPrevLeg = -1;          // the press count last seen, and the leg of the press before
         double _hopPrevTime = -10.0;
-        bool _hopRepeated;                          // the last press taken was the same leg again: the hop is really on
+        bool _hopRepeated;                          // the last KEY (taken or not) was the same key again: the hop is really on
+        bool _hopOpenPending;                       // the key opened a hop or changed its leg: the press the pose takes next frees the other leg
+        int _hopBufLeg = -1;                        // a hop press that came late in the air (kept, taken when the foot is down), and its time
+        double _hopBufTime;
+        double _motionAt = -10.0;                   // the last time a hop's leg was moving (swing, landing, a stance about to lift)
         int _standLeg = -1, _standPresses;          // the leg of a first press from a standstill that may turn into a hop (hopStandWait), and the press count after it
         double _standTime;
         bool _hopQuick;                             // the hop began from a standstill: its weight follows hopStandSpring and its arc takes the weight whole
@@ -1305,23 +1316,28 @@ namespace SpeedStars.Physical
             // the sim counts every press, so the gate costs no speed). A pair's second key and a jump are not gated.
             // The hop leg in the air shuts it for any time: a press there is a catch, which moved the hip 24 cm in six frames. It opens when the foot is down.
             // An unestablished hop (the first one from a standstill, not yet repeated on its key) lets the other key through: that is a run starting.
-            bool openOther = _hopQuick && !_hopRepeated && leg != _poseLastLeg;
-            bool hopShut = !_jumping && !pairSecond && !openOther && _poseLastTime > -5.0 && HopGateOn() &&
+            bool openOther = _hopQuick && !_hopRepeated && leg != _poseLastLeg && !HopLegInAir();
+            bool hopShut = !_jumping && !fromStand && !pairSecond && !openOther && _poseLastTime > -5.0 && HopGateOn() &&
                            (sinceTaken < hopTime || (sinceTaken < HopRepeatWindow && HopLegInAir()));
+            // What the player means is read from the key, taken or not (after the gate: it judged by the intent before this key).
+            double hopLandsIn = HopLandsIn(time);
+            NoteIntent(leg, time);
             if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (hopShut || sinceTaken < PoseMinGap || (!fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating))))
             {
                 l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
                 _lastPress = time;    // a key that is pressed is alive whether the pose takes it or not (else the legs go to the stock pose mid-swing)
-                // The hop's key pressed again but not taken keeps the hop alive (else presses that fall in the air let the repeat window run out).
-                if (hopShut && leg == _hopPrevLeg) _hopPrevTime = time;
+                // A hop's press that comes as the foot is about to land (or has just) is kept: the last one only, taken when the foot is down.
+                if (hopShut && _hopTarget > 0.5f && hopLandsIn <= hopBufferTime) { _hopBufLeg = leg; _hopBufTime = time; }
                 if (learn && l.cycle > 0f)
                     l.cycle = Mathf.Lerp(l.cycle, Mathf.Clamp((float)keyGap, HopCycleFloor(), 2f * Mathf.Max(stepTimeMin, stepTimeMax)), stepFollow);
                 return;
             }
             // Keys in turn pressed faster than that: the step that is taken is the other leg's of the one before (L R L R every 0.08 s is
             // still a run, not one leg hopping); one key pressed again and again stays one leg.
+            // In a hop the key pressed is the leg it moves (the gate may have refused the keys between, so "the same leg as the last taken" proves nothing).
             int use = leg;
-            if (alternating && leg == _poseLastLeg) use = 1 - leg;
+            if (alternating && leg == _poseLastLeg && _hop * (1f - _pair) < 0.5f) use = 1 - leg;
+            _hopBufLeg = -1;
             _posePrevGap = (float)System.Math.Min(10.0, sinceTaken);
             _poseLastTime = time;
             _poseLastLeg = use;
@@ -1385,6 +1401,93 @@ namespace SpeedStars.Physical
 
         /// <summary>A one-leg hop is on: the last press taken repeated a key, not a pair, not a hold. The hard press gate (hopTime) applies.</summary>
         bool HopGateOn() => _hopTarget > 0.5f && _pair < 0.5f && _heldNow < 0.5f;
+
+        /// <summary>
+        /// What the player means by this key, read from the key itself whether the pose takes the press or not (the gate drops many): the same key
+        /// again within a second is a hop on it; the other key while hopping is a change of leg; two changes in a row (or both keys together,
+        /// or the first key from a standstill) are a run. The pose only follows it: the other leg is freed when the pose takes the press.
+        /// </summary>
+        void NoteIntent(int leg, double time)
+        {
+            bool within = time - _hopPrevTime < HopRepeatWindow;
+            float wasTarget = within ? _hopTarget : 0f;
+            bool together = leftLeg.lastKey >= 0.0 && rightLeg.lastKey >= 0.0 &&
+                            System.Math.Abs(leftLeg.lastKey - rightLeg.lastKey) < 2f * PairWindow;
+            bool same = within && leg == _hopPrevLeg && !together && _pair < 0.5f;
+            // A change of key in a hop is a hop on the other leg, not a step of a run: dropping the hop for one press brought both
+            // feet down and up together. Two changes in a row (the last key was itself a change) are a run.
+            bool swap = within && !same && !together && _hopRepeated && wasTarget > 0.5f;
+            _hopTarget = same || swap ? 1f : 0f;
+            _hopRepeated = same;
+            if (_hopTarget > 0.5f) _hopOpenPending |= wasTarget < 0.5f || swap;
+            else
+            {
+                _hopOpenPending = false;
+                _hopBufLeg = -1;
+            }
+            _hopPrevLeg = leg;
+            _hopPrevTime = time;
+        }
+
+        /// <summary>Seconds until the hop leg is down (0 when it is, or when no hop leg is moving); large when its stance has not lifted yet.</summary>
+        double HopLandsIn(double time)
+        {
+            if (_poseLastLeg < 0) return 0.0;
+            Leg l = Legs(_poseLastLeg);
+            switch (l.phase)
+            {
+                case LegPhase.Recover:
+                case LegPhase.Mid: return System.Math.Max(0.0, l.swingT0 + l.swingLen - time);
+                case LegPhase.Push: return l.grounded && !l.swungSincePress ? 10.0 : 0.0;
+                default: return 0.0;
+            }
+        }
+
+        /// <summary>A leg is doing what a press asked: swinging, landing, being caught, or standing on a press that has not lifted yet.</summary>
+        bool HopMoving()
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                Leg l = Legs(i);
+                switch (l.phase)
+                {
+                    case LegPhase.Recover:
+                    case LegPhase.Mid:
+                    case LegPhase.Land: return true;
+                    case LegPhase.Push:
+                        if (!l.grounded || !l.swungSincePress) return true;
+                        break;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// The kept hop press (OnTapped) is taken once the hop leg is down and has stood hopStanceMin, hopTime after the last press taken:
+        /// the same key hops again, the other key changes the leg. Only the pose moves; the sim counted the press when it came.
+        /// </summary>
+        void TakeBuffered(double now)
+        {
+            if (_hopBufLeg < 0) return;
+            if (now - _hopBufTime > HopBufferLife || !HopGateOn() || _jumping || _poseLastLeg < 0)
+            {
+                _hopBufLeg = -1;
+                return;
+            }
+            if (HopLegInAir() || now - Legs(_poseLastLeg).plantedAt < hopStanceMin || now - _poseLastTime < hopTime) return;
+            int leg = _hopBufLeg;
+            Leg used = Legs(leg);
+            _hopBufLeg = -1;
+            _posePrevGap = (float)System.Math.Min(10.0, now - _poseLastTime);
+            _poseLastTime = now;
+            _poseLastLeg = leg;
+            _posePresses++;
+            used.pressedAt = now;
+            NoteCycle(used, Legs(1 - leg), now, -1.0);
+            _lastPress = now;
+            BeginStance(used, now);
+            _standLeg = -1;
+        }
 
         /// <summary>The hopping leg (the one pressed last) has not landed: swinging, or a touchdown pose still above the ground.</summary>
         bool HopLegInAir()
@@ -1857,6 +1960,9 @@ namespace SpeedStars.Physical
                                 if (leg.toeOff)
                                 {
                                     if (_idleStock) Enter(leg, LegPhase.Rest, time, stockReturnTime);   // no key: the stance ends at home, not in a swing
+                                    // The leg has swung since its press: nothing asked for another swing (a foot that landed before its press and ran out of
+                                    // reach, or the other leg's press taking over). It goes home; the next press catches it from there.
+                                    else if (leg.swungSincePress) Enter(leg, LegPhase.Rest, time, _hop * (1f - _pair) > 0.5f ? stockReturnTime : frontHomeTime * SpeedUp());
                                     else StartSwing(leg, time);
                                 }
                             }
@@ -2433,8 +2539,13 @@ namespace SpeedStars.Physical
                 // The Ready crouch is where the runner always heads; the run stance lasts while a key is down or
                 // presses keep coming (stepTimeMax), so with no input it goes straight back to the crouch (no upright
                 // stance on the way) and between presses it stays in the run.
-                _stepNow = sim.Legs[0].Pressed || sim.Legs[1].Pressed || sim.InJump ||
-                           (_lastPress >= 0.0 && now - _lastPress < Mathf.Lerp(stepTimeMax, HopRepeatWindow, _hop * (1f - _pair)));
+                // A hop is one press: it lasts while its leg moves (and a kept press waits), then hopStopDelay, and the runner stops by itself.
+                // The press window of a run stays (a slow rhythm is still running); a hop's shrinks to the stop delay.
+                float hopW = _hop * (1f - _pair);
+                if (hopW > 0.5f && HopMoving()) _motionAt = now;
+                _stepNow = sim.Legs[0].Pressed || sim.Legs[1].Pressed || sim.InJump || _hopBufLeg >= 0 ||
+                           (hopW > 0.5f && now - _motionAt < hopStopDelay) ||
+                           (_lastPress >= 0.0 && now - _lastPress < Mathf.Lerp(stepTimeMax, hopStopDelay, hopW));
                 _stepping = Mathf.Lerp(_stepping, _stepNow ? 1f : 0f, 1f - Mathf.Exp(-stanceBlend * dt));
                 p = PoseData.Lerp(Get(ready, RunnerPoseDefaults.Ready), Get(run, RunnerPoseDefaults.Run),
                     Mathf.SmoothStep(0f, 1f, sim.Speed / Mathf.Max(0.01f, runPoseSpeed)) * _stepping);
@@ -2608,31 +2719,25 @@ namespace SpeedStars.Physical
             float rockTarget = 1f - Mathf.SmoothStep(0f, 1f, rockU);
             _rockKick = Mathf.MoveTowards(_rockKick, rockTarget, dt / RockRise);
             bool off = preview || sim.InJump;
-            // The hop target comes from the presses themselves (not the sim's slowly built bias, which keeps ~0.5 for a while after a
-            // change of key): the same leg again within a second is 1, the other leg is 0, and a second without a press is 0.
+            // The hop target comes from the keys themselves (NoteIntent, in OnTapped: taken or not, not the sim's slowly built bias). Here only the
+            // pose's side: a kept press is taken once the foot is down, and a press the pose took that opened the hop (or changed its leg) frees the other leg.
+            TakeBuffered(now);
             if (_posePresses != _hopPresses)
             {
                 _hopPresses = _posePresses;
-                int leg = _poseLastLeg;
-                double at = _poseLastTime;
-                float wasTarget = now - _hopPrevTime < HopRepeatWindow ? _hopTarget : 0f;
-                bool within = leg >= 0 && at - _hopPrevTime < HopRepeatWindow;
-                // Both keys together are a pair, never a hop: neither the second key's change, nor the first key of a pair repeating the
-                // leg the last pair ended on (_pair is still the last frame's here: it is smoothed below).
-                bool together = leftLeg.lastPress >= 0.0 && rightLeg.lastPress >= 0.0 &&
-                                System.Math.Abs(leftLeg.lastPress - rightLeg.lastPress) < 2f * PairWindow;
-                bool same = within && leg == _hopPrevLeg && !together && _pair < 0.5f;
-                // A change of key in a hop is a hop on the other leg, not a step of a run: dropping the hop for one press brought both
-                // feet down and up together. Two changes in a row (the last press was itself a change) are a run.
-                bool swap = within && !same && !together && _hopRepeated && wasTarget > 0.5f;
-                _hopTarget = same || swap ? 1f : 0f;
-                _hopRepeated = same;
                 // The hop opens (or changes leg): the other leg leaves the ground whatever phase it is in, so the switch from a run is the same every time
                 // (a leg that stayed down carried the body and the flight spring never ran: only the pressed foot moved). A planted foot
                 // starts from the angles it was shown with (Enter); the pin lets go by itself once the leg is the balance leg (PinFeet).
-                if (_hopTarget > 0.5f && (wasTarget < 0.5f || swap) && !off && _dive <= 0.3f) FreeOtherLeg(leg, now);
-                _hopPrevLeg = leg;
-                _hopPrevTime = at;
+                if (_hopOpenPending && _hopTarget > 0.5f && _poseLastLeg >= 0 && !off && _dive <= 0.3f) FreeOtherLeg(_poseLastLeg, now);
+                _hopOpenPending = false;
+            }
+            // No hop, no landing, no press lately: the runner has stopped. The intent is gone with it (a key after this is a first press).
+            if (_idleStock)
+            {
+                _hopTarget = 0f;
+                _hopRepeated = false;
+                _hopOpenPending = false;
+                _hopBufLeg = -1;
             }
             // A single press from a standstill: if nothing else was pressed within hopStandWait and the key is up, it is a hop on that leg. The
             // step the press began (the other leg lifting) is taken over from where it is: that leg goes on to the held-out leg. Any later press
@@ -2649,6 +2754,7 @@ namespace SpeedStars.Physical
                     _hopPrevLeg = _standLeg;
                     _hopPrevTime = _standTime;
                     _hopQuick = true;   // the first hop from a standstill: its weight comes in quickly (hopStandSpring) and its arc is whole
+                    _hopOpenPending = false;
                     FreeOtherLeg(_standLeg, now);
                     _standLeg = -1;
                 }
@@ -3446,6 +3552,9 @@ namespace SpeedStars.Physical
             _standLeg = -1;
             _hopQuick = false;
             _hopRepeated = false;
+            _hopOpenPending = false;
+            _hopBufLeg = -1;
+            _motionAt = -10.0;
             _hopPrevTime = -10.0;
             _posePresses = _armPresses = _hopPresses = 0;
             _poseLastLeg = -1;

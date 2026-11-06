@@ -310,6 +310,12 @@ namespace SpeedStars.PlayTests
             s = new Script("standHops"); double standAt = s.Same(3f, 0.45f, Tap, 1); s.Strip(standAt); s.Strip(standAt + 0.6); list.Add(s.Build(0.5f));
             // T-154: the hop stops: 3 s of nothing after a 0.3 s hop rhythm; the strip starts when the keys end (the held-out leg lowers softly).
             s = new Script("hopStop"); s.Same(2.5f, 0.3f, Tap, 1); s.Strip(s.LastRelease); list.Add(s.Build(3f));
+            // T-157: every motion is from a press. fastTap: a fast run, then the same key once and nothing for 2 s (one hop or one step, then the brake pose).
+            s = new Script("fastTap"); s.Alt(3f, 0.24f, Tap); double tapAt = s.Same(0.1f, 2f, Tap, s.LastLeg); s.Strip(tapAt); s.Strip(tapAt + 0.5); s.Strip(tapAt + 1.1); list.Add(s.Build(2.5f));
+            // T-157: one key a second apart: one hop per press, the runner stops between them.
+            s = new Script("hopTap"); double hopTapAt = s.Same(4f, 1.0f, Tap, 1); s.Strip(hopTapAt); s.Strip(hopTapAt + 1.0); list.Add(s.Build(2f));
+            // T-157: a change of leg in a slow hop rhythm (0.60 s): 2 s on one key, 2 s on the other; the hop weight must not drop at the change.
+            s = new Script("hopSwapSlow"); s.Same(2f, 0.60f, Tap, 1); double swapSlowAt = s.Same(2f, 0.60f, Tap, 0); s.Strip(swapSlowAt); s.Strip(swapSlowAt + 0.6); list.Add(s.Build(0.5f));
             // T-153: the block stance, Marks at 0.3 s, Set at 1.1 s, the first press at 1.9 s; strips on Marks, Set, the first press and 0.55 s later.
             s = new Script("blockStart"); s.BlockStart(); s.Alt(3f, 0.30f, Tap); foreach (float st in new[] { 0.3f, 1.1f, 1.8f, 2.45f }) s.Strips.Add(st); list.Add(s.Build(0.5f));
             s = new Script("blockPair"); s.BlockStart(); s.Pair(2f, 0.35f, Tap, 0.015f, 0.015f, false); foreach (float st in new[] { 1.1f, 1.8f, 2.45f }) s.Strips.Add(st); list.Add(s.Build(0.5f));
