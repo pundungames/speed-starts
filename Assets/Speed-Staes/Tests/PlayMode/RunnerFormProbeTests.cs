@@ -261,7 +261,7 @@ namespace SpeedStars.PlayTests
             var list = new List<Scenario>();
             Script s;
 
-            s = new Script("start"); s.Alt(3f, 0.30f, Tap); s.Strips.Add(0.40f); list.Add(s.Build(0.5f));
+            s = new Script("start"); s.Alt(3f, 0.30f, Tap); s.Strips.Add(0.40f); s.Strips.Add(1.05f); list.Add(s.Build(0.5f));
 
             s = new Script("runToHop"); s.Alt(3f, 0.27f, Tap, 0); s.Strip(s.Same(2f, 0.27f, Tap, 1) + 0.27); list.Add(s.Build(0.5f));
             s = new Script("hopSwap"); s.Same(2.5f, 0.27f, Tap, 1); s.Strip(s.Same(2f, 0.27f, Tap, 0)); list.Add(s.Build(0.5f));
@@ -283,6 +283,14 @@ namespace SpeedStars.PlayTests
             s = new Script("holdBoth"); s.Alt(2.5f, 0.27f, Tap, 0); h = s.Held(1.2f, 0.27f, 0, 1); s.Strip(h); s.Strip(h + 1.2); s.Alt(1.5f, 0.27f, Tap); list.Add(s.Build(0.5f));
 
             s = new Script("stop"); s.Alt(3f, 0.27f, Tap); s.Strip(s.LastRelease); list.Add(s.Build(2.5f));
+
+            // T-148: from a standstill. restart: run, stand 2.2 s (speed 0), run again; the strips start at the second take-off and 0.65 s on.
+            s = new Script("restart"); s.Alt(2.5f, 0.30f, Tap); s.Next = s.LastRelease + 2.2;
+            double again = s.Alt(2.5f, 0.30f, Tap); s.Strip(again); s.Strip(again + 0.65); list.Add(s.Build(0.5f));
+            s = new Script("walkStart"); s.Alt(3f, 0.60f, Tap); s.Strips.Add(0.40f); s.Strips.Add(1.05f); list.Add(s.Build(0.5f));
+            s = new Script("oneTap"); s.Strip(s.Alt(0.1f, 0.30f, Tap)); list.Add(s.Build(2f));
+            s = new Script("holdStand"); s.Strip(s.Held(1.2f, 0.27f, 1)); list.Add(s.Build(0.5f));
+            s = new Script("holdBothStand"); s.Strip(s.Held(1.2f, 0.27f, 0, 1)); list.Add(s.Build(0.5f));
             return list.ToArray();
         }
 
