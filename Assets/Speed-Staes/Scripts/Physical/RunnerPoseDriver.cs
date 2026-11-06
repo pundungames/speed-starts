@@ -391,7 +391,7 @@ namespace SpeedStars.Physical
         public Vector3 runSwingKeys = new Vector3(0.22f, 0.45f, 0.68f);
         [Tooltip("One-leg hop swing keys (same meaning as swingKeys; blended in by the hop weight): the back kick comes later, so the leg has time to get " +
                  "far back before it comes round.")]
-        public Vector3 hopSwingKeys = new Vector3(0.36f, 0.62f, 0.84f);
+        public Vector3 hopSwingKeys = new Vector3(0.45f, 0.68f, 0.86f);
         [Tooltip("From the folded pass to the thigh's peak the knee opens later than the thigh comes forward: 1 = it keeps pace, " +
                  "higher = the leg drives from the hip first and the knee opens late; it is open as the thigh arrives. The ends do not move.")]
         [Range(1f, 4f)] public float kneeOpenDelay = 2f;
@@ -476,7 +476,7 @@ namespace SpeedStars.Physical
         [Tooltip("One-key hop (blended in by the hop weight): toe-off, how far back the pressed leg goes with the foot down.")]
         public LegAngles hopPushEnd = new LegAngles(-45f, 172f);
         [Tooltip("One-key hop swing, first key: the leg kicked well back, the knee bent (under 90).")]
-        public LegAngles hopRecover = new LegAngles(-72f, 85f);
+        public LegAngles hopRecover = new LegAngles(-85f, 85f);
         [Tooltip("One-key hop swing, second key: the deepest flex, thigh and knee both small.")]
         public LegAngles hopMid = new LegAngles(15f, 70f);
         [Tooltip("One-key hop swing, third key: the leg opens again going down.")]
@@ -602,6 +602,9 @@ namespace SpeedStars.Physical
         [Tooltip("One-leg hop: a hop's swing is never planned longer than this press-to-press time (s), however slow the key: at a slow rhythm the " +
                  "foot waits on the ground for the next press. Not shorter than hopTime.")]
         [Min(0.1f)] public float hopTimeMax = 0.6f;
+        [Tooltip("One-leg hop: the swing (flight) is at least this long (s) at full hop weight, whatever the rhythm taught: the leg needs the time to go " +
+                 "well back and come round. A hop's next press waits for the landing anyway.")]
+        [Min(0.12f)] public float hopSwingMin = 0.34f;
         [Tooltip("How much of each new press-to-press time a leg's cycle takes on (1 = just the last one): one odd press " +
                  "does not jerk the legs.")]
         [Range(0.1f, 1f)] public float stepFollow = 0.5f;
