@@ -1,7 +1,7 @@
 ---
 id: T-160
 title: Bayrak yarisi ekibi: ana ekranda 4 kisilik ekip, ayak secimi, yarista ayni ekip
-status: todo
+status: review
 owner: ui-agent
 depends_on: [T-159]
 owns_paths:
@@ -16,14 +16,29 @@ owns_paths:
   - "docs/tasks/T-160-bayrak-ekibi.md"
 touches_scene: true
 branch: agent/ik-kosucu
-commits: []
+commits:
+  - 3cc6ea7a
+  - 5ba3d660
+  - 374b9266
 tests:
   - "Assets/Speed-Staes/Tests/EditMode/Meta/Relay/"
 analytics:
   - "yok: projede analytics yok"
-needs: []
-started:
-finished:
+needs:
+  - tip: SCENE
+    durum: open
+    not: "HomeScreen prefab: CharacterCard/Content/RelayLeg satiri (etiket + onceki/sonraki ok) ve HomeScreenView.relayLegRoot/relayLegText/previousLegButton/nextLegButton baglari. Builder: Tools > Speed Stars > Build > Home card - add the relay leg row to the HomeScreen prefab (patch). Satir kartin isim hapinin kopyasidir, bir satir asagida; konumu Inspector'dan ayarlanir."
+  - tip: SCENE
+    durum: open
+    not: "Home.unity: 'Relay Team' nesnesi (MenuRelayTeam, runnerPrefab, mainRunner, 3 slot). Builder: Tools > Speed Stars > Build > Home scene - add the relay team stage (patch). Slotlar ana karakterin yanina konur, sahnede tasinir. Yeni .cs dosyalarinin .meta'lari Unity acilinca olusur."
+  - tip: WIRING
+    durum: open
+    not: "ProjectInstaller -> IRelayTeam: Container.Bind<IRelayTeam>().FromMethod(c => SpeedStars.Meta.Relay.RelayTeamService.Create(c.Container.Resolve<ISaveStore>(), c.Container.Resolve<ICosmeticService>(), c.Container.Resolve<RaceEventCatalog>())).AsSingle();  (ICosmeticService satirindan sonra)"
+  - tip: WIRING
+    durum: open
+    not: "RaceBots (Scripts/Bridge/RaceBots.cs, owns_paths disinda) -> RaceRelay.UseTeam: [Inject] void ConstructRelayTeam([InjectOptional] IRelayTeam team) alani sakla; _relay.Bind(this) satirindan hemen sonra _relay.UseTeam(_relayTeam, _cosmetics, _catalog); (Awake'te _relay yaratildigi yer, satir ~197). Bu olmadan yaris takimi eskisi gibi rastgele giyinir."
+started: 2026-11-06
+finished: 2026-11-06
 blocked_reason:
 ---
 
@@ -64,3 +79,8 @@ Ayak degistirince kiyafet degisimi aninda ama kucuk bir geri bildirimle (ana kar
 `docs/CALISMA-KURALLARI.md` §3, §3.1, §9, §11, §12 gecerli: UI runtime'da kurulmaz, `.unity/.prefab/.asset/.meta` yazma, `Scripts/Core/Installers/` yazma, `Find` yok, Zenject, DOTween, `TMP_Text`, `[SerializeField] private`. Unity calistirma. Commit `git commit -F <mesaj-dosyasi> -- <yollar>`, mesaj dosyasi scratch'te (`C:\Users\Monster\AppData\Local\Temp\claude\d--Pundun-speed-starts\1c7d0dba-289b-4948-ba09-42f88d086602\scratchpad\`), adinda "main" yok, son satir `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Git'i Bash ile cagir. `git add -A`, push yok. Calisma yeri `D:\Pundun\speed-starts-ik`.
 
 ## Calisma notu
+- Veri: `IRelayTeam`/`RelayTeamService` ayri kayit anahtari ("relay", Practice gibi `ISaveStore`); `PlayerProgress` owns_paths disinda oldugu icin ona alan eklenmedi. Ayak sayisi katalogdaki en uzun bayrak etkinligi.
+- Ana ekran: `HomeScreenView` bayrakta ayagin preset'ini `ICosmeticService`'te secer, cikinca onceki preset'e doner; wardrobe'dan donuste secilen preset ayagin yeni presetidir.
+- Sahne: `MenuRelayTeam` (Bridge) kendi kendine gorunur (Home ustte + bayrak, Race of the Day degil); UI asmdef Bridge'i goremedigi icin HomeScreenView ile baglanti yok.
+- Yaris: `RaceRelay.UseTeam` seam'i acildi; `RaceBots` owns_paths disinda oldugu icin cagri WIRING maddesinde.
+- Zorlandigim yer: derleyici/Unity yok, hicbir sey calistirilmadi; builder yerlesimi (satir ve slot konumu) gorulmeden tahmin, kullanici tasir.
