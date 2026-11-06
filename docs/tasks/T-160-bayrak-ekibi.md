@@ -26,11 +26,11 @@ analytics:
   - "yok: projede analytics yok"
 needs:
   - tip: SCENE
-    durum: open
-    not: "HomeScreen prefab: CharacterCard/Content/RelayLeg satiri (etiket + onceki/sonraki ok) ve HomeScreenView.relayLegRoot/relayLegText/previousLegButton/nextLegButton baglari. Builder: Tools > Speed Stars > Build > Home card - add the relay leg row to the HomeScreen prefab (patch). Satir kartin isim hapinin kopyasidir, bir satir asagida; konumu Inspector'dan ayarlanir."
+    durum: closed
+    not: "HomeScreen prefab: CharacterCard/Content/RelayLeg satiri (etiket + onceki/sonraki ok) ve HomeScreenView.relayLegRoot/relayLegText/previousLegButton/nextLegButton baglari. Builder: Tools > Speed Stars > Build > Home card - add the relay leg row to the HomeScreen prefab (patch). Satir kartin isim hapinin kopyasidir, bir satir asagida; konumu Inspector'dan ayarlanir. -> builder kopyada calisti (HOME_RELAY_ROW_OK); satir CharacterCard/RelayLeg (el ile duzenlenmis prefab'ta Select/Previous/Next Content altinda degil, builder Select'i kopyalayacak sekilde duzeltildi), 4 view baglari dolu"
   - tip: SCENE
-    durum: open
-    not: "Home.unity: 'Relay Team' nesnesi (MenuRelayTeam, runnerPrefab, mainRunner, 3 slot). Builder: Tools > Speed Stars > Build > Home scene - add the relay team stage (patch). Slotlar ana karakterin yanina konur, sahnede tasinir. Yeni .cs dosyalarinin .meta'lari Unity acilinca olusur."
+    durum: closed
+    not: "Home.unity: 'Relay Team' nesnesi (MenuRelayTeam, runnerPrefab, mainRunner, 3 slot). Builder: Tools > Speed Stars > Build > Home scene - add the relay team stage (patch). Slotlar ana karakterin yanina konur, sahnede tasinir. Yeni .cs dosyalarinin .meta'lari Unity acilinca olusur. -> builder kopyada calisti (HOME_RELAY_TEAM_OK); Relay Team: runnerPrefab, mainRunner, 3 slot dolu; .meta dosyalari geldi"
   - tip: WIRING
     durum: open
     not: "ProjectInstaller -> IRelayTeam: Container.Bind<IRelayTeam>().FromMethod(c => SpeedStars.Meta.Relay.RelayTeamService.Create(c.Container.Resolve<ISaveStore>(), c.Container.Resolve<ICosmeticService>(), c.Container.Resolve<RaceEventCatalog>())).AsSingle();  (ICosmeticService satirindan sonra)"
