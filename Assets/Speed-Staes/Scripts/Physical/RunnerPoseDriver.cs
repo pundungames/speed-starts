@@ -482,7 +482,7 @@ namespace SpeedStars.Physical
         [Tooltip("One-key hop swing, third key: the leg opens again going down.")]
         public LegAngles hopKneeDrive = new LegAngles(48f, 95f);
         [Tooltip("One-key hop touchdown: the foot lands a little ahead of the hips, the leg nearly straight; it stays down while the body passes over it.")]
-        public LegAngles hopContact = new LegAngles(24f, 158f);
+        public LegAngles hopContact = new LegAngles(30f, 165f);
         [Tooltip("The leg the hops leave out (not the one pressed again and again): held out in front, straight and still (thigh, knee; deg), " +
                  "in the air, balancing; it carries nothing and does not sway with the bounce. Blended in by the hop weight.")]
         public LegAngles hopFreeLeg = new LegAngles(55f, 175f);
