@@ -1251,13 +1251,21 @@ namespace SpeedStars.Physical
             leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid || leg.phase == LegPhase.Land ||
             (leg.phase == LegPhase.Push && !leg.grounded);
 
+        /// <summary>A standing start's first step that has not passed its tucked peak: it is lifting, not coming down, so the pressed foot stays planted.</summary>
+        static bool StandStepRising(Leg leg, double time)
+        {
+            if (!leg.standStep || leg.tuckKnots == null || leg.swingLen <= 0f) return false;
+            if (leg.phase != LegPhase.Recover && leg.phase != LegPhase.Mid) return false;
+            return (time - leg.swingT0) / leg.swingLen < leg.tuckKnots[3];
+        }
+
         /// <summary>
         /// The other foot has come down after this one, or is about to (past the folded pass, within a touch and a half of the
         /// ground): this foot's turn to lift. Read in TickLegs only, where the ankle is the last frame's final height.
         /// </summary>
-        bool OtherTakesOver(Leg leg, Leg other) =>
+        bool OtherTakesOver(Leg leg, Leg other, double time) =>
             (other.grounded && other.plantedAt > leg.plantedAt) ||
-            (ComingDown(other) && other.angles.thigh >= Key(mid, hopMid).thigh &&
+            (ComingDown(other) && !StandStepRising(other, time) && other.angles.thigh >= Key(mid, hopMid).thigh &&
              other.ankle.y - AnkleGround(other) <= TouchHeight * 1.5f);
 
         /// <summary>
@@ -1599,7 +1607,7 @@ namespace SpeedStars.Physical
                             else
                             {
                                 // Running, this foot lifts as the other one comes down or has come down (read here: the ankle is final).
-                                if (_plainRun > 0.5f && !_idleStock && OtherTakesOver(leg, partner)) leg.toeOff = true;
+                                if (_plainRun > 0.5f && !_idleStock && OtherTakesOver(leg, partner, time)) leg.toeOff = true;
                                 // Both keys together: the feet leave the ground in the same frame. One still down, or still being caught, holds the other until it is done too.
                                 if (leg.toeOff && _pair > 0.5f && !_idleStock && !partner.toeOff && partner.phase == LegPhase.Push)
                                     leg.toeOff = false;

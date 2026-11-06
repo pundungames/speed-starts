@@ -49,3 +49,4 @@ Kullanici 06.11: "karakterin durur pozisyondan yurumeye kosmaya gecmesi acayip k
 - Commit 1 8c104752: senaryolar (restart, walkStart, oneTap, holdStand, holdBothStand; start'a 1.05 seridi). Commit 2 2433b47d: ilk basista `_idleStock` (onceki karede dogru) + Rest'teki karsi bacak, cift ikincisi/hop/tutma degil -> `StartSwing(.., standing: true)`; mid uyluk baslangic uyluktan geriye gitmez (`MidKeyFor`).
 - Commit 3: `_armW = Max(_speedCurve, armStepShare) * gate` (ayni yumusatma); `StepArm` bunu okur, `_gaitW` baska okuyuculari ayni.
 - Cift basis: kaldirilan bacak ikinci basista `BeginStance` -> `StartCatch` ile iner (ertelenmedi); olculmedi. Belirsiz: kisa ciftte ayak havada kalabilir.
+- Tur 2: `OtherTakesOver` yukselen `standStep` salinimini (tuck tepesine varmadan) 'iniyor' saymaz; basilan ayak planted kalir.
