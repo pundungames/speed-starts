@@ -1,7 +1,7 @@
 ---
 id: T-153
 title: Yaris basi sprint dizisi: blok durusu (READY), kalca yukari (SET), cikis ve one yatik ivmelenme (GO)
-status: review
+status: merged
 owner: gameplay-agent
 depends_on: [T-152]
 owns_paths:
@@ -12,9 +12,16 @@ owns_paths:
   - "docs/tasks/T-153-sprint-cikisi.md"
 touches_scene: false
 branch: agent/ik-kosucu
-commits: [4826ef02, 239cecba, 27eb46d6]
+commits:
+  - 4826ef02
+  - 239cecba
+  - 27eb46d6
+  - d6ee8d1b
+  - 4ec0c46f
+  - 15b06814
+  - dc534398
 tests:
-  - "gerekmiyor: gorsel; olcum RunnerTransitions_WriteFrameStrips + Play duman testleri supervizorde"
+  - "Assets/Speed-Staes/Tests/PlayMode/FalseStartSmokeTests.cs"
 analytics:
   - "yok: projede analytics yok"
 needs: []
@@ -60,3 +67,5 @@ Kullanici 06.11, 4 kareli sprint cikisi gorseli: "sunlari da yap." Durus su an R
 - Tur 3: `stanceLean.x` 84, `blockOutSpring` 2 Hz, `armDriveQuick` 1.5 / `armDriveWidth` 0.35 (`StepArm`, `_driveW` 0 iken eski). Olculmedi.
 - PlayMode: `FalseStartSmokeTests` iki test (stance READY/SET/GO/ilk basis, FalseStart/yeniden READY); `startStance` reflection ile okunur, bot yoksa atlanir. Calistirilmadi.
 - Bot stance: `RaceBots.BeginRound` applies the current phase (READY could precede the bots' build, they stayed None until SET). Test: unchanged.
+- Olcu (t153-e): Marks kalca 0.51, govde 80, el (bilek) 0.18, arka diz 0.10; Set kalca 0.67, govde 101, el 0.16, on ayak yerde. Ilk basis: egim 80 -> 52 (0.3 sn) -> 26 (0.9 sn) -> 16 (1.3 sn). Kol -50..59. Hiz ve sim 0.0 fark; `startStance` None iken T-151 sayilari ayni.
+- Kalan: kare hareketi blok cikisi 5 civari; iki tus cikisi ~7. Blok modeli yok. Duz kalkista `driveLeanStand` 18 de geldi. Oyun ici kamera acisi tam takim ekran goruntulerinde bakilacak.

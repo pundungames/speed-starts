@@ -7,12 +7,12 @@ MOD: süpervizör
 
 Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakter-ik.md`. Push kullanıcıda.
 
-## 06.11: kullanıcı notları kapandı, gözünü bekliyor (`IKTest`, T-145..T-150 `merged`)
-- **T-145 bacak** karna çekilir, baldır öne (`tuckPeak`, `shinThrow`, `tuckLead`). **T-146 kol** adım süresine bağlı yay (`armPumpRate`, `armPumpWidth`). **T-147 tek ayağa giriş** yavaş (`hopBodySpring`).
-- **T-148 duruştan kalkış:** ilk basışta karşı bacak kalkar (`standStep`), kalça `_stepping` ile yükselir (`stanceStepShare`), kollar `armStepShare`.
-- **T-150 girdi kapısı yalnız pozda** (`PressStillBusy`, `pressGateShare`, `pressGateSameShare`, `pressGateMax`, `lastKey`, `_altStreak`); sim her basışı sayar: fizikte reddetmek spam'i 10.4 sn yapar (en iyi 9.8).
-- **T-149 fren pozu:** `_brake`, `brakeLean`, `brakeFront/Back`, `armBrake`, `brakeSpeed`; bitişte `RunnerCooldown` kapatır (`brakePose`). Bitişi gözle kimse görmedi.
-- Son kayıt `t149-b`. Araçlar: `swing_table.py`, `arm_table.py`, CSV `d_posePresses`.
+## 06.11: kullanıcı notları kapandı, gözünü bekliyor (`IKTest`, T-145..T-153 `merged`)
+- **T-145 bacak** karna, baldır öne. **T-146 kol** adım süresine bağlı yay. **T-147 tek ayağa giriş** yavaş. **T-148 duruştan kalkış** gerçek adım.
+- **T-150 girdi kapısı yalnız pozda** (sim her basışı sayar: fizikte reddetmek spam'i 10.4 sn yapar). **T-149 fren pozu** (`RunnerCooldown` bitişte kapatır, bitişi gözle kimse görmedi).
+- **T-151 sekiş:** yükseklik süreye bağlı (`hopRiseTime`), `sin²`, `hopContact` önde. **T-152 kol:** `armThrowSpring`, `armElbowSpring`.
+- **T-153 sprint çıkışı:** READY Marks, SET Set, ilk basış `_driveW`; `RaceSessionAdapter`, `RaceBots` yazar. Sayılar değişince prefab Reimport (TUZAK).
+- Son kayıt `t153-e`. Araçlar: `swing_table.py`, `arm_table.py`, CSV `d_posePresses`, `L_handY`.
 
 ## Çalışma düzeni
 - Kullanıcı `IKTest`'te (ana klasör, Unity açık). İş `agent/ik-kosucu`'da, worktree `D:\Pundun\speed-starts-ik`. Geçirme: kopyada doğrula, ana klasörde `git merge --ff-only <hash>`. `agent/ik-govde` worktree'si silinebilir.
@@ -25,7 +25,7 @@ Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakte
 - Koşu zıplaması `runBounce` 0.5, basma pozu `contactRun` 30/145, kamera Y sabit (`trackPull`, `trackSpeedSmooth`), fren `stopBrakeForce` 12.
 - Açık: tuş 0.18 sn basılı kalınca gövde kambur (kalça 66°); tek ayakta gövde ~30° geride, denge ayağı alçak; dalışta kollar yukarıda, önce çift zıplıyor; koşudan çift zıplamaya ~0.25 sn gecikme; tuşsuz süzülmede ayak kayar. Hareket oturunca `PlayerController.md`.
 - Prefab'ta kayıtlı, kod varsayılanı işlemez: `pushEnd`, `recover`, `mid`, `reach`, `holdBack`, `holdSupport`, `hipShare` 0.65, `liftKick` 1.5, `armBack`; sim `stopDelay`, `stopRamp`. Prefab Editor'den kaydedilirse tüm yeni alanlar dosyaya yazılır ve koddan değişmez: yeni ad aç.
-- Tam takım 06.11 (`6bd5340c`, T-145..T-150 dahil): EditMode 1281/1285, PlayMode 98/103 (3 atlanan); 6 kırmızı, hepsi backlog'da, koşucu dışı.
+- Tam takım 06.11 (`6bd5340c`, T-150 dahil; T-151..T-153 için koşuyor): EditMode 1281/1285, PlayMode 98/103 (3 atlanan); 6 kırmızı, hepsi backlog'da, koşucu dışı.
 
 ## Ölçüm
 - Kayıt: `powershell -File scripts/runner-probe.ps1 -Kaynak D:\Pundun\speed-starts-ik -Etiket x -Sahip T-xxx -Filtre RunnerTransitions_WriteFrameStrips` (yaklaşık 1 dk, commit'li hâli ölçer). Çıktı `D:\Pundun\form-probe\x\`: `trans_<senaryo>.csv` her kare, `trans_<senaryo>_strip<i>.png` 40 ardışık kare.
