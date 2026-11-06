@@ -1295,7 +1295,9 @@ namespace SpeedStars.Physical
             // A hop that is on is a hard gate: no press, either key, is taken before hopTime has passed since the last one taken (the pose only;
             // the sim counts every press, so the gate costs no speed). A pair's second key and a jump are not gated.
             // The hop leg in the air shuts it for any time: a press there is a catch, which moved the hip 24 cm in six frames. It opens when the foot is down.
-            bool hopShut = !_jumping && !pairSecond && _poseLastTime > -5.0 && HopGateOn() &&
+            // An unestablished hop (the first one from a standstill, not yet repeated on its key) lets the other key through: that is a run starting.
+            bool openOther = _hopQuick && !_hopRepeated && leg != _poseLastLeg;
+            bool hopShut = !_jumping && !pairSecond && !openOther && _poseLastTime > -5.0 && HopGateOn() &&
                            (sinceTaken < hopTime || (sinceTaken < HopRepeatWindow && HopLegInAir()));
             if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (hopShut || sinceTaken < PoseMinGap || (!fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating))))
             {
