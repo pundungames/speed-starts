@@ -55,7 +55,10 @@ namespace SpeedStars.Core.Race
         [Range(10f, 90f)]
         [SerializeField] private float introFieldOfView = 38f;
 
-        [Tooltip("How long the camera stays there (real seconds from READY). GO ends it at the latest.")]
+        [Tooltip("On: the opening shot holds through READY and SET and swings to the race camera on GO (as in the original). Off: it swings after Intro Hold Seconds.")]
+        [SerializeField] private bool introHoldUntilGo = true;
+
+        [Tooltip("With Intro Hold Until Go off: how long the camera stays there (real seconds from READY). GO ends it at the latest.")]
         [Min(0f)]
         [SerializeField] private float introHoldSeconds = 1.1f;
 
@@ -221,6 +224,7 @@ namespace SpeedStars.Core.Race
         public float IntroLookHeight => introLookHeight;
         public float IntroStanceLookDrop => introStanceLookDrop;
         public float IntroFieldOfView => introFieldOfView;
+        public bool IntroHoldUntilGo => introHoldUntilGo;
         public float IntroHoldSeconds => introHoldSeconds;
         public float IntroSwingSeconds => introSwingSeconds;
         public float GoSeconds => goSeconds;
