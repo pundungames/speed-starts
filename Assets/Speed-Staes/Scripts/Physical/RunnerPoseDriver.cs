@@ -551,7 +551,7 @@ namespace SpeedStars.Physical
         [Header("Arms (deg, + = forward): one key moves one leg and one arm — right key: right leg + left arm")]
         [Tooltip("Upper arm (deg, −) with its leg all the way back — fixed: speed and the key poses do not move it, " +
                  "so a held leg keeps its arm right here.")]
-        public float armBack = -40f;
+        public float armBack = -60f;
         [Tooltip("Elbow bend with the arm all the way back (deg): the forearm has turned back with the upper arm " +
                  "and points down-back (stays so while held).")]
         public float elbowBack = 30f;
@@ -572,7 +572,7 @@ namespace SpeedStars.Physical
         [Tooltip("Arms angled out sideways from the body (deg), so they clear the trunk.")]
         public float armOutward = 8f;
         [Tooltip("Shoulder (clavicle) follows the arm swing (deg at full swing).")]
-        public float shoulderFollow = 12f;
+        public float shoulderFollow = 20f;
 
         [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
         [Tooltip("The leg going over first: thigh and knee over the bar (knee 180 = straight).")]
