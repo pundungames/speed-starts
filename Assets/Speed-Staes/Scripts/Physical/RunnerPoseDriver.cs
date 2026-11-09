@@ -845,13 +845,6 @@ namespace SpeedStars.Physical
         [Tooltip("Most the running legs turn back with the forward lean (deg): with the head far forward (mashing) the feet " +
                  "still come down under the body.")]
         public float runLegLeanMax = 40f;
-        [Tooltip("Running, the hips lean forward up to this (deg, the lean part, on top of the pose's own pitch); past it the " +
-                 "rest is the whole body tipping forward about the foot on the ground (legs, hips and trunk in one line, like " +
-                 "the sit-back the other way), so the trunk does not fold 45+ deg over upright legs. The trunk's own angle is " +
-                 "the same as before. Not in a dive, a hold, a hop, a pair, braking or the start.")]
-        public float runBendMax = 25f;
-        [Tooltip("Most the whole body tips forward that way (deg).")]
-        public float runTipMax = 35f;
 
         [Header("Arms (deg, + = forward): one key moves one leg and one arm — right key: right leg + left arm")]
         [Tooltip("Upper arm (deg, −) with its leg all the way back — fixed: speed and the key poses do not move it, " +
@@ -2784,11 +2777,7 @@ namespace SpeedStars.Physical
             // 3. Forward the hips take their part of the lean (the waist bends the rest on them), within
             //    pelvisPitchRange. Back, the whole body leans about the feet on the ground (below, after the height).
             float backLean = Mathf.Min(0f, lean);
-            // Running: the hips bend only up to runBendMax, the rest tips the whole body forward about the planted foot (SitBack's way).
-            float runW = preview ? 0f : _plainRun * _stepping * (1f - _dive) * (1f - _heldNow) * (1f - _brake) * (1f - _stanceW) * (1f - _driveW);
-            float fwdTip = Mathf.Min(Mathf.Max(0f, lean - runBendMax), Mathf.Max(0f, runTipMax)) * runW;
-            float bodyTip = backLean + fwdTip;   // the whole body's turn about the feet (deg, + forward)
-            float hipPitch = Mathf.Clamp(p.pelvisPitch + lean - backLean - fwdTip, pelvisPitchRange.x, Mathf.Lerp(pelvisPitchRange.y, stanceHipMax, _stanceW));
+            float hipPitch = Mathf.Clamp(p.pelvisPitch + lean - backLean, pelvisPitchRange.x, Mathf.Lerp(pelvisPitchRange.y, stanceHipMax, _stanceW));
             // The lean part only (the pose's own tilt does not turn the legs).
             float legTurn = hipPitch - p.pelvisPitch;
             _legTurn = legTurn;
@@ -2849,7 +2838,7 @@ namespace SpeedStars.Physical
                 leg.softSet = true;
             }
             leftLeg.rock = rightLeg.rock = 0f;
-            if (bodyTip != 0f) SitBack(ref hip, bodyTip);
+            if (backLean < 0f) SitBack(ref hip, backLean);
             else leftLeg.sitShiftZ = rightLeg.sitShiftZ = 0f;
             // Whatever moved the body last (the height spring, the sit-back's pivot) is limited, then the floors are kept:
             // the last step that moves anything is the one that clamps (docs/TUZAKLAR.md: after the sit-back, the foot went in).
@@ -2863,17 +2852,17 @@ namespace SpeedStars.Physical
                 if (!preview && !leg.grounded && !leg.carry) leg.ankle.y = Mathf.Max(leg.ankle.y, _ground + FreeFootRise(leg, Mathf.Min(0f, backLean)) * leg.riseW);
             }
             if (!preview) ShowPlantedAngles(hip, pelvisTilt, p.width, backLean, legTurn);
-            PinFeet(hip, bodyTip != 0f ? Quaternion.Euler(bodyTip, 0f, 0f) * pelvisTilt : pelvisTilt, p.width, dt);
+            PinFeet(hip, backLean < 0f ? Quaternion.Euler(backLean, 0f, 0f) * pelvisTilt : pelvisTilt, p.width, dt);
 
             // Write the rig. The waist base sits at waistAngle plus its bend on the hips; the chain (TwistChain)
             // fills the chest in between it and the top, whose angle the neck and head work from (0 = the rig's rest).
             Quaternion rootRot = transform.rotation;
             _neckTrimNow = preview ? 0f : neckTrim * Mathf.SmoothStep(0f, 1f, _lean.Value / Mathf.Max(1f, neckTrimLean));
             hipTarget.position = transform.TransformPoint(hip);
-            hipTarget.rotation = rootRot * Quaternion.Euler(bodyTip, 0f, 0f) * pelvisTilt * _restHipRot;
+            hipTarget.rotation = rootRot * Quaternion.Euler(backLean, 0f, 0f) * pelvisTilt * _restHipRot;
             spineRootTarget.rotation = hipTarget.rotation * Quaternion.Euler(waistAngle + baseBend, 0f, 0f);
             // Leaning back the head keeps looking ahead: it takes only headKeep of the lean, the neck bends the rest.
-            WriteHead(hipPitch + bodyTip + waistAngle - _restWaist + waistTopAngle + bend,
+            WriteHead(hipPitch + backLean + waistAngle - _restWaist + waistTopAngle + bend,
                 p.pelvisPitch + waistAngle - _restWaist,
                 headLean - backLean, backLean, p.headDown, rootRot);
             WriteLeg(leftLeg);
@@ -3223,7 +3212,7 @@ namespace SpeedStars.Physical
             Vector3 pivot = (hip * hipW + sum) / (hipW + sumW);
             Quaternion r = Quaternion.Euler(backLean, 0f, 0f);
             // Hopping on one key the foot lands flat: the heel rock fades with the hop weight.
-            float rock = Mathf.Min(0f, backLean) * heelRock * (1f - _hop * (1f - _pair));   // forward (the run's tip) the foot stays flat
+            float rock = backLean * heelRock * (1f - _hop * (1f - _pair));
             Quaternion foot = Quaternion.Euler(rock, 0f, 0f);
             Vector3 oldHip = hip;
             hip = pivot + r * (hip - pivot);
@@ -3235,8 +3224,7 @@ namespace SpeedStars.Physical
                     // A leg that is not held hangs from the hip's new place without turning with the trunk (the run's legs stay
                     // under it; only a hold and a dive, _dive, turn the legs with it). Turning it about the hip moved its foot by
                     // ~20 cm: at the touchdown the foot was nailed where the unturned leg is, and again at the toe-off.
-                    // Tipping forward (the run's tip, runBendMax) the whole body is one line: the running legs turn with it.
-                    Quaternion turn = Quaternion.Slerp(Quaternion.identity, r, leg.phase == LegPhase.Hold || backLean > 0f ? 1f : _dive);
+                    Quaternion turn = Quaternion.Slerp(Quaternion.identity, r, leg.phase == LegPhase.Hold ? 1f : _dive);
                     float oldZ = leg.ankle.z;
                     leg.knee = hip + turn * (leg.knee - oldHip);
                     leg.ankle = hip + turn * (leg.ankle - oldHip);
