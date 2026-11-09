@@ -43,6 +43,7 @@ namespace SpeedStars.Runner
         [SerializeField,HideInInspector] public bool configured;
         [SerializeField,HideInInspector] Transform generatedRoot;
         readonly List<LoopWayChunk> live=new List<LoopWayChunk>();
+        readonly List<int> recentBuildingTypes=new List<int>();
         int nextIndex;
         public bool IsConfigured {get{return configured&&roads!=null&&roads.Length>0&&city!=null&&city.prefab;}}
         void Start()
@@ -69,9 +70,14 @@ namespace SpeedStars.Runner
         {
             if(!IsConfigured)return;
             ClearGenerated();
+            var startPaving=transform.Find("Front Sidewalk - Authored Start");
+            if(startPaving){startPaving.gameObject.SetActive(false);if(Application.isPlaying)Destroy(startPaving.gameObject);else DestroyImmediate(startPaving.gameObject);}
+            var pavingRoot=Group("Front Sidewalk - Authored Start",transform);
+            FrontSidewalkGeometry.Build(pavingRoot,FrontRoadEdge(),startZ,startZ+segmentLength,sidewalk);
             var root=new GameObject("Generated Loops - Seed "+seed);root.transform.SetParent(transform,false);
             root.AddComponent<LoopWayGenerated>();generatedRoot=root.transform;
             live.Clear();
+            recentBuildingTypes.Clear();
             for(int i=1;i<Mathf.Clamp(loopCount,1,30);i++)live.Add(BuildChunk(i));
             nextIndex=Mathf.Max(1,loopCount);
 #if UNITY_EDITOR
@@ -102,6 +108,21 @@ namespace SpeedStars.Runner
         {var g=new GameObject(name);g.transform.SetParent(parent,false);return g.transform;}
         void SetPosition(GameObject g,float x,float y,float z)
         {g.transform.localPosition=new Vector3(x,y,z);}
+        public float FrontRoadEdge()
+        {
+            float edge=float.MinValue;
+            foreach(var road in roads)
+            {
+                var bounds=LocalBounds(road.prefab,road.prefab.transform);
+                var matrix=Matrix4x4.TRS(road.position,road.rotation,road.scale);
+                for(int corner=0;corner<8;corner++)
+                {
+                    var p=bounds.center+Vector3.Scale(bounds.extents,new Vector3((corner&1)==0?-1:1,(corner&2)==0?-1:1,(corner&4)==0?-1:1));
+                    edge=Mathf.Max(edge,matrix.MultiplyPoint3x4(p).x);
+                }
+            }
+            return edge;
+        }
         LoopWayChunk BuildChunk(int index)
         {
             int chunkSeed=ChunkSeed(seed,index);var r=new System.Random(chunkSeed);
@@ -110,6 +131,7 @@ namespace SpeedStars.Runner
             float a=startZ+segmentLength*index,b=a+segmentLength;info.start=a;info.end=b;
             var infrastructure=Group("Continuous Road Sidewalk Bridge Canal",root);
             foreach(var road in roads)Spawn(road,infrastructure,segmentLength*index);
+            FrontSidewalkGeometry.Build(infrastructure,FrontRoadEdge(),a,b,sidewalk);
             TileSlabs(sidewalk,infrastructure,index==1?Mathf.Min(a,sidewalkEnd):a,b,1.5f);
             TileSlabs(curb,infrastructure,index==1?Mathf.Min(a,sidewalkEnd):a,b,1.5f);
             Stretch(water,infrastructure,Mathf.Max(a,waterEnd),b);
@@ -154,6 +176,7 @@ namespace SpeedStars.Runner
             if(frontageKind==0||(frontageKind==1&&(busStop==null||!busStop.prefab))||(frontageKind==2&&(park==null||!park.prefab))||(frontageKind==3&&(hospital==null||!hospital.prefab)))
                 BuildFrontage(frontage,a,b,index,info);
             else BuildLandmark(frontage,frontageKind==1?busStop:frontageKind==2?park:hospital,a,b,index,frontageKind);
+            FillLongFrontageGaps(frontage,a,b,index);
             // Street props use spaced curb-side bays. Deep building frontage stays separate.
             var vegetation=Group("Visible Foreground Hedge Groups",root);
             int phase=DepthPhase(index);int hedgeCount=phase==4?2:1;info.hedgeCount=hedgeCount;
@@ -198,17 +221,39 @@ namespace SpeedStars.Runner
         }
         public int FrontageKind(int index)
         {
-            // Two urban sections, a low bus-stop section, then introduce the park before random continuation.
-            if(index==1)return 0;if(index==2)return 3;if(index==3)return 1;if(index==4)return 0;if(index==5)return 2;
-            int previous=2;
-            for(int i=6;i<=index;i++)
+            // Each shuffled district contains buildings, hospital, park and shelter once.
+            // The first four streamed sections already show the complete public-space palette.
+            int cycle=Mathf.Max(0,index-1)/4,slot=Mathf.Max(0,index-1)%4;
+            var order=FrontageDistrict(cycle);
+            if(cycle>0&&order[0]==FrontageDistrict(cycle-1)[3])
+            {int swap=order[0];order[0]=order[1];order[1]=swap;}
+            return order[slot];
+        }
+        int[] FrontageDistrict(int cycle)
+        {
+            var order=new[]{0,1,2,3};var random=new System.Random(ChunkSeed(seed,cycle)^18275301);
+            for(int i=order.Length-1;i>0;i--){int j=random.Next(i+1),swap=order[i];order[i]=order[j];order[j]=swap;}
+            return order;
+        }
+        List<int> BuildingCandidates(System.Random random,Transform frontage)
+        {
+            var fresh=new List<int>();var recent=new List<int>();
+            var shuffled=new List<int>();for(int i=0;i<buildings.Length;i++)shuffled.Add(i);
+            for(int i=shuffled.Count-1;i>0;i--){int j=random.Next(i+1),swap=shuffled[i];shuffled[i]=shuffled[j];shuffled[j]=swap;}
+            foreach(int type in shuffled)
             {
-                int roll=new System.Random(ChunkSeed(seed,i)^18275301).Next(100);
-                int next=roll<40?0:roll<60?1:roll<82?2:3;
-                if(next==previous&&next!=0)next=0;
-                previous=next;
+                bool alreadyHere=false;
+                if(buildings[type]!=null&&buildings[type].prefab)
+                    foreach(Transform child in frontage)
+                        if(child.gameObject.activeSelf&&child.name==buildings[type].prefab.name){alreadyHere=true;break;}
+                if(recentBuildingTypes.Contains(type)||alreadyHere)recent.Add(type);else fresh.Add(type);
             }
-            return previous;
+            fresh.AddRange(recent);return fresh;
+        }
+        void RecordBuilding(int type)
+        {
+            recentBuildingTypes.Add(type);
+            while(recentBuildingTypes.Count>Mathf.Min(2,Mathf.Max(0,buildings.Length-1)))recentBuildingTypes.RemoveAt(0);
         }
         void BuildLandmark(Transform parent,LoopWayAsset asset,float a,float b,int index,int kind)
         {
@@ -223,13 +268,13 @@ namespace SpeedStars.Runner
         void BuildFrontage(Transform parent,float a,float b,int index,LoopWayChunk info)
         {
             var random=new System.Random(ChunkSeed(seed,index)^1274126177);
-            var order=new List<int>();for(int i=0;i<buildings.Length;i++)order.Add(i);
-            for(int i=order.Count-1;i>0;i--){int j=random.Next(i+1);int t=order[i];order[i]=order[j];order[j]=t;}
-            float cursor=a+Range(random,1.5f,6);
+            if(buildings==null||buildings.Length==0)return;
+            float cursor=a+Range(random,2f,11f);
             int placed=0,clusterLeft=random.Next(2,4),headingOffset=random.Next(3);
-            while(cursor<b-4&&placed<DepthBudget(index))
+            int budget=random.Next(2,5);
+            while(cursor<b-4&&placed<budget)
             {
-                int type=order[placed%order.Count];var building=Spawn(buildings[type],parent);
+                int type=BuildingCandidates(random,parent)[0];var building=Spawn(buildings[type],parent);
                 // Front-facing facades and opposite corner views, rather than the same right-facing angle.
                 int heading=(placed+headingOffset)%3;
                 float yaw=(heading==0?246:heading==1?270:294)+Range(random,-3,3);
@@ -243,12 +288,54 @@ namespace SpeedStars.Runner
                 // Align the visible facade to irregular setbacks, keeping a clear pedestrian strip.
                 float facadeX=sidewalk.position.x+sidewalk.scale.x*.5f-(DepthPhase(index)==4?8.5f:11f)-Range(random,0,1.5f);
                 p.x+=facadeX-bounds.max.x;building.transform.localPosition=p;
-                SupportRiverfrontPlot(building,parent);bounds=LocalBounds(building,transform);placed++;clusterLeft--;
-                float gap=clusterLeft>0?Range(random,7,12):Range(random,19,30);
+                SupportRiverfrontPlot(building,parent);RecordBuilding(type);bounds=LocalBounds(building,transform);placed++;clusterLeft--;
+                float gap=clusterLeft>0?Range(random,5,15):Range(random,12,21);
                 if(clusterLeft<=0)clusterLeft=random.Next(2,4);
                 cursor=bounds.max.z+gap;
             }
             info.buildingType=-1;
+        }
+        // Keep the loose composition, but do not leave most of a section without a facade.
+        // This also checks the empty ends of landmark sections, not just building clusters.
+        void FillLongFrontageGaps(Transform parent,float a,float b,int index)
+        {
+            if(buildings==null||buildings.Length==0)return;
+            var random=new System.Random(ChunkSeed(seed,index)^491723);
+            for(int pass=0;pass<8;pass++)
+            {
+                var occupied=new List<Bounds>();
+                foreach(Transform child in parent)
+                    if(child.gameObject.activeSelf&&!child.name.StartsWith("Grounded Riverside Terrace - "))
+                        occupied.Add(LocalBounds(child.gameObject,transform));
+                occupied.Sort((left,right)=>left.min.z.CompareTo(right.min.z));
+                float cursor=a,gapStart=a,gapEnd=a,longest=0;
+                foreach(var bounds in occupied)
+                {
+                    float end=Mathf.Min(b,bounds.min.z);
+                    if(end-cursor>longest){longest=end-cursor;gapStart=cursor;gapEnd=end;}
+                    cursor=Mathf.Max(cursor,bounds.max.z);
+                }
+                if(b-cursor>longest){longest=b-cursor;gapStart=cursor;gapEnd=b;}
+                if(longest<=20f)break;
+                GameObject infill=null;Bounds measured=new Bounds();int selected=-1;
+                foreach(int type in BuildingCandidates(random,parent))
+                {
+                    var asset=buildings[type];
+                    if(asset==null||!asset.prefab)continue;
+                    var candidate=Spawn(asset,parent);
+                    candidate.transform.localRotation=Quaternion.Euler(0,Range(random,249,291),0);
+                    candidate.transform.localScale*=Range(random,.64f,.76f);
+                    measured=LocalBounds(candidate,transform);
+                    if(measured.size.z+7f<=longest){infill=candidate;selected=type;break;}
+                    candidate.SetActive(false);if(Application.isPlaying)Destroy(candidate);else DestroyImmediate(candidate);
+                }
+                if(!infill)break;
+                float center=Range(random,gapStart+3.5f+measured.extents.z,gapEnd-3.5f-measured.extents.z);
+                center=Mathf.Clamp(center,gapStart+3.5f+measured.extents.z,gapEnd-3.5f-measured.extents.z);
+                float facade=sidewalk.position.x+sidewalk.scale.x*.5f-Range(random,9.5f,12.5f);
+                infill.transform.localPosition+=new Vector3(facade-measured.max.x,0,center-measured.center.z);
+                SupportRiverfrontPlot(infill,parent);RecordBuilding(selected);
+            }
         }
         void SupportRiverfrontPlot(GameObject item,Transform parent){var b=LocalBounds(item,transform);float bankEdge=sidewalk.position.x-sidewalk.scale.x*.5f;if(b.min.x>=bankEdge)return;var foundation=GameObject.CreatePrimitive(PrimitiveType.Cube);foundation.name="Grounded Riverside Terrace - "+item.name;foundation.transform.SetParent(parent,false);float bottom=water.position.y-.16f,top=b.min.y+.025f;foundation.transform.localPosition=new Vector3(b.center.x,(bottom+top)*.5f,b.center.z);foundation.transform.localScale=new Vector3(b.size.x+.15f,Mathf.Max(.2f,top-bottom),b.size.z+.15f);var source=sidewalk.prefab.GetComponentInChildren<Renderer>();if(source)foundation.GetComponent<Renderer>().sharedMaterial=source.sharedMaterial;var collider=foundation.GetComponent<Collider>();if(Application.isPlaying)Destroy(collider);else DestroyImmediate(collider);}
         int CloudCount(int index,int min,int max)

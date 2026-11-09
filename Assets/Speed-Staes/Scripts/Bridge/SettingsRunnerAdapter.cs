@@ -65,6 +65,7 @@ namespace SpeedStars.Bridge
                 _scratch.AddRange(_player.GetComponentsInChildren<EarlyStepFeedback>(true));
                 _scratch.AddRange(_player.GetComponentsInChildren<LateStepFeedback>(true));
                 _scratch.AddRange(_player.GetComponentsInChildren<MomentumWindFeedback>(true));
+                _scratch.AddRange(_player.GetComponentsInChildren<SweatFeedback>(true));
                 _scratch.AddRange(_player.GetComponentsInChildren<PremiumCosmeticSparkles>(true));
                 _scratch.AddRange(_player.GetComponentsInChildren<PremiumShoeTrails>(true));
             }

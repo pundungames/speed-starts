@@ -48,6 +48,7 @@ namespace SpeedStars.Physical
             if (!GetComponent<EarlyStepFeedback>()) gameObject.AddComponent<EarlyStepFeedback>();
             if (!GetComponent<LateStepFeedback>()) gameObject.AddComponent<LateStepFeedback>();
             if (!GetComponent<MomentumWindFeedback>()) gameObject.AddComponent<MomentumWindFeedback>();
+            if (!GetComponent<SweatFeedback>()) gameObject.AddComponent<SweatFeedback>();
         }
 
         void OnDestroy()
