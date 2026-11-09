@@ -186,6 +186,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float lockBallZ;   // where the ball was in front of the ankle when the foot was nailed (m)
             [System.NonSerialized] public bool pinned;      // a foot that stands on the ground without being planted (rest, front, reach, land) is nailed in the world
             [System.NonSerialized] public Vector3 pinPoint; // ...at this world point
+            [System.NonSerialized] public float pinLiftW;   // how far in the melt's lift is (0..1): it comes in over PinLiftIn, not in a frame
             [System.NonSerialized] public float pinOffset;  // after a pin lets go: how far behind the leg's own place the foot still is (m), melting away
             [System.NonSerialized] public float sitShiftZ;  // last frame: how far the sit-back moved this free leg's ankle along z (m)
             [System.NonSerialized] public LegAngles dispAngles;   // a planted leg's angles as shown (from the sat-back hip to the nailed ankle)
@@ -1041,6 +1042,8 @@ namespace SpeedStars.Physical
         const float PinExit = 1.8f;            // a pinned foot lets go when it is raised this many TouchHeights (hysteresis)
         const float PinMelt = 20f;             // a foot the pin let go of melts to its leg's place at this rate (1/s)
         const float PinLift = 0.06f;           // ...and stays up to this much (m) off the ground while it does
+        const float PinMeltMax = 1.2f;         // the most a let-go foot melts from (m): past it the rest is a jump
+        const float PinLiftIn = 0.08f;         // ...that lift comes in over this long (s): all at once it threw the foot 6 cm up in a frame
         const float ReachCarryExit = 0.12f;    // ...and stops carrying only above this (hysteresis)
         const float ReachCarryHeight = 0.08f;  // a reaching foot this near the ground (m) carries the body; higher it does not
         const float ReachKneeSpeed = 1.8f;     // the reaching knee opens this much faster than the thigh comes forward
@@ -3310,19 +3313,27 @@ namespace SpeedStars.Physical
                     {
                         leg.knee.z += (targetZ - leg.ankle.z) * 0.5f;
                         leg.ankle.z = targetZ;
+                        // The pin is where the foot is SHOWN: a weak pin (strength, faded by the hold weight) lets the foot slide that frame,
+                        // and when the weight changes (a key let go, strength back to 1) it holds the foot there instead of pulling it
+                        // back to where it was first put down (the front foot of a one-key hold jumped 30-40 cm back in one frame).
+                        if (strength < 1f) leg.pinPoint = transform.TransformPoint(new Vector3(leg.ankle.x, pinLocal.y, targetZ));
                     }
                 }
                 // A planted leg took the pinned place as its nail (footZ), so nothing melts there; a lifted or released one melts from it.
                 if (leg.grounded) leg.pinOffset = 0f;
-                else if (!pin && was) leg.pinOffset = Mathf.Clamp(pinLocal.z - leg.ankle.z, -0.5f, 0.5f);
+                // The melt starts where the foot was shown (the pin point follows it, above).
+                // Up to PinMeltMax: a body gliding on with no key drags a pinned foot ~0.9 m behind its home before the leg runs out of length,
+                // and the old 0.5 m cap threw the rest (~0.4 m) forward in one frame.
+                else if (!pin && was) { leg.pinOffset = Mathf.Clamp(pinLocal.z - leg.ankle.z, -PinMeltMax, PinMeltMax); leg.pinLiftW = 0f; }
                 leg.pinned = pin;
                 if (!pin && leg.pinOffset != 0f)
                 {
                     leg.pinOffset *= Mathf.Exp(-PinMelt * Mathf.Max(0f, dt));
                     if (Mathf.Abs(leg.pinOffset) < 0.002f) leg.pinOffset = 0f;
+                    leg.pinLiftW = Mathf.MoveTowards(leg.pinLiftW, 1f, Mathf.Max(0f, dt) / PinLiftIn);
                     leg.ankle.z += leg.pinOffset;
                     leg.knee.z += leg.pinOffset * 0.5f;
-                    leg.ankle.y += Mathf.Min(PinLift, Mathf.Abs(leg.pinOffset) * 0.6f);
+                    leg.ankle.y += Mathf.Min(PinLift, Mathf.Abs(leg.pinOffset) * 0.6f) * leg.pinLiftW;
                 }
             }
         }
