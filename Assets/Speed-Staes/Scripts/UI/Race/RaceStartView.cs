@@ -67,6 +67,8 @@ namespace SpeedStars.UI.Race
         private bool _shown;
         private bool _preview;
         private ISfx _sfx;
+        private IMusic _music;
+        private bool _musicResting;
 
         [Inject]
         public void InjectStart(IRaceSession session)
@@ -79,9 +81,24 @@ namespace SpeedStars.UI.Race
 
         /// <summary>Optional: without a bound sound system the countdown is silent.</summary>
         [Inject]
-        public void InjectAudio([InjectOptional] ISfx sfx)
+        public void InjectAudio([InjectOptional] ISfx sfx, [InjectOptional] IMusic music)
         {
             _sfx = sfx;
+            _music = music;
+        }
+
+        /// <summary>
+        /// The background music rests during READY and SET (and a false start's FAIL, which starts the countdown over), so the beeps
+        /// and the tension carry the start; it comes back on GO and whenever the countdown ends otherwise (cancel, leaving the race).
+        /// </summary>
+        private void MusicFor(RaceStartPhase phase)
+        {
+            if (_music == null) return;
+            bool rest = phase == RaceStartPhase.Ready || phase == RaceStartPhase.Set || phase == RaceStartPhase.FalseStart;
+            if (rest == _musicResting) return;
+            _musicResting = rest;
+            if (rest) _music.Stop();
+            else _music.Play();
         }
 
         private void Awake() => Initialize();
@@ -91,6 +108,7 @@ namespace SpeedStars.UI.Race
         private void OnDisable()
         {
             Unsubscribe();
+            MusicFor(RaceStartPhase.Idle); // leaving during the countdown must not leave the menu silent
             Hide();
         }
 
@@ -114,6 +132,7 @@ namespace SpeedStars.UI.Race
             _subscribed = true;
             // Bound late (the countdown already began): show where it is instead of waiting for the next event.
             ShowPhase(_signal.StartPhase);
+            MusicFor(_signal.StartPhase);
         }
 
         /// <summary>
@@ -155,6 +174,7 @@ namespace SpeedStars.UI.Race
         private void OnPhaseChanged(RaceStartPhase phase)
         {
             ShowPhase(phase);
+            MusicFor(phase);
             if (_sfx == null) return;
             if (phase == RaceStartPhase.Ready) _sfx.Play(SfxId.CountdownReady);
             else if (phase == RaceStartPhase.Set) _sfx.Play(SfxId.CountdownSet);
