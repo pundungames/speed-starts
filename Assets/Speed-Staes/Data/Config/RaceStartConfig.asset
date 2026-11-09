@@ -12,17 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3b80d7f6918d774398d4d9d5b062095, type: 3}
   m_Name: RaceStartConfig
   m_EditorClassIdentifier: 
-  readySeconds: 0.8
-  setWaitMinSeconds: 0.6
-  setWaitMaxSeconds: 1.4
+  readySeconds: 2
+  setWaitMinSeconds: 2
+  setWaitMaxSeconds: 2
   maxFrameSeconds: 0.1
   finishWordSeconds: 1.3
-  falseStartSeconds: 2.2
+  falseStartSeconds: 2
   falseStartTimeScale: 0.45
   introCameraOffset: {x: 2.3, y: 1.05, z: 3.3}
   introLookHeight: 1.25
   introStanceLookDrop: 0.45
   introFieldOfView: 38
+  introHoldUntilGo: 1
   introHoldSeconds: 1.1
   introSwingSeconds: 1
   readyPose: {fileID: 7970073201812882101, guid: f1e8e1bfafe7fa241ba6b4181f3eba85, type: 3}
@@ -55,6 +56,8 @@ MonoBehaviour:
   outlineFadePower: 3
   bannerScale: 1.39
   dimColor: {r: 0.023529412, g: 0.101960786, b: 0.25490198, a: 0.5294118}
+  falseStartDimColor: {r: 0.85, g: 0.05, b: 0.08, a: 0.55}
+  falseStartFlashSeconds: 1
   readySetOutline: 0
   reduceMotion: 0
   reducedFadeSeconds: 0.08

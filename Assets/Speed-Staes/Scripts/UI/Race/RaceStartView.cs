@@ -33,6 +33,9 @@ namespace SpeedStars.UI.Race
         [Tooltip("BackdropRoot: the full-screen dim and the banner (background + flag) behind the words (T-064). A sibling under the Group, never a parent of the word, so the word's squash and growth never touch it. It shows and hides with the Group.")]
         [SerializeField] private GameObject backdropRoot;
 
+        [Tooltip("BackdropRoot/StartDimScreen: the full-screen dim; it flashes red during FAIL. Empty = found by name under the backdrop.")]
+        [SerializeField] private Image dimImage;
+
         [Tooltip("Group: the speed lines and the word (the art's 1024x576 canvas x the config's group scale, built into its size); shows and hides with the countdown.")]
         [SerializeField] private RectTransform group;
 
@@ -253,9 +256,32 @@ namespace SpeedStars.UI.Race
             if (!red && !config.ReadySetOutline) outline.a = 0f;
             wordText.outlineColor = outline;
 
+            ApplyDim();
+
             SetAlpha(impactImages, pose.ImpactAlpha);
             SetAlpha(tensionImages, pose.TensionAlpha);
             SetAlpha(releaseImages, pose.ReleaseAlpha);
+        }
+
+        /// <summary>
+        /// FAIL flashes the dim red (starting red, a cosine back to the normal dim and again); every other phase keeps the normal dim.
+        /// Real time (the view's own clock), so the slowed-down fall does not slow the blinking.
+        /// </summary>
+        private void ApplyDim()
+        {
+            if (dimImage == null && backdropRoot != null)
+            {
+                Transform found = backdropRoot.transform.Find("StartDimScreen");
+                if (found != null) dimImage = found.GetComponent<Image>();
+            }
+            if (dimImage == null) return;
+            if (_phase != RaceStartPhase.FalseStart)
+            {
+                dimImage.color = config.DimColor;
+                return;
+            }
+            float red = 0.5f + 0.5f * Mathf.Cos(2f * Mathf.PI * _seconds / config.FalseStartFlashSeconds);
+            dimImage.color = Color.Lerp(config.DimColor, config.FalseStartDimColor, red);
         }
 
         private static void SetAlpha(Image[] images, float alpha)

@@ -55,7 +55,10 @@ namespace SpeedStars.Core.Race
         [Range(10f, 90f)]
         [SerializeField] private float introFieldOfView = 38f;
 
-        [Tooltip("How long the camera stays there (real seconds from READY). GO ends it at the latest.")]
+        [Tooltip("On: the opening shot holds through READY and SET and swings to the race camera on GO (as in the original). Off: it swings after Intro Hold Seconds.")]
+        [SerializeField] private bool introHoldUntilGo = true;
+
+        [Tooltip("With Intro Hold Until Go off: how long the camera stays there (real seconds from READY). GO ends it at the latest.")]
         [Min(0f)]
         [SerializeField] private float introHoldSeconds = 1.1f;
 
@@ -179,6 +182,13 @@ namespace SpeedStars.Core.Race
         [Tooltip("Colour of the full-screen dim behind the banner (the art's 6,26,65,135). A flat colour on an Image, no texture. Read when the prefab is built.")]
         [SerializeField] private Color dimColor = new Color(6f / 255f, 26f / 255f, 65f / 255f, 135f / 255f);
 
+        [Tooltip("FAIL (false start): the full-screen dim flashes between its own colour and this red, so an early press reads at a glance.")]
+        [SerializeField] private Color falseStartDimColor = new Color(0.85f, 0.05f, 0.08f, 0.55f);
+
+        [Tooltip("One red flash of the FAIL dim, red to normal and back (real seconds). Smaller = faster blinking.")]
+        [Min(0.05f)]
+        [SerializeField] private float falseStartFlashSeconds = 1f;
+
         [Tooltip("Off: READY and SET are plain navy on the cream banner (as approved); only GO! (red) keeps the navy outline.")]
         [SerializeField] private bool readySetOutline;
 
@@ -214,6 +224,7 @@ namespace SpeedStars.Core.Race
         public float IntroLookHeight => introLookHeight;
         public float IntroStanceLookDrop => introStanceLookDrop;
         public float IntroFieldOfView => introFieldOfView;
+        public bool IntroHoldUntilGo => introHoldUntilGo;
         public float IntroHoldSeconds => introHoldSeconds;
         public float IntroSwingSeconds => introSwingSeconds;
         public float GoSeconds => goSeconds;
@@ -230,6 +241,8 @@ namespace SpeedStars.Core.Race
         public float BannerWordFontSize => bannerWordFontSize;
         public float BannerScale => bannerScale;
         public Color DimColor => dimColor;
+        public Color FalseStartDimColor => falseStartDimColor;
+        public float FalseStartFlashSeconds => falseStartFlashSeconds;
         public bool ReadySetOutline => readySetOutline;
         public float OutlineThicknessRatio => outlineThicknessRatio;
         public float OutlineWidth => outlineWidth;

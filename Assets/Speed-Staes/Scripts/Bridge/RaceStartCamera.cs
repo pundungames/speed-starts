@@ -6,7 +6,7 @@ namespace SpeedStars.Bridge
 {
     /// <summary>
     /// Every race opens with the camera in front of the player's runner, on its right, so the player can pick out which one is theirs in
-    /// a lane that changes each race; then it swings round to the race camera. The race camera keeps running underneath (its own snap,
+    /// a lane that changes each race; it holds there through READY and SET and swings round to the race camera on GO (config). The race camera keeps running underneath (its own snap,
     /// zoom and follow), and this only blends from the opening place to where that one put the camera this frame, so the end of the swing
     /// is exactly the race camera and there is nothing to hand back. Real time, so the tutorial's waiting does not stop the swing.
     /// Added by RaceSessionAdapter; its LateUpdate comes right after the race camera's.
@@ -70,7 +70,7 @@ namespace SpeedStars.Bridge
             RaceStartConfig config = _session.StartSettings;
             float seconds = Mathf.Min(Time.unscaledDeltaTime, config.MaxFrameSeconds);
             _held += seconds;
-            if (_go || _held >= config.IntroHoldSeconds) _swing += seconds / config.IntroSwingSeconds;
+            if (_go || (!config.IntroHoldUntilGo && _held >= config.IntroHoldSeconds)) _swing += seconds / config.IntroSwingSeconds;
             if (_swing >= 1f)
             {
                 Stop();
