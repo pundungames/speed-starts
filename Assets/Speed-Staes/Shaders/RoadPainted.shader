@@ -66,7 +66,9 @@ Shader "Speed Stars/Road Painted"
                     float silverMask=neutralMask*smoothstep(0.40,0.58,sourceBrightness);
                     base=lerp(base,metal*1.10,silverMask);
                 }
-                else if(height<0.20 && (height>0.025 || IN.worldPos.x> -0.51 || IN.worldPos.x< -10.75))
+                // Raised curb geometry only. Ground markings stay at y=0 even
+                // when the road is translated or its width changes.
+                else if(height>0.025 && height<0.20)
                 {
                     float phase=frac(IN.worldPos.z/max(_RepeatLength,0.01));
                     float slab=floor(phase*14);

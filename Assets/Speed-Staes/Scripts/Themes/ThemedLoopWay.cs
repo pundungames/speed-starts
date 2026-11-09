@@ -58,6 +58,7 @@ namespace SpeedStars.Themes
                 {var materials=renderer.sharedMaterials;for(int m=0;m<materials.Length;m++)materials[m]=materials[m]&&materials[m].HasProperty("_Asphalt")&&materials[m].GetFloat("_Asphalt")>.5f?theme.asphaltMaterial:theme.paletteMaterial;renderer.sharedMaterials=materials;}
             }
             var terrain=Group("Continuous Theme Setting",root);
+            FrontSidewalkGeometry.Build(terrain,LoopWayGenerator.LocalBounds(infrastructure.gameObject,transform).max.x,a,b,theme.pathMaterial);
             bool romanSetting=theme.concept==EnvironmentConcept.RomeByzantium;
             bool wideGround=romanSetting||theme.concept==EnvironmentConcept.Egypt;
             if(!theme.noGround)Block(terrain,"Continuous Ground",new Vector3(wideGround?-78:-43,-.55f,(a+b)*.5f),new Vector3(wideGround?132:64,.7f,SectionLength),theme.groundMaterial);
