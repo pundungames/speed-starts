@@ -57,7 +57,7 @@ powershell -File D:\Pundun\agent-kit\install.ps1 -Proje D:\yol\yeni-oyun        
 ```
 
 Kurulum ne yapar (`kit-manifest.psd1`):
-- **Kit dosyaları** (kitin malı, projede birebir): `scripts/*.ps1`, `prompts/*.md`, kitin belgeleri
+- **Kit dosyaları** (kitin malı, projede birebir): `scripts/*.ps1`, `scripts/verify.ps1.ORNEK`, `prompts/*.md`, kitin belgeleri
   `agent-kit/` altına salt okunur anlık kopya. Hash'leri `agent-kit/SURUM.json`'a yazılır.
 - **Şablonlar** (yalnız ilk kurulumda, varsa dokunulmaz; sonra projenin malı): `CLAUDE.md`,
   `.claude/settings.json`, `.claude/agents/*.md`, `agent-kit.config.psd1`, `docs/DURUM.md`, `docs/TUZAKLAR.md`,

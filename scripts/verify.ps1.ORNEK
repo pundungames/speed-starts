@@ -1,0 +1,88 @@
+# verify.ps1 — DOGRULAMA KAPISI (iskelet)
+#
+# Bu dosya calisir bir script DEGIL, bir SOZLESME ornegidir. Yeni projede
+# `scripts/verify.ps1` olarak kopyala ve <BURAYA> yerlerini kendi motorunun
+# derleme/test komutuyla doldur.
+#
+# ============================ NEDEN BOYLE ============================
+# Onceki projede tek bir hata bir haftaya mal oldu: dogrulama script'i
+# "Editor projeyi acik tutuyor" (ortam sorunu) ile "kod derlenmiyor" (gercek
+# hata) durumlarini AYNI sifir-disi cikisla bildiriyordu. 25-28.08 arasi
+# 21 ardisik ortam hatasi "DERLEME BASARISIZ" diye kaydedildi ve agent'lar
+# sapasaglam kodu duzeltmeye calisti.
+#
+# Kural: DOGRULAMA KAPISININ UC SONUCU VARDIR.
+#   0      YESIL          -> her sey tamam
+#   1..9   KIRMIZI        -> gercek kod/test hatasi, turu BLOKLAR
+#   10..19 DOGRULANAMADI  -> ortam sorunu, turu bloklamaz ama SAYILIR
+# =====================================================================
+
+[CmdletBinding()]
+param(
+    [switch]$CompileOnly     # hizli mod: sadece derle, test kosma
+)
+
+$ErrorActionPreference = "Continue"
+New-Item -ItemType Directory -Force -Path "pipeline-logs" | Out-Null
+$log = "pipeline-logs/verify-last.log"
+
+# --- 1. ORTAM KONTROLLERI (once bunlar; hepsi 10+ dondurur) -----------
+
+# 1a. Motor/derleyici kurulu mu?
+# <BURAYA: motorun calisir kurulumunu bul. Bulamazsan:>
+#   exit 10
+
+# 1b. Proje dogru yerde mi?
+if (-not (Test-Path "<Assets>")) {
+    Add-Content $log "$(Get-Date -Format 'u') ORTAM: proje bulunamadi"
+    exit 11
+}
+
+# 1c. Editor projeyi kilitlemis mi?
+# DIKKAT: kilit DOSYASININ varligi yetmez. Batchmode yarida kesilince bayat
+# bir kilit kalir ve kapi bos yere kapanir. ONCE gercekten bir surec var mi bak.
+$kilit = "<Temp/UnityLockfile>"
+if (Test-Path $kilit) {
+    $surec = Get-Process "<Unity>" -ErrorAction SilentlyContinue
+    if ($surec) {
+        Add-Content $log "$(Get-Date -Format 'u') ORTAM: Editor projeyi acik tutuyor"
+        exit 12
+    }
+    # Bayat kilit: temizle ve devam et.
+    Remove-Item $kilit -Force -ErrorAction SilentlyContinue
+}
+
+# --- 2. DERLEME -------------------------------------------------------
+# <BURAYA: batchmode derleme komutu>
+# Ciktidan GERCEK derleme hatasi ara ("error CS", "error:", vb.)
+
+$derlemeHatasi = $false   # <BURAYA: ciktidan hesapla>
+if ($derlemeHatasi) {
+    Add-Content $log "$(Get-Date -Format 'u') KIRMIZI: derleme hatasi"
+    exit 1
+}
+
+if ($CompileOnly) {
+    Add-Content $log "$(Get-Date -Format 'u') YESIL: derleme temiz (test kosulmadi)"
+    exit 0
+}
+
+# --- 3. TESTLER -------------------------------------------------------
+# <BURAYA: test kosucusu>
+#   test kosucusu hic calismadiysa  -> exit 2
+#   kirik test kaldiysa             -> exit 3
+
+# --- 4. YESIL ---------------------------------------------------------
+Add-Content $log "$(Get-Date -Format 'u') YESIL"
+exit 0
+
+# ======================= CAGIRAN TARAF ICIN NOT =======================
+# hook-post-agent.ps1 bu kodlari soyle yorumlar:
+#   0        -> sessizce devam
+#   10,11,12 -> "DOGRULANAMADI" olarak loglar, agent'i DURDURMAZ, ama
+#               ardisik sayiyi tutar; 5'i gecerse insan mudahalesi ister
+#   digeri   -> agent'i durdurur, "kodun derlenmiyor" der
+#
+# Yeni bir ortam cikis kodu eklersen hook-post-agent.ps1'deki
+# $ortamKodlari dizisine de ekle. Eklemezsen ortam sorunu kod hatasi
+# sanilir - bu dosyanin var olma sebebi tam olarak budur.

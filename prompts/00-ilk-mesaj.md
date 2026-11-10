@@ -19,7 +19,7 @@ Bu projeye D:\Pundun\agent-kit'teki agent kit v2'yi kur ve bundan sonra bu düze
 6. docs/DURUM.md'yi yaz; ilk satır: MOD: süpervizör
 7. Pano yan paneli açık değilse söyle (kurulum satırı README'de); önemli bulguları bildir ile panoya yaz.
 8. Durumum:
-   - GDD var: <dosya yolu> → agent-kit/prompts/gdd-bootstrap.md'yi uygula, Gün 0'da kod yazma.
+   - GDD var: <dosya yolu> → prompts/gdd-bootstrap.md'yi uygula, Gün 0'da kod yazma.
    - GDD yok, fikir şu: <2-3 cümle> → agent-kit/01-BASLANGIC-PROTOKOLU.md Gün 0.
    - Proje zaten ilerlemiş → docs/TEMEL-SOZLESME.md'yi koda bakarak çıkar; eski task dosyaları varsa
      scripts/task-gocu.ps1'i önce KURU çalıştırıp raporu göster; denetci-agent ile ölü ayar taraması yap.
@@ -36,7 +36,7 @@ Aşağıdaki A / B / C, aynı işin daha kısa ayrı ayrı halleridir.
 GDD: docs/gdd/<dosya>.md
 agent-kit kurulu.
 
-agent-kit/prompts/gdd-bootstrap.md'yi uygula. Gün 0'dan başla:
+prompts/gdd-bootstrap.md'yi uygula. Gün 0'dan başla:
 kod yazma, önce docs/TEMEL-SOZLESME.md'yi çıkar ve mimariyi değiştiren
 soruları tek seferde sor. Sayıları belgeden asset'e taşı, koda değil.
 ```
