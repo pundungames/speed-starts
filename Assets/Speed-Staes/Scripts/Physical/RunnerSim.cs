@@ -239,19 +239,7 @@ namespace SpeedStars.Physical
         [Tooltip("How long the stumble after a knocked hurdle lasts (s): the runner stays on its feet.")]
         public float hitTime = 0.45f;
 
-        [Header("Energy")]
-        [Tooltip("Full energy, at the start of a run.")]
-        public float energyMax = 100f;
-        [Tooltip("Energy every press uses.")]
-        public float drainPerPush = 0.25f;
-        [Tooltip("Energy used per second while a key is held.")]
-        public float drainHoldPerSecond = 2f;
-        [Tooltip("Recovered per second while standing still.")]
-        public float regenPerSecond = 4f;
-        [Tooltip("Below this the pushes weaken.")]
-        public float lowEnergy = 25f;
-        [Tooltip("Push strength at 0 energy.")]
-        [Range(0f, 1f)] public float lowEnergyFactor = 0.6f;
+        // Energy: every number is in EnergyModel (one EnergyTuning asset), not here.
     }
 
     public sealed class LegSim
@@ -308,6 +296,8 @@ namespace SpeedStars.Physical
         const float HeldStop = 20f;       // a key down stops the head's way back this fast (1/s)
 
         public readonly RunnerTuning T;
+        /// <summary>The energy numbers (one EnergyTuning asset; code defaults when none is given).</summary>
+        public readonly EnergyModel E;
         public readonly LegSim[] Legs = { new LegSim(), new LegSim() };
         public Spring LeanSpring;
 
@@ -359,11 +349,30 @@ namespace SpeedStars.Physical
         public int JumpLeg { get; private set; }
         /// <summary>The stumble after a knocked hurdle (1 at the hit, 0 when over).</summary>
         public float HitWeight => Mathf.Clamp01(_hitLeft / Mathf.Max(0.01f, T.hitTime));
-        /// <summary>Press to press on time at this speed (s): a full push lands then (stepTime, standing to max speed).</summary>
-        public float StepTime => Mathf.Lerp(T.stepTime.x, T.stepTime.y, Speed / T.maxSpeed);
+        /// <summary>
+        /// Press to press on time at this speed (s): a full push lands then (stepTime, standing to max speed). Lower energy
+        /// (Capacity) stretches it: the tempo the runner can keep falls with the energy, so the best rhythm slows by itself.
+        /// </summary>
+        public float StepTime => Mathf.Lerp(T.stepTime.x, T.stepTime.y, Speed / TopSpeed) / Capacity;
+
+        /// <summary>Full energy (EnergyModel.energyMax).</summary>
+        public float EnergyMax => E.energyMax;
+        /// <summary>Energy left, 0..1.</summary>
+        public float Energy01 => E.Share(Energy);
+        /// <summary>What the energy allows (EnergyModel.capacityAtEmpty..1): step tempo, cadence limit and top speed scale with it.</summary>
+        public float Capacity => E.Capacity(Energy01);
+        /// <summary>The hard speed limit now (m/s): maxSpeed × Capacity.</summary>
+        public float TopSpeed => T.maxSpeed * Capacity;
+        /// <summary>The best rhythm now (presses per second, keys in turn): one press per StepTime, each landing on time.</summary>
+        public float OptimalCadence => 1f / Mathf.Max(0.01f, StepTime);
+        /// <summary>The most presses per second the runner can make now: the best rhythm is EnergyModel.optimalShare of it.</summary>
+        public float CadenceLimit => OptimalCadence / Mathf.Max(0.01f, E.optimalShare);
+        /// <summary>How fast the runner is pressing now (steps per second; a pair's second key is part of the first's step), falling as a pause grows.</summary>
+        public float Cadence => Presses == 0 ? 0f : Mathf.Min(_cadence, 1f / Mathf.Max(0.05f, (float)(Time - _lastStepTime)));
         public int HoldingCount => (Legs[0].Holding ? 1 : 0) + (Legs[1].Holding ? 1 : 0);
 
-        float _pending, _hopVelocity, _launchVelocity, _form, _hopBias, _lastGap, _prevGap;
+        float _pending, _hopVelocity, _launchVelocity, _form, _hopBias, _lastGap, _prevGap, _cadence;
+        double _lastStepTime;
         int _repeatRun;   // presses in a row that repeated the same key: one key being tapped, not a stray double
         Spring _head, _headFwd;   // the head angle; where the keys have taken it, coming back with no key down
         Spring _shown, _shownFwd; // the same for the picture (ShownHeadAngle): fixed kick, no strain; nothing reads them in the sim
@@ -371,19 +380,21 @@ namespace SpeedStars.Physical
         double _launchTime, _landTime;
         float _windupLeft, _windupTotal, _jumpLeft, _jumpTotal, _hitLeft;
 
-        public RunnerSim(RunnerTuning tuning)
+        public RunnerSim(RunnerTuning tuning, EnergyModel energy = null)
         {
             T = tuning;
+            E = energy ?? new EnergyModel();
             Reset();
         }
 
         public void Reset()
         {
             Time = 0.0;
-            Speed = Distance = HopY = _hopVelocity = _pending = _form = _hopBias = _lastGap = _prevGap = 0f;
+            Speed = Distance = HopY = _hopVelocity = _pending = _form = _hopBias = _lastGap = _prevGap = _cadence = 0f;
+            _lastStepTime = -10.0;
             _repeatRun = 0;
             _windupLeft = _jumpLeft = _hitLeft = 0f;
-            Energy = T.energyMax;
+            Energy = E.energyMax;
             Presses = 0;
             LastLeg = -1;
             LastPressTime = -10.0;
@@ -470,7 +481,8 @@ namespace SpeedStars.Physical
             float kickTiming = Mathf.Clamp01(eff);
             if (repeat) eff *= Mathf.Lerp(T.sameLegStartFactor, T.sameLegFactor, Mathf.SmoothStep(0f, 1f, Speed / Mathf.Max(0.1f, T.sameLegStartSpeed)));
             // Tapping one key faster than hopFullGap gains nothing: the push per second stays what it is at that gap.
-            float pushScale = Mathf.Min(1f, sinceLast / Mathf.Max(0.01f, repeat ? T.hopFullGap : T.pressFullGap));
+            // The gap grows as the energy falls (Capacity): a tired runner gains nothing from tapping as fast as a fresh one.
+            float pushScale = Mathf.Min(1f, sinceLast * Capacity / Mathf.Max(0.01f, repeat ? T.hopFullGap : T.pressFullGap));
             if (together) pushScale = 1f;   // a pair's second key is judged by togetherPush
             // The press's own quality, before the body's state (energy, head) scales the push: it is what the head's
             // first kick and Form follow, so a press on time keeps the head low and a wasted one throws it forward.
@@ -478,7 +490,7 @@ namespace SpeedStars.Physical
             // The second key of a pair is part of the first's push, not a push of its own.
             bool pairSecond = together && launchPending;
             float share = pairSecond ? T.togetherPush : 1f;
-            eff *= EnergyFactor();
+            // Energy does not weaken the push itself: it slows the tempo (StepTime) and lowers the top speed (TopSpeed).
             // A head that is down spoils the push: it comes back in full only as the head comes up.
             if (!series) eff *= HeadUpright;   // a hop is not a stride: the head is not shown for it, so it does not spoil it
             _head.Velocity += T.headNod * share;
@@ -513,7 +525,15 @@ namespace SpeedStars.Physical
                 _launchVelocity = 0.5f * T.gravity * Mathf.Max(0f, StepTime - T.stanceTime);
             }
 
-            Energy = Mathf.Max(0f, Energy - T.drainPerPush);
+            // A step's energy (a pair's second key is part of the first's step): at the best rhythm the presses of a second use the
+            // energy's per-second rate; one sooner than the best rhythm's gap costs more by how much sooner. The cadence follows the steps.
+            if (!pairSecond)
+            {
+                float stepGap = (float)(Time - _lastStepTime);
+                Energy = Mathf.Max(0f, Energy - E.PressCost(Energy01, StepTime, stepGap));
+                _cadence = stepGap < 2f ? _cadence + (1f / Mathf.Max(0.05f, stepGap) - _cadence) * 0.5f : 0f;
+                _lastStepTime = Time;
+            }
             l.Pressed = true;
             l.PressTime = Time;
             LastLeg = leg;
@@ -627,9 +647,6 @@ namespace SpeedStars.Physical
             return a / (a + h);
         }
 
-        float EnergyFactor() =>
-            Energy >= T.lowEnergy ? 1f : Mathf.Lerp(T.lowEnergyFactor, 1f, Energy / Mathf.Max(0.01f, T.lowEnergy));
-
         void Step(float h)
         {
             Time += h;
@@ -705,7 +722,7 @@ namespace SpeedStars.Physical
             float thrust = 0f;
             int holding = HoldingCount;
             if (holding > 0 && Time - thrustStart < T.holdThrustTime)
-                thrust = T.holdThrust * holding * EnergyFactor();
+                thrust = T.holdThrust * holding * Capacity;
             // Stumbling is lean beyond what holding asks for (every held foot leans on purpose).
             float poseLean = PoseLean = T.lungeLean * (Legs[0].HoldValue + Legs[1].HoldValue);
             // No key down for a while: the runner has stopped running and brakes (constant, like friction).
@@ -715,7 +732,10 @@ namespace SpeedStars.Physical
             float drag = T.dragConstant + T.dragLinear * Speed + T.dragQuadratic * Speed * Speed + brake + T.holdDrag * maxHold
                          + T.headDrag * Mathf.Clamp01(HeadAngle / Mathf.Max(1f, T.headForwardMax));
             if (JumpInAir) drag = 0f;
-            Speed = Mathf.Clamp(Speed + applied + (thrust - drag) * h, 0f, T.maxSpeed);
+            // The limit falls with the energy (TopSpeed); a runner above it as the energy drops is brought down by the drag, not cut.
+            float top = TopSpeed;
+            float next = Speed + applied + (thrust - drag) * h;
+            Speed = Mathf.Max(0f, next > top ? Mathf.Max(top, Mathf.Min(next, Speed)) : next);
             Distance += Speed * h;
 
             // Lean.
@@ -728,9 +748,11 @@ namespace SpeedStars.Physical
             }
 
             // Energy.
-            if (holding > 0) Energy -= T.drainHoldPerSecond * h;
-            else if (Speed < 0.1f && !Legs[0].Pressed && !Legs[1].Pressed) Energy += T.regenPerSecond * h;
-            Energy = Mathf.Clamp(Energy, 0f, T.energyMax);
+            // Held keys use energy; pressing slower than the best rhythm (or not at all) gives some back, by how far below it
+            // the cadence is and less as the energy runs out. At the best rhythm there is no recovery: the presses' cost is all.
+            if (holding > 0) Energy -= E.holdDrainPerSecond * holding * h;
+            else Energy += E.RegenPerSecond(Energy01) * Mathf.Clamp01(1f - Cadence / OptimalCadence) * h;
+            Energy = Mathf.Clamp(Energy, 0f, E.energyMax);
         }
     }
 }

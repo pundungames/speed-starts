@@ -29,8 +29,7 @@ namespace SpeedStars.PlayTests
             var sim = bodyType.GetProperty("Sim").GetValue(body);
             body.enabled = false; // Freeze only physics so threshold samples remain exact.
             var energy = sim.GetType().GetProperty("Energy");
-            var tuning = bodyType.GetField("tuning").GetValue(body);
-            float max = (float)tuning.GetType().GetField("energyMax").GetValue(tuning);
+            float max = (float)sim.GetType().GetProperty("EnergyMax").GetValue(sim);
             yield return null;
             foreach (float sample in new[] { 0.30f, 0.29f, 0.15f, 0.14f, 0.31f })
             {

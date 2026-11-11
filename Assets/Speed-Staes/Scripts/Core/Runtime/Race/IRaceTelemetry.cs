@@ -14,5 +14,8 @@ namespace SpeedStars.Core.Race
 
         /// <summary>Key presses per second over a short recent window (cadence).</summary>
         float PressesPerSecond { get; }
+
+        /// <summary>The most presses per second the runner can make right now (falls with its energy; the best rhythm is half of it). 0 = unknown: the HUD keeps its own fixed scale.</summary>
+        float CadenceLimit { get; }
     }
 }

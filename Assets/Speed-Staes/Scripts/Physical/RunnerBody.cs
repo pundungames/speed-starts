@@ -13,8 +13,10 @@ namespace SpeedStars.Physical
     {
         [Tooltip("Where the presses come from (keyboard N/M, touch: left/right half of the screen).")]
         public RunnerInput input;
-        [Tooltip("All the physics numbers: speed, stride, push efficiency, hold, lean, head, energy.")]
+        [Tooltip("All the physics numbers: speed, stride, push efficiency, hold, lean, head (energy is in Energy Tuning).")]
         public RunnerTuning tuning = new RunnerTuning();
+        [Tooltip("The energy numbers (Physical/EnergyTuning asset): capacity, best rhythm, use, recovery. Every runner and bot reads the same asset. Empty = the code defaults.")]
+        public EnergyTuning energyTuning;
         [Tooltip("Presses are ignored while false (e.g. after the finish).")]
         public bool acceptInput = true;
         [Tooltip("Jumps are ignored while false (a race without hurdles).")]
@@ -36,7 +38,7 @@ namespace SpeedStars.Physical
             if (!input) input = GetComponent<RunnerInput>();
             _startPos = transform.position;
             _forward = transform.forward;
-            Sim = new RunnerSim(tuning);
+            Sim = new RunnerSim(tuning, energyTuning ? energyTuning.model : null);
             _origin = Time.timeAsDouble;
             if (input) input.JumpPressed += OnJumpPressed;
         }
