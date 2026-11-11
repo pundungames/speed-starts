@@ -22,7 +22,6 @@ namespace SpeedStars.Bridge
         bool _go;
         float _held;
         float _swing;
-        float _laneFromEdge;
 
         void Awake()
         {
@@ -51,9 +50,6 @@ namespace SpeedStars.Bridge
             _follow = _camera ? _camera.GetComponent<SideFollowCamera>() : null;
             if (!_follow || !_follow.target) return;
             _raceFieldOfView = _camera.fieldOfView;
-            // The original's opening shot stands by the lane nearest the camera, not by the player: an outer lane is seen farther off.
-            var bots = FindObjectOfType<RaceBots>();
-            _laneFromEdge = bots ? bots.PlayerLaneFromNearEdge : 0f;
             _follow.SnapToTarget(); // the lane has just changed: the race camera starts from there, not on its way there
             _active = true;
             _go = false;
@@ -88,12 +84,8 @@ namespace SpeedStars.Bridge
             Transform runner = _follow.target;
             Transform cam = _camera.transform;
             Vector3 raceOffset = cam.position - runner.position;
-            float side = config.IntroCameraOffset.x + (config.IntroFixedAim ? _laneFromEdge : 0f);
-            // Ahead in step with the side distance, so the runner keeps its place across the picture from any lane (as in the original).
-            float ahead = config.IntroFixedAim && config.IntroCameraOffset.x > 0.01f
-                ? config.IntroCameraOffset.z * side / config.IntroCameraOffset.x
-                : config.IntroCameraOffset.z;
-            Vector3 opening = runner.right * side + Vector3.up * config.IntroCameraOffset.y + runner.forward * ahead;
+            // The same place by the player's runner in every race, whatever its lane: the start shot always looks the same.
+            Vector3 opening = runner.right * config.IntroCameraOffset.x + Vector3.up * config.IntroCameraOffset.y + runner.forward * config.IntroCameraOffset.z;
             Vector3 look = runner.position + Vector3.up * (config.IntroLookHeight - config.IntroStanceLookDrop) - (runner.position + opening);
 
             // Fixed aim: straight across the track from the runner's right, turned toward the runner's back, then tipped down.

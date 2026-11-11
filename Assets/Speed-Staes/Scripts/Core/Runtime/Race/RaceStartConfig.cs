@@ -55,7 +55,7 @@ namespace SpeedStars.Core.Race
         [Range(10f, 90f)]
         [SerializeField] private float introFieldOfView = 38f;
 
-        [Tooltip("On: the opening camera keeps a fixed aim across the track (Intro Aim Yaw / Pitch), as in the original's low shot along the blocks, and the runner sits where that aim puts it; Intro Camera Offset x then counts from the lane nearest the camera, so an outer lane is seen farther off. Off: it looks at the runner (Intro Look Height).")]
+        [Tooltip("On: the opening camera keeps a fixed aim across the track (Intro Aim Yaw / Pitch), as in the original's low shot along the blocks, and the runner sits where that aim puts it, the same in every race whatever the lane. Off: it looks at the runner (Intro Look Height).")]
         [SerializeField] private bool introFixedAim;
 
         [Tooltip("With a fixed aim: how far the view turns from straight across the track toward the runner's back (deg). The original: about 7.")]

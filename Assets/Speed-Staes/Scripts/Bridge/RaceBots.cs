@@ -219,9 +219,6 @@ namespace SpeedStars.Bridge
         /// </summary>
         public Vector3 StartPositionOf(int runnerIndex) => _basePosition + LaneOffset(BotLanes.BotSlot(runnerIndex, _playerSlot));
 
-        /// <summary>How far the player's lane is from the lane nearest the camera (m): the opening shot stands beside that nearest lane, as in the original.</summary>
-        public float PlayerLaneFromNearEdge => _playerSlot * laneSpacing;
-
         Vector3 LaneOffset(int slot) => _laneDirection * (BotLanes.FromMiddle(slot, Mathf.Max(1, _laneCount)) * laneSpacing);
 
         int BotsOnTheField => HasOpponents() && config ? Mathf.Min(Mathf.Max(config.BotCount, 0), config.Identities.Count) : 0;
