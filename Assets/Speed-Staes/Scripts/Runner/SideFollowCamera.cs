@@ -7,7 +7,10 @@ namespace SpeedStars.Runner
 {
     /// <summary>
     /// Side-on race camera: sits to the runner's right and tracks along the run axis only,
-    /// so step bob and pelvis sway never shake the frame. Its height never changes (the zoom moves it only away from the runner).
+    /// so step bob and pelvis sway never shake the frame. Framed as the original (measured from its lane lines): a wide lens (about 69 deg),
+    /// level, about 0.47 m up per metre away at the nearest setting (flatter when the player sets it farther), so the zoom backs it away
+    /// along one line and the angle onto the runner never changes with speed
+    /// (Height Per Distance 0 keeps the older fixed height).
     /// Two things come from the race itself and touch only the picture: each press sends the camera back, flowing, and the speed
     /// holds it there (it comes in as both fade), and a knocked hurdle shakes it sideways. Each press also lets the runner get a little
     /// ahead in the picture before the camera catches up (the step nudge, as in the original), which makes the steps felt.
@@ -27,8 +30,17 @@ namespace SpeedStars.Runner
         [Tooltip("Where the runner sits across the picture (0 = left edge, 0.5 = centre, 1 = right edge), at any zoom, speed and distance setting; the original keeps it at about a third. 0 = use Lead Ahead (m) instead.")]
         [Range(0f, 0.9f)]
         public float runnerScreenX = 0.32f;
-        [Tooltip("Height the camera looks at (m).")]
+        [Tooltip("Height the camera looks at (m). Only used when Height Per Distance is 0.")]
         public float lookHeight = 0.9f;
+        [Tooltip("Camera height above the runner's feet per metre of distance at distance setting 1 (0.47 = 1.69 m at 3.6 m: the original's nearest setting). The camera backs away along one line as it zooms, so the angle onto the runner never changes with speed. 0 = the older fixed height from Pitch and Look Height.")]
+        [Min(0f)]
+        public float heightPerDistance = 0.47f;
+        [Tooltip("How much flatter that line gets as the player's distance setting grows: the slope is divided by setting ^ this. The original goes from 0.47 at its nearest to 0.29 at twice the distance, which is 0.7. 0 = the same slope at every setting.")]
+        [Range(0f, 2f)]
+        public float heightScalePower = 0.7f;
+        [Tooltip("Vertical field of view the race camera uses (deg); the original is about 69. 0 = leave the Camera's own.")]
+        [Range(0f, 120f)]
+        public float fieldOfView = 69f;
         [Tooltip("How tightly the camera follows along the track.")]
         public float followSharpness = 12f;
         [Tooltip("Time (s) the camera's own speed along the track takes to follow the runner's, so a press's surge does not move the picture.")]
@@ -62,6 +74,17 @@ namespace SpeedStars.Runner
         [Tooltip("Time (s) the camera then takes to catch up.")]
         [Min(0.01f)]
         public float stepNudgeFall = 0.15f;
+        [Tooltip("On the same press the camera also backs away along its line of sight by this share of its distance and comes back (0.014 = 1.4%, measured from the original's lane lines). 0 = off.")]
+        [Range(0f, 0.1f)]
+        public float stepZoomPulse = 0.014f;
+        [Tooltip("easeOutBack overshoot of the step nudge and pulse: each move shoots a little past its mark and settles back, instead of a flat glide. 1.70158 is the classic easeOutBack; 0 = no overshoot (a plain ease).")]
+        [Range(0f, 4f)]
+        public float stepNudgeOvershoot = 1.70158f;
+
+        [Header("Zoom bounce")]
+        [Tooltip("How the zoom settles: 1 = glides in with no overshoot (the older feel), lower = it passes its mark and swings back, like easeOutBack (0.55 overshoots about 13%).")]
+        [Range(0.2f, 1f)]
+        public float zoomDamping = 0.55f;
 
         [Header("Shake")]
         [Tooltip("Shake size on a knocked hurdle (m); sideways only.")]
@@ -82,6 +105,13 @@ namespace SpeedStars.Runner
         float _lastHitWeight;
         float _nudgeFrom, _nudgeStart = -10f;
         Camera _camera;
+
+        void Awake()
+        {
+            // Before the opening shot reads it as the race camera's field of view.
+            _camera = GetComponent<Camera>();
+            if (_camera && fieldOfView > 0f) _camera.fieldOfView = fieldOfView;
+        }
 
         void OnEnable()
         {
@@ -127,9 +157,19 @@ namespace SpeedStars.Runner
         float Nudge()
         {
             float t = Time.time - _nudgeStart;
-            if (t < stepNudgeRise) return Mathf.Lerp(_nudgeFrom, 1f, Mathf.SmoothStep(0f, 1f, t / stepNudgeRise));
+            if (t < stepNudgeRise) return Mathf.LerpUnclamped(_nudgeFrom, 1f, EaseOutBack(t / stepNudgeRise, stepNudgeOvershoot));
             t -= stepNudgeRise;
-            return t < stepNudgeFall ? 1f - Mathf.SmoothStep(0f, 1f, t / stepNudgeFall) : 0f;
+            return t < stepNudgeFall ? 1f - EaseOutBack(t / stepNudgeFall, stepNudgeOvershoot) : 0f;
+        }
+
+        /// <summary>
+        /// easeOutBack: starts fast, passes 1 by a little and settles on it at x = 1 (overshoot 1.70158 is the classic curve, 0 is a
+        /// plain cubic ease out). x is clamped to 0..1; the result may leave 0..1 on the way.
+        /// </summary>
+        public static float EaseOutBack(float x, float overshoot)
+        {
+            x = Mathf.Clamp01(x) - 1f;
+            return 1f + (overshoot + 1f) * x * x * x + overshoot * x * x;
         }
 
         /// <summary>Width of the picture at the runner's distance (m), so the nudge is the same share of the screen at any zoom.</summary>
@@ -178,7 +218,19 @@ namespace SpeedStars.Runner
             Vector3 side = Side();
             // The lead is taken along the picture's own horizontal, so the runner sits the same share of the frame left at any yaw.
             Vector3 screenRight = Vector3.Cross(Vector3.up, -side);
-            return target.position + screenRight * Lead(back) + side * back + Vector3.up * StandingHeight;
+            return target.position + screenRight * Lead(back) + side * back + Vector3.up * HeightAt(back);
+        }
+
+        /// <summary>Camera height above the runner's feet at <paramref name="back"/> metres away: on one line through the runner, or the older fixed height.</summary>
+        float HeightAt(float back) => heightPerDistance > 0f
+            ? back * heightPerDistance / Mathf.Pow(Mathf.Max(0.1f, distanceScale), heightScalePower)
+            : StandingHeight;
+
+        /// <summary>The camera's offset from the runner without the lead (m): what the step zoom pulse scales.</summary>
+        Vector3 ViewOffset()
+        {
+            float back = distance * distanceScale * Mathf.Lerp(1f, speedZoomDistance, _zoom);
+            return Side() * back + Vector3.up * HeightAt(back);
         }
 
         /// <summary>
@@ -217,7 +269,16 @@ namespace SpeedStars.Runner
             {
                 _pressZoom = Mathf.Max(0f, _pressZoom - zoomPressFade * dt);
                 float wanted = Mathf.Max(_pressZoom, Mathf.Clamp01(sim.Speed / Mathf.Max(0.01f, speedZoomFull)));
-                _zoom = Mathf.SmoothDamp(_zoom, wanted, ref _zoomVelocity, wanted > _zoom ? zoomFlowOutTime : zoomFlowInTime);
+                float flow = wanted > _zoom ? zoomFlowOutTime : zoomFlowInTime;
+                if (zoomDamping >= 0.999f) _zoom = Mathf.SmoothDamp(_zoom, wanted, ref _zoomVelocity, flow);
+                else
+                {
+                    // A spring that settles in about the same time but passes its mark and swings back (the easeOutBack feel).
+                    float w = 3f / Mathf.Max(0.05f, flow);
+                    float step = Mathf.Min(dt, 0.05f); // a load hitch must not throw the spring
+                    _zoomVelocity += (w * w * (wanted - _zoom) - 2f * zoomDamping * w * _zoomVelocity) * step;
+                    _zoom += _zoomVelocity * step;
+                }
                 if (sim.HitWeight > _lastHitWeight) Shake(hitShake, hitShakeTime);
                 _lastHitWeight = sim.HitWeight;
             }
@@ -251,7 +312,10 @@ namespace SpeedStars.Runner
             float share = stepNudge / Mathf.Max(0.1f, distanceScale);
             Vector3 nudge = sim != null && stepNudge > 0f ? -target.forward * (share * ViewWidth() * Nudge()) : Vector3.zero;
 
-            transform.position = _position + shake + nudge;
+            // The same press also backs the camera away along its line of sight a little and lets it come back.
+            Vector3 pulse = sim != null && stepZoomPulse > 0f ? ViewOffset() * (stepZoomPulse * Nudge()) : Vector3.zero;
+
+            transform.position = _position + shake + nudge + pulse;
             transform.rotation = Facing();
         }
     }

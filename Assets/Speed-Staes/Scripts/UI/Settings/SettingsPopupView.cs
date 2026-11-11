@@ -179,6 +179,7 @@ namespace SpeedStars.UI.Settings
         private readonly List<LanguageRowView> _languageRows = new List<LanguageRowView>();
         private readonly List<FlagCellView> _flagCells = new List<FlagCellView>();
         private bool _listsBuilt;
+        private bool _refreshing; // while the window shows the saved values: the slider's own events are not the player's
         private bool _nameRefused;
         private bool _nameFocused;
         private Tween _shake;
@@ -288,6 +289,7 @@ namespace SpeedStars.UI.Settings
 
         private void OnCameraDistance(float value)
         {
+            if (_refreshing) return;
             _settings.SetCameraDistance(Mathf.Round(value / cameraDistanceStep) * cameraDistanceStep);
         }
 
@@ -316,9 +318,14 @@ namespace SpeedStars.UI.Settings
             musicToggle.SetOn(_settings.MusicOn, animate: false); // no-op when the toggle already shows it, so its own slide is not cut
             if (cameraDistanceSlider != null)
             {
+                // Setting the range clamps the prefab's value (0 under a 0.7 minimum) and Unity reports that as a change, which
+                // used to save the minimum over the player's choice every time a new window opened. Read the saved value first.
+                float saved = _settings.CameraDistance;
+                _refreshing = true;
                 cameraDistanceSlider.minValue = _settings.CameraDistanceMin;
                 cameraDistanceSlider.maxValue = _settings.CameraDistanceMax;
-                cameraDistanceSlider.SetValueWithoutNotify(_settings.CameraDistance);
+                cameraDistanceSlider.SetValueWithoutNotify(saved);
+                _refreshing = false;
             }
 
             string language = _settings.LanguageCode;
