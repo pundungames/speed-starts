@@ -857,6 +857,15 @@ namespace SpeedStars.Physical
         [Range(0f, 1.5f)] public float runToeStand = 0.6f;
         [Tooltip("Most the heels come up that way (deg, on top of the push's own heel rise).")]
         public float runToeStandMax = 35f;
+        [Tooltip("Legs out in front of the hips lean the body back by up to this (deg), a counterweight: the one-key hop's free leg held " +
+                 "out, a slow rhythm's long reach (the reference). Read from both legs' mean thigh angle (legsAheadRange), so plain " +
+                 "running's legs, one in front and one behind, barely move it. It goes in as the whole body sitting back on the heels, " +
+                 "through legsAheadSpring; only while stepping (not the Ready crouch, the blocks, a dive or a jump). 0 = off.")]
+        public float legsAheadLean = 30f;
+        [Tooltip("Both legs' mean forward thigh angle (deg, world, + = forward) where the lean back starts (x) and is whole (y).")]
+        public Vector2 legsAheadRange = new Vector2(10f, 40f);
+        [Tooltip("How the lean back follows the legs (damping 1: it eases in and out, never swings).")]
+        public SpringSettings legsAheadSpring = new SpringSettings(1.5f, 1f);
 
         [Header("Arms (deg, + = forward): one key moves one leg and one arm — right key: right leg + left arm")]
         [Tooltip("Upper arm (deg, −) with its leg all the way back — fixed: speed and the key poses do not move it, " +
@@ -1121,6 +1130,7 @@ namespace SpeedStars.Physical
         float _hopTarget;                         // the hop weight's target: 1 once the pose took a press that meant a hop, 0 as soon as a key means a run
         bool _hopWanted;                          // what the last key means (NoteIntent): a hop; the weight follows only when the pose takes the press
         Spring _hopBody;                          // the hop weight's slow twin (hopBodySpring); _hopBodyW is what the body reads
+        Spring _legsAhead;                        // the lean back against legs out in front (legsAheadLean, deg)
         float _hopBodyW;
         bool _hopFreed;                           // a hop is open: the leg that is not the pressed one is the balance leg, whatever its idle weight has reached yet
         Spring _hopSpring, _pairSpring, _bothTip;   // the hop and pair weights' springs (gaitBlendSpring); the both-keys tip's (holdTipSpring)
@@ -2798,6 +2808,13 @@ namespace SpeedStars.Physical
                 lean += Mathf.Lerp(stanceLean.x, stanceLean.y, _stanceSet) * _stanceW + driveLean * _driveW;   // the blocks / the drive: forward (the opposite of the brake)
                 lean -= brakeLean * _brakeRaw;                       // braking the whole body lies back about the heels (SitBack below)
                 lean += jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
+                // Legs out in front (a hop's free leg, a long reach): the body sits back against them, eased by its spring. Last frame's
+                // legs are read (this frame's come below); the spring makes that moot.
+                float ahead = 0.5f * (leftLeg.thighWorld + rightLeg.thighWorld);
+                float aheadOn = _stepping * (1f - _stanceW) * (1f - _dive) * (_jumping ? 0f : 1f);
+                _legsAhead.Step(legsAheadLean * aheadOn * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(legsAheadRange.x, legsAheadRange.y, ahead)),
+                    legsAheadSpring.frequency, legsAheadSpring.damping, dt);
+                lean -= _legsAhead.Value;
             }
             else _hipsNow = 0f;
 
@@ -3800,6 +3817,7 @@ namespace SpeedStars.Physical
             _brakeSpring.Reset();
             _brake = _brakeRaw = 0f;
             _hopBody.Reset();
+            _legsAhead.Reset();
             _surge.Reset();
             _landHold = false;
             _hopBodyW = 0f;
