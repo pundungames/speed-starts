@@ -870,7 +870,7 @@ namespace SpeedStars.Physical
         [Tooltip("Legs out in front of the hips lean the body back by up to this (deg), a counterweight: the one-key hop's free leg held " +
                  "out, a slow rhythm's long reach (the reference). Read from both legs' mean thigh angle (legsAheadRange), so plain " +
                  "running's legs, one in front and one behind, barely move it. It goes in as the whole body sitting back on the heels, " +
-                 "through legsAheadSpring; only while stepping (not the Ready crouch, the blocks, a dive or a jump). 0 = off.")]
+                 "through legsAheadSpring; only while stepping (not the Ready crouch, the blocks, a dive, a jump or a two-key pair). 0 = off.")]
         public float legsAheadLean = 30f;
         [Tooltip("Both legs' mean forward thigh angle (deg, world, + = forward) where the lean back starts (x) and is whole (y).")]
         public Vector2 legsAheadRange = new Vector2(10f, 40f);
@@ -2821,7 +2821,9 @@ namespace SpeedStars.Physical
                 // Legs out in front (a hop's free leg, a long reach): the body sits back against them, eased by its spring. Last frame's
                 // legs are read (this frame's come below); the spring makes that moot.
                 float ahead = 0.5f * (leftLeg.thighWorld + rightLeg.thighWorld);
-                float aheadOn = _stepping * (1f - _stanceW) * (1f - _dive) * (_jumping ? 0f : 1f);
+                // Not on a two-key pair: its feet are down two frames, and the sit-back's pivot went heels - hips - heels with them,
+                // throwing the hips 6 cm back and forth in a frame on every jump (measured in play).
+                float aheadOn = _stepping * (1f - _stanceW) * (1f - _dive) * (1f - _pair) * (_jumping ? 0f : 1f);
                 _legsAhead.Step(legsAheadLean * aheadOn * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(legsAheadRange.x, legsAheadRange.y, ahead)),
                     legsAheadSpring.frequency, legsAheadSpring.damping, dt);
                 lean -= _legsAhead.Value;
