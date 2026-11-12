@@ -7,15 +7,16 @@ namespace SpeedStars.Runner
 {
     /// <summary>
     /// Side-on race camera: sits to the runner's right and tracks along the run axis only,
-    /// so step bob and pelvis sway never shake the frame. Along the track it is locked to the runner (Lock Along Track), as in the
-    /// original: a press's surge and the slowing between presses never leave the camera behind or let it run on past the runner.
+    /// so step bob and pelvis sway never shake the frame. Along the track it follows the runner through two critically damped springs
+    /// in a row with their lag added back (Track Follow): at a steady speed the runner sits exactly at its place in the picture (the
+    /// original keeps it fixed), while the sim's speed, which jumps on every press, reaches the camera with neither its speed nor its
+    /// acceleration jumping. Locked instead, each press jerked the whole picture.
     /// Framed as the original (measured from its lane lines): a wide lens (about 69 deg),
     /// level, about 0.47 m up per metre away at the nearest setting (flatter when the player sets it farther), so the zoom backs it away
     /// along one line and the angle onto the runner never changes with speed
     /// (Height Per Distance 0 keeps the older fixed height).
-    /// Two things come from the race itself and touch only the picture: each press sends the camera back, flowing, and the speed
-    /// holds it there (it comes in as both fade), and a knocked hurdle shakes it sideways. Each press also lets the runner get a little
-    /// ahead in the picture before the camera catches up (the step nudge, as in the original), which makes the steps felt.
+    /// The zoom reads the speed held over a moment (Zoom Speed Smooth), not a single press, and glides with no overshoot; a knocked
+    /// hurdle shakes the camera sideways. Presses themselves never kick the picture.
     /// </summary>
     public sealed class SideFollowCamera : MonoBehaviour
     {
@@ -43,17 +44,14 @@ namespace SpeedStars.Runner
         [Tooltip("Vertical field of view the race camera uses (deg); the original is about 69. 0 = leave the Camera's own.")]
         [Range(0f, 120f)]
         public float fieldOfView = 69f;
-        [Tooltip("How tightly the camera follows along the track.")]
+        [Tooltip("How tightly the camera follows across the track and in height (where the zoom moves it). With Runner Screen X 0 it also sets how far behind it rests at speed.")]
         public float followSharpness = 12f;
-        [Tooltip("Along the track the camera moves exactly with the runner, so the runner never slides in the picture (the original). " +
-                 "Off: it runs at the runner's smoothed speed (Track Speed Smooth, Track Pull), which lags a press's surge and then runs on " +
-                 "past the runner as it slows between presses (the camera seems to throw itself forward).")]
-        public bool lockAlongTrack = true;
-        [Tooltip("Time (s) the camera's own speed along the track takes to follow the runner's (Lock Along Track off). With Runner Screen X 0 " +
-                 "it also smooths how far behind the camera rests at speed.")]
-        public float trackSpeedSmooth = 0.35f;
-        [Tooltip("How strongly (1/s) the camera makes up what it is off along the track. Only with Lock Along Track off.")]
-        public float trackPull = 2.5f;
+        [Tooltip("How quickly (Hz) the camera follows the runner along the track: two critically damped springs in a row with their lag " +
+                 "added back. At a steady speed the runner stays exactly in place in the picture; a press from standing moves it up to " +
+                 "about 15 cm in the picture at 2.5 and back, with the camera's speed and acceleration never jumping (higher = tighter, " +
+                 "lower = softer). 0 = locked to the runner (every surge of the sim shows as a jerk of the whole picture).")]
+        [Min(0f)]
+        public float trackFollow = 2.5f;
         [Tooltip("The player's distance setting: multiplies distance and leaves the zoom on top of it.")]
         public float distanceScale = 1f;
 
@@ -62,6 +60,9 @@ namespace SpeedStars.Runner
         public float speedZoomFull = 11f;
         [Tooltip("Distance at full zoom (the speed in Speed Zoom Full), as a multiple of the standing distance.")]
         public float speedZoomDistance = 2.4f;
+        [Tooltip("Time (s) the speed the zoom reads takes to follow the runner's: a single press's surge barely moves the zoom, a held pace does. 0 = the raw speed.")]
+        [Min(0f)]
+        public float zoomSpeedSmooth = 0.8f;
         [Tooltip("How much of the full zoom each key press asks for at once (0..1).")]
         public float zoomPerPress = 0.15f;
         [Tooltip("How fast the zoom asked for by presses fades (share of the full zoom per second).")]
@@ -70,28 +71,6 @@ namespace SpeedStars.Runner
         public float zoomFlowOutTime = 0.45f;
         [Tooltip("Time to flow in (s).")]
         public float zoomFlowInTime = 0.6f;
-
-        [Header("Step nudge (each press, like the original)")]
-        [Tooltip("How far the runner gets ahead in the picture on each press before the camera catches up, as a share of the picture's width at distance setting 1 (0.02 = 2%; a farther player setting shows less, as in the original). 0 = off.")]
-        [Range(0f, 0.1f)]
-        public float stepNudge = 0.02f;
-        [Tooltip("Time (s) the runner takes to get ahead after a press (the camera lagging).")]
-        [Min(0.01f)]
-        public float stepNudgeRise = 0.28f;
-        [Tooltip("Time (s) the camera then takes to catch up.")]
-        [Min(0.01f)]
-        public float stepNudgeFall = 0.15f;
-        [Tooltip("On the same press the camera also backs away along its line of sight by this share of its distance and comes back (0.014 = 1.4%, measured from the original's lane lines). 0 = off.")]
-        [Range(0f, 0.1f)]
-        public float stepZoomPulse = 0.014f;
-        [Tooltip("easeOutBack overshoot of the step nudge and pulse: each move shoots a little past its mark and settles back, instead of a flat glide. 1.70158 is the classic easeOutBack; 0 = no overshoot (a plain ease).")]
-        [Range(0f, 4f)]
-        public float stepNudgeOvershoot = 1.70158f;
-
-        [Header("Zoom bounce")]
-        [Tooltip("How the zoom settles: 1 = glides in with no overshoot (the older feel), lower = it passes its mark and swings back, like easeOutBack (0.55 overshoots about 13%).")]
-        [Range(0.2f, 1f)]
-        public float zoomDamping = 0.55f;
 
         [Header("Shake")]
         [Tooltip("Shake size on a knocked hurdle (m); sideways only.")]
@@ -106,11 +85,11 @@ namespace SpeedStars.Runner
 
         RunnerBody _body;
         Vector3 _position;
-        float _trackSpeed;
+        Spring _track, _trackOut;   // the two stages of the camera's place along the track, without their lag added back (m)
+        float _heldSpeed;       // the runner's speed held over Zoom Speed Smooth (m/s)
         float _zoom, _zoomVelocity, _pressZoom;
         float _shakeSize, _shakeTime, _shakeStart = -10f;
         float _lastHitWeight;
-        float _nudgeFrom, _nudgeStart = -10f;
         Camera _camera;
 
         void Awake()
@@ -129,6 +108,7 @@ namespace SpeedStars.Runner
                 _body.Tapped += OnTapped;
             }
             _position = transform.position;
+            if (target) SetTrack(Vector3.Dot(_position, target.forward), 0f);
         }
 
         void OnDisable()
@@ -152,35 +132,17 @@ namespace SpeedStars.Runner
         {
             if (!pressed || _body.Sim == null) return;
             _pressZoom = Mathf.Clamp01(_pressZoom + zoomPerPress);
-            // A press restarts the nudge from where it is now, so quick presses never jump the picture.
-            _nudgeFrom = Nudge();
-            _nudgeStart = Time.time;
-        }
-
-        /// <summary>
-        /// The step nudge now, 0..1: rises to 1 over <see cref="stepNudgeRise"/> (the runner gets ahead), then back to 0 over
-        /// <see cref="stepNudgeFall"/> (the camera catches up). Only the picture moves; the follow itself is untouched.
-        /// </summary>
-        float Nudge()
-        {
-            float t = Time.time - _nudgeStart;
-            if (t < stepNudgeRise) return Mathf.LerpUnclamped(_nudgeFrom, 1f, EaseOutBack(t / stepNudgeRise, stepNudgeOvershoot));
-            t -= stepNudgeRise;
-            return t < stepNudgeFall ? 1f - EaseOutBack(t / stepNudgeFall, stepNudgeOvershoot) : 0f;
         }
 
         /// <summary>
         /// easeOutBack: starts fast, passes 1 by a little and settles on it at x = 1 (overshoot 1.70158 is the classic curve, 0 is a
-        /// plain cubic ease out). x is clamped to 0..1; the result may leave 0..1 on the way.
+        /// plain cubic ease out). x is clamped to 0..1; the result may leave 0..1 on the way. The opening shot (RaceStartCamera) uses it.
         /// </summary>
         public static float EaseOutBack(float x, float overshoot)
         {
             x = Mathf.Clamp01(x) - 1f;
             return 1f + (overshoot + 1f) * x * x * x + overshoot * x * x;
         }
-
-        /// <summary>Width of the picture at the runner's distance (m), so the nudge is the same share of the screen at any zoom.</summary>
-        float ViewWidth() => WidthAt(Vector3.Distance(_position, target.position + Vector3.up * lookHeight));
 
         /// <summary>A stronger shake running now is not cut by a smaller one.</summary>
         void Shake(float size, float time)
@@ -206,14 +168,30 @@ namespace SpeedStars.Runner
             _zoom = _zoomVelocity = _pressZoom = 0f;
             _shakeStart = -10f;
             _lastHitWeight = 0f;
-            _nudgeFrom = 0f;
-            _nudgeStart = -10f;
             var sim = _body ? _body.Sim : null;
-            _trackSpeed = sim != null ? sim.Speed : 0f;
+            float speed = sim != null ? sim.Speed : 0f;
+            _heldSpeed = speed;
             // At speed it rests as far behind as it runs, so a snap does not start with a slide.
             _position = Desired() - target.forward * Lag();
+            SetTrack(Vector3.Dot(_position, target.forward), speed);
             transform.position = _position;
             transform.rotation = Facing();
+        }
+
+        /// <summary>The lag one critically damped spring at Track Follow keeps behind a target moving at <paramref name="speed"/> (m).</summary>
+        float StageLag(float speed) => trackFollow > 0f ? speed / (Mathf.PI * trackFollow) : 0f;
+
+        /// <summary>The camera's place along the track: the second stage with both stages' lag added back, so at a steady speed it is on the runner.</summary>
+        float TrackShown() => _trackOut.Value + 2f * StageLag(_trackOut.Velocity);
+
+        /// <summary>Puts the camera at <paramref name="along"/> on the track moving at <paramref name="speed"/>, with no swing to come.</summary>
+        void SetTrack(float along, float speed)
+        {
+            float lag = StageLag(speed);
+            _track.Value = along - lag;
+            _track.Velocity = speed;
+            _trackOut.Value = along - 2f * lag;
+            _trackOut.Velocity = speed;
         }
 
         /// <summary>Unit direction from the runner to the camera on the ground: the right side turned toward the front by <see cref="sideYaw"/>.</summary>
@@ -233,13 +211,6 @@ namespace SpeedStars.Runner
             ? back * heightPerDistance / Mathf.Pow(Mathf.Max(0.1f, distanceScale), heightScalePower)
             : StandingHeight;
 
-        /// <summary>The camera's offset from the runner without the lead (m): what the step zoom pulse scales.</summary>
-        Vector3 ViewOffset()
-        {
-            float back = distance * distanceScale * Mathf.Lerp(1f, speedZoomDistance, _zoom);
-            return Side() * back + Vector3.up * HeightAt(back);
-        }
-
         /// <summary>
         /// How far ahead of the runner the camera centres (m). With <see cref="runnerScreenX"/> set it is that share of the picture's
         /// width at the camera's distance, so the runner stays in the same place at any zoom or distance setting; otherwise <see cref="leadAhead"/>.
@@ -251,7 +222,7 @@ namespace SpeedStars.Runner
         }
 
         /// <summary>How far behind the camera rests at speed (m). None when the runner is framed by a screen share: that share holds at any speed.</summary>
-        float Lag() => runnerScreenX > 0f ? 0f : _trackSpeed / Mathf.Max(0.01f, followSharpness);
+        float Lag() => runnerScreenX > 0f ? 0f : _heldSpeed / Mathf.Max(0.01f, followSharpness);
 
         /// <summary>Width of the picture (m) at <paramref name="depth"/> metres from the camera.</summary>
         float WidthAt(float depth)
@@ -275,17 +246,10 @@ namespace SpeedStars.Runner
             if (sim != null)
             {
                 _pressZoom = Mathf.Max(0f, _pressZoom - zoomPressFade * dt);
-                float wanted = Mathf.Max(_pressZoom, Mathf.Clamp01(sim.Speed / Mathf.Max(0.01f, speedZoomFull)));
-                float flow = wanted > _zoom ? zoomFlowOutTime : zoomFlowInTime;
-                if (zoomDamping >= 0.999f) _zoom = Mathf.SmoothDamp(_zoom, wanted, ref _zoomVelocity, flow);
-                else
-                {
-                    // A spring that settles in about the same time but passes its mark and swings back (the easeOutBack feel).
-                    float w = 3f / Mathf.Max(0.05f, flow);
-                    float step = Mathf.Min(dt, 0.05f); // a load hitch must not throw the spring
-                    _zoomVelocity += (w * w * (wanted - _zoom) - 2f * zoomDamping * w * _zoomVelocity) * step;
-                    _zoom += _zoomVelocity * step;
-                }
+                // The zoom reads the pace, not the press: a single surge passes through the smoothing almost unseen.
+                _heldSpeed = zoomSpeedSmooth > 0f ? Mathf.Lerp(_heldSpeed, sim.Speed, 1f - Mathf.Exp(-dt / zoomSpeedSmooth)) : sim.Speed;
+                float wanted = Mathf.Max(_pressZoom, Mathf.Clamp01(_heldSpeed / Mathf.Max(0.01f, speedZoomFull)));
+                _zoom = Mathf.SmoothDamp(_zoom, wanted, ref _zoomVelocity, wanted > _zoom ? zoomFlowOutTime : zoomFlowInTime);
                 if (sim.HitWeight > _lastHitWeight) Shake(hitShake, hitShakeTime);
                 _lastHitWeight = sim.HitWeight;
             }
@@ -295,22 +259,22 @@ namespace SpeedStars.Runner
             // Only the track direction and the zoom go through this; the shake stays out of it so it ends exactly.
             if (sim != null)
             {
-                // Locked, the camera sits exactly where the framing puts it along the track every frame. Unlocked, it runs at the runner's
-                // smoothed speed, moving by exactly what it moved (no lag that depends on the frame time), and only slowly makes up what it
-                // is off. Framed by a screen share it rests on that share at speed; otherwise it rests behind by the smoothed speed /
-                // followSharpness (the older framing; the smoothing keeps that offset from jumping with each press).
+                // Along the track: the two springs, their steady lag added back (TrackShown), so the camera's speed bends where the runner's jumps.
                 Vector3 along = target.forward;
-                _trackSpeed = Mathf.Lerp(_trackSpeed, sim.Speed, 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, trackSpeedSmooth)));
                 desired -= along * Lag();
-                Vector3 off = desired - _position;
-                float offAlong = Vector3.Dot(off, along);
-                if (lockAlongTrack) _position += (off - along * offAlong) * t + along * offAlong;
+                float want = Vector3.Dot(desired, along);
+                float shown = TrackShown();
+                if (trackFollow <= 0f) SetTrack(want, sim.Speed);
+                // Far off (a change of runner without a snap) it closes as fast as the plain follow and takes the runner's speed.
+                else if (Mathf.Abs(want - shown) > TrackFarOff) SetTrack(Mathf.Lerp(shown, want, t), sim.Speed);
                 else
                 {
-                    // Far off (a change of runner without a snap) it closes as fast as it always did.
-                    float pull = Mathf.Abs(offAlong) > TrackFarOff ? t : 1f - Mathf.Exp(-trackPull * dt);
-                    _position += (off - along * offAlong) * t + along * (_trackSpeed * dt + offAlong * pull);
+                    _track.Step(want, trackFollow, 1f, dt);
+                    _trackOut.Step(_track.Value, trackFollow, 1f, dt);
                 }
+                Vector3 off = desired - _position;
+                _position += (off - along * Vector3.Dot(off, along)) * t;
+                _position += along * (TrackShown() - Vector3.Dot(_position, along));
             }
             else _position = Vector3.Lerp(_position, desired, t);
 
@@ -318,16 +282,7 @@ namespace SpeedStars.Runner
             float n = Time.time * shakeRate;
             Vector3 shake = transform.right * ((Mathf.PerlinNoise(n, 0.3f) - 0.5f) * 2f * size);
 
-            // The camera lags behind along the track by the nudge, so the runner moves ahead in the picture and comes back.
-            // Measured in the original: the lag is the same in metres at any distance setting, so a farther player setting shows a
-            // smaller share (2% at 8/10, ~1.3% at 10/10); dividing by the player's scale does the same here.
-            float share = stepNudge / Mathf.Max(0.1f, distanceScale);
-            Vector3 nudge = sim != null && stepNudge > 0f ? -target.forward * (share * ViewWidth() * Nudge()) : Vector3.zero;
-
-            // The same press also backs the camera away along its line of sight a little and lets it come back.
-            Vector3 pulse = sim != null && stepZoomPulse > 0f ? ViewOffset() * (stepZoomPulse * Nudge()) : Vector3.zero;
-
-            transform.position = _position + shake + nudge + pulse;
+            transform.position = _position + shake;
             transform.rotation = Facing();
         }
     }
