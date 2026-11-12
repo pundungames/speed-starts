@@ -619,11 +619,6 @@ namespace SpeedStars.Physical
         [Tooltip("A key must stay down this long before its leg holds: the pushing leg goes on to the hold angles and the other " +
                  "leg reaches forward (s). A shorter press is a tap, whatever the speed.")]
         public float holdAfter = 0.22f;
-        [Tooltip("Shortest time (s) between two steps the legs take: a press sooner than this after the last step taken is the sim's " +
-                 "alone (it still throws the head forward, slows the runner and tips the trunk), not a step. Mashing then keeps whole " +
-                 "strides instead of tiny ones reversing halfway (the reference game, 2026-11-11: ~0.4 s a stride cycle, about " +
-                 "4.5-5 steps a second, even at 7-8 presses a second). A good rhythm (0.21-0.25 s) and slower are not touched.")]
-        public float stepMinGap = 0.21f;
         [Tooltip("At max speed pushTime and the legs' going home take this share of their time (1 = as slow as standing).")]
         [Range(0.2f, 1f)] public float animSpeedUp = 0.5f;
         [Tooltip("A leg in front (or landed with nothing more coming) goes home this slowly; quicker with speed.")]
@@ -727,17 +722,7 @@ namespace SpeedStars.Physical
         [Range(0f, 1f)] public float waistShare = 0.6f;
         [Tooltip("Plain running: the whole body leans forward by this much (deg) from standing (x) to the top speed (y), on top of " +
                  "the head-led chain. A hop or a pair keeps its own trunk.")]
-        public Vector2 hipRunLean = new Vector2(0f, 2f);
-        [Tooltip("Running with the head forward (mashing) the whole body leans this much more (deg) at the head's x..y angle (deg): " +
-                 "the trunk lies down toward level like the two-key dive, the legs (turned with it, runLegLean) slide back and the body " +
-                 "comes down to the ground (runLegDrop). 0 = the head-led chain alone.")]
-        public float mashLean = 25f;
-        public Vector2 mashLeanHead = new Vector2(35f, 75f);
-        [Tooltip("Share of the sim's shown head angle (ShownHeadAngle: every press kicks it the same, on time or not) the trunk chain " +
-                 "follows; the rest is the sim's head angle itself, which stays near its rest in a good rhythm and goes forward only " +
-                 "when the presses come too soon (mashing) or a key is held. 0 = the sim's head: upright in a good rhythm (the reference " +
-                 "game, 2026-11-11), forward when mashing. 1 = the old picture (the trunk leaned ~20 deg forward in a good rhythm).")]
-        [Range(0f, 1f)] public float shownHeadShare = 0f;
+        public Vector2 hipRunLean = new Vector2(3f, 8f);
         [Tooltip("Most the whole body leans back (deg) when the shown head angle swings back past where the head rests; " +
                  "more than that is the body sitting back on its heels.")]
         public float hipBackMax = 12f;
@@ -835,9 +820,6 @@ namespace SpeedStars.Physical
         public float neckTrimLean = 30f;
         [Tooltip("The top of the waist (chest, neck base) follows the shown head angle through this spring, so the head leads.")]
         public SpringSettings hipFollowSpring = new SpringSettings(4f, 0.9f);
-        [Tooltip("Coming back up (the lean's target behind its value) the chest follows through this softer spring: the trunk goes down " +
-                 "with the head at once but rises slowly, so the waist does not snap upright between presses or when the keys stop.")]
-        public SpringSettings leanRiseSpring = new SpringSettings(1.3f, 1f);
 
         [Header("Body: head → neck → chest → waist base → hips, each following the one above")]
         [Tooltip("B-spine's bend on the hips at rest (deg, its Inspector X); the chain's bend comes on top.")]
@@ -856,18 +838,13 @@ namespace SpeedStars.Physical
                  "the hips, never past these (the pose's own pelvisPitch included). Leaning back is the whole body " +
                  "about the feet instead (see Update), not the hips.")]
         public Vector2 pelvisPitchRange = new Vector2(-10f, 90f);
-        [Tooltip("Running legs (the push, the swing, the touchdown) turn with the hips by this share of the forward lean: the whole " +
-                 "run cycle is the trunk's, so as the trunk tips the running figure tips with it, legs parallel to the body (the reference " +
-                 "game, 2026-11-11: from upright into mashing body and legs lie down together). 1 = the whole turn; 0 = the legs stay " +
-                 "under the body whatever the lean. The dive and the hold turn them as ever.")]
-        [Range(0f, 1f)] public float runLegLean = 1f;
-        [Tooltip("Most the running legs turn with the forward lean (deg).")]
-        public float runLegLeanMax = 90f;
-        [Tooltip("How much of the height a leg turned with the lean needs less (0..1): a planted leg lying parallel to a tipped trunk " +
-                 "reaches the ground only with the hips lower (by the cosine of the turn). 1 = all of it (the body goes down to where the " +
-                 "turned leg stands straight), 0 = the run's own height (the legs then stay under the body). The knees are not bent for it: " +
-                 "the whole body comes down about the feet as it tips. Upright nothing changes.")]
-        [Range(0f, 1f)] public float runLegDrop = 1f;
+        [Tooltip("Running legs (the push, the swing, the touchdown) turn back with the hips by this share of the forward lean: " +
+                 "the whole body leans from the feet up, not the trunk alone over upright legs. 0 = the legs stay under the body " +
+                 "whatever the lean (as before). The dive and the hold turn them as ever.")]
+        [Range(0f, 1f)] public float runLegLean = 0.6f;
+        [Tooltip("Most the running legs turn back with the forward lean (deg): with the head far forward (mashing) the feet " +
+                 "still come down under the body.")]
+        public float runLegLeanMax = 40f;
 
         [Header("Arms (deg, + = forward): one key moves one leg and one arm — right key: right leg + left arm")]
         [Tooltip("Upper arm (deg, −) with its leg all the way back — fixed: speed and the key poses do not move it, " +
@@ -975,7 +952,7 @@ namespace SpeedStars.Physical
         public float pairOpen = 10f;
         [Tooltip("Running: the trunk goes back this much (deg) with each press at any speed and returns (the press clock, through the bounce spring), by the gait weight. " +
                  "0 = off: the plain run's trunk is the head-led chain alone.")]
-        public float runRock = 45f;
+        public float runRock = 0f;
         [Tooltip("Share of the bounce lean the pelvis takes (the rest is the waist and chest): the lean runs from the seat to the head. " +
                  "The legs do not turn with it.")]
         [Range(0f, 1f)] public float pelvisRockShare = 0.4f;
@@ -985,14 +962,7 @@ namespace SpeedStars.Physical
         public SpringSettings bounceChestSpring = new SpringSettings(6f, 0.55f);
         [Tooltip("The share of the run's trunk rock left at the fastest rhythm, presses 0.2 s apart or less; " +
                  "it grows to the whole at 0.4 s apart. A trunk cannot follow presses that fast: it only trembled.")]
-        [Range(0f, 1f)] public float rockFastShare = 0f;
-        [Tooltip("Press-to-press time (s) at and under which the run's rock is down to rockFastShare (x), and at and over which it is " +
-                 "whole (y). The reference game (2026-11-11): upright at a good rhythm (0.21-0.25 s), rocking back 25-35 deg every step " +
-                 "at a slow one (0.4 s and slower).")]
-        public Vector2 runRockPeriod = new Vector2(0.25f, 0.4f);
-        [Tooltip("Share of the run's rock the hips take: that part leans the whole body back about the heels (the sit-back), the rest " +
-                 "bends the waist and the chest. 0 = only the upper body rocks.")]
-        [Range(0f, 1f)] public float runRockHipShare = 0.35f;
+        [Range(0f, 1f)] public float rockFastShare = 0.3f;
 
         [Header("Hurdle jump (deg, + = forward): on top of the run, by how far through the jump")]
         [Tooltip("The leg going over first: thigh and knee over the bar (knee 180 = straight).")]
@@ -1081,7 +1051,7 @@ namespace SpeedStars.Physical
         const float HopTimeFollow = 10f;       // the hop height's flight time follows the real one at this rate (1/s)
         const float IdleRate = 5f;              // a leg turns into the balance leg (and back) this fast (1/s)
         const float IdleCarry = 0.5f;          // a resting leg more than this much the balance leg carries no weight
-        const double PairPauseGap = 0.195;     // a pair (both keys together) counts after this long since the step before it (the old 0.13 step gate × 1.5)
+        const double PoseMinGap = 0.13;        // a press this soon after the last one the pose took is the sim's alone (about 7.7 steps a second)
         const float PairWindow = 0.04f;        // two presses this close (s) are together (full), twice as far apart are not at all (the sim's togetherWindow)
         const float PressTwin = 0.06f;         // two presses closer than this (s) are one throw (two keys together)
         const float ArmIdle = 10f;             // the arm clock before any press (s): the throw is over
@@ -1089,6 +1059,8 @@ namespace SpeedStars.Physical
         const float ArmPeriodMax = 0.5f;
         const float ArmRise = 0.05f;           // the arms' throw eases up to 1 over this (s), not at once
         const float RockRise = 0.06f;         // the trunk rock eases up to its target over this (s), not at once
+        const float RockFastPeriod = 0.2f;     // press-to-press time (s) at and under which the rock is down to rockFastShare ...
+        const float RockSlowPeriod = 0.4f;     // ... and at and over which it is whole
         const float ArmReturnShare = 0.85f;   // the arm is back down this share of the press-to-press time in (it waits for the next press)
 
         const float GaitBlend = 8f;            // the gait weight follows its target this fast (1/s)
@@ -1104,7 +1076,7 @@ namespace SpeedStars.Physical
 
         float _gaitW, _armW, _speedCurve;                  // gait weight 0..1 (the arms read it); speed curve 0..1
         int _armPresses;
-        int _posePresses, _poseLastLeg = -1;        // the presses the pose took (OnTapped, stepMinGap), and the leg of the last one
+        int _posePresses, _poseLastLeg = -1;        // the presses the pose took (OnTapped, PoseMinGap), and the leg of the last one
         double _poseLastTime = -10.0;
         float _posePrevGap = 10f;                   // time between the last taken press and the one before (s)
         int _altStreak;                             // keys in turn in a row at a followable pace
@@ -1398,11 +1370,11 @@ namespace SpeedStars.Physical
             _keyLastLeg = leg;
             bool fromStand = _idleStock;   // read before it is cleared: no key and no press lately, so this press starts the run from a standstill
             _idleStock = false;   // a key is down: the legs are not on their way to the stock pose, not even for the rest of this frame
-            // The pose takes only the presses a person's steps can follow. One that comes within stepMinGap of the last one taken is
+            // The pose takes only the presses a person's steps can follow. One that comes within PoseMinGap of the last one taken is
             // the sim's alone (it counts it all the same: speed and timing are the sim's): no new stance, no cycle, no throw of the arms, no
             // hop count. A key pressed together with the first of a pair (within the pair window PairWeight counts, after a pause) is the pair's second key, taken.
             double sinceTaken = time - _poseLastTime;
-            bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 1.5f * PairWindow && _posePrevGap >= PairPauseGap;
+            bool pairSecond = _poseLastLeg >= 0 && leg != _poseLastLeg && sinceTaken <= 1.5f * PairWindow && _posePrevGap >= PoseMinGap * 1.5;
             // A hop that is on is a gate: no press, either key, is taken before the hop leg's swing is hopSpamShare along (HopBlocked) (the pose only;
             // the sim counts every press, so the gate costs no speed). A pair's second key and a jump are not gated.
             // The hop leg in the air shuts it for any time: a press there is a catch, which moved the hip 24 cm in six frames. It opens when the foot is down.
@@ -1412,8 +1384,8 @@ namespace SpeedStars.Physical
                            HopBlocked(time);
             // What the player means is read from the key, taken or not (after the gate: it judged by the intent before this key).
             NoteIntent(leg, time);
-            bool busyGate = !hopShut && sinceTaken >= stepMinGap && !fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating);
-            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (hopShut || sinceTaken < stepMinGap || busyGate))
+            bool busyGate = !hopShut && sinceTaken >= PoseMinGap && !fromStand && _altStreak < SettledStreak && PressStillBusy(leg, time, sinceTaken, alternating);
+            if (!_jumping && _poseLastTime > -5.0 && !pairSecond && (hopShut || sinceTaken < PoseMinGap || busyGate))
             {
                 l.pressedAt = time;   // the key is down: a hold counts from here, not from an old press
                 _lastPress = time;    // a key that is pressed is alive whether the pose takes it or not (else the legs go to the stock pose mid-swing)
@@ -2356,7 +2328,6 @@ namespace SpeedStars.Physical
             // the same share (its foot is planted, the share only keeps its angles in step, so the lift-off does not jump);
             // in a dive it keeps to the ground as before. The dive (the hold weight) turns the swinging legs with the hips.
             bool running = push || leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid || leg.phase == LegPhase.Land;
-            // The whole cycle, the way back and forward alike, turns with the trunk (one rule, no weights by phase or rate).
             float runShare = legTurn > 0.5f ? Mathf.Min(legTurn * runLegLean, Mathf.Max(0f, runLegLeanMax)) / legTurn : 0f;
             float runTarget = push ? runShare * (1f - _dive) : Mathf.Max(_dive, runShare);
             leg.follow = Mathf.MoveTowards(leg.follow, planted ? 0f : running ? runTarget : 1f, FollowRate * dt);
@@ -2643,18 +2614,7 @@ namespace SpeedStars.Physical
             float bounce = Mathf.Lerp(1f, runBounce, _plainRun);
             float extent = StanceExtent(leg) - (stanceDip * _dipAmp * (1f - hopW) * bounce + hopStanceDip * hopW) * Mathf.Sin(Mathf.PI * leg.stanceU) +
                            hopPushRise * hopW * Mathf.SmoothStep(0f, 1f, leg.stanceU);
-            extent *= RunDrop();
             return extent + AnkleGround(leg) - joint.y;
-        }
-
-        /// <summary>
-        /// A leg turned with the lean (runLegLean) stands at that angle: its foot is on the ground only that much lower (runLegDrop of the
-        /// cosine). The stance and the run's flight both come down to it, so the turned feet reach the ground and the body tips about them.
-        /// </summary>
-        float RunDrop()
-        {
-            float turn = Mathf.Clamp(_legTurn * runLegLean, 0f, Mathf.Min(80f, runLegLeanMax)) * _plainRun * (1f - _dive);
-            return Mathf.Lerp(1f, Mathf.Cos(turn * Mathf.Deg2Rad), runLegDrop);
         }
 
         /// <summary>Highest body a planted foot lets (the leg at full length from the hip joint to the ankle).</summary>
@@ -2798,7 +2758,7 @@ namespace SpeedStars.Physical
             _extent = StanceExtent(leftLeg);
             // The picture's head angle: the shown one (a good rhythm moves it too); a hop or a pair keeps the sim's, their trunk has its own design.
             // A one-leg hop does not throw the head forward.
-            _headAngle = preview ? 0f : Mathf.Lerp(Mathf.Lerp(sim.HeadAngle, sim.ShownHeadAngle, shownHeadShare), sim.HeadAngle, _pair) * (1f - _hop);
+            _headAngle = preview ? 0f : Mathf.Lerp(sim.ShownHeadAngle, sim.HeadAngle, _pair) * (1f - _hop);
             float baseBend = 0f, bend = 0f, headLean = 0f;
             if (!preview)
             {
@@ -3488,7 +3448,7 @@ namespace SpeedStars.Physical
                 Vector3 joint = Joint(incoming, hip, pelvisTilt, width);
                 // A hop comes down to the touchdown pose's own height (hopContact), not the stance's (a slow stance is near the crouch: the spring
                 // took the body to 0.80 while the pose asks for 0.94, and the foot's touch then pushed it up 5 cm). The stance sinks it after the touch.
-                float landExtent = Mathf.Lerp(StanceExtent(incoming) * RunDrop(), Extent(incoming, Key(ContactPose(), hopContact)), _hop * (1f - _pair));
+                float landExtent = Mathf.Lerp(StanceExtent(incoming), Extent(incoming, Key(ContactPose(), hopContact)), _hop * (1f - _pair));
                 float landY = landExtent + AnkleGround(incoming) - joint.y;
                 float speed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(riseSpeed.x, riseSpeed.y, sim.Speed));
                 float hopWeight = Mathf.Max(_hopQuick ? _hop * (1f - _pair) : _hopBodyW, _pair);
@@ -3599,15 +3559,10 @@ namespace SpeedStars.Physical
         {
             float head = Mathf.Max(0f, _headAngle);
             float whole = Mathf.Lerp(hipRunLean.x, hipRunLean.y, Speed01()) * _stepping * _plainRun;
-            // Mashing (the head far forward while running) the whole body lies down further, toward the dive's level.
-            whole += mashLean * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(mashLeanHead.x, mashLeanHead.y, head)) *
-                     _stepping * _plainRun * (1f - _dive) * (1f - _heldNow);
             float back = _headAngle < 0f ? Mathf.Max(-hipBackMax, Mathf.Min(0f, _headAngle - body.Sim.HeadRest)) : 0f;
 
             // A chain down from the head: chest, waist base, hips, each a share of the head's angle and following the one above a moment later.
-            float leanTarget = whole + back + chestShare * head;
-            SpringSettings leanIn = leanTarget < _lean.Value ? leanRiseSpring : hipFollowSpring;
-            _lean.Step(leanTarget, leanIn.frequency, leanIn.damping, dt);
+            _lean.Step(whole + back + chestShare * head, hipFollowSpring.frequency, hipFollowSpring.damping, dt);
             float chest = _lean.Value;
             _waistBase.Step(whole + back + (chest - whole - back) * waistShare / Mathf.Max(0.01f, chestShare),
                 waistSpring.frequency, waistSpring.damping, dt);
@@ -3777,7 +3732,7 @@ namespace SpeedStars.Physical
             float pw = _pair * (1f - _dive), hw = _hop * (1f - _pair) * (1f - _dive);
             float rw = _stepping * (1f - _hop) * (1f - _pair) * (1f - _dive);   // the run's rock does not wait for the gait: it is there at a slow run too
             // Presses too fast for a trunk to follow rock it less (the pair's throw is not a rhythm of single presses, so it keeps its size).
-            float rock = Mathf.Lerp(rockFastShare, 1f, Mathf.InverseLerp(runRockPeriod.x, runRockPeriod.y, _armPeriod));
+            float rock = Mathf.Lerp(rockFastShare, 1f, Mathf.InverseLerp(RockFastPeriod, RockSlowPeriod, _armPeriod));
             // A one-leg hop adds nothing here: its trunk is a steady lean (hopLean), no rock with the press and no riding of the bounce.
             float target = pw * (pairLean * (1f - _armKick) - pairOpen * _armKick) + rock * rw * -runRock * _rockKick;
             _bounceLean.Step(target, bounceLeanSpring.frequency, bounceLeanSpring.damping, dt);
@@ -3797,8 +3752,7 @@ namespace SpeedStars.Physical
             baseBend += _pressBack.Value * 0.5f;
             bend += _pressBack.Value * 0.5f;
             // The pelvis takes a small share in the hop, so the rock goes from the seat to the head (the legs' turn is not touched).
-            // The run's rock back: runRockHipShare of it leans the whole body back about the heels (a lean back is the sit-back).
-            lean += _bounceLean.Value * (pelvisRockShare * hw + runRockHipShare * rw);
+            lean += _bounceLean.Value * pelvisRockShare * hw;
         }
 
         void ResetGait()
