@@ -28,7 +28,14 @@ namespace SpeedStars.Runner
         [Header("Runtime continuation")]
         public bool streamAtRuntime=true;
         public Transform runner;
+        [Tooltip("Minimum distance behind the runner before a chunk may be retired. It is only removed once the camera cannot see it either.")]
         [Min(5)] public float retireDistance=25;
+        [Tooltip("Camera whose view keeps chunks alive. Empty = Camera.main; with no camera at all, only the distance rule applies.")]
+        public Camera viewCamera;
+        [Tooltip("Retire a chunk regardless of the camera once the runner is this far past its end, so the live list never grows without bound.")]
+        [Min(50)] public float forceRetireDistance=300;
+        [Tooltip("Build the next chunk when the end of the last one is closer than this to the runner. Keep it well beyond what the camera sees.")]
+        [Min(30)] public float buildAheadDistance=150;
         [Header("Street rhythm")]
         [Min(2)] public float lampSpacing=11.81f;
         public Vector2 cloudCountRange=new Vector2(0,2);
@@ -45,6 +52,9 @@ namespace SpeedStars.Runner
         readonly List<LoopWayChunk> live=new List<LoopWayChunk>();
         readonly List<int> recentBuildingTypes=new List<int>();
         int nextIndex;
+        Coroutine building;
+        LoopWayChunk pending;
+        Camera mainCamera;
         public bool IsConfigured {get{return configured&&roads!=null&&roads.Length>0&&city!=null&&city.prefab;}}
         void Start()
         {
@@ -59,12 +69,26 @@ namespace SpeedStars.Runner
             float z=transform.InverseTransformPoint(runner.position).z;
             // Restart can return behind sections already retired from the stream.
             if(live[0].index>1&&z<live[0].start-retireDistance){Generate();return;}
-            // A teleport can retire several sections. Keep work bounded in one frame.
-            for(int n=0;n<8&&live.Count>0&&z>live[0].end+retireDistance;n++)
-            {
-                var old=live[0];live.RemoveAt(0);old.gameObject.SetActive(false);Destroy(old.gameObject);
-                live.Add(BuildChunk(nextIndex++));
-            }
+            // While a chunk is being built, the frame budget is taken: never build and destroy in the same frame.
+            if(building!=null)return;
+            var first=live[0];
+            if(live.Count>1&&z>first.end+retireDistance&&(z>first.end+forceRetireDistance||LoopWayStreaming.OutOfView(ViewCamera(),first.worldBounds)))
+            {live.RemoveAt(0);first.gameObject.SetActive(false);Destroy(first.gameObject);return;}
+            // Build far ahead of the camera, independent of what is retired behind.
+            if(live[live.Count-1].end-z<buildAheadDistance)building=StartCoroutine(BuildAhead());
+        }
+        Camera ViewCamera()
+        {
+            if(viewCamera&&viewCamera.isActiveAndEnabled)return viewCamera;
+            if(!mainCamera||!mainCamera.isActiveAndEnabled)mainCamera=Camera.main;
+            return mainCamera;
+        }
+        // One build step per frame; the half-built chunk is far ahead and not visible yet.
+        System.Collections.IEnumerator BuildAhead()
+        {
+            var steps=BuildChunkSteps(nextIndex++);
+            while(steps.MoveNext())yield return null;
+            live.Add(pending);pending=null;building=null;
         }
         public void Generate()
         {
@@ -91,6 +115,8 @@ namespace SpeedStars.Runner
             foreach(Transform child in transform)if(child.GetComponent<LoopWayGenerated>())owned.Add(child.gameObject);
             foreach(var item in owned){item.SetActive(false);if(Application.isPlaying)Destroy(item);else DestroyImmediate(item);}
             generatedRoot=null;live.Clear();
+            if(building!=null)StopCoroutine(building);
+            building=null;pending=null;
         }
         static int ChunkSeed(int baseSeed,int index)
         {unchecked{return (baseSeed*73856093)^(index*19349663)^83492791;}}
@@ -123,7 +149,15 @@ namespace SpeedStars.Runner
             }
             return edge;
         }
+        // Synchronous path (edit mode, Generate): drain every step at once.
         LoopWayChunk BuildChunk(int index)
+        {
+            var steps=BuildChunkSteps(index);
+            while(steps.MoveNext()){}
+            var done=pending;pending=null;return done;
+        }
+        // Yields between sections so runtime streaming can spread the work. Random draws keep their original order.
+        System.Collections.IEnumerator BuildChunkSteps(int index)
         {
             int chunkSeed=ChunkSeed(seed,index);var r=new System.Random(chunkSeed);
             var root=Group("Loop "+index.ToString("000")+" - Seed "+chunkSeed,generatedRoot);
@@ -137,10 +171,12 @@ namespace SpeedStars.Runner
             Stretch(water,infrastructure,Mathf.Max(a,waterEnd),b);
             Stretch(bank,infrastructure,Mathf.Max(a,bankEnd),b);
             BuildBridge(infrastructure,Mathf.Max(a,bridgeEnd),b);
+            yield return null;
             var lighting=Group("Evenly Spaced Street Lamps",root);
             float visualLampSpacing=lampSpacing*1.75f;int first=Mathf.CeilToInt((a-lampAnchor)/visualLampSpacing);
             for(int k=first;lampAnchor+k*visualLampSpacing<b-.001f;k++)
             {var g=Spawn(lamp,lighting);var p=g.transform.localPosition;p.z=lampAnchor+k*visualLampSpacing;p.x-=2.5f;g.transform.localPosition=p;g.transform.localScale*=.78f;}
+            yield return null;
             var skyline=Group("Background City",root);var cityObject=Spawn(city,skyline,segmentLength*index);
             var row=cityObject.GetComponent<PastelBuildingRow>();row.automaticUpdate=false;row.variationSeed=r.Next();
             var districtRandom=new System.Random(ChunkSeed(seed,index)^17095733);
@@ -151,6 +187,7 @@ namespace SpeedStars.Runner
             row.layerStagger=Range(districtRandom,1.5f,6);
             row.gap=Range(districtRandom,.7f,2.8f);
             row.heightRange=city.prefab.GetComponent<PastelBuildingRow>().heightRange*Range(districtRandom,.80f,1.22f);
+            yield return null;
             row.Rebuild();info.cityCount=row.buildingCount;SpeedStars.Themes.ThemeAtmosphere.Set(cityObject,new Color(.64f,.78f,.86f),.8f);
             // Fit the district to its section, retaining facade rotations and depth layers.
             Bounds district=LocalBounds(cityObject,transform);
@@ -158,6 +195,7 @@ namespace SpeedStars.Runner
             float factor=segmentLength*coverage/Mathf.Max(1,district.size.z);
             var scale=cityObject.transform.localScale;scale.z*=factor;cityObject.transform.localScale=scale;
             district=LocalBounds(cityObject,transform);var cp=cityObject.transform.localPosition;cp.z+=(a+b)*.5f-district.center.z;cp.x-=DepthPhase(index)==4?5:Range(districtRandom,10,18);cityObject.transform.localPosition=cp;
+            yield return null;
             var sky=Group("Independent Cloud Variations",root);
             int cmin=Mathf.Clamp(Mathf.RoundToInt(cloudCountRange.x),0,2),cmax=Mathf.Clamp(Mathf.RoundToInt(cloudCountRange.y),cmin,2);
             int cloudCount=CloudCount(index,cmin,cmax);info.cloudCount=cloudCount;
@@ -169,6 +207,7 @@ namespace SpeedStars.Runner
                 var variation=g.GetComponent<CloudVariation>();if(!variation){variation=g.AddComponent<CloudVariation>();variation.ReadMaterial();}
                 variation.shapeVariant=Range(r,0,10000)+index*.371f;variation.Apply();
             }
+            yield return null;
             var frontage=Group("Foreground Building Clusters",root);
             int frontageKind=FrontageKind(index);
             info.frontageKind=frontageKind==0?"Buildings":frontageKind==1?"Bus Stop":frontageKind==2?"Pocket Park":"Hospital";
@@ -177,6 +216,7 @@ namespace SpeedStars.Runner
                 BuildFrontage(frontage,a,b,index,info);
             else BuildLandmark(frontage,frontageKind==1?busStop:frontageKind==2?park:hospital,a,b,index,frontageKind);
             FillLongFrontageGaps(frontage,a,b,index);
+            yield return null;
             // Street props use spaced curb-side bays. Deep building frontage stays separate.
             var vegetation=Group("Visible Foreground Hedge Groups",root);
             int phase=DepthPhase(index);int hedgeCount=phase==4?2:1;info.hedgeCount=hedgeCount;
@@ -190,6 +230,7 @@ namespace SpeedStars.Runner
                 var plant=g.GetComponent<PastelPlantGenerator>();plant.automaticUpdate=false;plant.variationSeed=r.Next();
                 plant.width=phase==4?Range(r,3.5f,4.5f):Range(r,2.2f,3.5f);plant.height=phase==4?Range(r,1.4f,1.9f):Range(r,.85f,1.35f);plant.Rebuild();
             }
+            yield return null;
             var furnishings=Group("Street Props - Varied Street Activity",root);
             int propCount=phase==4?3:r.Next(1,3);info.propCount=propCount;
             var propOrder=new List<int>();for(int p=0;p<props.Length;p++)propOrder.Add(p);
@@ -211,13 +252,15 @@ namespace SpeedStars.Runner
                     }
                 }
             }
+            yield return null;
             var riverPlants=Group("Riverside Foliage",root);
             for(int j=0;j<6;j++)
             {
                 var g=Spawn(riversideHedge,riverPlants);var p=g.transform.localPosition;p.z=a+(j+.5f)*segmentLength/6;p.x+=(j%3==0?-18:0);if(p.z<riversideEnd){g.SetActive(false);if(Application.isPlaying)Destroy(g);else DestroyImmediate(g);continue;}g.transform.localPosition=p;
                 var plant=g.GetComponent<PastelPlantGenerator>();plant.automaticUpdate=false;plant.variationSeed=r.Next();plant.width*=Range(r,.8f,1.25f);plant.Rebuild();
             }
-            return info;
+            info.worldBounds=LoopWayStreaming.CaptureBounds(root.gameObject);
+            pending=info;
         }
         public int FrontageKind(int index)
         {

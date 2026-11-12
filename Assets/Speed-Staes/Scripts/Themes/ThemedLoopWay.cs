@@ -19,6 +19,13 @@ namespace SpeedStars.Themes
         public bool streamAtRuntime=true;
         public Transform runner;
         [Min(5)]public float retireDistance=25;
+        [Tooltip("Camera whose view keeps chunks alive. Empty = Camera.main; with no camera at all, only the distance rule applies.")]
+        public Camera viewCamera;
+        [Tooltip("Retire a chunk regardless of the camera once the runner is this far past its end, so the live list never grows without bound.")]
+        [Min(50)]public float forceRetireDistance=300;
+        [Tooltip("Build the next chunk when the end of the last one is closer than this to the runner. Keep it well beyond what the camera sees.")]
+        [Min(30)]public float buildAheadDistance=150;
+        Camera mainCamera;
         [Min(2)]public float romanLampSpacing=11.81f;
         public const float RoadLength=20.14339f;
         public const float SectionLength=RoadLength*3;
@@ -27,13 +34,24 @@ namespace SpeedStars.Themes
         readonly List<ThemeChunk> live=new List<ThemeChunk>();
         Transform generated;int next;
         void Start(){if(Application.isPlaying&&streamAtRuntime){if(!runner){var r=FindObjectOfType<RunnerBody>();if(r)runner=r.transform;}if(loopCount<2)loopCount=2;if(live.Count==0)Generate();}}
-        void Update(){if(!Application.isPlaying||!streamAtRuntime||!runner||live.Count==0)return;float z=transform.InverseTransformPoint(runner.position).z;if(live[0].index>0&&z<live[0].start-retireDistance){Generate();return;}for(int n=0;n<8&&live.Count>0&&z>live[0].end+retireDistance;n++){var old=live[0];live.RemoveAt(0);old.gameObject.SetActive(false);Destroy(old.gameObject);live.Add(Build(next++));}}
+        void Update(){if(!Application.isPlaying||!streamAtRuntime||!runner||live.Count==0)return;float z=transform.InverseTransformPoint(runner.position).z;if(live[0].index>0&&z<live[0].start-retireDistance){Generate();return;}
+            // Retire only once out of the camera's view, and never build and destroy in the same frame.
+            var first=live[0];
+            if(live.Count>1&&z>first.end+retireDistance&&(z>first.end+forceRetireDistance||LoopWayStreaming.OutOfView(ViewCamera(),first.worldBounds))){live.RemoveAt(0);first.gameObject.SetActive(false);Destroy(first.gameObject);return;}
+            if(live[live.Count-1].end-z<buildAheadDistance){var made=Build(next++);made.worldBounds=LoopWayStreaming.CaptureBounds(made.gameObject);live.Add(made);}
+        }
+        Camera ViewCamera()
+        {
+            if(viewCamera&&viewCamera.isActiveAndEnabled)return viewCamera;
+            if(!mainCamera||!mainCamera.isActiveAndEnabled)mainCamera=Camera.main;
+            return mainCamera;
+        }
         public void Generate()
         {
             if(theme&&theme.concept==EnvironmentConcept.Egypt&&Application.isPlaying&&streamAtRuntime){loopCount=Mathf.Max(4,loopCount);retireDistance=Mathf.Max(70,retireDistance);}
             if(theme&&theme.concept==EnvironmentConcept.PirateSea&&Application.isPlaying&&streamAtRuntime){loopCount=Mathf.Max(4,loopCount);retireDistance=Mathf.Max(90,retireDistance);}
             if(!theme||!theme.road)return;Clear();ResetRomanStreetLayout();ResetEgyptDesertLayout();ResetMarineLayout();ResetSkyLayout();generated=Group("Generated Theme - "+theme.concept,transform);generated.gameObject.AddComponent<ThemeGeneratedRoot>();
-            for(int i=0;i<Mathf.Clamp(loopCount,1,20);i++)live.Add(Build(i));next=loopCount;
+            for(int i=0;i<Mathf.Clamp(loopCount,1,20);i++){var made=Build(i);made.worldBounds=LoopWayStreaming.CaptureBounds(made.gameObject);live.Add(made);}next=loopCount;
 #if UNITY_EDITOR
             if(!Application.isPlaying){EditorUtility.SetDirty(this);if(gameObject.scene.IsValid())EditorSceneManager.MarkSceneDirty(gameObject.scene);}
 #endif

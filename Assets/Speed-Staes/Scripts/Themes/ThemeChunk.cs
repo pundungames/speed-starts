@@ -1,5 +1,5 @@
 using UnityEngine;
 namespace SpeedStars.Themes
 {
-    public sealed class ThemeChunk:MonoBehaviour {public int index,seed;public float start,end;public string landmarkSummary;}
+    public sealed class ThemeChunk:MonoBehaviour {public int index,seed;public float start,end;public string landmarkSummary;public Bounds worldBounds;}
 }
