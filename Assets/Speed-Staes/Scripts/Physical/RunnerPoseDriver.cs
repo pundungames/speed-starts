@@ -171,6 +171,9 @@ namespace SpeedStars.Physical
 
             // Run-cycle state: runtime only, not serialized.
             [System.NonSerialized] public bool grounded;    // stance: the ankle is nailed to the ground at footZ
+            [System.NonSerialized] public Spring plantBlend;   // after a landing / lift-off: how far the drawn ankle is off its own place along the run (m), decaying
+            [System.NonSerialized] public float blendLeft, shownZ, shownVel, rawZ;   // blend time left (s); the ankle along the run as drawn last frame, its speed; its own place last frame
+            [System.NonSerialized] public bool blendSet, blendGrounded;        // shownZ is valid; grounded as of the last drawn frame
             [System.NonSerialized] public bool needLock;    // the stance begins this frame: nail the ankle where it is
             [System.NonSerialized] public bool toeOff;      // the stance is over: swing next (running: the other foot took over, or the leg ran out of length; else pushEnd, stanceMax)
             [System.NonSerialized] public double plantedAt = -1.0;   // when this stance began (not pressedAt: a landed foot's press time is rewritten)
@@ -756,6 +759,13 @@ namespace SpeedStars.Physical
         public float touchSoftRate = 35f;
         [Tooltip("The slowest a landing foot comes down (m/s), so it always reaches the ground in time.")]
         public float touchMinSpeed = 1.5f;
+        [Tooltip("A foot landing or lifting off takes its new motion at once, and the gap to where and how fast it was drawn fades " +
+                 "through this spring (Hz, damping 1), so its speed along the run does not jump in one frame. Mashing, a foot still " +
+                 "swinging forward at ~6 m/s was nailed to the ground in one frame and the thigh snapped 13-20 deg (measured in play); " +
+                 "now the planted foot slides a few cm and settles. Higher = tighter (less slide), lower = softer. 0 = off.")]
+        public float plantBlendFrequency = 10f;
+        [Tooltip("How long (s) after a landing or a lift-off the fading gap is drawn (it is under a millimetre by then).")]
+        public float plantBlendTime = 0.12f;
 
         [Header("Foot")]
         [Tooltip("Foot angle while a foot is held back (deg).")]
@@ -2911,8 +2921,8 @@ namespace SpeedStars.Physical
             WriteHead(hipPitch + backLean + waistAngle - _restWaist + waistTopAngle + bend,
                 p.pelvisPitch + waistAngle - _restWaist,
                 headLean - backLean, backLean, p.headDown, rootRot);
-            WriteLeg(leftLeg);
-            WriteLeg(rightLeg);
+            WriteLeg(leftLeg, dt);
+            WriteLeg(rightLeg, dt);
 
             // Arms: one key, one leg, one arm (the right key's press sends the right leg back and the left arm
             // with it); a leg held back keeps its arm back.
@@ -3652,11 +3662,60 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>The IK reproduces the angles: target = the ankle, hint = in front of the knee, across the thigh.</summary>
-        void WriteLeg(Leg leg)
+        void WriteLeg(Leg leg, float dt)
         {
-            leg.target.position = transform.TransformPoint(leg.ankle);
+            // The landing / lift-off blend moves the ankle and the knee together along the run, so the leg keeps its shape.
+            Vector3 shift = new Vector3(0f, 0f, PlantBlend(leg, leg.ankle.z, dt));
+            leg.target.position = transform.TransformPoint(leg.ankle + shift);
             float th = leg.thighWorld * Mathf.Deg2Rad;
-            leg.hint.position = transform.TransformPoint(leg.knee + leg.sideTurn * new Vector3(0f, Mathf.Sin(th), Mathf.Cos(th)) * HintDistance);
+            leg.hint.position = transform.TransformPoint(leg.knee + shift + leg.sideTurn * new Vector3(0f, Mathf.Sin(th), Mathf.Cos(th)) * HintDistance);
+        }
+
+        /// <summary>
+        /// How far (m, along the run) the drawn ankle is off its own place this frame. A landing nails the foot where it was drawn but
+        /// stops it dead (it was still swinging forward), and a lift-off starts it at the swing's speed at once: both changed the ankle's
+        /// speed along the run by ~6 m/s in one frame, mashing. At either, the gap between where and how fast the ankle was drawn and its
+        /// own place and speed is taken as an offset that a critically damped spring (plantBlendFrequency) brings to nothing: the ankle
+        /// takes its new motion at once and only the fading offset rides on it. (A spring chasing the place itself lagged the planted
+        /// foot, which runs back at the run's speed, by up to 40 cm.)
+        /// </summary>
+        float PlantBlend(Leg leg, float z, float dt)
+        {
+            if (preview || plantBlendFrequency <= 0f || dt <= 0f)
+            {
+                leg.blendSet = false;
+                return 0f;
+            }
+            if (!leg.blendSet)
+            {
+                leg.blendSet = true;
+                leg.blendGrounded = leg.grounded;
+                leg.shownZ = leg.rawZ = z;
+                leg.shownVel = 0f;
+                leg.blendLeft = 0f;
+                leg.plantBlend.Reset();
+                return 0f;
+            }
+            if (leg.grounded != leg.blendGrounded)
+            {
+                leg.blendGrounded = leg.grounded;
+                // Its own speed now: a planted foot goes back with the root; a lifting one at the swing's first step.
+                float ownVel = leg.grounded ? -_rootSpeed : (z - leg.rawZ) / dt;
+                leg.plantBlend.Value = leg.shownZ + leg.shownVel * dt - z;
+                leg.plantBlend.Velocity = leg.shownVel - ownVel;
+                leg.blendLeft = plantBlendTime;
+            }
+            else if (leg.blendLeft > 0f)
+            {
+                leg.plantBlend.Step(0f, plantBlendFrequency, 1f, dt);
+                leg.blendLeft -= dt;
+            }
+            float offset = leg.blendLeft > 0f ? leg.plantBlend.Value : 0f;
+            float shown = z + offset;
+            leg.shownVel = (shown - leg.shownZ) / dt;
+            leg.shownZ = shown;
+            leg.rawZ = z;
+            return offset;
         }
 
         /// <summary>−1 = left, +1 = right.</summary>
@@ -3818,6 +3877,7 @@ namespace SpeedStars.Physical
             _brake = _brakeRaw = 0f;
             _hopBody.Reset();
             _legsAhead.Reset();
+            leftLeg.blendSet = rightLeg.blendSet = false;
             _surge.Reset();
             _landHold = false;
             _hopBodyW = 0f;
