@@ -80,8 +80,7 @@ namespace SpeedStars.Physical
         void LateUpdate()
         {
             if (!_particles || _body.Sim == null) return;
-            float max = _body.Sim.T.energyMax;
-            float multiplier = max > 0f ? MultiplierForEnergy(_body.Sim.Energy / max) : 0f;
+            float multiplier = MultiplierForEnergy(_body.Sim.Energy01);
             Vector3 position = transform.position;
             bool teleport = _hasPrevious && Vector3.Distance(position, _previous) > Mathf.Max(2f, 30f * Time.deltaTime);
             _previous = position;

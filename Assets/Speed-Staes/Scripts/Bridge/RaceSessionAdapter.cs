@@ -77,10 +77,12 @@ namespace SpeedStars.Bridge
             {
                 if (Relay) return bots.Relay.PlayerEnergy01; // the runner with the baton: full again after every exchange
                 if (!body || body.Sim == null) return 0f;
-                float max = body.Sim.T.energyMax;
-                return max > 0f ? Mathf.Clamp01(body.Sim.Energy / max) : 0f;
+                return body.Sim.Energy01;
             }
         }
+
+        /// <summary>The most presses per second the player's runner can make now (falls with its energy); 0 when there is no runner.</summary>
+        public float CadenceLimit => !Relay && body && body.Sim != null ? body.Sim.CadenceLimit : 0f;
 
         public float PressesPerSecond
         {

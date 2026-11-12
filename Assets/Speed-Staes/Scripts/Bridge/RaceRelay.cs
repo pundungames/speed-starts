@@ -166,8 +166,7 @@ namespace SpeedStars.Bridge
             {
                 if (!(PlayerTeam() is Team t)) return 0f;
                 RunnerSim sim = Baton(t).Body ? Baton(t).Body.Sim : null;
-                if (sim == null || sim.T.energyMax <= 0f) return 0f;
-                return Mathf.Clamp01(sim.Energy / sim.T.energyMax);
+                return sim != null ? sim.Energy01 : 0f;
             }
         }
 

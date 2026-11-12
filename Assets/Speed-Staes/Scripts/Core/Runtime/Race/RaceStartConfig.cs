@@ -55,6 +55,29 @@ namespace SpeedStars.Core.Race
         [Range(10f, 90f)]
         [SerializeField] private float introFieldOfView = 38f;
 
+        [Tooltip("On: the opening camera keeps a fixed aim across the track (Intro Aim Yaw / Pitch), as in the original's low shot along the blocks, and the runner sits where that aim puts it, the same in every race whatever the lane. Off: it looks at the runner (Intro Look Height).")]
+        [SerializeField] private bool introFixedAim;
+
+        [Tooltip("With a fixed aim: how far the view turns from straight across the track toward the runner's back (deg). The original: about 7.")]
+        [Range(-60f, 60f)]
+        [SerializeField] private float introAimYaw = 7f;
+
+        [Tooltip("With a fixed aim: how far the view looks down (deg). The original is level: about 1.")]
+        [Range(-30f, 45f)]
+        [SerializeField] private float introAimPitch = 1f;
+
+        [Tooltip("At READY the opening camera starts this much higher (m), looking down at the runner, and slides down to the opening shot (as in the original). 0 = it starts in place.")]
+        [Min(0f)]
+        [SerializeField] private float introDropHeight = 2.5f;
+
+        [Tooltip("How long that slide down takes (real seconds from READY); the READY word shows about as long.")]
+        [Min(0.01f)]
+        [SerializeField] private float introDropSeconds = 2f;
+
+        [Tooltip("easeOutBack overshoot of the slide down: 0 = a plain ease out (fast first, settling softly), higher = it dips a little below and comes back up.")]
+        [Range(0f, 4f)]
+        [SerializeField] private float introDropOvershoot = 0f;
+
         [Tooltip("On: the opening shot holds through READY and SET and swings to the race camera on GO (as in the original). Off: it swings after Intro Hold Seconds.")]
         [SerializeField] private bool introHoldUntilGo = true;
 
@@ -65,6 +88,10 @@ namespace SpeedStars.Core.Race
         [Tooltip("How long it takes to swing round to the race camera (real seconds).")]
         [Min(0.01f)]
         [SerializeField] private float introSwingSeconds = 1f;
+
+        [Tooltip("easeOutBack overshoot of that swing: it leaves fast, passes the race camera a little and settles back. 1.70158 is the classic easeOutBack; 0 = the older even ease in and out.")]
+        [Range(0f, 4f)]
+        [SerializeField] private float introSwingOvershoot = 1.70158f;
 
         [Header("Start poses (clips from the character FBX; empty = the driver's computed stance)")]
         [Tooltip("READY pose (on the blocks), sampled at time 0. Empty = the computed stance stays.")]
@@ -224,7 +251,14 @@ namespace SpeedStars.Core.Race
         public float IntroLookHeight => introLookHeight;
         public float IntroStanceLookDrop => introStanceLookDrop;
         public float IntroFieldOfView => introFieldOfView;
+        public bool IntroFixedAim => introFixedAim;
+        public float IntroAimYaw => introAimYaw;
+        public float IntroAimPitch => introAimPitch;
         public bool IntroHoldUntilGo => introHoldUntilGo;
+        public float IntroDropHeight => introDropHeight;
+        public float IntroDropSeconds => introDropSeconds;
+        public float IntroDropOvershoot => introDropOvershoot;
+        public float IntroSwingOvershoot => introSwingOvershoot;
         public float IntroHoldSeconds => introHoldSeconds;
         public float IntroSwingSeconds => introSwingSeconds;
         public float GoSeconds => goSeconds;

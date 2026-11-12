@@ -39,7 +39,7 @@ namespace SpeedStars.UI.Race
         [Tooltip("Cadence/Marker: moved along the track from its left end by presses per second over the full scale.")]
         [SerializeField] private RectTransform cadenceMarker;
 
-        [Tooltip("Presses per second at the right end of the cadence bar.")]
+        [Tooltip("Presses per second at the right end of the cadence bar when the telemetry gives no limit; otherwise the runner's own limit (falling with its energy) is the full scale.")]
         [Min(0.1f)]
         [SerializeField] private float cadenceMaxPressesPerSecond = 10f;
 
@@ -315,15 +315,17 @@ namespace SpeedStars.UI.Race
             if (energyFill != null) energyFill.fillAmount = referenceHud && !approvedHudV3 ? ReferenceBarAmount(_telemetry.Energy01) : Mathf.Clamp01(_telemetry.Energy01);
             if (energyValueText != null) energyValueText.text = Mathf.RoundToInt(Mathf.Clamp01(_telemetry.Energy01) * 100f).ToString();
             if (cadenceValueText != null) cadenceValueText.text = _telemetry.PressesPerSecond.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+            // The bar's full scale is the runner's limit now (it falls with the energy), so the best rhythm sits at its middle.
+            float cadenceMax = _telemetry.CadenceLimit > 0f ? _telemetry.CadenceLimit : cadenceMaxPressesPerSecond;
             if (cadenceFill != null)
             {
-                float fraction = RaceDisplayFormat.CadenceFraction(_telemetry.PressesPerSecond, cadenceMaxPressesPerSecond);
+                float fraction = RaceDisplayFormat.CadenceFraction(_telemetry.PressesPerSecond, cadenceMax);
                 cadenceFill.fillAmount = approvedHudV3 ? fraction : ReferenceBarAmount(fraction);
             }
 
             if (cadenceTrack != null && cadenceMarker != null)
             {
-                float fraction = RaceDisplayFormat.CadenceFraction(_telemetry.PressesPerSecond, cadenceMaxPressesPerSecond);
+                float fraction = RaceDisplayFormat.CadenceFraction(_telemetry.PressesPerSecond, cadenceMax);
                 if (!Mathf.Approximately(fraction, _shownCadence))
                 {
                     _shownCadence = fraction;

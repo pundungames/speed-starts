@@ -77,16 +77,31 @@ namespace SpeedStars.Bridge
                 return;
             }
 
-            float t = Mathf.SmoothStep(0f, 1f, _swing);
+            // easeOutBack: leaves the opening shot fast, passes the race camera a little and settles back (0 = the older even ease).
+            float t = config.IntroSwingOvershoot > 0f
+                ? SideFollowCamera.EaseOutBack(_swing, config.IntroSwingOvershoot)
+                : Mathf.SmoothStep(0f, 1f, _swing);
             Transform runner = _follow.target;
             Transform cam = _camera.transform;
             Vector3 raceOffset = cam.position - runner.position;
+            // The same place by the player's runner in every race, whatever its lane: the start shot always looks the same.
             Vector3 opening = runner.right * config.IntroCameraOffset.x + Vector3.up * config.IntroCameraOffset.y + runner.forward * config.IntroCameraOffset.z;
+            // READY: it starts higher, looking down, and slides down into the shot (eased; real time from READY).
+            float drop = config.IntroDropHeight * (1f - SideFollowCamera.EaseOutBack(_held / config.IntroDropSeconds, config.IntroDropOvershoot));
+            opening += Vector3.up * drop;
+            float across = new Vector2(config.IntroCameraOffset.x, config.IntroCameraOffset.z).magnitude;
+            float dropPitch = Mathf.Atan2(drop, Mathf.Max(0.1f, across)) * Mathf.Rad2Deg; // tipped down by what it rose, so the runner stays in the picture
             Vector3 look = runner.position + Vector3.up * (config.IntroLookHeight - config.IntroStanceLookDrop) - (runner.position + opening);
 
-            cam.position = runner.position + Vector3.Slerp(opening, raceOffset, t); // round the runner, not through it
-            cam.rotation = Quaternion.Slerp(Quaternion.LookRotation(look, Vector3.up), cam.rotation, t);
-            _camera.fieldOfView = Mathf.Lerp(config.IntroFieldOfView, _raceFieldOfView, t);
+            // Fixed aim: straight across the track from the runner's right, turned toward the runner's back, then tipped down.
+            Quaternion openingAim = config.IntroFixedAim
+                ? Quaternion.AngleAxis(-config.IntroAimYaw, Vector3.up) * Quaternion.LookRotation(-runner.right, Vector3.up) * Quaternion.Euler(config.IntroAimPitch + dropPitch, 0f, 0f)
+                : Quaternion.LookRotation(look, Vector3.up);
+
+            // Unclamped, so the overshoot past the race camera shows.
+            cam.position = runner.position + Vector3.SlerpUnclamped(opening, raceOffset, t); // round the runner, not through it
+            cam.rotation = Quaternion.SlerpUnclamped(openingAim, cam.rotation, t);
+            _camera.fieldOfView = Mathf.LerpUnclamped(config.IntroFieldOfView, _raceFieldOfView, t);
         }
     }
 }
