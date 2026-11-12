@@ -56,10 +56,12 @@ namespace SpeedStars.Runner
         public float distanceScale = 1f;
 
         [Header("Zoom with speed")]
+        // New names (12.11): Race.unity kept speedZoomFull 10 / speedZoomDistance 1.5 from 11.11, which flattened the zoom the user wants
+        // (close when slow, well back when fast); those old values are no longer read.
         [Tooltip("Speed at which the camera is fully back (m/s). It keeps coming back up to this speed, so the faster the runner the further it sits.")]
-        public float speedZoomFull = 11f;
-        [Tooltip("Distance at full zoom (the speed in Speed Zoom Full), as a multiple of the standing distance.")]
-        public float speedZoomDistance = 2.4f;
+        public float zoomOutSpeed = 11f;
+        [Tooltip("Distance at full zoom (the speed in Zoom Out Speed), as a multiple of the standing distance: close to the runner standing, well back at speed.")]
+        public float zoomOutDistance = 2.4f;
         [Tooltip("Time (s) the speed the zoom reads takes to follow the runner's: a single press's surge barely moves the zoom, a held pace does. 0 = the raw speed.")]
         [Min(0f)]
         public float zoomSpeedSmooth = 0.8f;
@@ -199,7 +201,7 @@ namespace SpeedStars.Runner
 
         Vector3 Desired()
         {
-            float back = distance * distanceScale * Mathf.Lerp(1f, speedZoomDistance, _zoom);
+            float back = distance * distanceScale * Mathf.Lerp(1f, zoomOutDistance, _zoom);
             Vector3 side = Side();
             // The lead is taken along the picture's own horizontal, so the runner sits the same share of the frame left at any yaw.
             Vector3 screenRight = Vector3.Cross(Vector3.up, -side);
@@ -233,7 +235,7 @@ namespace SpeedStars.Runner
         }
 
         /// <summary>The camera's one fixed height (m): what the pitch gives at full zoom, so the picture at running speed is unchanged and presses never move it.</summary>
-        public float StandingHeight => lookHeight + distance * distanceScale * speedZoomDistance * Mathf.Tan(pitch * Mathf.Deg2Rad);
+        public float StandingHeight => lookHeight + distance * distanceScale * zoomOutDistance * Mathf.Tan(pitch * Mathf.Deg2Rad);
 
         Quaternion Facing() => Quaternion.LookRotation(-Side(), Vector3.up) * Quaternion.Euler(pitch, 0f, 0f);
 
@@ -248,7 +250,7 @@ namespace SpeedStars.Runner
                 _pressZoom = Mathf.Max(0f, _pressZoom - zoomPressFade * dt);
                 // The zoom reads the pace, not the press: a single surge passes through the smoothing almost unseen.
                 _heldSpeed = zoomSpeedSmooth > 0f ? Mathf.Lerp(_heldSpeed, sim.Speed, 1f - Mathf.Exp(-dt / zoomSpeedSmooth)) : sim.Speed;
-                float wanted = Mathf.Max(_pressZoom, Mathf.Clamp01(_heldSpeed / Mathf.Max(0.01f, speedZoomFull)));
+                float wanted = Mathf.Max(_pressZoom, Mathf.Clamp01(_heldSpeed / Mathf.Max(0.01f, zoomOutSpeed)));
                 _zoom = Mathf.SmoothDamp(_zoom, wanted, ref _zoomVelocity, wanted > _zoom ? zoomFlowOutTime : zoomFlowInTime);
                 if (sim.HitWeight > _lastHitWeight) Shake(hitShake, hitShakeTime);
                 _lastHitWeight = sim.HitWeight;
