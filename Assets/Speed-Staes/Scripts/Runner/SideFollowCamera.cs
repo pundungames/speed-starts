@@ -7,7 +7,9 @@ namespace SpeedStars.Runner
 {
     /// <summary>
     /// Side-on race camera: sits to the runner's right and tracks along the run axis only,
-    /// so step bob and pelvis sway never shake the frame. Framed as the original (measured from its lane lines): a wide lens (about 69 deg),
+    /// so step bob and pelvis sway never shake the frame. Along the track it is locked to the runner (Lock Along Track), as in the
+    /// original: a press's surge and the slowing between presses never leave the camera behind or let it run on past the runner.
+    /// Framed as the original (measured from its lane lines): a wide lens (about 69 deg),
     /// level, about 0.47 m up per metre away at the nearest setting (flatter when the player sets it farther), so the zoom backs it away
     /// along one line and the angle onto the runner never changes with speed
     /// (Height Per Distance 0 keeps the older fixed height).
@@ -43,9 +45,14 @@ namespace SpeedStars.Runner
         public float fieldOfView = 69f;
         [Tooltip("How tightly the camera follows along the track.")]
         public float followSharpness = 12f;
-        [Tooltip("Time (s) the camera's own speed along the track takes to follow the runner's, so a press's surge does not move the picture.")]
+        [Tooltip("Along the track the camera moves exactly with the runner, so the runner never slides in the picture (the original). " +
+                 "Off: it runs at the runner's smoothed speed (Track Speed Smooth, Track Pull), which lags a press's surge and then runs on " +
+                 "past the runner as it slows between presses (the camera seems to throw itself forward).")]
+        public bool lockAlongTrack = true;
+        [Tooltip("Time (s) the camera's own speed along the track takes to follow the runner's (Lock Along Track off). With Runner Screen X 0 " +
+                 "it also smooths how far behind the camera rests at speed.")]
         public float trackSpeedSmooth = 0.35f;
-        [Tooltip("How strongly (1/s) the camera makes up what it is off along the track.")]
+        [Tooltip("How strongly (1/s) the camera makes up what it is off along the track. Only with Lock Along Track off.")]
         public float trackPull = 2.5f;
         [Tooltip("The player's distance setting: multiplies distance and leaves the zoom on top of it.")]
         public float distanceScale = 1f;
@@ -288,17 +295,22 @@ namespace SpeedStars.Runner
             // Only the track direction and the zoom go through this; the shake stays out of it so it ends exactly.
             if (sim != null)
             {
-                // Along the track the camera runs at the runner's smoothed speed, moving by exactly what it moved (no lag that depends on the
-                // frame time), and only slowly makes up what it is off. Framed by a screen share it rests on that share at speed;
-                // otherwise it rests behind by speed / followSharpness (the older framing).
+                // Locked, the camera sits exactly where the framing puts it along the track every frame. Unlocked, it runs at the runner's
+                // smoothed speed, moving by exactly what it moved (no lag that depends on the frame time), and only slowly makes up what it
+                // is off. Framed by a screen share it rests on that share at speed; otherwise it rests behind by the smoothed speed /
+                // followSharpness (the older framing; the smoothing keeps that offset from jumping with each press).
                 Vector3 along = target.forward;
                 _trackSpeed = Mathf.Lerp(_trackSpeed, sim.Speed, 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, trackSpeedSmooth)));
                 desired -= along * Lag();
                 Vector3 off = desired - _position;
                 float offAlong = Vector3.Dot(off, along);
-                // Far off (a change of runner without a snap) it closes as fast as it always did.
-                float pull = Mathf.Abs(offAlong) > TrackFarOff ? t : 1f - Mathf.Exp(-trackPull * dt);
-                _position += (off - along * offAlong) * t + along * (_trackSpeed * dt + offAlong * pull);
+                if (lockAlongTrack) _position += (off - along * offAlong) * t + along * offAlong;
+                else
+                {
+                    // Far off (a change of runner without a snap) it closes as fast as it always did.
+                    float pull = Mathf.Abs(offAlong) > TrackFarOff ? t : 1f - Mathf.Exp(-trackPull * dt);
+                    _position += (off - along * offAlong) * t + along * (_trackSpeed * dt + offAlong * pull);
+                }
             }
             else _position = Vector3.Lerp(_position, desired, t);
 

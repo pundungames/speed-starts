@@ -33,6 +33,7 @@ Son güncelleme: 2026-11-06. Son checkpoint `docs/checkpoints/2026-11-05-karakte
 - Sim: `scripts/runner-olcum/simprobe.csproj`, `dotnet build -c Release`, exe'yi doğrudan çalıştır.
 
 ## Verilen kararlar
+- **12.11: Malik ayrıldı, mekanik + kamera bizde** (kullanıcı: "artık malik yok biz yapıyoruz her şeyi"). `CALISMA-KURALLARI.md` §1 tablosu eski, hook kilitli. Kamera: koşucuya X'te kilitli (`lockAlongTrack`).
 - Kullanıcı 03.11: "referans oyun ne ise aynısı". Ekonomi ve fiyatlar `docs/decisions/ADR-2026-11-03-ekonomi-v2-referans.md`. Gerçek gelir, reklam SDK, IAP şimdilik yok (Çin müşterisi). TMP + American Captain her yerde. Builder var olanı ezmez (`-forceOverwriteHandEdits` kullanma).
 - Tema fiyatları: Egypt 2.500, Rome 5.000, Pirate Sea 7.500 Nakit, Sky Islands 50 Mor Mücevher.
 - Installer bağlamaları: kalıcı onay. Teslim belgesi, telefonda APK, ana menü hızı: kullanıcı "geç" dedi. Günlük build Mono/ARMv7, mağaza IL2CPP.
