@@ -31,6 +31,10 @@ namespace SpeedStars.Runner
         public float trackSpeedSmooth = 0.35f;
         [Tooltip("How strongly (1/s) the camera makes up what it is off along the track.")]
         public float trackPull = 2.5f;
+        [Tooltip("Share of speed / Follow Sharpness the camera rests behind the runner at speed. 1 = the older framing: the runner slid " +
+                 "from a third of the picture to right of centre as it ran (the camera trailing). 0 = the runner stays where Lead Ahead " +
+                 "puts it at any speed.")]
+        [Range(0f, 1f)] public float speedLag = 0f;
         [Tooltip("The player's distance setting: multiplies distance and leaves the zoom on top of it.")]
         public float distanceScale = 1f;
 
@@ -137,7 +141,7 @@ namespace SpeedStars.Runner
             var sim = _body ? _body.Sim : null;
             _trackSpeed = sim != null ? sim.Speed : 0f;
             // At speed it rests as far behind as it runs, so a snap does not start with a slide.
-            _position = Desired() - target.forward * (_trackSpeed / Mathf.Max(0.01f, followSharpness));
+            _position = Desired() - target.forward * (speedLag * _trackSpeed / Mathf.Max(0.01f, followSharpness));
             transform.position = _position;
             transform.rotation = Facing();
         }
@@ -180,11 +184,11 @@ namespace SpeedStars.Runner
             if (sim != null)
             {
                 // Along the track the camera runs at the runner's smoothed speed, moving by exactly what it moved (no lag that depends on the
-                // frame time), and only slowly makes up what it is off. It stays as far behind as it always did at speed
-                // (speed / followSharpness), so the framing is the same.
+                // frame time), and only slowly makes up what it is off. It rests speedLag of speed / followSharpness behind at speed
+                // (0: the runner keeps its place in the picture however fast it runs).
                 Vector3 along = target.forward;
                 _trackSpeed = Mathf.Lerp(_trackSpeed, sim.Speed, 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, trackSpeedSmooth)));
-                desired -= along * (_trackSpeed / Mathf.Max(0.01f, followSharpness));
+                desired -= along * (speedLag * _trackSpeed / Mathf.Max(0.01f, followSharpness));
                 Vector3 off = desired - _position;
                 float offAlong = Vector3.Dot(off, along);
                 // Far off (a change of runner without a snap) it closes as fast as it always did.
