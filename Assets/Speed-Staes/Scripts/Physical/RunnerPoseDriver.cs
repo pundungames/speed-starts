@@ -838,13 +838,25 @@ namespace SpeedStars.Physical
                  "the hips, never past these (the pose's own pelvisPitch included). Leaning back is the whole body " +
                  "about the feet instead (see Update), not the hips.")]
         public Vector2 pelvisPitchRange = new Vector2(-10f, 90f);
-        [Tooltip("Running legs (the push, the swing, the touchdown) turn back with the hips by this share of the forward lean: " +
-                 "the whole body leans from the feet up, not the trunk alone over upright legs. 0 = the legs stay under the body " +
-                 "whatever the lean (as before). The dive and the hold turn them as ever.")]
-        [Range(0f, 1f)] public float runLegLean = 0.6f;
-        [Tooltip("Most the running legs turn back with the forward lean (deg): with the head far forward (mashing) the feet " +
-                 "still come down under the body.")]
-        public float runLegLeanMax = 40f;
+        [Tooltip("Plain running, the running legs (the push, the swing, the touchdown) turn back with the hips by this share of the " +
+                 "forward lean: 1 = the whole body leans from the ankles in one line (the reference), lower = the hips fold over legs " +
+                 "nearer upright. The body comes down with it (runLegDrop). The dive and the hold turn them as ever.")]
+        [Range(0f, 1f)] public float runLegLean = 1f;
+        [Tooltip("Most the running legs turn back with the forward lean in plain running (deg).")]
+        public float runLegLeanMax = 70f;
+        [Tooltip("Hops and the two-key pair: the share of the forward lean their running legs turn back with (they keep their own look).")]
+        [Range(0f, 1f)] public float otherLegLean = 0.6f;
+        [Tooltip("Hops and the two-key pair: most their running legs turn back with the forward lean (deg).")]
+        public float otherLegLeanMax = 40f;
+        [Tooltip("Plain running, the body comes down by as much as the turned legs are lower: a leg turned back by the lean stands at " +
+                 "cos(turn) of its upright height, so the hips come down until the turned feet are on the ground (the whole body tips " +
+                 "about the feet). 0 = the upright stance height (the turned feet do not reach the ground).")]
+        [Range(0f, 1f)] public float runLegDrop = 1f;
+        [Tooltip("Plain running, the feet on the ground come up onto their toes by this much heel-up per degree the legs are turned " +
+                 "with the forward lean: leaning far forward (mashing) the runner is on the balls of the feet. 0 = flat as before.")]
+        [Range(0f, 1.5f)] public float runToeStand = 0.6f;
+        [Tooltip("Most the heels come up that way (deg, on top of the push's own heel rise).")]
+        public float runToeStandMax = 35f;
 
         [Header("Arms (deg, + = forward): one key moves one leg and one arm — right key: right leg + left arm")]
         [Tooltip("Upper arm (deg, −) with its leg all the way back — fixed: speed and the key poses do not move it, " +
@@ -2328,7 +2340,10 @@ namespace SpeedStars.Physical
             // the same share (its foot is planted, the share only keeps its angles in step, so the lift-off does not jump);
             // in a dive it keeps to the ground as before. The dive (the hold weight) turns the swinging legs with the hips.
             bool running = push || leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid || leg.phase == LegPhase.Land;
-            float runShare = legTurn > 0.5f ? Mathf.Min(legTurn * runLegLean, Mathf.Max(0f, runLegLeanMax)) / legTurn : 0f;
+            // Plain running turns them fully (the body in one line from the ankles); hops and the pair keep their own share.
+            float share = Mathf.Lerp(otherLegLean, runLegLean, _plainRun);
+            float shareMax = Mathf.Lerp(otherLegLeanMax, runLegLeanMax, _plainRun);
+            float runShare = legTurn > 0.5f ? Mathf.Min(legTurn * share, Mathf.Max(0f, shareMax)) / legTurn : 0f;
             float runTarget = push ? runShare * (1f - _dive) : Mathf.Max(_dive, runShare);
             leg.follow = Mathf.MoveTowards(leg.follow, planted ? 0f : running ? runTarget : 1f, FollowRate * dt);
             leg.leanTurn = running ? Mathf.Max(0f, legTurn) * Mathf.Min(leg.follow, runShare) : 0f;
@@ -2453,6 +2468,15 @@ namespace SpeedStars.Physical
         /// <summary>The joint's height over the ground in a stance, before its dip: the crouch standing, the touchdown pose running.</summary>
         float StanceExtent(Leg leg) => Mathf.Lerp(Extent(leg, crouch), Extent(leg, Stride(ContactPose())), StanceHome());
 
+        /// <summary>How far (deg) plain running's legs are turned back with the forward lean (runLegLean, up to runLegLeanMax); 0 in a hop, a pair or a dive.</summary>
+        float RunTurn() => Mathf.Clamp(_legTurn * runLegLean, 0f, Mathf.Max(0f, runLegLeanMax)) * _plainRun * (1f - _dive);
+
+        /// <summary>
+        /// The share of its upright height a leg turned back with the lean stands at (cos of the turn, runLegDrop of it): the stance and the
+        /// touchdown height take it, so the hips come down until the turned feet are on the ground and the whole body tips about them.
+        /// </summary>
+        float RunDrop() => Mathf.Lerp(1f, Mathf.Cos(Mathf.Min(80f, RunTurn()) * Mathf.Deg2Rad), runLegDrop);
+
         /// <summary>
         /// How far the stance height is from the crouch to the run's. It followed the speed alone (_runHome), so a start from a standstill ran
         /// at crouch height for a second while the legs already stepped: the foot did not clear the ground and the hips rose in steps as the speed
@@ -2538,8 +2562,11 @@ namespace SpeedStars.Physical
             else leg.footZ -= rootStep;   // a planted foot is still in the world: it goes back with the root, all of it
             float behind = joint.z - leg.footZ;
             LegAngles end = Key(pushEnd, hopPushEnd);
-            float endBehind = -(leg.thighLength * Mathf.Sin(end.thigh * Mathf.Deg2Rad) +
-                                leg.shinLength * Mathf.Sin((end.thigh - (180f - end.knee)) * Mathf.Deg2Rad));
+            // The push ends where the leg turned back with the lean reaches (RunTurn): read upright, the turned foot was already past it
+            // at the touchdown and the push ended at once (short steps rowing behind).
+            float endThigh = end.thigh - RunTurn();
+            float endBehind = -(leg.thighLength * Mathf.Sin(endThigh * Mathf.Deg2Rad) +
+                                leg.shinLength * Mathf.Sin((endThigh - (180f - end.knee)) * Mathf.Deg2Rad));
             endBehind = Mathf.Max(endBehind, leg.dz0 + 0.05f);
             // Running, a foot waiting behind stays on its toes longer: the heel is up (and the leg longer by the toe rise) before it runs out.
             float heelEnd = Mathf.Lerp(endBehind, Mathf.Max(leg.dz0 + 0.05f, Mathf.Min(endBehind, HeelEndShare * MaxReach(leg))), _plainRun);
@@ -2612,7 +2639,7 @@ namespace SpeedStars.Physical
             // instead, so the flight's arc starts from the push and the hop reads as a bounce, not a squat and a stretch.
             float hopW = _hop * (1f - _pair);
             float bounce = Mathf.Lerp(1f, runBounce, _plainRun);
-            float extent = StanceExtent(leg) - (stanceDip * _dipAmp * (1f - hopW) * bounce + hopStanceDip * hopW) * Mathf.Sin(Mathf.PI * leg.stanceU) +
+            float extent = StanceExtent(leg) * RunDrop() - (stanceDip * _dipAmp * (1f - hopW) * bounce + hopStanceDip * hopW) * Mathf.Sin(Mathf.PI * leg.stanceU) +
                            hopPushRise * hopW * Mathf.SmoothStep(0f, 1f, leg.stanceU);
             return extent + AnkleGround(leg) - joint.y;
         }
@@ -2837,7 +2864,9 @@ namespace SpeedStars.Physical
                 leg.softY = leg.ankle.y;
                 leg.softSet = true;
             }
-            leftLeg.rock = rightLeg.rock = 0f;
+            // Leaning forward in a run the feet come up onto their toes with the legs' turn (the ball stays put, ToeRise lifts the ankle);
+            // sitting back (below) rocks them onto the heels instead.
+            leftLeg.rock = rightLeg.rock = Mathf.Min(RunTurn() * runToeStand, Mathf.Max(0f, runToeStandMax));
             if (backLean < 0f) SitBack(ref hip, backLean);
             else leftLeg.sitShiftZ = rightLeg.sitShiftZ = 0f;
             // Whatever moved the body last (the height spring, the sit-back's pivot) is limited, then the floors are kept:
@@ -3448,7 +3477,7 @@ namespace SpeedStars.Physical
                 Vector3 joint = Joint(incoming, hip, pelvisTilt, width);
                 // A hop comes down to the touchdown pose's own height (hopContact), not the stance's (a slow stance is near the crouch: the spring
                 // took the body to 0.80 while the pose asks for 0.94, and the foot's touch then pushed it up 5 cm). The stance sinks it after the touch.
-                float landExtent = Mathf.Lerp(StanceExtent(incoming), Extent(incoming, Key(ContactPose(), hopContact)), _hop * (1f - _pair));
+                float landExtent = Mathf.Lerp(StanceExtent(incoming) * RunDrop(), Extent(incoming, Key(ContactPose(), hopContact)), _hop * (1f - _pair));
                 float landY = landExtent + AnkleGround(incoming) - joint.y;
                 float speed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(riseSpeed.x, riseSpeed.y, sim.Speed));
                 float hopWeight = Mathf.Max(_hopQuick ? _hop * (1f - _pair) : _hopBodyW, _pair);
