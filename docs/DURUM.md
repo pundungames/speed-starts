@@ -8,10 +8,9 @@ MOD: süpervizör
 Son güncelleme: 2026-11-17. Son checkpoint `docs/checkpoints/2026-11-05-karakter-ik.md`. Push kullanıcıda.
 
 ## 17.11: Çin müşterisi feedback'i, ayak kayması (`main`, gözünü bekliyor)
-- Feedback: gövde animasyondan bağımsız ilerliyor, ayak yerde kayıyor. Bırakınca durma kuralı (`groundReach`) denendi, kullanıcı geri aldırdı (`182cf51a`): bırakınca eskisi gibi süzülsün; hız/denge sayıları aynı (kusursuz 100 m 9.9 sn).
-- Kayma: `footLock` (son katman, `WriteLeg`→`FootLock`): yerdeki ayak topundan kilitli, önce kalkar sonra gider, salınımdaki bacak tutulmaz. Koşuda kayma 0.42-1.68 → ~0.05 m/sn.
-- Yürüyüş pozları 17.11 akşamı SABAHKİ hâline döndü (`6f74bdcb`): o günkü 9 poz/zamanlama denemesi kullanıcıya "eskisinden çok kötü" geldi. Açık şikâyet: arka bacak gövdeye ~90° geride, öndeki dik; kökü salınımı arka pozda bekleten kural (`RunnerPoseDriver` Recover/Mid, "its clock waits"). Tek tek, A/B kareyle ele alınacak.
-- Tekleme: sim hızı her basışta %7-16 dalgalanıyor (itiş + sürtünme), kamera köke kilitli. `RunnerBody.shownSpeedSmoothing` 0.2: kök yumuşak hızla gider (dalga %2-3), yarış sim'i okur.
+- Feedback: gövde adımlardan bağımsız ilerliyor, ayak kayıyor. Kullanıcının teşhisi (onaylı): iyi basıştan kötü basışa geçerken hız düşmüyor, adım az ama gövde hızlı.
+- Son hâl: `RunnerPoseDriver` SABAHKİ hâlinde (`4e01775a`; o günkü poz/salınım/ayak kilidi denemeleri kullanıcıya kötü geldi, hepsi geri). Sim: `stepLength` 3.1 m, hız ≤ adım boyu / son basıştan beri geçen süre (`a4f9e3cc`): düzenli ritimde süreler aynı, geç basışta hız hemen düşer, bırakınca süzülme ~4.5 m. `RunnerBody.shownSpeedSmoothing` 0.2: kök yumuşak hızla gider, basış başı tekleme yok (kullanıcı: "tekleme gitmiş").
+- Açık: geç kalınan ilk adım hâlâ ~4.4 m (sonraki basışı bilmek mümkün değil). Kullanıcı Mixamo klipleri (Downloads: Y Bot Running/Sprint) indirdi; sorunun animasyon değil hız-adım uyumu olduğunda anlaştık.
 - Ölçüm: `runner-probe.ps1 -Kaynak D:\Pundun\speed-starts` + `python -I scripts/runner-olcum/slide_check.py <önce> <sonra>`. Sim: `scripts/runner-olcum` (`glide`, `tests`, `SIM_SET`).
 
 ## 06.11: tek ayak sekiş turu, gözünü bekliyor (`main`, T-145..T-161 `merged`)
