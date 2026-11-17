@@ -507,8 +507,9 @@ namespace SpeedStars.Physical
                  "+ = ahead of the knee). From here the foot claws back into contactRun. Run weight only.")]
         public LegAngles shinThrow = new LegAngles(56f, 160f);
         [Tooltip("Plain running: where the tucked peak and the shin throw fall in the swing's time (0..1; x < y, both after the folded pass). " +
-                 "The knee opens between them, so a short fast swing needs them apart (a knee cannot open faster than legMaxSpeed).")]
-        public Vector2 tuckThrowKeys = new Vector2(0.66f, 0.84f);
+                 "The knee opens between them, so a short fast swing needs them apart (a knee cannot open faster than legMaxSpeed). Late, so " +
+                 "the leg opens just before the touchdown: at 0.66/0.84 it stood open in front 0.1 s early, the foot skimming the ground (17.11).")]
+        public Vector2 tuckThrowKeys = new Vector2(0.74f, 0.95f);
         [Tooltip("Plain running: the tucked curve is read this far (s) ahead of the swing's clock from the folded pass on, so the shown " +
                  "angles (which trail their target through the limb springs) reach the peak and the shin throw before the next press. " +
                  "Eased in from the swing's start to the folded pass, so the swing does not jump and the thigh is not rushed.")]
