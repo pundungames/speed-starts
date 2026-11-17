@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Globalization;
 using System.Collections.Generic;
@@ -477,12 +478,31 @@ static class P
         Console.WriteLine("one key neighbour cliffs:" + (bad == "" ? " none" : bad));
     }
 
+
+    // Keys held long in turn (right held, then left held...): speed and metres per press.
+    static void HeldAlt()
+    {
+        foreach (var (gap, hold) in new[] { (0.40f, 0.38f), (0.50f, 0.45f), (0.50f, 0.30f), (0.30f, 0.07f), (0.50f, 0.07f) })
+        {
+            var s = new RunnerSim(T()); double t = 0, next = 0.2, rel = -1; int leg = 0, k = 0, relLeg = 0; float lastD = 0f; var steps = new List<float>();
+            while (t < 8)
+            {
+                if (rel >= 0 && t >= rel) { s.Release(relLeg); rel = -1; }
+                if (t >= next) { if (k > 0) steps.Add(s.Distance - lastD); lastD = s.Distance; s.Press(leg); relLeg = leg; rel = t + hold; leg = 1 - leg; k++; next += gap; }
+                s.Advance(1f / 240f); t += 1.0 / 240;
+            }
+            var late = steps.GetRange(steps.Count / 2, steps.Count / 2);
+            Console.WriteLine($"aralik {gap:0.00} basili {hold:0.00}: son hiz {s.Speed:0.0} m/s | adim basi {late.Min():0.0}-{late.Max():0.0} m | 100m icin {s.Distance:0} m / 8 sn");
+        }
+    }
+
     static void Main(string[] args)
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         if (args.Length > 0 && args[0] == "hop") { HopTable(); return; }
         if (args.Length > 0 && args[0] == "stop") { StopTable(); return; }
         if (args.Length > 0 && args[0] == "glide") { GlideTable(); return; }
+        if (args.Length > 0 && args[0] == "held") { HeldAlt(); return; }
         if (args.Length > 0 && args[0] == "tests") { TestRelations(); return; }
         if (args.Length > 0 && args[0] == "phased") { if (args.Length > 1) Waste2 = float.Parse(args[1]); Phased(); Table(); return; }
         if (args.Length > 0 && args[0] == "spam") { SpamTable(); return; }
