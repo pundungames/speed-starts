@@ -84,8 +84,10 @@ namespace SpeedStars.Physical
         public float lateSpeed = 3f;
         [Tooltip("The pressed leg's extension: below x it is back under the body (full), above y it is still out (0).")]
         public Vector2 legReadyExt = new Vector2(0.25f, 0.85f);
-        [Tooltip("Below this speed (m/s) every tap pushes at least tapFloorGain, whatever its timing or the head: mashing never leaves the runner standing.")]
-        public float tapFloorSpeed = 3.2f;
+        [Tooltip("Below this speed (m/s) every tap pushes at least tapFloorGain, whatever its timing or the head: mashing never leaves the runner standing. " +
+                 "2: at 3.2 keys held long in turn (0.45 of a 0.5 s rhythm) ran at ~3 m/s, 1.5 m a press on legs held in the hold pose, and the " +
+                 "feet slid (user 17.11: the least speed is too high). Steady rhythms are above it and do not change; mashing is slower (27.7 s).")]
+        public float tapFloorSpeed = 2f;
         [Tooltip("Least push (m/s) of a tap while the runner is below tapFloorSpeed.")]
         public float tapFloorGain = 0.6f;
         [Tooltip("Same leg twice in a row within a second.")]
