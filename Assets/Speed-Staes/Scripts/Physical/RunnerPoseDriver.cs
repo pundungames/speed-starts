@@ -892,6 +892,10 @@ namespace SpeedStars.Physical
         public Vector2 legsAheadRange = new Vector2(10f, 40f);
         [Tooltip("How the lean back follows the legs (damping 1: it eases in and out, never swings).")]
         public SpringSettings legsAheadSpring = new SpringSettings(1.5f, 1f);
+        [Tooltip("Plain running fades the lean back out between these speeds (m/s): a slow rhythm's long reach sits back as before, a runner " +
+                 "at speed does not sit back against its own knee drive (with the high knee drive the legs' mean angle rose to ~27 deg at a " +
+                 "0.32 s rhythm and the runner ran leaning back, 17.11). Hops keep it whole.")]
+        public Vector2 legsAheadSpeed = new Vector2(3f, 6f);
 
         [Header("Arms (deg, + = forward): one key moves one leg and one arm — right key: right leg + left arm")]
         [Tooltip("Upper arm (deg, −) with its leg all the way back — fixed: speed and the key poses do not move it, " +
@@ -2845,7 +2849,8 @@ namespace SpeedStars.Physical
                 float ahead = 0.5f * (leftLeg.thighWorld + rightLeg.thighWorld);
                 // Not on a two-key pair: its feet are down two frames, and the sit-back's pivot went heels - hips - heels with them,
                 // throwing the hips 6 cm back and forth in a frame on every jump (measured in play).
-                float aheadOn = _stepping * (1f - _stanceW) * (1f - _dive) * (1f - _pair) * (_jumping ? 0f : 1f);
+                float aheadOn = _stepping * (1f - _stanceW) * (1f - _dive) * (1f - _pair) * (_jumping ? 0f : 1f) *
+                                (1f - _plainRun * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(legsAheadSpeed.x, legsAheadSpeed.y, sim.Speed)));
                 _legsAhead.Step(legsAheadLean * aheadOn * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(legsAheadRange.x, legsAheadRange.y, ahead)),
                     legsAheadSpring.frequency, legsAheadSpring.damping, dt);
                 lean -= _legsAhead.Value;
