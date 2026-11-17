@@ -1084,8 +1084,9 @@ namespace SpeedStars.Physical
         const float LockSpeed = 1f;            // ...and is held only when the gait moves it slower than this along the run (m/s): a foot still swinging is not
         const float LockSlack = 0.12f;         // ...and let go when the gait puts it further than this (m) from where it is held
         const float LockMelt = 30f;            // a foot that has to go elsewhere goes there at this rate (1/s), once it is up
-        const float LockLift = 0.04f;          // ...this far (m) off the ground; a foot the gait would drag stays up this far too
-        const float AirIn = 0.06f;             // ...rising (and coming down) over this long (s): along the run only as far as it is up
+        const float LockLift = 0.05f;          // ...this far (m) off the ground; a foot the gait would drag stays up this far too
+        const float LockDrag = 0.05f;          // a gait foot this near the ground (m) moved along the run faster than LockSpeed would drag: its toes scrape
+        const float AirIn = 0.05f;             // ...rising (and coming down) over this long (s): along the run only once it is half up
         const float ReachCarryExit = 0.12f;    // ...and stops carrying only above this (hysteresis)
         const float ReachCarryHeight = 0.08f;  // a reaching foot this near the ground (m) carries the body; higher it does not
         const float ReachKneeSpeed = 1.8f;     // the reaching knee opens this much faster than the thigh comes forward
@@ -3753,7 +3754,7 @@ namespace SpeedStars.Physical
                 leg.lastDrawn = transform.TransformPoint(ankle);
                 return ankle;
             }
-            bool drags = down && gaitSpeed > LockSpeed;   // the gait would move this foot along the ground
+            bool drags = ankle.y <= ground + LockDrag && gaitSpeed > LockSpeed;   // the gait would move this foot along (or just over) the ground
             if (down && !drags && leg.lockOffset == 0f && leg.airW <= 0f)
             {
                 leg.locked = true;
@@ -3768,8 +3769,10 @@ namespace SpeedStars.Physical
             float go = Mathf.SmoothStep(0f, 1f, leg.airW);
             if (apart)
             {
+                // It travels only once it is half up: a foot 1 cm over the ground going along it still reads as sliding.
+                float travel = Mathf.SmoothStep(0f, 1f, (leg.airW - 0.5f) * 2f);
                 float heldZ = transform.InverseTransformPoint(leg.lastDrawn).z;
-                float z = Mathf.Lerp(heldZ, ankle.z, 1f - Mathf.Exp(-LockMelt * go * dt));
+                float z = Mathf.Lerp(heldZ, ankle.z, 1f - Mathf.Exp(-LockMelt * travel * dt));
                 leg.lockOffset = Mathf.Clamp(z - ankle.z, -PinMeltMax, PinMeltMax);
                 if (!drags && Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
                 ankle.z += leg.lockOffset;
