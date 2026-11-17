@@ -2608,7 +2608,11 @@ namespace SpeedStars.Physical
                 if (!early && (behind >= Mathf.Min(endBehind, swapBehind) || since > swapStanceMax)) leg.toeOff = true;
                 return;
             }
-            if (!waits && !early && (behind >= endBehind || (timed && since > Mathf.Lerp(stanceMax, hopStanceMax, hopW)))) leg.toeOff = true;
+            // Running, a foot that came down before its press carries the body until the press comes (it pushes then) or the leg runs out
+            // of length (SolveStance): ended at endBehind it went home on the ground and slid there with the body until the press
+            // (0.45 s rhythm: 0.7 m a step, the client's "the foot is down but the runner goes on").
+            bool carries = _plainRun > 0.5f && !_idleStock && hopW <= 0.5f && leg.swungSincePress;
+            if (!waits && !early && !carries && (behind >= endBehind || (timed && since > Mathf.Lerp(stanceMax, hopStanceMax, hopW)))) leg.toeOff = true;
         }
 
         /// <summary>
