@@ -1082,8 +1082,9 @@ namespace SpeedStars.Physical
         const float PinLiftIn = 0.08f;         // ...that lift comes in over this long (s): all at once it threw the foot 6 cm up in a frame
         const float LockTouch = 0.02f;         // footLock: a gait foot this near its ground height (m) is on the ground
         const float LockSpeed = 1f;            // ...and is held only when the gait moves it slower than this along the run (m/s): a foot still swinging is not
-        const float LockJoin = 0.02f;          // ...and is back on the gait's once within this (m)
-        const float LockSlack = 0.5f;          // ...and let go when the gait puts it further than this (m) from where it is held (a carried foot: a step)
+        const float LockJoin = 0.02f;          // ...in a hold, is back on the gait's once within this (m)
+        const float LockSlack = 0.12f;         // ...and let go when the gait puts it further than this (m) from where it is held
+        const float LockSlackHold = 0.5f;      // ...in a hold (a foot carried with the body: let go only for a step)
         const float LockMelt = 30f;            // a foot that has to go elsewhere goes there at this rate (1/s), once it is up
         const float LockLift = 0.05f;          // ...its ankle this far (m) off the ground; a foot the gait would drag stays up this far too
         const float BallLiftShare = 0.6f;      // ...and its ball and tip this share of that
@@ -3728,8 +3729,11 @@ namespace SpeedStars.Physical
             }
             // A held key too: its leg kicked back along the ground at up to 12 m/s and its support foot slid (keys held 0.45 s in turn, 17.11).
             bool allowed = footLock && !preview && !_jumping && !_ballistic && !_idleStock && _bothHeld < 0.3f && dt > 0f;   // _dive is any hold's weight, one key too
-            // On the ground: the gait's own stance or a leg it stands on (carry), or an ankle at AnkleGround (which a hold's sat-back legs miss).
-            bool down = leg.grounded || leg.carry || ankle.y <= ground + LockTouch;
+            // A one-key hold has rules of its own (the running ones measured best as they were, 17.11): there the gait carries the support foot
+            // along with the body and sits its legs back past AnkleGround, so a foot is on the ground when the gait stands on it (grounded,
+            // carry), a foot carried with the body is nailed, and a lifted foot goes up from the gait's own ankle.
+            bool holding = _heldNow > 0.1f;
+            bool down = (holding && (leg.grounded || leg.carry)) || ankle.y <= ground + LockTouch;
             // A leg the gait has taken off the ground (its swing) is never held: held at toe-off, its foot stayed down 5-6 frames behind
             // while the body ran on and the leg stretched out back ("the legs always stay behind", 17.11).
             bool swinging = leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid;
@@ -3739,7 +3743,7 @@ namespace SpeedStars.Physical
                 float heldZ = transform.InverseTransformPoint(leg.lockPoint).z - ball;
                 float dy = ankle.y - joint.y, dz = heldZ - joint.z;
                 bool outOfReach = Mathf.Sqrt(dy * dy + dz * dz) >= MaxReach(leg) * Overstretch;
-                if (!allowed || !down || swinging || outOfReach || Mathf.Abs(ankle.z - heldZ) > LockSlack)
+                if (!allowed || !down || swinging || outOfReach || Mathf.Abs(ankle.z - heldZ) > (holding ? LockSlackHold : LockSlack))
                 {
                     leg.locked = false;
                     leg.lockOffset = Mathf.Clamp(heldZ - ankle.z, -PinMeltMax, PinMeltMax);
@@ -3764,8 +3768,8 @@ namespace SpeedStars.Physical
             }
             // A foot the gait carries along with the body (no faster than the body) is a foot left on the ground: it is nailed. Faster than
             // that (thrown forward, kicked back) it would be dragged along the ground: it is lifted. A hold's support foot went with the body.
-            bool still = gaitSpeed >= -LockSpeed && gaitSpeed <= _rootSpeed + LockSpeed;
-            bool drags = (down || ankle.y <= ground + LockDrag) && !still;
+            bool still = holding ? gaitSpeed >= -LockSpeed && gaitSpeed <= _rootSpeed + LockSpeed : gaitSpeed <= LockSpeed;
+            bool drags = ((holding && down) || ankle.y <= ground + LockDrag) && !still;
             if (down && still && !swinging && leg.lockOffset == 0f && leg.airW <= 0f)
             {
                 leg.locked = true;
@@ -3785,12 +3789,12 @@ namespace SpeedStars.Physical
                 float heldZ = transform.InverseTransformPoint(leg.lastDrawn).z;
                 float z = Mathf.Lerp(heldZ, ankle.z, 1f - Mathf.Exp(-LockMelt * travel * dt));
                 leg.lockOffset = Mathf.Clamp(z - ankle.z, -PinMeltMax, PinMeltMax);
-                if (!drags && Mathf.Abs(leg.lockOffset) < LockJoin) leg.lockOffset = 0f;   // a gait foot that keeps moving is never caught to the mm
+                if (!drags && Mathf.Abs(leg.lockOffset) < (holding ? LockJoin : 0.002f)) leg.lockOffset = 0f;   // a hold's gait foot keeps moving: never caught to the mm
                 ankle.z += leg.lockOffset;
             }
             // Up from where the gait has it, not only from AnkleGround: in a hold the gait's planted ankle stood ~5 cm over that and the "lifted"
             // foot still dragged on the ground.
-            ankle.y = Mathf.Max(ankle.y + (drags ? LockLift * go : 0f), ground + LockLift * go);
+            ankle.y = Mathf.Max(ankle.y + (holding && drags ? LockLift * go : 0f), ground + LockLift * go);
             // The ankle up is not the toes up: a swinging foot points them down, and the ankle's floor (PoseAnkle, PoseToes) let them scrape.
             leg.floorLift = LockLift * go * BallLiftShare;
             leg.lastDrawn = transform.TransformPoint(ankle);
