@@ -1075,6 +1075,8 @@ namespace SpeedStars.Physical
         const float MaxRootSpeed = 20f;       // ...and so is one faster than this (m/s)
         const float RootSpeedBlend = 12f;      // the root's speed for the swing's end speed is smoothed at this rate (1/s)
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
+        const float HoldStepSpeed = 2.5f;      // legDrivenRoot: a foot pushing off from a hold's stand carries the body at least this fast (m/s)
+        const float HoldStopTime = 0.5f;       // ...and a leg kept in its hold with nothing pushing eases the runner to a stand over this long (s)
         const float GlideAfterSteps = 1.5f;    // legDrivenRoot: a runner on its feet with no press glides on in full this many step times after it
         const float HeelEndShare = 0.55f;      // running: the heel is fully up when the foot is this share of the leg's length behind the hip
         const float Overstretch = 0.985f;     // a planted leg this near its full length is at toe-off (the knee never locks)
@@ -1205,6 +1207,8 @@ namespace SpeedStars.Physical
         Vector3 _lastRootPos;                      // the root last frame
         bool _haveRoot;
         bool _rootJumped;                          // this frame the root jumped (reset, lane, replay): world points held from before are void
+        float _holdGlide = 1f;                     // legDrivenRoot: how much of its glide a runner in a hold still has (1 = all, 0 = standing)
+        bool _holdStep;                            // legDrivenRoot: this stance pushes off from a hold's stand (at HoldStepSpeed at least)
         float _rootSpeed;                          // the root's own speed (m/s), smoothed
         const float LandHoldMax = 0.12f;           // the landing's no-rise hold ends after this (s) at the latest
         float _flightV;                            // the body height's speed (m/s) in the last flight frame, for hipMaxAccel
@@ -2081,6 +2085,8 @@ namespace SpeedStars.Physical
             ResetGait();
             _carried = true;
             _ballistic = false;
+            _holdGlide = 1f;
+            _holdStep = false;
             _wasInJump = false;
             _haveRoot = false;
             _rootSpeed = 0f;
@@ -2137,7 +2143,11 @@ namespace SpeedStars.Physical
                     // A key kept down past holdAfter is a hold, from whatever phase its leg is in. Only Push and Recover used to turn:
                     // a press the gate did not take left its leg the other's support, and fast keys in turn give a press to the other
                     // leg (use = 1 - leg), so a held key's own leg could be mid-swing and land in the touchdown pose: both keys, one dive leg.
-                    if (leg.held && leg.phase != LegPhase.Hold &&
+                    // With the legs carrying the body (legDrivenRoot) a held key's planted foot first pushes: the body goes on over it while the
+                    // other leg is thrown forward, and it turns into the hold once it has left the ground behind. It used to turn back where it
+                    // stood, the legs changing places on the spot (user 17.11: "keep the front foot there and throw the other one forward").
+                    bool stepsFirst = leg.grounded && leg.phase == LegPhase.Push && _plainRun > 0.5f && body && body.legDrivenRoot;
+                    if (leg.held && leg.phase != LegPhase.Hold && !stepsFirst &&
                         time - leg.pressedAt >= holdAfter)   // not PushTime(): that is 0.1-0.2 s at speed and made 0.18 s taps holds
                     {
                         ToHold(leg, partner, time);
@@ -2591,19 +2601,43 @@ namespace SpeedStars.Physical
         {
             if (dt <= 0f) return 0f;
             float want = sim.Speed * dt;
-            if (sim.InJump || _dive > 0.3f || _ballistic) return want;
+            // The dive (both keys) keeps its own flight. Not _dive: that is any hold's weight, and with it a one-key hold went on at the sim's
+            // speed with no foot pushing (the hold's front foot carries the body but is not planted), the whole pose sliding.
+            if (sim.InJump || _bothHeld > 0.3f || _ballistic) return want;
             Leg stance = null;
             for (int i = 0; i < 2; i++)
             {
                 Leg leg = Legs(i);
                 if (leg.grounded && (stance == null || leg.plantedAt < stance.plantedAt)) stance = leg;   // the older stance is the one pushing
             }
-            if (stance != null) return Mathf.Clamp(HeelEndShare * MaxReach(stance) - stance.behind, 0f, want);
+            // A foot that pushes off from a hold's stand carries the body on over it at a step's pace at least (the sim's speed in a hold is
+            // ~1 m/s), all through that stance.
+            if (stance == null) _holdStep = false;
+            else if (_holdGlide < 1f) _holdStep = true;
+            float stanceWant = _holdStep ? Mathf.Max(want, HoldStepSpeed * dt) : want;
+            // A leg in its hold (a tap never gets there, and a held key's planted foot pushes first) slows the runner.
+            bool inHold = InHold(leftLeg) || InHold(rightLeg);
+            // After its push a held key's leg goes on at the glide it has until its hold begins: the coast below dropped the body between
+            // the two and it jumped back at the hold (0.45 s holds in turn ran 5.5/2.6/5.5 m/s). A tap's key down after its push: the same.
+            bool pushedOn = PushedOn(leftLeg) || PushedOn(rightLeg);
+            // A key pressed out of a hold's slowing whose foot has not landed yet: still slowing (the coast gave a frame's stall).
+            bool landing = _holdGlide < 1f && (Landing(leftLeg) || Landing(rightLeg));
+            // A key held on with no foot pushing: the runner eases to a stand in its hold over HoldStopTime (user 17.11: smoothly, not nailed).
+            // It stays standing when the key comes up (the sim's speed lives on in a hold); the next foot that pushes gives it its glide back.
+            if (stance != null) _holdGlide = 1f;
+            else if (inHold) _holdGlide = Mathf.MoveTowards(_holdGlide, 0f, dt / HoldStopTime);
+            float glide = Mathf.SmoothStep(0f, 1f, _holdGlide);
+            if (stance != null) return Mathf.Clamp(HeelEndShare * MaxReach(stance) - stance.behind, 0f, stanceWant);
+            if (inHold || pushedOn || landing) return want * glide;
             if (!_carried) return want;
             // Standing on its feet with nothing pushing: a runner whose keys stopped glides on as before (user 17.11: "let it glide when I let
             // go, not stop dead"), coming in as the next press grows overdue, so a step a little late does not slide and a stop does not halt.
             float since = (float)(sim.Time - sim.LastPressTime);
-            return want * Mathf.SmoothStep(0f, 1f, since / Mathf.Max(0.05f, GlideAfterSteps * sim.StepTime));
+            return want * glide * Mathf.SmoothStep(0f, 1f, since / Mathf.Max(0.05f, GlideAfterSteps * sim.StepTime));
+
+            static bool InHold(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Hold;
+            static bool PushedOn(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Recover;
+            static bool Landing(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Push;
         }
 
         /// <summary>
