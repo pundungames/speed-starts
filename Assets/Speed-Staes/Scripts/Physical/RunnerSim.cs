@@ -312,6 +312,9 @@ namespace SpeedStars.Physical
         public double Time { get; private set; }
         public float Speed { get; private set; }
         public float Distance { get; private set; }
+
+        /// <summary>The distance the runner has really covered, when the legs carry it (RunnerBody.legDrivenRoot): the race reads this.</summary>
+        public void SetDistance(float meters) => Distance = meters;
         public float HopY { get; private set; }
         public float Energy { get; private set; }
         public int Presses { get; private set; }

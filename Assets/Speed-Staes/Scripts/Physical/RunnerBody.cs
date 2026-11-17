@@ -25,6 +25,10 @@ namespace SpeedStars.Physical
                  "and the drag takes it back, so the sim's speed swings 7-16% each step and the root (and the camera on it) jolted with every " +
                  "press (17.11). Only the picture: the race, the finish and the speed read the sim. 0 = the sim's distance as it is.")]
         public float shownSpeedSmoothing = 0.2f;
+        [Tooltip("The root goes only as far as the legs carry it: the pose driver moves it (MoveAlong) while a foot pushes on the ground or the " +
+                 "body is in a step's flight, at the sim's speed, and nothing else moves the runner; the race reads that distance. The user's " +
+                 "trial (17.11): \"move the runner by the legs alone\". Off = the root follows the sim's distance (shownSpeedSmoothing).")]
+        public bool legDrivenRoot = true;
 
         public RunnerSim Sim { get; private set; }
 
@@ -40,6 +44,7 @@ namespace SpeedStars.Physical
         double _origin;
         bool _jumpAsked;
         float _shownDistance, _shownSpeed;   // where the root is drawn along the run, and how fast it goes there
+        float _legDistance;                  // legDrivenRoot: how far the legs have carried the runner (m)
 
         void Awake()
         {
@@ -89,7 +94,21 @@ namespace SpeedStars.Physical
             if (_jumpAsked && acceptInput && acceptJump) Sim.Jump();
             _jumpAsked = false;
             if (now > Sim.Time) Sim.Advance((float)(now - Sim.Time));
-            transform.position = _startPos + _forward * ShownDistance(Time.deltaTime);
+            if (legDrivenRoot)
+            {
+                Sim.SetDistance(_legDistance);   // the sim's own distance ran on at its speed this frame; the race goes by the legs
+                transform.position = _startPos + _forward * _legDistance;
+            }
+            else transform.position = _startPos + _forward * ShownDistance(Time.deltaTime);
+        }
+
+        /// <summary>The legs carried the runner this far this frame (legDrivenRoot): the root and the race's distance go on by it.</summary>
+        public void MoveAlong(float meters)
+        {
+            if (!legDrivenRoot || meters <= 0f) return;
+            _legDistance += meters;
+            Sim.SetDistance(_legDistance);
+            transform.position += _forward * meters;
         }
 
         /// <summary>The sim's distance through a smoothed speed (shownSpeedSmoothing), held within ShownMaxOff of it.</summary>
@@ -111,7 +130,7 @@ namespace SpeedStars.Physical
         {
             Sim.Reset();
             _origin = Time.timeAsDouble;
-            _shownDistance = _shownSpeed = 0f;
+            _shownDistance = _shownSpeed = _legDistance = 0f;
             if (input) input.Clear();
             transform.position = _startPos;
             acceptInput = true;

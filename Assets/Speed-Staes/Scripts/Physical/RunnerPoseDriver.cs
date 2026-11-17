@@ -184,6 +184,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float dz0;        // how far behind the hip joint the foot was put down (m)
             [System.NonSerialized] public float plantGap;   // how far above the ground the ankle was when nailed (m); melts to 0 so the leg does not lengthen at once
             [System.NonSerialized] public float stanceU;    // 0..1 through the stance (the foot's way)
+            [System.NonSerialized] public float behind;     // last frame: how far the planted foot was behind the hip joint (m)
             [System.NonSerialized] public float kneeRate;   // the knee's angular speed last frame (deg/s)
             [System.NonSerialized] public Track thighT, kneeT;   // a free leg's shown angles follow its phase's target through these
             [System.NonSerialized] public float lockBallZ;   // where the ball was in front of the ankle when the foot was nailed (m)
@@ -370,8 +371,9 @@ namespace SpeedStars.Physical
         public LegAngles contact = new LegAngles(22f, 165f);
         [Tooltip("Plain running only: the touchdown pose with the knee a little bent, the foot about as far ahead as contact " +
                  "(a classic run cycle's contact frame). Blended in by the run weight; a hop or a pair jump keeps contact. " +
-                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing.")]
-        public LegAngles contactRun = new LegAngles(30f, 145f);
+                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing. 30/160: the " +
+                 "foot ~10 cm further ahead at the same stance height (user 17.11: the front foot further ahead).")]
+        public LegAngles contactRun = new LegAngles(30f, 160f);
         [Tooltip("Hold only: the other leg's reach when a key is held. It opens forward nearly straight and the foot " +
                  "lands well ahead (the reference video: ~47° from straight down).")]
         public LegAngles reach = new LegAngles(47f, 175f);
@@ -482,10 +484,11 @@ namespace SpeedStars.Physical
         [Range(0f, 1f)] public float jumpStrideMin = 0.25f;
         [Tooltip("Plain running: from x m/s to y m/s the fast angles (recoverFast, kneeOpenFast) come in, linearly.")]
         public Vector2 fastStrideSpeed = new Vector2(2f, 8f);
-        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key).")]
-        public LegAngles recoverFast = new LegAngles(-60f, 125f);
+        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key). -45/125: at -60 the heel " +
+                 "came up to the hip behind (user 17.11).")]
+        public LegAngles recoverFast = new LegAngles(-45f, 125f);
         [Tooltip("Plain running at low speed: the heel kick, the rear leg open behind (replaces recover; recoverFast is its faster pair).")]
-        public LegAngles recoverOpen = new LegAngles(-55f, 125f);
+        public LegAngles recoverOpen = new LegAngles(-40f, 130f);
         [Tooltip("Plain running: the folded pass, further back than mid (replaces mid; the hop keeps mid's own key).")]
         public LegAngles midRun = new LegAngles(0f, 55f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
@@ -2577,6 +2580,27 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
+        /// How far the legs carry the body this frame (RunnerBody.legDrivenRoot), at the sim's speed: while a planted foot pushes it goes
+        /// on over that foot (the foot stays where it is; never past the foot's way behind the hip), and in a step's flight (no leg
+        /// carried the body last frame) it flies on; standing on its feet with nothing pushing it does not move. A hurdle jump and a dive
+        /// keep their own flight. Read from last frame's legs: this frame's come after the root has moved.
+        /// </summary>
+        float LegCarry(RunnerSim sim, float dt)
+        {
+            if (dt <= 0f) return 0f;
+            float want = sim.Speed * dt;
+            if (sim.InJump || _dive > 0.3f || _ballistic) return want;
+            Leg stance = null;
+            for (int i = 0; i < 2; i++)
+            {
+                Leg leg = Legs(i);
+                if (leg.grounded && (stance == null || leg.plantedAt < stance.plantedAt)) stance = leg;   // the older stance is the one pushing
+            }
+            if (stance != null) return Mathf.Clamp(HeelEndShare * MaxReach(stance) - stance.behind, 0f, want);
+            return _carried ? 0f : want;
+        }
+
+        /// <summary>
         /// A planted foot: put down where the ankle is (needLock), then it goes back with the root's real move. How far
         /// it is through its stance (stanceU) comes from where it is behind the hip; at the end, or after stanceMax,
         /// it is toe-off. Running, a foot waits for the other one instead (TickLegs lifts it when that one comes down);
@@ -2607,6 +2631,7 @@ namespace SpeedStars.Physical
             }
             else leg.footZ -= rootStep;   // a planted foot is still in the world: it goes back with the root, all of it
             float behind = joint.z - leg.footZ;
+            leg.behind = behind;
             LegAngles end = Key(pushEnd, hopPushEnd);
             // The push ends where the leg turned back with the lean reaches (RunTurn): read upright, the turned foot was already past it
             // at the touchdown and the push ended at once (short steps rowing behind).
@@ -2764,6 +2789,7 @@ namespace SpeedStars.Physical
             if (!body || body.Sim == null) return;
             var sim = body.Sim;
             float dt = Time.deltaTime;
+            if (!preview && body.legDrivenRoot && body.enabled) body.MoveAlong(LegCarry(sim, dt));
             float rootStep = RootStep(dt);
             double now = sim.Time;
             _now = now;
