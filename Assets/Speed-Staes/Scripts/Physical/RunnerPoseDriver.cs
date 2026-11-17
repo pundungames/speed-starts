@@ -368,11 +368,11 @@ namespace SpeedStars.Physical
         [Tooltip("Swing end, touchdown: the foot swept down and back under the knee, the leg nearly (not fully) straight, " +
                  "the foot coming down under the body, not stretched out ahead of it.")]
         public LegAngles contact = new LegAngles(22f, 165f);
-        [Tooltip("Plain running only: the touchdown pose, the foot ~0.35 m ahead of the hip with the knee a little bent (a sprinter's " +
-                 "touchdown), so the planted foot can carry the body from in front to behind; at 30/145 it came down under the hip and " +
-                 "carried 0.2-0.3 m of a 1.1-2.3 m step, the rest slid. Blended in by the run weight; a hop or a pair jump keeps contact. " +
-                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing.")]
-        public LegAngles contactRun = new LegAngles(40f, 160f);
+        [Tooltip("Plain running only: the touchdown pose, the foot ~0.3 m ahead of the hip on a long leg (a sprinter's touchdown), so the " +
+                 "planted foot carries the body from in front to behind; at 30/145 it came down under the hip and carried 0.2-0.3 m of a " +
+                 "1.1-2.3 m step. The stance height is this pose's height: 40/160 put the hips 6 cm lower and the runner ran crouched on bent " +
+                 "knees (17.11). Blended in by the run weight; a hop or a pair jump keeps contact. The swing's last key and the catch read it too.")]
+        public LegAngles contactRun = new LegAngles(30f, 165f);
         [Tooltip("Hold only: the other leg's reach when a key is held. It opens forward nearly straight and the foot " +
                  "lands well ahead (the reference video: ~47° from straight down).")]
         public LegAngles reach = new LegAngles(47f, 175f);
