@@ -372,7 +372,7 @@ namespace SpeedStars.Physical
                  "touchdown), so the planted foot can carry the body from in front to behind; at 30/145 it came down under the hip and " +
                  "carried 0.2-0.3 m of a 1.1-2.3 m step, the rest slid. Blended in by the run weight; a hop or a pair jump keeps contact. " +
                  "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing.")]
-        public LegAngles contactRun = new LegAngles(36f, 160f);
+        public LegAngles contactRun = new LegAngles(40f, 160f);
         [Tooltip("Hold only: the other leg's reach when a key is held. It opens forward nearly straight and the foot " +
                  "lands well ahead (the reference video: ~47° from straight down).")]
         public LegAngles reach = new LegAngles(47f, 175f);
@@ -483,10 +483,11 @@ namespace SpeedStars.Physical
         [Range(0f, 1f)] public float jumpStrideMin = 0.25f;
         [Tooltip("Plain running: from x m/s to y m/s the fast angles (recoverFast, kneeOpenFast) come in, linearly.")]
         public Vector2 fastStrideSpeed = new Vector2(2f, 8f);
-        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key).")]
-        public LegAngles recoverFast = new LegAngles(-60f, 125f);
+        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key). The thigh stays near " +
+                 "upright and the heel folds up behind: at -60/125 (with the lean's turn) the rear leg stood out ~80 deg behind, nearly level (17.11).")]
+        public LegAngles recoverFast = new LegAngles(-35f, 95f);
         [Tooltip("Plain running at low speed: the heel kick, the rear leg open behind (replaces recover; recoverFast is its faster pair).")]
-        public LegAngles recoverOpen = new LegAngles(-55f, 125f);
+        public LegAngles recoverOpen = new LegAngles(-30f, 100f);
         [Tooltip("Plain running: the folded pass, further back than mid (replaces mid; the hop keeps mid's own key).")]
         public LegAngles midRun = new LegAngles(0f, 55f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
@@ -863,8 +864,9 @@ namespace SpeedStars.Physical
         public Vector2 pelvisPitchRange = new Vector2(-10f, 90f);
         [Tooltip("Plain running, the running legs (the push, the swing, the touchdown) turn back with the hips by this share of the " +
                  "forward lean: 1 = the whole body leans from the ankles in one line (the reference), lower = the hips fold over legs " +
-                 "nearer upright. The body comes down with it (runLegDrop). The dive and the hold turn them as ever.")]
-        [Range(0f, 1f)] public float runLegLean = 1f;
+                 "nearer upright. The body comes down with it (runLegDrop). The dive and the hold turn them as ever. At 1 the whole lean " +
+                 "turned the rear leg back past level and stood the front leg upright under the hip (user, 17.11).")]
+        [Range(0f, 1f)] public float runLegLean = 0.5f;
         [Tooltip("Most the running legs turn back with the forward lean in plain running (deg).")]
         public float runLegLeanMax = 70f;
         [Tooltip("Hops and the two-key pair: the share of the forward lean their running legs turn back with (they keep their own look).")]
