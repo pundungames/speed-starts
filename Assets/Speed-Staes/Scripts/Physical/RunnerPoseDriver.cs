@@ -3732,7 +3732,7 @@ namespace SpeedStars.Physical
             // A one-key hold has rules of its own (the running ones measured best as they were, 17.11): there the gait carries the support foot
             // along with the body and sits its legs back past AnkleGround, so a foot is on the ground when the gait stands on it (grounded,
             // carry), a foot carried with the body is nailed, and a lifted foot goes up from the gait's own ankle.
-            bool holding = _heldNow > 0.1f;
+            bool holding = _heldNow > 0.5f;   // a real hold, not a long tap (0.18 s taps at a 0.27 s rhythm took these rules and their swings scraped)
             bool down = (holding && (leg.grounded || leg.carry)) || ankle.y <= ground + LockTouch;
             // A leg the gait has taken off the ground (its swing) is never held: held at toe-off, its foot stayed down 5-6 frames behind
             // while the body ran on and the leg stretched out back ("the legs always stay behind", 17.11).
