@@ -9,7 +9,8 @@ Son güncelleme: 2026-11-17. Son checkpoint `docs/checkpoints/2026-11-05-karakte
 
 ## 17.11: Çin müşterisi feedback'i, ayak kayması (`main`, gözünü bekliyor)
 - Feedback: gövde adımlardan bağımsız ilerliyor, ayak kayıyor. Kullanıcının teşhisi (onaylı): iyi basıştan kötü basışa geçerken hız düşmüyor, adım az ama gövde hızlı.
-- Son hâl: `RunnerPoseDriver` SABAHKİ hâlinde (`4e01775a`; o günkü poz/salınım/ayak kilidi denemeleri kullanıcıya kötü geldi, hepsi geri). Sim: `stepLength` 3.1 m, hız ≤ adım boyu / son basıştan beri geçen süre (`a4f9e3cc`): düzenli ritimde süreler aynı, geç basışta hız hemen düşer, bırakınca süzülme ~4.5 m. `RunnerBody.shownSpeedSmoothing` 0.2: kök yumuşak hızla gider, basış başı tekleme yok (kullanıcı: "tekleme gitmiş").
+- Son hâl: `RunnerPoseDriver` sabahki pozlar + ayak kilidi (`f13147b4`; tek tuş gerçek tutmada ek kurallar `99b9981b`). Sim: `stepLength` 3.1 m (hız ≤ adım boyu / son basıştan beri geçen süre), `tapFloorSpeed` 3.2 → 1 (kullanıcı: adımla hız orantılı olsun, gerekirse 0). `RunnerBody.shownSpeedSmoothing` 0.2 (tekleme yok). Düzenli ritimde 100 m süreleri aynı; ezme ~0.9 m/s.
+- Ölçüm (kopya, ayak kemiği): koşuda kayma 0.01-0.17 m/s (sabah kilitsiz 0.42-1.68); uzun basılı geçişte (0.45/0.5 sn) parmak teması ile ayak başına ~0.5-0.7 m / 5 sn, tuş değişiminde 6-7 kare.
 - Açık: geç kalınan ilk adım hâlâ ~4.4 m (sonraki basışı bilmek mümkün değil). Kullanıcı Mixamo klipleri (Downloads: Y Bot Running/Sprint) indirdi; sorunun animasyon değil hız-adım uyumu olduğunda anlaştık.
 - Ölçüm: `runner-probe.ps1 -Kaynak D:\Pundun\speed-starts` + `python -I scripts/runner-olcum/slide_check.py <önce> <sonra>`. Sim: `scripts/runner-olcum` (`glide`, `tests`, `SIM_SET`).
 
