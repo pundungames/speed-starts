@@ -370,8 +370,9 @@ namespace SpeedStars.Physical
         public LegAngles contact = new LegAngles(22f, 165f);
         [Tooltip("Plain running only: the touchdown pose with the knee a little bent, the foot about as far ahead as contact " +
                  "(a classic run cycle's contact frame). Blended in by the run weight; a hop or a pair jump keeps contact. " +
-                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing.")]
-        public LegAngles contactRun = new LegAngles(30f, 145f);
+                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing. 30/160: the " +
+                 "foot ~10 cm further ahead at the same stance height (40/160 put the hips 6 cm lower and the runner ran crouched, 17.11).")]
+        public LegAngles contactRun = new LegAngles(30f, 160f);
         [Tooltip("Hold only: the other leg's reach when a key is held. It opens forward nearly straight and the foot " +
                  "lands well ahead (the reference video: ~47° from straight down).")]
         public LegAngles reach = new LegAngles(47f, 175f);
@@ -482,10 +483,11 @@ namespace SpeedStars.Physical
         [Range(0f, 1f)] public float jumpStrideMin = 0.25f;
         [Tooltip("Plain running: from x m/s to y m/s the fast angles (recoverFast, kneeOpenFast) come in, linearly.")]
         public Vector2 fastStrideSpeed = new Vector2(2f, 8f);
-        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key).")]
-        public LegAngles recoverFast = new LegAngles(-60f, 125f);
+        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key). At -60/125 the heel " +
+                 "came up to the hip behind (user, 17.11: the rear leg rises too high).")]
+        public LegAngles recoverFast = new LegAngles(-45f, 125f);
         [Tooltip("Plain running at low speed: the heel kick, the rear leg open behind (replaces recover; recoverFast is its faster pair).")]
-        public LegAngles recoverOpen = new LegAngles(-55f, 125f);
+        public LegAngles recoverOpen = new LegAngles(-40f, 130f);
         [Tooltip("Plain running: the folded pass, further back than mid (replaces mid; the hop keeps mid's own key).")]
         public LegAngles midRun = new LegAngles(0f, 55f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
@@ -493,8 +495,9 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running at fast-stride speed: the knee drive (kneeOpen's faster pair).")]
         public LegAngles kneeOpenFast = new LegAngles(70f, 170f);
         [Tooltip("Plain running: the thigh's peak with the knee still folded, the heel drawn up toward the belly (the shin is " +
-                 "thrown out only after this). Blended in by the run weight; a hop, a pair jump and a hold do not read it.")]
-        public LegAngles tuckPeak = new LegAngles(86f, 82f);
+                 "thrown out only after this). Blended in by the run weight; a hop, a pair jump and a hold do not read it. 98 deg: the thigh " +
+                 "comes up past level (user, 17.11: the front leg folds up more from the hip).")]
+        public LegAngles tuckPeak = new LegAngles(98f, 70f);
         [Tooltip("Plain running at a short step (the leg's press-to-press time at tuckFastPeriod.y or less): the tucked peak, taken whole (the stride's size does not " +
                  "shrink it): the quicker the steps, the higher the knee and the more the heel is drawn up. Blended from tuckPeak by the rhythm.")]
         public LegAngles tuckPeakFast = new LegAngles(108f, 45f);
@@ -502,10 +505,11 @@ namespace SpeedStars.Physical
         public Vector2 tuckFastPeriod = new Vector2(0.34f, 0.22f);
         [Tooltip("Plain running: the shin thrown forward as the thigh comes down (thigh − (180 − knee) is the shin's angle, " +
                  "+ = ahead of the knee). From here the foot claws back into contactRun. Run weight only.")]
-        public LegAngles shinThrow = new LegAngles(56f, 160f);
+        public LegAngles shinThrow = new LegAngles(66f, 165f);
         [Tooltip("Plain running: where the tucked peak and the shin throw fall in the swing's time (0..1; x < y, both after the folded pass). " +
-                 "The knee opens between them, so a short fast swing needs them apart (a knee cannot open faster than legMaxSpeed).")]
-        public Vector2 tuckThrowKeys = new Vector2(0.66f, 0.84f);
+                 "The knee opens between them, so a short fast swing needs them apart (a knee cannot open faster than legMaxSpeed). Late, so " +
+                 "the leg opens just before the touchdown: at 0.66/0.84 (with the swing on its own clock) it stood open in front 0.1 s early.")]
+        public Vector2 tuckThrowKeys = new Vector2(0.74f, 0.95f);
         [Tooltip("Plain running: the tucked curve is read this far (s) ahead of the swing's clock from the folded pass on, so the shown " +
                  "angles (which trail their target through the limb springs) reach the peak and the shin throw before the next press. " +
                  "Eased in from the swing's start to the folded pass, so the swing does not jump and the thigh is not rushed.")]
@@ -743,8 +747,8 @@ namespace SpeedStars.Physical
                  "The knee bends for it through the IK.")]
         public float stanceDip = 0.04f;
         [Tooltip("Plain running keeps this share of the body's up-and-down (the stance's dip and the flight's rise). " +
-                 "Hops and pair jumps keep all of theirs.")]
-        [Range(0f, 1f)] public float runBounce = 0.5f;
+                 "Hops and pair jumps keep all of theirs. All of it: the user wants the runner off the ground between steps (17.11).")]
+        [Range(0f, 1f)] public float runBounce = 1f;
         [Tooltip("Running: the pelvis' rise between two steps, at the top of the flight (m, at speed and good form). " +
                  "None at a standstill.")]
         public float flightRise = 0.15f;
@@ -2298,15 +2302,9 @@ namespace SpeedStars.Physical
                 case LegPhase.Recover:
                 case LegPhase.Mid:
                 {
+                    // The swing runs on its own clock: the rear leg folds and comes through while the other is out in front (a run cycle's
+                    // scissor). It used to wait open behind until the other came down, 0.1-0.15 s every step (user, 17.11).
                     float share = SwingShare(leg, now);
-                    // Running, the rear leg stays open behind while the other is out in front: it goes through only as that one comes down.
-                    Leg other = leg == leftLeg ? rightLeg : leftLeg;
-                    if (_plainRun > 0.5f && !_idleStock && dt > 0f && share >= leg.knots[1] && share < leg.knots[2] &&
-                        other.phase == LegPhase.Mid && !other.grounded)
-                    {
-                        leg.swingT0 += dt;   // its clock waits; a press still catches it from here
-                        share = SwingShare(leg, now);
-                    }
                     RefreshSwingKeys(leg);
                     leg.angles = EvalSwing(leg, share);
                     leg.phase = share < leg.knots[2] ? LegPhase.Recover : LegPhase.Mid;
