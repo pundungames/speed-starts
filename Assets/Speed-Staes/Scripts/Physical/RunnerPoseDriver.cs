@@ -371,9 +371,9 @@ namespace SpeedStars.Physical
         public LegAngles contact = new LegAngles(22f, 165f);
         [Tooltip("Plain running only: the touchdown pose with the knee a little bent, the foot about as far ahead as contact " +
                  "(a classic run cycle's contact frame). Blended in by the run weight; a hop or a pair jump keeps contact. " +
-                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing. 30/160: the " +
-                 "foot ~10 cm further ahead at the same stance height (user 17.11: the front foot further ahead).")]
-        public LegAngles contactRun = new LegAngles(30f, 160f);
+                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing. 30/165: the " +
+                 "foot ~15 cm further ahead than at 30/145, the stance ~1 cm lower (user 17.11: the front foot 15 further ahead).")]
+        public LegAngles contactRun = new LegAngles(30f, 165f);
         [Tooltip("Hold only: the other leg's reach when a key is held. It opens forward nearly straight and the foot " +
                  "lands well ahead (the reference video: ~47° from straight down).")]
         public LegAngles reach = new LegAngles(47f, 175f);
@@ -488,7 +488,7 @@ namespace SpeedStars.Physical
                  "came up to the hip behind (user 17.11).")]
         public LegAngles recoverFast = new LegAngles(-45f, 125f);
         [Tooltip("Plain running at low speed: the heel kick, the rear leg open behind (replaces recover; recoverFast is its faster pair).")]
-        public LegAngles recoverOpen = new LegAngles(-40f, 130f);
+        public LegAngles recoverOpen = new LegAngles(-35f, 130f);
         [Tooltip("Plain running: the folded pass, further back than mid (replaces mid; the hop keeps mid's own key).")]
         public LegAngles midRun = new LegAngles(0f, 55f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
@@ -1075,6 +1075,7 @@ namespace SpeedStars.Physical
         const float MaxRootSpeed = 20f;       // ...and so is one faster than this (m/s)
         const float RootSpeedBlend = 12f;      // the root's speed for the swing's end speed is smoothed at this rate (1/s)
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
+        const float GlideAfterSteps = 1.5f;    // legDrivenRoot: a runner on its feet with no press glides on in full this many step times after it
         const float HeelEndShare = 0.55f;      // running: the heel is fully up when the foot is this share of the leg's length behind the hip
         const float Overstretch = 0.985f;     // a planted leg this near its full length is at toe-off (the knee never locks)
         const float PinStopSpeed = 0.3f;       // a runner slower than this (m/s) with no key is standing: a foot is pinned as usual
@@ -2582,8 +2583,9 @@ namespace SpeedStars.Physical
         /// <summary>
         /// How far the legs carry the body this frame (RunnerBody.legDrivenRoot), at the sim's speed: while a planted foot pushes it goes
         /// on over that foot (the foot stays where it is; never past the foot's way behind the hip), and in a step's flight (no leg
-        /// carried the body last frame) it flies on; standing on its feet with nothing pushing it does not move. A hurdle jump and a dive
-        /// keep their own flight. Read from last frame's legs: this frame's come after the root has moved.
+        /// carried the body last frame) it flies on. A hurdle jump and a dive
+        /// keep their own flight. Standing with no press it glides on, more as the next press grows overdue (a stop coasts as before).
+        /// Read from last frame's legs: this frame's come after the root has moved.
         /// </summary>
         float LegCarry(RunnerSim sim, float dt)
         {
@@ -2597,7 +2599,11 @@ namespace SpeedStars.Physical
                 if (leg.grounded && (stance == null || leg.plantedAt < stance.plantedAt)) stance = leg;   // the older stance is the one pushing
             }
             if (stance != null) return Mathf.Clamp(HeelEndShare * MaxReach(stance) - stance.behind, 0f, want);
-            return _carried ? 0f : want;
+            if (!_carried) return want;
+            // Standing on its feet with nothing pushing: a runner whose keys stopped glides on as before (user 17.11: "let it glide when I let
+            // go, not stop dead"), coming in as the next press grows overdue, so a step a little late does not slide and a stop does not halt.
+            float since = (float)(sim.Time - sim.LastPressTime);
+            return want * Mathf.SmoothStep(0f, 1f, since / Mathf.Max(0.05f, GlideAfterSteps * sim.StepTime));
         }
 
         /// <summary>
