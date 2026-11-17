@@ -9,8 +9,9 @@ Son güncelleme: 2026-11-17. Son checkpoint `docs/checkpoints/2026-11-05-karakte
 
 ## 17.11: Çin müşterisi feedback'i, ayak kayması (`main`, gözünü bekliyor)
 - Feedback: gövde animasyondan bağımsız ilerliyor, ayak yerde kayıyor. Bırakınca durma kuralı (`groundReach`) denendi, kullanıcı geri aldırdı (`182cf51a`): bırakınca eskisi gibi süzülsün; hız/denge sayıları aynı (kusursuz 100 m 9.9 sn).
-- Çözüm A (görsel hıza uyar): `contactRun` 36/160 (ayak kalçanın ~0.3 m önüne basar, taşınan 0.32→0.57 m) + `footLock` (son katman, `WriteLeg`→`FootLock`: yerdeki ayak topundan kilitli, önce kalkar sonra gider, sürüklenecek ayak 5 cm havada). Koşuda kayma 0.42-1.68 → 0.01-0.09 m/sn.
-- Açık: yakalamada kalça bir karede ~3 cm tıklıyor (abanma, yavaş koşu; `contactRun` dizi 160 → ~150 ile azalır); abanmada inen ayak havada bir kare durup atlıyor; bitiş, botlar, sekiş, çift tuş ölçülmedi. `plantBlend` artık kilit altında etkisiz.
+- Kayma: `footLock` (son katman, `WriteLeg`→`FootLock`): yerdeki ayak topundan kilitli, önce kalkar sonra gider, salınımdaki bacak tutulmaz. Koşuda kayma 0.42-1.68 → ~0.05 m/sn.
+- Yürüyüş pozları 17.11 akşamı SABAHKİ hâline döndü (`6f74bdcb`): o günkü 9 poz/zamanlama denemesi kullanıcıya "eskisinden çok kötü" geldi. Açık şikâyet: arka bacak gövdeye ~90° geride, öndeki dik; kökü salınımı arka pozda bekleten kural (`RunnerPoseDriver` Recover/Mid, "its clock waits"). Tek tek, A/B kareyle ele alınacak.
+- Tekleme: sim hızı her basışta %7-16 dalgalanıyor (itiş + sürtünme), kamera köke kilitli. `RunnerBody.shownSpeedSmoothing` 0.2: kök yumuşak hızla gider (dalga %2-3), yarış sim'i okur.
 - Ölçüm: `runner-probe.ps1 -Kaynak D:\Pundun\speed-starts` + `python -I scripts/runner-olcum/slide_check.py <önce> <sonra>`. Sim: `scripts/runner-olcum` (`glide`, `tests`, `SIM_SET`).
 
 ## 06.11: tek ayak sekiş turu, gözünü bekliyor (`main`, T-145..T-161 `merged`)
