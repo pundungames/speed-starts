@@ -1083,7 +1083,7 @@ namespace SpeedStars.Physical
         const float LockTouch = 0.02f;         // footLock: a gait foot this near its ground height (m) is on the ground
         const float LockSpeed = 1f;            // ...and is held only when the gait moves it slower than this along the run (m/s): a foot still swinging is not
         const float LockSlack = 0.12f;         // ...and let go when the gait puts it further than this (m) from where it is held
-        const float LockMelt = 22f;            // a foot that has to go elsewhere goes there at this rate (1/s), once it is up
+        const float LockMelt = 30f;            // a foot that has to go elsewhere goes there at this rate (1/s), once it is up
         const float LockLift = 0.04f;          // ...this far (m) off the ground; a foot the gait would drag stays up this far too
         const float AirIn = 0.06f;             // ...rising (and coming down) over this long (s): along the run only as far as it is up
         const float ReachCarryExit = 0.12f;    // ...and stops carrying only above this (hysteresis)
@@ -3761,15 +3761,19 @@ namespace SpeedStars.Physical
                 leg.lastDrawn = world;
                 return ankle;
             }
-            // About to be dragged from where it was drawn on the ground: it stays there and rises first.
-            if (drags && leg.lockOffset == 0f && leg.airW <= 0f)
-                leg.lockOffset = Mathf.Clamp(transform.InverseTransformPoint(leg.lastDrawn).z - ankle.z, -PinMeltMax, PinMeltMax);
-            bool up = leg.lockOffset != 0f || drags;
-            leg.airW = Mathf.MoveTowards(leg.airW, up ? 1f : 0f, dt / AirIn);
+            // Off the gait's place, or about to be dragged from where it was drawn: it stays where it is in the world and rises first,
+            // then goes after the gait's foot as far as it is up (a foot the gait keeps dragging follows it up there).
+            bool apart = leg.lockOffset != 0f || drags;
+            leg.airW = Mathf.MoveTowards(leg.airW, apart ? 1f : 0f, dt / AirIn);
             float go = Mathf.SmoothStep(0f, 1f, leg.airW);
-            leg.lockOffset *= Mathf.Exp(-LockMelt * go * dt);   // along the run only as far as it is off the ground
-            if (Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
-            ankle.z += leg.lockOffset;
+            if (apart)
+            {
+                float heldZ = transform.InverseTransformPoint(leg.lastDrawn).z;
+                float z = Mathf.Lerp(heldZ, ankle.z, 1f - Mathf.Exp(-LockMelt * go * dt));
+                leg.lockOffset = Mathf.Clamp(z - ankle.z, -PinMeltMax, PinMeltMax);
+                if (!drags && Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
+                ankle.z += leg.lockOffset;
+            }
             ankle.y = Mathf.Max(ankle.y, ground + LockLift * go);
             leg.lastDrawn = transform.TransformPoint(ankle);
             return ankle;
