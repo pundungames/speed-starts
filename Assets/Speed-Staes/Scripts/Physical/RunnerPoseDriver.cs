@@ -196,6 +196,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public Vector3 lockPoint;
             [System.NonSerialized] public float lockOffset; // how far the drawn foot still is from the gait's (m, along the run), going there through the air
             [System.NonSerialized] public float airW;       // 0..1: how far up the drawn foot is while it goes there (or while the gait would drag it)
+            [System.NonSerialized] public float dragLeft;   // in a hold: how long the foot the gait last dragged stays up (s), see HoldDragKeep
             [System.NonSerialized] public Vector3 lastDrawn;   // the drawn ankle last frame (world)
             [System.NonSerialized] public float floorLift;  // this frame: how far over the ground the ball and the tip must stay (m), a foot held up by footLock
             [System.NonSerialized] public Vector3 lastGaitAnkle;   // the gait's own ankle last frame (world), for its speed along the run
@@ -1078,6 +1079,7 @@ namespace SpeedStars.Physical
         const float HoldStepSpeed = 2.5f;      // legDrivenRoot: a foot pushing off from a hold's stand carries the body at least this fast (m/s)
         const float HoldStopTime = 0.5f;       // ...and a leg kept in its hold with nothing pushing eases the runner to a stand over this long (s)
         const float GlideAfterSteps = 1.5f;    // legDrivenRoot: a runner on its feet with no press glides on in full this many step times after it
+        const float CoastDecel = 40f;          // ...and one that was going slows no faster than this on its feet with nothing pushing (m/s²)
         const float HeelEndShare = 0.55f;      // running: the heel is fully up when the foot is this share of the leg's length behind the hip
         const float Overstretch = 0.985f;     // a planted leg this near its full length is at toe-off (the knee never locks)
         const float PinStopSpeed = 0.3f;       // a runner slower than this (m/s) with no key is standing: a foot is pinned as usual
@@ -1095,6 +1097,7 @@ namespace SpeedStars.Physical
         const float LockLift = 0.05f;          // ...its ankle this far (m) off the ground; a foot the gait would drag stays up this far too
         const float BallLiftShare = 0.6f;      // ...and its ball and tip this share of that
         const float AirIn = 0.05f;             // ...rising (and coming down) over this long (s): along the run only once it is half up
+        const float HoldDragKeep = 0.1f;       // ...and in a hold, one the gait dragged stays up at least this long after (s)
         const float LockDrag = 0.05f;          // a gait foot this near the ground (m) moved along the run faster than LockSpeed would drag: its toes scrape
         const float ReachCarryExit = 0.12f;    // ...and stops carrying only above this (hysteresis)
         const float ReachCarryHeight = 0.08f;  // a reaching foot this near the ground (m) carries the body; higher it does not
@@ -1209,6 +1212,7 @@ namespace SpeedStars.Physical
         bool _rootJumped;                          // this frame the root jumped (reset, lane, replay): world points held from before are void
         float _holdGlide = 1f;                     // legDrivenRoot: how much of its glide a runner in a hold still has (1 = all, 0 = standing)
         bool _holdStep;                            // legDrivenRoot: this stance pushes off from a hold's stand (at HoldStepSpeed at least)
+        float _carrySpeed;                         // legDrivenRoot: how fast the legs carried the body last frame (m/s)
         float _rootSpeed;                          // the root's own speed (m/s), smoothed
         const float LandHoldMax = 0.12f;           // the landing's no-rise hold ends after this (s) at the latest
         float _flightV;                            // the body height's speed (m/s) in the last flight frame, for hipMaxAccel
@@ -1338,7 +1342,7 @@ namespace SpeedStars.Physical
             leg.pinned = false;
             leg.pinOffset = 0f;
             leg.locked = leg.haveGaitAnkle = false;
-            leg.lockOffset = leg.airW = 0f;
+            leg.lockOffset = leg.airW = leg.dragLeft = 0f;
             leg.grounded = leg.needLock = leg.toeOff = leg.carry = false;
             leg.plantGap = 0f;
             leg.plantedAt = -1.0;
@@ -2087,6 +2091,7 @@ namespace SpeedStars.Physical
             _ballistic = false;
             _holdGlide = 1f;
             _holdStep = false;
+            _carrySpeed = 0f;
             _wasInJump = false;
             _haveRoot = false;
             _rootSpeed = 0f;
@@ -2599,6 +2604,13 @@ namespace SpeedStars.Physical
         /// </summary>
         float LegCarry(RunnerSim sim, float dt)
         {
+            float meters = CarryThisFrame(sim, dt);
+            _carrySpeed = dt > 0f ? meters / dt : 0f;
+            return meters;
+        }
+
+        float CarryThisFrame(RunnerSim sim, float dt)
+        {
             if (dt <= 0f) return 0f;
             float want = sim.Speed * dt;
             // The dive (both keys) keeps its own flight. Not _dive: that is any hold's weight, and with it a one-key hold went on at the sim's
@@ -2608,7 +2620,9 @@ namespace SpeedStars.Physical
             for (int i = 0; i < 2; i++)
             {
                 Leg leg = Legs(i);
-                if (leg.grounded && (stance == null || leg.plantedAt < stance.plantedAt)) stance = leg;   // the older stance is the one pushing
+                // The older stance is the one pushing. A foot put down this frame (needLock: the press's own, before the root moves) is the
+                // newest whatever its plantedAt says (that and its place behind the hip are still its last stance's).
+                if (leg.grounded && (stance == null || (!leg.needLock && (stance.needLock || leg.plantedAt < stance.plantedAt)))) stance = leg;
             }
             // A foot that pushes off from a hold's stand carries the body on over it at a step's pace at least (the sim's speed in a hold is
             // ~1 m/s), all through that stance.
@@ -2627,13 +2641,19 @@ namespace SpeedStars.Physical
             if (stance != null) _holdGlide = 1f;
             else if (inHold) _holdGlide = Mathf.MoveTowards(_holdGlide, 0f, dt / HoldStopTime);
             float glide = Mathf.SmoothStep(0f, 1f, _holdGlide);
-            if (stance != null) return Mathf.Clamp(HeelEndShare * MaxReach(stance) - stance.behind, 0f, stanceWant);
+            // A foot just put down is ahead of the hip: it carries the body on in full. Read with its last stance's place it stopped the body
+            // dead for the frame of the press (4.1 -> 0 -> 4.8 m/s).
+            if (stance != null)
+                return Mathf.Clamp(stance.needLock ? stanceWant : HeelEndShare * MaxReach(stance) - stance.behind, 0f, stanceWant);
             if (inHold || pushedOn || landing) return want * glide;
             if (!_carried) return want;
             // Standing on its feet with nothing pushing: a runner whose keys stopped glides on as before (user 17.11: "let it glide when I let
             // go, not stop dead"), coming in as the next press grows overdue, so a step a little late does not slide and a stop does not halt.
             float since = (float)(sim.Time - sim.LastPressTime);
-            return want * glide * Mathf.SmoothStep(0f, 1f, since / Mathf.Max(0.05f, GlideAfterSteps * sim.StepTime));
+            float coast = want * glide * Mathf.SmoothStep(0f, 1f, since / Mathf.Max(0.05f, GlideAfterSteps * sim.StepTime));
+            // ...but a body that was going does not stop dead in a frame. A foot leaving the ground a frame before the other one took the
+            // body, or a key pressed a frame before its foot came down, fell into the coast for that frame: 6.4 -> 0 -> 6.5 m/s, a shake.
+            return Mathf.Max(coast, Mathf.Min(want * glide, Mathf.Max(0f, _carrySpeed - CoastDecel * dt) * dt));
 
             static bool InHold(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Hold;
             static bool PushedOn(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Recover;
@@ -3789,7 +3809,7 @@ namespace SpeedStars.Physical
             if (_rootJumped)
             {
                 leg.locked = false;
-                leg.lockOffset = leg.airW = leg.floorLift = 0f;
+                leg.lockOffset = leg.airW = leg.floorLift = leg.dragLeft = 0f;
                 leg.lastDrawn = world;
                 return ankle;
             }
@@ -3827,10 +3847,15 @@ namespace SpeedStars.Physical
             if (!allowed)
             {
                 // The glide after the last key, a hold, a dive, a jump: their own rules; a foot still off its place melts back as before.
-                leg.airW = 0f;
+                // A foot still up comes down at AirIn's pace: set down at once, a hold's support foot fell 5 cm in the frame its key was let go.
+                leg.airW = Mathf.MoveTowards(leg.airW, 0f, dt / AirIn);
+                leg.dragLeft = 0f;
+                float up = LockLift * Mathf.SmoothStep(0f, 1f, leg.airW);
                 leg.lockOffset *= Mathf.Exp(-LockMelt * dt);
                 if (Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
                 ankle.z += leg.lockOffset;
+                ankle.y += up;
+                leg.floorLift = up * BallLiftShare;
                 leg.lastDrawn = transform.TransformPoint(ankle);
                 return ankle;
             }
@@ -3847,7 +3872,10 @@ namespace SpeedStars.Physical
             }
             // Off the gait's place, or about to be dragged from where it was drawn: it stays where it is in the world and rises first,
             // then goes after the gait's foot as far as it is up (a foot the gait keeps dragging follows it up there).
-            bool apart = leg.lockOffset != 0f || drags;
+            // In a hold the support foot goes about the body's speed, so drags flipped frame to frame and the foot went up and down with it
+            // (a shaking leg at a change of keys): a foot dragged there stays up HoldDragKeep. Running, a landing foot must not hover.
+            leg.dragLeft = drags && holding ? HoldDragKeep : Mathf.Max(0f, leg.dragLeft - dt);
+            bool apart = leg.lockOffset != 0f || drags || leg.dragLeft > 0f;
             leg.airW = Mathf.MoveTowards(leg.airW, apart ? 1f : 0f, dt / AirIn);
             float go = Mathf.SmoothStep(0f, 1f, leg.airW);
             if (apart)
@@ -3861,8 +3889,9 @@ namespace SpeedStars.Physical
                 ankle.z += leg.lockOffset;
             }
             // Up from where the gait has it, not only from AnkleGround: in a hold the gait's planted ankle stood ~5 cm over that and the "lifted"
-            // foot still dragged on the ground.
-            ankle.y = Mathf.Max(ankle.y + (holding && drags ? LockLift * go : 0f), ground + LockLift * go);
+            // foot still dragged on the ground. By go alone (airW's own pace): read off drags, which flips frame to frame as a hold's support
+            // foot goes about the body's speed, the foot jumped 5 cm up and down every frame (the leg shook).
+            ankle.y = Mathf.Max(ankle.y + (holding ? LockLift * go : 0f), ground + LockLift * go);
             // The ankle up is not the toes up: a swinging foot points them down, and the ankle's floor (PoseAnkle, PoseToes) let them scrape.
             leg.floorLift = LockLift * go * BallLiftShare;
             leg.lastDrawn = transform.TransformPoint(ankle);
