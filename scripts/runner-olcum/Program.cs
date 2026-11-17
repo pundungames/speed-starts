@@ -432,11 +432,58 @@ static class P
         }
     }
 
+
+    // Glide: after the last tap, metres travelled on the ground after the step came down (body moving, no step) and stop time.
+    static void GlideTable()
+    {
+        Console.WriteLine("kayma: tus aralik taps | inisten sonra yerde m | son basistan durus sn | inis hizi | ara yerde m (seri ici, adim basi max)");
+        foreach (var keys in new[] { 2, 1 })
+        foreach (var (g, n) in new[] { (0.22f, 30), (0.26f, 30), (0.30f, 25), (0.40f, 15), (0.50f, 12), (0.70f, 8), (1.00f, 6) })
+        {
+            var s = new RunnerSim(T()); double t = 0, next = 0.2, rel = -1, lastTap = 0; int leg = 1, k = 0; double stop = -1;
+            float groundFrom = -1f, vLand = 0f, gapMax = 0f, after = 0f; bool wasAir = false;
+            while (t < 30)
+            {
+                if (k < n && t >= next) { if (keys == 2) leg = 1 - leg; s.Press(leg); rel = t + Math.Min(0.07, 0.6 * g); lastTap = t; k++; next += g; if (groundFrom >= 0 && k > 3) gapMax = Math.Max(gapMax, s.Distance - groundFrom); groundFrom = -1f; }
+                if (rel >= 0 && t >= rel) { s.Release(0); s.Release(1); rel = -1; }
+                s.Advance(1f / 240f); t += 1.0 / 240;
+                bool air = s.Airborne || (t - s.LastPressTime) < s.T.stanceTime;
+                if (wasAir && !air && groundFrom < 0) { groundFrom = s.Distance; if (k >= n) vLand = s.Speed; }
+                wasAir = air;
+                if (k >= n && stop < 0 && s.Speed < 0.05f && t > lastTap + 0.1) { stop = t - lastTap; after = groundFrom >= 0 ? s.Distance - groundFrom : 0f; }
+            }
+            Console.WriteLine($"{keys} tus {g:0.00} x{n} | {after:0.00} | {(stop < 0 ? ">30" : stop.ToString("0.00"))} | {vLand:0.0} | {gapMax:0.00}");
+        }
+    }
+
+
+    const float TStep = 1f / 240f, KH = 0.07f;
+    static float AltSpeed(float gap, float hold, float seconds) { var s = new RunnerSim(T()); double next = 0.2, rel = -1, t = 0; int leg = 0, rl = 0; while (t < seconds) { if (t >= next) { s.Press(leg); rl = leg; rel = t + hold; leg = 1 - leg; next += gap; } if (rel >= 0 && t >= rel) { s.Release(rl); rel = -1; } s.Advance(TStep); t += TStep; } return s.Speed; }
+    static float RhythmSec(float gap, float hold) { var s = new RunnerSim(T()); double next = 0.2, rel = -1, t = 0; int leg = 0, ra = 0; while (t < 30 && s.Distance < 100f) { if (t >= next) { s.Press(leg); ra = leg; rel = t + hold; leg = 1 - leg; next += gap; } if (rel >= 0 && t >= rel) { s.Release(ra); rel = -1; } s.Advance(TStep); t += TStep; } return s.Distance >= 100f ? (float)t : 30f; }
+    static (float min, float mean) OneKeySeries(float gap) { var s = new RunnerSim(T()); double next = 0.2, rel = -1, t = 0, sum = 0; float min = 99f; int n = 0; while (t < 8.0) { if (t >= next) { s.Press(1); rel = t + Math.Min(KH, 0.6f * gap); next += gap; } if (rel >= 0 && t >= rel) { s.Release(1); rel = -1; } s.Advance(TStep); t += TStep; if (t > 3.0) { min = Math.Min(min, s.Speed); sum += s.Speed; n++; } } return (min, (float)(sum / n)); }
+    static float OneKeySpeed(float gap) { var s = new RunnerSim(T()); double next = 0.2, rel = -1, t = 0; while (t < 8) { if (t >= next) { s.Press(1); rel = t + KH; next += gap; } if (rel >= 0 && t >= rel) { s.Release(1); rel = -1; } s.Advance(TStep); t += TStep; } return s.Speed; }
+    static void TestRelations()
+    {
+        float slowV = AltSpeed(0.5f, KH, 10f), slowT = RhythmSec(0.5f, KH);
+        Console.WriteLine($"slow 0.50: v10 {slowV:0.00}  sec {slowT:0.00}");
+        float mashVmax = 0, mashTmin = 99;
+        foreach (var h in new[] { 0.04f, 0.07f }) foreach (var g in new[] { 0.08f, 0.09f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f }) { mashVmax = Math.Max(mashVmax, AltSpeed(g, h, 10f)); mashTmin = Math.Min(mashTmin, RhythmSec(g, h)); }
+        Console.WriteLine($"mash: max v10 {mashVmax:0.00} (must < slow v10)  min sec {mashTmin:0.00} (must > slow sec)");
+        float best = Math.Max(OneKeySeries(0.20f).mean, Math.Max(OneKeySeries(0.25f).mean, OneKeySeries(0.30f).mean));
+        foreach (var g in new[] { 0.40f, 0.50f, 0.70f, 1.00f, 1.40f }) { var r = OneKeySeries(g); Console.WriteLine($"one key {g:0.00}: mean {r.mean:0.00} ({r.mean / best:0.00} of best {best:0.00})  min {r.min:0.00} ({r.min / best:0.00})"); }
+        foreach (var g in new[] { 0.05f, 0.08f, 0.10f }) Console.WriteLine($"one key mash {g:0.00}: mean {OneKeySeries(g).mean / best:0.00} of best (>0.75)");
+        string bad = ""; for (float g = 0.16f; g < 0.34f; g += 0.01f) { float a = OneKeySpeed(g), b = OneKeySpeed(g + 0.01f); if ((b >= 1f && a <= 0.3f * b) || (a >= 1f && b <= 0.3f * a)) bad += $" {g:0.00}({a:0.0}/{b:0.0})"; }
+        foreach (var g in new[] { 0.16f, 0.17f, 0.18f, 0.19f }) Console.Write($" alt{g:0.00}/0.04={AltSpeed(g, 0.04f, 10f):0.00}"); Console.WriteLine();
+        Console.WriteLine("one key neighbour cliffs:" + (bad == "" ? " none" : bad));
+    }
+
     static void Main(string[] args)
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         if (args.Length > 0 && args[0] == "hop") { HopTable(); return; }
         if (args.Length > 0 && args[0] == "stop") { StopTable(); return; }
+        if (args.Length > 0 && args[0] == "glide") { GlideTable(); return; }
+        if (args.Length > 0 && args[0] == "tests") { TestRelations(); return; }
         if (args.Length > 0 && args[0] == "phased") { if (args.Length > 1) Waste2 = float.Parse(args[1]); Phased(); Table(); return; }
         if (args.Length > 0 && args[0] == "spam") { SpamTable(); return; }
         if (args.Length > 0 && args[0] == "scan") { Scan(); return; }

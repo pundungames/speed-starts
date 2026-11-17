@@ -3,6 +3,7 @@ namespace UnityEngine
 {
     public class HeaderAttribute : Attribute { public HeaderAttribute(string s) { } }
     public class TooltipAttribute : Attribute { public TooltipAttribute(string s) { } }
+    public class MinAttribute : Attribute { public MinAttribute(float a) { } }
     public class RangeAttribute : Attribute { public RangeAttribute(float a, float b) { } }
     public struct Vector2 { public float x, y; public Vector2(float x, float y) { this.x = x; this.y = y; } }
     public static class Mathf
