@@ -196,6 +196,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float lockOffset; // how far the drawn foot still is from the gait's (m, along the run), going there through the air
             [System.NonSerialized] public float airW;       // 0..1: how far up the drawn foot is while it goes there (or while the gait would drag it)
             [System.NonSerialized] public Vector3 lastDrawn;   // the drawn ankle last frame (world)
+            [System.NonSerialized] public float floorLift;  // this frame: how far over the ground the ball and the tip must stay (m), a foot held up by footLock
             [System.NonSerialized] public Vector3 lastGaitAnkle;   // the gait's own ankle last frame (world), for its speed along the run
             [System.NonSerialized] public bool haveGaitAnkle;
             [System.NonSerialized] public float sitShiftZ;  // last frame: how far the sit-back moved this free leg's ankle along z (m)
@@ -1084,9 +1085,10 @@ namespace SpeedStars.Physical
         const float LockSpeed = 1f;            // ...and is held only when the gait moves it slower than this along the run (m/s): a foot still swinging is not
         const float LockSlack = 0.12f;         // ...and let go when the gait puts it further than this (m) from where it is held
         const float LockMelt = 30f;            // a foot that has to go elsewhere goes there at this rate (1/s), once it is up
-        const float LockLift = 0.05f;          // ...this far (m) off the ground; a foot the gait would drag stays up this far too
-        const float LockDrag = 0.05f;          // a gait foot this near the ground (m) moved along the run faster than LockSpeed would drag: its toes scrape
+        const float LockLift = 0.05f;          // ...its ankle this far (m) off the ground; a foot the gait would drag stays up this far too
+        const float BallLiftShare = 0.6f;      // ...and its ball and tip this share of that
         const float AirIn = 0.05f;             // ...rising (and coming down) over this long (s): along the run only once it is half up
+        const float LockDrag = 0.05f;          // a gait foot this near the ground (m) moved along the run faster than LockSpeed would drag: its toes scrape
         const float ReachCarryExit = 0.12f;    // ...and stops carrying only above this (hysteresis)
         const float ReachCarryHeight = 0.08f;  // a reaching foot this near the ground (m) carries the body; higher it does not
         const float ReachKneeSpeed = 1.8f;     // the reaching knee opens this much faster than the thigh comes forward
@@ -3720,12 +3722,13 @@ namespace SpeedStars.Physical
             if (_rootJumped)
             {
                 leg.locked = false;
-                leg.lockOffset = leg.airW = 0f;
+                leg.lockOffset = leg.airW = leg.floorLift = 0f;
                 leg.lastDrawn = world;
                 return ankle;
             }
             bool allowed = footLock && !preview && !_jumping && !_ballistic && !_idleStock && _dive < 0.3f && _heldNow < 0.1f && dt > 0f;
             bool down = ankle.y <= ground + LockTouch;
+            leg.floorLift = 0f;
             if (leg.locked)
             {
                 float heldZ = transform.InverseTransformPoint(leg.lockPoint).z - ball;
@@ -3778,6 +3781,8 @@ namespace SpeedStars.Physical
                 ankle.z += leg.lockOffset;
             }
             ankle.y = Mathf.Max(ankle.y, ground + LockLift * go);
+            // The ankle up is not the toes up: a swinging foot points them down, and the ankle's floor (PoseAnkle, PoseToes) let them scrape.
+            leg.floorLift = LockLift * go * BallLiftShare;
             leg.lastDrawn = transform.TransformPoint(ankle);
             return ankle;
         }
@@ -4205,7 +4210,7 @@ namespace SpeedStars.Physical
             // FreeFootRise, can be a few degrees off, and a reaching or resting leg is not raised by it at all) the foot turns up
             // until it stands on it. The floor is the one thing nothing after this step moves.
             if (preview || !leg.toeBone) return;
-            float floor = GroundY(leg) - 0.003f;
+            float floor = GroundY(leg) - 0.003f + leg.floorLift;
             for (int i = 0; i < 4; i++)
             {
                 Vector3 ball = Local(leg.toeBone), ankle = Local(leg.footBone);
@@ -4243,7 +4248,7 @@ namespace SpeedStars.Physical
             // The floor under the shoe's tip as well (the toe bone is the ball): toes down put the tip ~8 cm past it into the ground. The
             // toes bend up first (the tip level), and what that cannot do the foot turns up. The last step on the foot.
             if (preview) return;
-            float floorY = GroundY(leg) - 0.003f;
+            float floorY = GroundY(leg) - 0.003f + leg.floorLift;
             for (int i = 0; i < 4; i++)
             {
                 Vector3 dir = transform.InverseTransformDirection(Quaternion.AngleAxis(bend, axis) * (leg.footBone.rotation * leg.tipInFoot)).normalized;
