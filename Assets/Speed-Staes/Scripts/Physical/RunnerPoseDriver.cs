@@ -406,8 +406,9 @@ namespace SpeedStars.Physical
                  "knee drive (kneeDrive). The swing ends at the touchdown pose at 1, when the leg's next press is due.")]
         public Vector3 swingKeys = new Vector3(0.22f, 0.5f, 0.78f);
         [Tooltip("Plain running's own swing keys (same meaning as swingKeys; blended in by the plain-run weight). The thigh's peak " +
-                 "comes earlier, so a nearly straight leg has time to come down before the touchdown.")]
-        public Vector3 runSwingKeys = new Vector3(0.22f, 0.45f, 0.68f);
+                 "comes earlier, so a nearly straight leg has time to come down before the touchdown. The rear leg is back at its furthest early " +
+                 "and passes under the hip by a third of the swing: at 0.22/0.45 it stood out behind through the whole stance of the other leg (17.11).")]
+        public Vector3 runSwingKeys = new Vector3(0.12f, 0.32f, 0.62f);
         [Tooltip("One-leg hop swing keys (same meaning as swingKeys; blended in by the hop weight): the back kick comes later, so the leg has time to get " +
                  "far back before it comes round.")]
         public Vector3 hopSwingKeys = new Vector3(0.45f, 0.68f, 0.86f);
@@ -485,9 +486,9 @@ namespace SpeedStars.Physical
         public Vector2 fastStrideSpeed = new Vector2(2f, 8f);
         [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key). The thigh stays near " +
                  "upright and the heel folds up behind: at -60/125 (with the lean's turn) the rear leg stood out ~80 deg behind, nearly level (17.11).")]
-        public LegAngles recoverFast = new LegAngles(-35f, 95f);
+        public LegAngles recoverFast = new LegAngles(-30f, 125f);
         [Tooltip("Plain running at low speed: the heel kick, the rear leg open behind (replaces recover; recoverFast is its faster pair).")]
-        public LegAngles recoverOpen = new LegAngles(-30f, 100f);
+        public LegAngles recoverOpen = new LegAngles(-25f, 130f);
         [Tooltip("Plain running: the folded pass, further back than mid (replaces mid; the hop keeps mid's own key).")]
         public LegAngles midRun = new LegAngles(0f, 55f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
