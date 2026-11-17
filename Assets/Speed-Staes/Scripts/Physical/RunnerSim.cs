@@ -45,16 +45,6 @@ namespace SpeedStars.Physical
         public float stopWaitShare = 1.2f;
         [Tooltip("Longest wait (s) the brake gives a slow series of taps before the runner is taken to have stopped.")]
         public float stopWaitMax = 1.6f;
-        [Tooltip("The body moves on its feet: once a step is down (no flight, no stance pushing, no key down) it goes at most this far " +
-                 "(m) on the ground before it stands. A press on time or a little late comes well within it (rhythms of 0.24-0.40 s run as " +
-                 "before); without it the body glided on 3-9 m after the last tap with both feet down, and they slid. 0 = off.")]
-        public float groundReach = 1.5f;
-        [Tooltip("How late in groundReach the body slows: speed = landing speed × √(1 − (way/groundReach)^this). 1 = evenly over the " +
-                 "whole reach; higher keeps the speed longer (a press a little late loses little) and stops harder at the end.")]
-        public float groundReachPower = 10f;
-        [Tooltip("The reach also ends this long (s) after the step is down, at the speed it came down with: a slow step is a short one " +
-                 "(at 1 m/s the full groundReach crept on for a second, past the moment the legs go to their stock pose).")]
-        public float groundReachTime = 0.35f;
 
         [Header("Stride")]
         [Tooltip("Press → take-off: how long the foot pushes on the ground (s).")]
@@ -304,7 +294,6 @@ namespace SpeedStars.Physical
         const float SubStep = 1f / 240f;
         const float PressBurst = 0.03f;   // a key down gives its headKick over about this long (s, time constant)
         const float HeldStop = 20f;       // a key down stops the head's way back this fast (1/s)
-        const float StandSpeed = 0.05f;   // at the end of the ground reach the body stands below this (m/s): the square root never quite gets there
 
         public readonly RunnerTuning T;
         /// <summary>The energy numbers (one EnergyTuning asset; code defaults when none is given).</summary>
@@ -390,8 +379,6 @@ namespace SpeedStars.Physical
         double _keyUpTime;        // sim time the last key down came up
         double _launchTime, _landTime;
         float _windupLeft, _windupTotal, _jumpLeft, _jumpTotal, _hitLeft;
-        bool _onReach;                  // on the ground with the step done: the body is carried by the planted foot only
-        float _reachFrom, _reachSpeed;  // where and how fast that began
 
         public RunnerSim(RunnerTuning tuning, EnergyModel energy = null)
         {
@@ -415,8 +402,6 @@ namespace SpeedStars.Physical
             LastEfficiency = 0f;
             _launchTime = -1.0;
             _landTime = -10.0;
-            _onReach = false;
-            _reachFrom = _reachSpeed = 0f;
             LeanSpring.Reset();
             _head.Reset();
             Strain = 0f;
@@ -589,34 +574,6 @@ namespace SpeedStars.Physical
             return (_hopVelocity + Mathf.Sqrt(_hopVelocity * _hopVelocity + 2f * T.gravity * HopY)) / T.gravity;
         }
 
-        /// <summary>
-        /// The most speed the ground lets the body keep now (m/s). In the air, in a stance that is still pushing, in a jump's wind-up
-        /// or with a key down, nothing limits it. Once the step is down and none of that, only the planted foot carries the body:
-        /// from that moment its speed falls along √(1 − (way/reach)^groundReachPower) and it stands at the reach (groundReach, or
-        /// groundReachTime at the speed it came down with if that is shorter), so the
-        /// body never goes on further than its legs (the visual's feet stay where they are nailed). A press starts a new step.
-        /// </summary>
-        float ReachCap()
-        {
-            bool stepping = HopY > 0f || _hopVelocity > 0f || JumpInAir || _windupLeft > 0f || _launchTime >= 0.0 ||
-                            Legs[0].Pressed || Legs[1].Pressed;
-            if (T.groundReach <= 0f || stepping)
-            {
-                _onReach = false;
-                return float.MaxValue;
-            }
-            if (!_onReach)
-            {
-                _onReach = true;
-                _reachFrom = Distance;
-                _reachSpeed = Speed;
-            }
-            float reach = Mathf.Min(T.groundReach, _reachSpeed * Mathf.Max(0.01f, T.groundReachTime));
-            float way = Mathf.Clamp01((Distance - _reachFrom) / Mathf.Max(0.01f, reach));
-            float cap = _reachSpeed * Mathf.Sqrt(Mathf.Max(0f, 1f - Mathf.Pow(way, Mathf.Max(0.1f, T.groundReachPower))));
-            return cap < StandSpeed ? 0f : cap;
-        }
-
         public void Release(int leg)
         {
             var l = Legs[leg];
@@ -779,7 +736,6 @@ namespace SpeedStars.Physical
             float top = TopSpeed;
             float next = Speed + applied + (thrust - drag) * h;
             Speed = Mathf.Max(0f, next > top ? Mathf.Max(top, Mathf.Min(next, Speed)) : next);
-            Speed = Mathf.Min(Speed, ReachCap());
             Distance += Speed * h;
 
             // Lean.

@@ -557,20 +557,14 @@ namespace SpeedStars.PlayTests
         }
 
         [Test]
-        public void OneKeyTappedBadlySlowsTheRunnerAndASlowSeriesStandsBetweenTaps()
+        public void OneKeyTappedBadlyOrSlowlySlowsTheRunnerButNeverStopsIt()
         {
-            // The body moves on its feet (groundReach): a tap every 0.7 s or slower is a step and a stand each time, not a glide
-            // between taps with the legs still (T-155 kept the speed there; the client's feedback 17.11 asked for no sliding).
             object tuning = NewTuning();
             float best = new[] { 0.20f, 0.25f, 0.30f }.Max(g => OneKeySeries(tuning, g).mean);
-            foreach (float gap in new[] { 0.40f, 0.50f })
+            foreach (float gap in new[] { 0.40f, 0.50f, 0.70f })
                 Assert.Greater(OneKeySeries(tuning, gap).mean, 0.55f * best, $"one key every {gap:0.00} s is slowed to a crawl");
             foreach (float gap in new[] { 0.70f, 1.00f, 1.40f })
-            {
-                var series = OneKeySeries(tuning, gap);
-                Assert.Less(series.min, 0.05f, $"one key every {gap:0.00} s glides on between taps");
-                Assert.Greater(series.mean, 0.1f * best, $"one key every {gap:0.00} s does not move the runner");
-            }
+                Assert.Greater(OneKeySeries(tuning, gap).min, 0.2f * best, $"one key every {gap:0.00} s lets the speed fall to a standstill between taps");
         }
 
         [Test]
@@ -583,51 +577,30 @@ namespace SpeedStars.PlayTests
         }
 
         [Test]
-        public void AfterTheLastStepTheBodyGoesNoFurtherOnTheGroundThanItsReach()
+        public void TheBrakeWaitsForTheNextTapOfASlowSeriesButNotAfterOneTap()
         {
             object tuning = NewTuning();
-            float reach = (float)TuningType.GetField("groundReach").GetValue(tuning);
-            Assume.That(reach > 0f, "groundReach is off");
-            foreach (float gap in new[] { 0.26f, 0.40f })
+            float SpeedAfterLastTap(int taps, float gap)
             {
-                // A run in good rhythm, then the keys stop: from the last step's landing the body stands within its reach.
                 var s = new Sim(tuning);
-                int leg = 0;
-                for (int i = 0; i < 20; i++)
+                s.Advance(0.2f);
+                for (int i = 0; i < taps; i++)
                 {
-                    s.Press(leg);
+                    s.Press(1);
                     s.Advance(KeyHold);
-                    s.Release(leg);
-                    if (i < 19) s.Advance(gap - KeyHold);
-                    leg = 1 - leg;
+                    s.Release(1);
+                    s.Advance(gap - KeyHold);
                 }
-                float moving = s.Speed;
-                bool flew = false;
-                float landedAt = -1f;
-                for (double t = 0; t < 2.0; t += Step)
-                {
-                    s.Advance(Step);
-                    if (s.Airborne) flew = true;
-                    else if (flew && landedAt < 0f) landedAt = s.Distance;
-                }
-                Assert.Greater(moving, 2f, $"rhythm {gap:0.00} never got going");
-                Assert.GreaterOrEqual(landedAt, 0f, $"rhythm {gap:0.00}: the last step never came down");
-                Assert.LessOrEqual(s.Distance - landedAt, reach + 0.02f, $"rhythm {gap:0.00}: the body glided on past its reach after the last step");
-                Assert.Less(s.Speed, 0.05f, $"rhythm {gap:0.00}: the runner keeps going with no key");
+                return s.Speed;   // one gap after the last tap, where the next one would come
             }
-        }
 
-        [Test]
-        public void RhythmsOnTimeOrALittleLateRunAsWithoutTheGroundReach()
-        {
-            // The reach only takes what the legs cannot carry: a press within the step's time is never cut by it.
-            object tuning = NewTuning();
-            object free = NewTuning(t => Set(t, "groundReach", 0f));
-            foreach (float gap in new[] { 0.24f, 0.26f, 0.28f, 0.30f, 0.32f, 0.36f, 0.40f })
-            {
-                float with = Rhythm(tuning, gap).Seconds, without = Rhythm(free, gap).Seconds;
-                Assert.LessOrEqual(with, without * 1.02f, $"rhythm {gap:0.00}: the ground reach slows the race ({with:0.00} s, {without:0.00} s without)");
-            }
+            Assert.Greater(SpeedAfterLastTap(6, 1.0f), 0.5f, "the runner stopped between taps of a slow series");
+            Assert.Less(SpeedAfterLastTap(1, 1.0f), 0.1f, "one tap alone must still stop the runner");
+            var stopped = new Sim(tuning);
+            stopped.Advance(0.2f);
+            for (int i = 0; i < 6; i++) { stopped.Press(1); stopped.Advance(KeyHold); stopped.Release(1); stopped.Advance(1.0f - KeyHold); }
+            stopped.Advance(4f);
+            Assert.Less(stopped.Speed, 0.1f, "the series stopped but the runner keeps going");
         }
     }
 }
