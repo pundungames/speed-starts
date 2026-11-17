@@ -368,11 +368,10 @@ namespace SpeedStars.Physical
         [Tooltip("Swing end, touchdown: the foot swept down and back under the knee, the leg nearly (not fully) straight, " +
                  "the foot coming down under the body, not stretched out ahead of it.")]
         public LegAngles contact = new LegAngles(22f, 165f);
-        [Tooltip("Plain running only: the touchdown pose, the foot ~0.3 m ahead of the hip on a long leg (a sprinter's touchdown), so the " +
-                 "planted foot carries the body from in front to behind; at 30/145 it came down under the hip and carried 0.2-0.3 m of a " +
-                 "1.1-2.3 m step. The stance height is this pose's height: 40/160 put the hips 6 cm lower and the runner ran crouched on bent " +
-                 "knees (17.11). Blended in by the run weight; a hop or a pair jump keeps contact. The swing's last key and the catch read it too.")]
-        public LegAngles contactRun = new LegAngles(30f, 165f);
+        [Tooltip("Plain running only: the touchdown pose with the knee a little bent, the foot about as far ahead as contact " +
+                 "(a classic run cycle's contact frame). Blended in by the run weight; a hop or a pair jump keeps contact. " +
+                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing.")]
+        public LegAngles contactRun = new LegAngles(30f, 145f);
         [Tooltip("Hold only: the other leg's reach when a key is held. It opens forward nearly straight and the foot " +
                  "lands well ahead (the reference video: ~47° from straight down).")]
         public LegAngles reach = new LegAngles(47f, 175f);
@@ -406,9 +405,8 @@ namespace SpeedStars.Physical
                  "knee drive (kneeDrive). The swing ends at the touchdown pose at 1, when the leg's next press is due.")]
         public Vector3 swingKeys = new Vector3(0.22f, 0.5f, 0.78f);
         [Tooltip("Plain running's own swing keys (same meaning as swingKeys; blended in by the plain-run weight). The thigh's peak " +
-                 "comes earlier, so a nearly straight leg has time to come down before the touchdown. The rear leg is back at its furthest early " +
-                 "and passes under the hip by a third of the swing: at 0.22/0.45 it stood out behind through the whole stance of the other leg (17.11).")]
-        public Vector3 runSwingKeys = new Vector3(0.12f, 0.32f, 0.62f);
+                 "comes earlier, so a nearly straight leg has time to come down before the touchdown.")]
+        public Vector3 runSwingKeys = new Vector3(0.22f, 0.45f, 0.68f);
         [Tooltip("One-leg hop swing keys (same meaning as swingKeys; blended in by the hop weight): the back kick comes later, so the leg has time to get " +
                  "far back before it comes round.")]
         public Vector3 hopSwingKeys = new Vector3(0.45f, 0.68f, 0.86f);
@@ -484,11 +482,10 @@ namespace SpeedStars.Physical
         [Range(0f, 1f)] public float jumpStrideMin = 0.25f;
         [Tooltip("Plain running: from x m/s to y m/s the fast angles (recoverFast, kneeOpenFast) come in, linearly.")]
         public Vector2 fastStrideSpeed = new Vector2(2f, 8f);
-        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key). The thigh stays near " +
-                 "upright and the heel folds up behind: at -60/125 (with the lean's turn) the rear leg stood out ~80 deg behind, nearly level (17.11).")]
-        public LegAngles recoverFast = new LegAngles(-30f, 125f);
+        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key).")]
+        public LegAngles recoverFast = new LegAngles(-60f, 125f);
         [Tooltip("Plain running at low speed: the heel kick, the rear leg open behind (replaces recover; recoverFast is its faster pair).")]
-        public LegAngles recoverOpen = new LegAngles(-25f, 130f);
+        public LegAngles recoverOpen = new LegAngles(-55f, 125f);
         [Tooltip("Plain running: the folded pass, further back than mid (replaces mid; the hop keeps mid's own key).")]
         public LegAngles midRun = new LegAngles(0f, 55f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
@@ -507,9 +504,8 @@ namespace SpeedStars.Physical
                  "+ = ahead of the knee). From here the foot claws back into contactRun. Run weight only.")]
         public LegAngles shinThrow = new LegAngles(56f, 160f);
         [Tooltip("Plain running: where the tucked peak and the shin throw fall in the swing's time (0..1; x < y, both after the folded pass). " +
-                 "The knee opens between them, so a short fast swing needs them apart (a knee cannot open faster than legMaxSpeed). Late, so " +
-                 "the leg opens just before the touchdown: at 0.66/0.84 it stood open in front 0.1 s early, the foot skimming the ground (17.11).")]
-        public Vector2 tuckThrowKeys = new Vector2(0.74f, 0.95f);
+                 "The knee opens between them, so a short fast swing needs them apart (a knee cannot open faster than legMaxSpeed).")]
+        public Vector2 tuckThrowKeys = new Vector2(0.66f, 0.84f);
         [Tooltip("Plain running: the tucked curve is read this far (s) ahead of the swing's clock from the folded pass on, so the shown " +
                  "angles (which trail their target through the limb springs) reach the peak and the shin throw before the next press. " +
                  "Eased in from the swing's start to the folded pass, so the swing does not jump and the thigh is not rushed.")]
@@ -866,9 +862,8 @@ namespace SpeedStars.Physical
         public Vector2 pelvisPitchRange = new Vector2(-10f, 90f);
         [Tooltip("Plain running, the running legs (the push, the swing, the touchdown) turn back with the hips by this share of the " +
                  "forward lean: 1 = the whole body leans from the ankles in one line (the reference), lower = the hips fold over legs " +
-                 "nearer upright. The body comes down with it (runLegDrop). The dive and the hold turn them as ever. At 1 the whole lean " +
-                 "turned the rear leg back past level and stood the front leg upright under the hip (user, 17.11).")]
-        [Range(0f, 1f)] public float runLegLean = 0.5f;
+                 "nearer upright. The body comes down with it (runLegDrop). The dive and the hold turn them as ever.")]
+        [Range(0f, 1f)] public float runLegLean = 1f;
         [Tooltip("Most the running legs turn back with the forward lean in plain running (deg).")]
         public float runLegLeanMax = 70f;
         [Tooltip("Hops and the two-key pair: the share of the forward lean their running legs turn back with (they keep their own look).")]
@@ -2303,9 +2298,15 @@ namespace SpeedStars.Physical
                 case LegPhase.Recover:
                 case LegPhase.Mid:
                 {
-                    // The swing runs on its own clock: the rear leg folds and comes through while the other is out in front (a run cycle's
-                    // scissor). It used to wait open behind until the other came down, and stood out back for 0.1-0.15 s every step (17.11).
                     float share = SwingShare(leg, now);
+                    // Running, the rear leg stays open behind while the other is out in front: it goes through only as that one comes down.
+                    Leg other = leg == leftLeg ? rightLeg : leftLeg;
+                    if (_plainRun > 0.5f && !_idleStock && dt > 0f && share >= leg.knots[1] && share < leg.knots[2] &&
+                        other.phase == LegPhase.Mid && !other.grounded)
+                    {
+                        leg.swingT0 += dt;   // its clock waits; a press still catches it from here
+                        share = SwingShare(leg, now);
+                    }
                     RefreshSwingKeys(leg);
                     leg.angles = EvalSwing(leg, share);
                     leg.phase = share < leg.knots[2] ? LegPhase.Recover : LegPhase.Mid;
