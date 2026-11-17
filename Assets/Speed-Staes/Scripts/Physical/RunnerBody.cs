@@ -21,6 +21,10 @@ namespace SpeedStars.Physical
         public bool acceptInput = true;
         [Tooltip("Jumps are ignored while false (a race without hurdles).")]
         public bool acceptJump = true;
+        [Tooltip("The root goes along at the sim's speed smoothed over this long (s), pulled back to the sim's distance: every press is a push " +
+                 "and the drag takes it back, so the sim's speed swings 7-16% each step and the root (and the camera on it) jolted with every " +
+                 "press (17.11). Only the picture: the race, the finish and the speed read the sim. 0 = the sim's distance as it is.")]
+        public float shownSpeedSmoothing = 0.2f;
 
         public RunnerSim Sim { get; private set; }
 
@@ -29,9 +33,13 @@ namespace SpeedStars.Physical
         /// <summary>The run was reset (sim time is back at 0).</summary>
         public event System.Action RunReset;
 
+        const float ShownPull = 5f;        // the shown distance closes on the sim's at this rate (1/s), so it never drifts off (~0.13 m behind at the start's pull)
+        const float ShownMaxOff = 0.3f;    // ...and is never more than this (m) from it
+
         Vector3 _startPos, _forward;
         double _origin;
         bool _jumpAsked;
+        float _shownDistance, _shownSpeed;   // where the root is drawn along the run, and how fast it goes there
 
         void Awake()
         {
@@ -81,7 +89,21 @@ namespace SpeedStars.Physical
             if (_jumpAsked && acceptInput && acceptJump) Sim.Jump();
             _jumpAsked = false;
             if (now > Sim.Time) Sim.Advance((float)(now - Sim.Time));
-            transform.position = _startPos + _forward * Sim.Distance;
+            transform.position = _startPos + _forward * ShownDistance(Time.deltaTime);
+        }
+
+        /// <summary>The sim's distance through a smoothed speed (shownSpeedSmoothing), held within ShownMaxOff of it.</summary>
+        float ShownDistance(float dt)
+        {
+            if (shownSpeedSmoothing <= 0f || dt <= 0f)
+            {
+                _shownSpeed = Sim.Speed;
+                return _shownDistance = Sim.Distance;
+            }
+            _shownSpeed += (Sim.Speed - _shownSpeed) * (1f - Mathf.Exp(-dt / shownSpeedSmoothing));
+            _shownDistance += (_shownSpeed + ShownPull * (Sim.Distance - _shownDistance)) * dt;
+            _shownDistance = Mathf.Clamp(_shownDistance, Sim.Distance - ShownMaxOff, Sim.Distance + ShownMaxOff);
+            return _shownDistance;
         }
 
         /// <summary>Back to the start line, standing still, full energy.</summary>
@@ -89,6 +111,7 @@ namespace SpeedStars.Physical
         {
             Sim.Reset();
             _origin = Time.timeAsDouble;
+            _shownDistance = _shownSpeed = 0f;
             if (input) input.Clear();
             transform.position = _startPos;
             acceptInput = true;
