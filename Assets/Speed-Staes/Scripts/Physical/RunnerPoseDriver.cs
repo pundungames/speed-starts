@@ -193,8 +193,9 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float pinOffset;  // after a pin lets go: how far behind the leg's own place the foot still is (m), melting away
             [System.NonSerialized] public bool locked;      // footLock: the drawn foot is held on the ground at lockPoint (world)
             [System.NonSerialized] public Vector3 lockPoint;
-            [System.NonSerialized] public float lockOffset, lockLiftW;   // after a lock lets go: how far the drawn foot still is from its own place (m), melting in the air
-            [System.NonSerialized] public float clearW;     // 0..1: a free foot going along the ground is lifted clear by this much
+            [System.NonSerialized] public float lockOffset; // how far the drawn foot still is from the gait's (m, along the run), going there through the air
+            [System.NonSerialized] public float airW;       // 0..1: how far up the drawn foot is while it goes there (or while the gait would drag it)
+            [System.NonSerialized] public Vector3 lastDrawn;   // the drawn ankle last frame (world)
             [System.NonSerialized] public Vector3 lastGaitAnkle;   // the gait's own ankle last frame (world), for its speed along the run
             [System.NonSerialized] public bool haveGaitAnkle;
             [System.NonSerialized] public float sitShiftZ;  // last frame: how far the sit-back moved this free leg's ankle along z (m)
@@ -1081,10 +1082,10 @@ namespace SpeedStars.Physical
         const float PinLiftIn = 0.08f;         // ...that lift comes in over this long (s): all at once it threw the foot 6 cm up in a frame
         const float LockTouch = 0.02f;         // footLock: a gait foot this near its ground height (m) is on the ground
         const float LockSpeed = 1f;            // ...and is held only when the gait moves it slower than this along the run (m/s): a foot still swinging is not
-        const float LockMelt = 22f;            // a foot the lock let go of goes to its own place at this rate (1/s)
-        const float LockLift = 0.05f;          // ...up to this much (m) off the ground while it does
-        const float LockClear = 0.035f;        // a free foot going along the ground faster than LockSpeed is lifted this far (m) clear of it
-        const float ClearIn = 0.05f;           // ...that lift comes in and goes out over this long (s)
+        const float LockSlack = 0.12f;         // ...and let go when the gait puts it further than this (m) from where it is held
+        const float LockMelt = 22f;            // a foot that has to go elsewhere goes there at this rate (1/s), once it is up
+        const float LockLift = 0.04f;          // ...this far (m) off the ground; a foot the gait would drag stays up this far too
+        const float AirIn = 0.06f;             // ...rising (and coming down) over this long (s): along the run only as far as it is up
         const float ReachCarryExit = 0.12f;    // ...and stops carrying only above this (hysteresis)
         const float ReachCarryHeight = 0.08f;  // a reaching foot this near the ground (m) carries the body; higher it does not
         const float ReachKneeSpeed = 1.8f;     // the reaching knee opens this much faster than the thigh comes forward
@@ -1325,7 +1326,7 @@ namespace SpeedStars.Physical
             leg.pinned = false;
             leg.pinOffset = 0f;
             leg.locked = leg.haveGaitAnkle = false;
-            leg.lockOffset = leg.lockLiftW = leg.clearW = 0f;
+            leg.lockOffset = leg.airW = 0f;
             leg.grounded = leg.needLock = leg.toeOff = leg.carry = false;
             leg.plantGap = 0f;
             leg.plantedAt = -1.0;
@@ -3700,11 +3701,12 @@ namespace SpeedStars.Physical
         }
 
         /// <summary>
-        /// The last word on where a foot is drawn (runner space in and out; the gait's own ankle is left as it is). Running, a foot the gait
-        /// puts on the ground and does not move along the run is held where it touched in the world, the IK bending the leg to it, until the
-        /// gait lifts it or the leg cannot reach it; then it goes to its own place through the air (lockOffset, raised while it melts). A free
-        /// foot the gait moves along the ground faster than LockSpeed (a low swing, a foot going home under a moving body) is lifted clear
-        /// instead of sliding. The gait's timing is untouched: the sim's speed and the legs' phases are what they were.
+        /// The last word on where a foot is drawn (runner space in and out; the gait's own ankle is left as it is). One rule: a drawn foot
+        /// on the ground does not move along it. Running, a foot the gait puts on the ground and does not move along the run is held there
+        /// by its ball (the heel comes up about it, as the gait has it), the IK bending the leg to it, until the gait lifts it, takes it
+        /// elsewhere or the leg cannot reach it. A foot that has to go somewhere else first rises (airW) and only then goes, through the
+        /// air (lockOffset); while the gait would drag it along the ground (a low swing, a foot going home under a body still moving) it
+        /// stays up, a few cm over the ground. The gait's timing is untouched: the sim's speed and the legs' phases are what they were.
         /// </summary>
         Vector3 FootLock(Leg leg, Vector3 ankle, Vector3 joint, float dt)
         {
@@ -3712,52 +3714,65 @@ namespace SpeedStars.Physical
             float gaitSpeed = leg.haveGaitAnkle && dt > 0f && !_rootJumped ? Vector3.Dot(world - leg.lastGaitAnkle, transform.forward) / dt : 0f;
             leg.lastGaitAnkle = world;
             leg.haveGaitAnkle = true;
-            bool allowed = footLock && !preview && !_jumping && !_ballistic && !_idleStock && _dive < 0.3f && _heldNow < 0.1f && dt > 0f;
-            if (!allowed || _rootJumped)
-            {
-                if (leg.locked && !_rootJumped) StartLockMelt(leg, transform.InverseTransformPoint(leg.lockPoint).z - ankle.z);
-                leg.locked = false;
-                if (_rootJumped) leg.lockOffset = 0f;
-            }
             float ground = AnkleGround(leg);
+            float ball = BallZ(leg, leg.pitch + leg.rock);
+            if (_rootJumped)
+            {
+                leg.locked = false;
+                leg.lockOffset = leg.airW = 0f;
+                leg.lastDrawn = world;
+                return ankle;
+            }
+            bool allowed = footLock && !preview && !_jumping && !_ballistic && !_idleStock && _dive < 0.3f && _heldNow < 0.1f && dt > 0f;
             bool down = ankle.y <= ground + LockTouch;
             if (leg.locked)
             {
-                Vector3 at = transform.InverseTransformPoint(leg.lockPoint);
-                float dy = ankle.y - joint.y, dz = at.z - joint.z;
-                bool lifted = ankle.y > ground + LockTouch * 1.5f;
+                float heldZ = transform.InverseTransformPoint(leg.lockPoint).z - ball;
+                float dy = ankle.y - joint.y, dz = heldZ - joint.z;
                 bool outOfReach = Mathf.Sqrt(dy * dy + dz * dz) >= MaxReach(leg) * Overstretch;
-                if (lifted || outOfReach)
+                if (!allowed || !down || outOfReach || Mathf.Abs(ankle.z - heldZ) > LockSlack)
                 {
                     leg.locked = false;
-                    StartLockMelt(leg, at.z - ankle.z);
+                    leg.lockOffset = Mathf.Clamp(heldZ - ankle.z, -PinMeltMax, PinMeltMax);
                 }
-                else ankle.z = at.z;   // its height and side are the gait's: the heel comes up as it would
+                else
+                {
+                    ankle.z = heldZ;   // its height and side are the gait's
+                    leg.airW = 0f;
+                    leg.lastDrawn = transform.TransformPoint(ankle);
+                    return ankle;
+                }
             }
-            else if (allowed && down && gaitSpeed <= LockSpeed && leg.lockOffset == 0f)
+            if (!allowed)
             {
-                leg.locked = true;
-                leg.lockPoint = world;
-            }
-            if (!leg.locked && leg.lockOffset != 0f)
-            {
+                // The glide after the last key, a hold, a dive, a jump: their own rules; a foot still off its place melts back as before.
+                leg.airW = 0f;
                 leg.lockOffset *= Mathf.Exp(-LockMelt * dt);
                 if (Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
-                leg.lockLiftW = Mathf.MoveTowards(leg.lockLiftW, 1f, dt / PinLiftIn);
                 ankle.z += leg.lockOffset;
-                ankle.y = Mathf.Max(ankle.y, ground + Mathf.Min(LockLift, Mathf.Abs(leg.lockOffset) * 0.6f) * leg.lockLiftW);
+                leg.lastDrawn = transform.TransformPoint(ankle);
+                return ankle;
             }
-            bool scuff = allowed && !leg.locked && down && gaitSpeed > LockSpeed;
-            leg.clearW = Mathf.MoveTowards(leg.clearW, scuff ? 1f : 0f, dt / ClearIn);
-            if (!leg.locked) ankle.y = Mathf.Max(ankle.y, ground + LockClear * leg.clearW);
+            bool drags = down && gaitSpeed > LockSpeed;   // the gait would move this foot along the ground
+            if (down && !drags && leg.lockOffset == 0f && leg.airW <= 0f)
+            {
+                leg.locked = true;
+                leg.lockPoint = transform.TransformPoint(new Vector3(ankle.x, ankle.y, ankle.z + ball));
+                leg.lastDrawn = world;
+                return ankle;
+            }
+            // About to be dragged from where it was drawn on the ground: it stays there and rises first.
+            if (drags && leg.lockOffset == 0f && leg.airW <= 0f)
+                leg.lockOffset = Mathf.Clamp(transform.InverseTransformPoint(leg.lastDrawn).z - ankle.z, -PinMeltMax, PinMeltMax);
+            bool up = leg.lockOffset != 0f || drags;
+            leg.airW = Mathf.MoveTowards(leg.airW, up ? 1f : 0f, dt / AirIn);
+            float go = Mathf.SmoothStep(0f, 1f, leg.airW);
+            leg.lockOffset *= Mathf.Exp(-LockMelt * go * dt);   // along the run only as far as it is off the ground
+            if (Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
+            ankle.z += leg.lockOffset;
+            ankle.y = Mathf.Max(ankle.y, ground + LockLift * go);
+            leg.lastDrawn = transform.TransformPoint(ankle);
             return ankle;
-        }
-
-        /// <summary>A lock let go: the drawn foot starts from where it was held (offset from its own place), melting there through the air.</summary>
-        static void StartLockMelt(Leg leg, float offset)
-        {
-            leg.lockOffset = Mathf.Clamp(offset, -PinMeltMax, PinMeltMax);
-            leg.lockLiftW = 0f;
         }
 
         /// <summary>
