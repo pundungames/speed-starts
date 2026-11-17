@@ -45,6 +45,11 @@ namespace SpeedStars.Physical
         public float stopWaitShare = 1.2f;
         [Tooltip("Longest wait (s) the brake gives a slow series of taps before the runner is taken to have stopped.")]
         public float stopWaitMax = 1.6f;
+        [Tooltip("The body goes on its steps: the speed is never more than this (m) over the time since the last step's press (StepTime at " +
+                 "least), so a press that comes late slows the runner at once and the next steps are no longer than this. Running in a steady " +
+                 "rhythm every step is 2.7-3.1 m whatever the rhythm, so this changes no race time; from a good rhythm to a worse one the steps " +
+                 "were 4-6 m for a second while the drag slowly took the speed down, and the feet slid (17.11). No key held, not in a jump. 0 = off.")]
+        public float stepLength = 3.1f;
 
         [Header("Stride")]
         [Tooltip("Press → take-off: how long the foot pushes on the ground (s).")]
@@ -736,6 +741,8 @@ namespace SpeedStars.Physical
             float top = TopSpeed;
             float next = Speed + applied + (thrust - drag) * h;
             Speed = Mathf.Max(0f, next > top ? Mathf.Max(top, Mathf.Min(next, Speed)) : next);
+            if (T.stepLength > 0f && Presses > 0 && !JumpInAir && !Legs[0].Pressed && !Legs[1].Pressed)
+                Speed = Mathf.Min(Speed, T.stepLength / Mathf.Max(StepTime, (float)(Time - _lastStepTime)));
             Distance += Speed * h;
 
             // Lean.
