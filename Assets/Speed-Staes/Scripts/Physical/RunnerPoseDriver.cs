@@ -196,7 +196,6 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float lockOffset; // how far the drawn foot still is from the gait's (m, along the run), going there through the air
             [System.NonSerialized] public float airW;       // 0..1: how far up the drawn foot is while it goes there (or while the gait would drag it)
             [System.NonSerialized] public Vector3 lastDrawn;   // the drawn ankle last frame (world)
-            [System.NonSerialized] public bool drawnDown;   // ...and it was on the ground then
             [System.NonSerialized] public float floorLift;  // this frame: how far over the ground the ball and the tip must stay (m), a foot held up by footLock
             [System.NonSerialized] public Vector3 lastGaitAnkle;   // the gait's own ankle last frame (world), for its speed along the run
             [System.NonSerialized] public bool haveGaitAnkle;
@@ -1329,7 +1328,7 @@ namespace SpeedStars.Physical
             leg.thighT.set = leg.kneeT.set = false;
             leg.pinned = false;
             leg.pinOffset = 0f;
-            leg.locked = leg.haveGaitAnkle = leg.drawnDown = false;
+            leg.locked = leg.haveGaitAnkle = false;
             leg.lockOffset = leg.airW = 0f;
             leg.grounded = leg.needLock = leg.toeOff = leg.carry = false;
             leg.plantGap = 0f;
@@ -3725,7 +3724,6 @@ namespace SpeedStars.Physical
                 leg.locked = false;
                 leg.lockOffset = leg.airW = leg.floorLift = 0f;
                 leg.lastDrawn = world;
-                leg.drawnDown = false;
                 return ankle;
             }
             bool allowed = footLock && !preview && !_jumping && !_ballistic && !_idleStock && _dive < 0.3f && _heldNow < 0.1f && dt > 0f;
@@ -3746,7 +3744,6 @@ namespace SpeedStars.Physical
                     ankle.z = heldZ;   // its height and side are the gait's
                     leg.airW = 0f;
                     leg.lastDrawn = transform.TransformPoint(ankle);
-                    leg.drawnDown = true;
                     return ankle;
                 }
             }
@@ -3758,7 +3755,6 @@ namespace SpeedStars.Physical
                 if (Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
                 ankle.z += leg.lockOffset;
                 leg.lastDrawn = transform.TransformPoint(ankle);
-                leg.drawnDown = ankle.y <= ground + LockTouch;
                 return ankle;
             }
             bool drags = ankle.y <= ground + LockDrag && gaitSpeed > LockSpeed;   // the gait would move this foot along (or just over) the ground
@@ -3767,16 +3763,12 @@ namespace SpeedStars.Physical
                 leg.locked = true;
                 leg.lockPoint = transform.TransformPoint(new Vector3(ankle.x, ankle.y, ankle.z + ball));
                 leg.lastDrawn = world;
-                leg.drawnDown = true;
                 return ankle;
             }
-            // Off the gait's place, or about to be dragged from where it stood on the ground last frame: it stays where it is in the world and
-            // rises first, then goes after the gait's foot as far as it is up. A foot already in the air the gait brings down along the ground
-            // (a catch flung forward) is only lifted: holding it there froze it a frame and threw it 20 cm on.
-            if (drags && leg.drawnDown && leg.lockOffset == 0f)
-                leg.lockOffset = Mathf.Clamp(transform.InverseTransformPoint(leg.lastDrawn).z - ankle.z, -PinMeltMax, PinMeltMax);
-            bool apart = leg.lockOffset != 0f;
-            leg.airW = Mathf.MoveTowards(leg.airW, apart || drags ? 1f : 0f, dt / AirIn);
+            // Off the gait's place, or about to be dragged from where it was drawn: it stays where it is in the world and rises first,
+            // then goes after the gait's foot as far as it is up (a foot the gait keeps dragging follows it up there).
+            bool apart = leg.lockOffset != 0f || drags;
+            leg.airW = Mathf.MoveTowards(leg.airW, apart ? 1f : 0f, dt / AirIn);
             float go = Mathf.SmoothStep(0f, 1f, leg.airW);
             if (apart)
             {
@@ -3785,14 +3777,13 @@ namespace SpeedStars.Physical
                 float heldZ = transform.InverseTransformPoint(leg.lastDrawn).z;
                 float z = Mathf.Lerp(heldZ, ankle.z, 1f - Mathf.Exp(-LockMelt * travel * dt));
                 leg.lockOffset = Mathf.Clamp(z - ankle.z, -PinMeltMax, PinMeltMax);
-                if (Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
+                if (!drags && Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
                 ankle.z += leg.lockOffset;
             }
             ankle.y = Mathf.Max(ankle.y, ground + LockLift * go);
             // The ankle up is not the toes up: a swinging foot points them down, and the ankle's floor (PoseAnkle, PoseToes) let them scrape.
             leg.floorLift = LockLift * go * BallLiftShare;
             leg.lastDrawn = transform.TransformPoint(ankle);
-            leg.drawnDown = ankle.y <= ground + LockTouch;
             return ankle;
         }
 
