@@ -2302,15 +2302,9 @@ namespace SpeedStars.Physical
                 case LegPhase.Recover:
                 case LegPhase.Mid:
                 {
+                    // The swing runs on its own clock: the rear leg folds and comes through while the other is out in front (a run cycle's
+                    // scissor). It used to wait open behind until the other came down, and stood out back for 0.1-0.15 s every step (17.11).
                     float share = SwingShare(leg, now);
-                    // Running, the rear leg stays open behind while the other is out in front: it goes through only as that one comes down.
-                    Leg other = leg == leftLeg ? rightLeg : leftLeg;
-                    if (_plainRun > 0.5f && !_idleStock && dt > 0f && share >= leg.knots[1] && share < leg.knots[2] &&
-                        other.phase == LegPhase.Mid && !other.grounded)
-                    {
-                        leg.swingT0 += dt;   // its clock waits; a press still catches it from here
-                        share = SwingShare(leg, now);
-                    }
                     RefreshSwingKeys(leg);
                     leg.angles = EvalSwing(leg, share);
                     leg.phase = share < leg.knots[2] ? LegPhase.Recover : LegPhase.Mid;
@@ -3731,13 +3725,16 @@ namespace SpeedStars.Physical
             }
             bool allowed = footLock && !preview && !_jumping && !_ballistic && !_idleStock && _dive < 0.3f && _heldNow < 0.1f && dt > 0f;
             bool down = ankle.y <= ground + LockTouch;
+            // A leg the gait has taken off the ground (its swing) is never held: held at toe-off, its foot stayed down 5-6 frames behind
+            // while the body ran on and the leg stretched out back ("the legs always stay behind", 17.11).
+            bool swinging = leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid;
             leg.floorLift = 0f;
             if (leg.locked)
             {
                 float heldZ = transform.InverseTransformPoint(leg.lockPoint).z - ball;
                 float dy = ankle.y - joint.y, dz = heldZ - joint.z;
                 bool outOfReach = Mathf.Sqrt(dy * dy + dz * dz) >= MaxReach(leg) * Overstretch;
-                if (!allowed || !down || outOfReach || Mathf.Abs(ankle.z - heldZ) > LockSlack)
+                if (!allowed || !down || swinging || outOfReach || Mathf.Abs(ankle.z - heldZ) > LockSlack)
                 {
                     leg.locked = false;
                     leg.lockOffset = Mathf.Clamp(heldZ - ankle.z, -PinMeltMax, PinMeltMax);
@@ -3761,7 +3758,7 @@ namespace SpeedStars.Physical
                 return ankle;
             }
             bool drags = ankle.y <= ground + LockDrag && gaitSpeed > LockSpeed;   // the gait would move this foot along (or just over) the ground
-            if (down && !drags && leg.lockOffset == 0f && leg.airW <= 0f)
+            if (down && !drags && !swinging && leg.lockOffset == 0f && leg.airW <= 0f)
             {
                 leg.locked = true;
                 leg.lockPoint = transform.TransformPoint(new Vector3(ankle.x, ankle.y, ankle.z + ball));
