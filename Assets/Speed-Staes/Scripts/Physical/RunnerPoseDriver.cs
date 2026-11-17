@@ -3546,7 +3546,10 @@ namespace SpeedStars.Physical
                     float arc = Mathf.Sin(Mathf.PI * w);
                     hopPart = hopRise * hopWeight * Mathf.Clamp01(Mathf.Pow(_hopFlightT / Mathf.Max(0.05f, hopRiseTime), 1.5f)) * arc * arc;
                 }
-                float target = Mathf.Lerp(_offY, landY, Mathf.SmoothStep(0f, 1f, w)) + rise * 4f * w * (1f - w) + hopPart;
+                // The run's rise is a sine squared too: leaving and landing at rest. The parabola came down at -4 rise/flight (~3 m/s with the
+                // full bounce) and the stance stopped it in one frame (the hips jolted 2-4.7 m/s a frame on landing, 17.11).
+                float runArc = Mathf.Sin(Mathf.PI * w);
+                float target = Mathf.Lerp(_offY, landY, Mathf.SmoothStep(0f, 1f, w)) + rise * runArc * runArc + hopPart;
                 // A hop or a pair puts the foot down on the ground, no hover: the press finds it planted and the stance has its frames.
                 if (incoming.phase == LegPhase.Land) target += landHover * (1f - hopWeight);
                 _bodyY.Step(target, flightSpring.frequency, flightSpring.damping, dt);
