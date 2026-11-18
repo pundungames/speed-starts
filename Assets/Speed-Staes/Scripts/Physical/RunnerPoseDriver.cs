@@ -1083,9 +1083,14 @@ namespace SpeedStars.Physical
         const float MinExtent = 0.5f;          // lowest hip height (m) used to turn the root's speed into the leg's angular speed
         const float HoldStepSpeed = 2.5f;      // legDrivenRoot: a foot pushing off from a hold's stand carries the body at least this fast (m/s)
         const float HoldStopTime = 0.5f;       // ...and a leg kept in its hold with nothing pushing eases the runner to a stand over this long (s)
-        const float GlideAfterSteps = 1.5f;    // legDrivenRoot: a runner on its feet with no press glides on in full this many step times after it
-        const float CoastDecel = 40f;          // ...and one that was going slows no faster than this on its feet with nothing pushing (m/s²)
-        static readonly Vector2 GlideSpeed = new Vector2(1.5f, 3f);   // ...gliding not at all below x m/s, in full from y (a run's stop glides, a hop's does not)
+        const float StopSlideFrom = 13f / 2.23694f;   // legDrivenRoot: a runner stopping faster than this (13 mph, in m/s) slides; slower it stops where it is
+        const float StopSlideTime = 0.5f;      // ...sliding this long (s) from 13 mph, at one braking: the faster, the longer (20 mph ~0.8 s)
+        const float StopDecel = StopSlideFrom / StopSlideTime;
+        const float StopGrace = 0.12f;         // ...but nothing pushing for less than this (s) is a run's change of feet, not a stop (a 0.45 s
+                                               //    rhythm's stance foot goes home 0.07-0.12 s before the next key: stopped there, it stuttered)
+        const float PressLate = 1.25f;         // a press is overdue past this share of the keys' own gap (_rawGap)...
+        const float PressWaitMax = 0.5f;       // ...or this long (s) at most: then a foot that came down on its own stops pushing...
+        const float SelfPushMax = 0.22f;       // ...and in any case this long (s) after it came down (it lands up to ~0.2 s before its key)
         const float HeelEndShare = 0.55f;      // running: the heel is fully up when the foot is this share of the leg's length behind the hip
         const float Overstretch = 0.985f;     // a planted leg this near its full length is at toe-off (the knee never locks)
         const float PinStopSpeed = 0.3f;       // a runner slower than this (m/s) with no key is standing: a foot is pinned as usual
@@ -1146,8 +1151,8 @@ namespace SpeedStars.Physical
         const float ThrowTuck = 70f;           // ...its knee folded this much more (deg) half way, so the foot clears the ground under the body
         const double ThrowWindow = 0.3;        // ...also when the other key comes this long (s) after it was let go (on its way in under the body)
         const float MashGap = 0.16f;           // keys pressed this close (s, smoothed, either key) are a mash: the body goes on at the sim's speed...
-        const float MashKeep = 0.25f;          // ...while the last press is this recent (s)
-        const float MashBlend = 0.15f;         // ...coming in and going out over this long (s)
+        const float MashKeep = 0.16f;          // ...while the last press is this recent (s: a mash's next press would have come), then the stop's rule
+        const float MashBlend = 0.15f;         // ...coming in over this long (s); it ends at once (a mash let go slid on at the sim's speed)
 
         float _gaitW, _armW, _speedCurve;                  // gait weight 0..1 (the arms read it); speed curve 0..1
         int _armPresses;
@@ -1226,6 +1231,8 @@ namespace SpeedStars.Physical
         float _holdGlide = 1f;                     // legDrivenRoot: how much of its glide a runner in a hold still has (1 = all, 0 = standing)
         bool _holdStep;                            // legDrivenRoot: this stance pushes off from a hold's stand (at HoldStepSpeed at least)
         float _carrySpeed;                         // legDrivenRoot: how fast the legs carried the body last frame (m/s)
+        float _coastT;                             // legDrivenRoot: how long nothing has pushed the runner on its feet (s), see StopCoast
+        bool _stopSlides;                          // ...and whether this stop slides (it began at 13 mph or faster)
         double _lastRawPress = -1.0;               // the last key press, either key, taken or not (sim time)
         float _rawGap = 1f;                        // the time between key presses, smoothed (s)
         float _mashW;                              // 0..1: the keys are a mash (MashGap): the body goes on at the sim's speed
@@ -2116,7 +2123,8 @@ namespace SpeedStars.Physical
             _ballistic = false;
             _holdGlide = 1f;
             _holdStep = false;
-            _carrySpeed = 0f;
+            _carrySpeed = _coastT = 0f;
+            _stopSlides = false;
             _lastRawPress = -1.0;
             _rawGap = 1f;
             _mashW = 0f;
@@ -2650,7 +2658,7 @@ namespace SpeedStars.Physical
         /// How far the legs carry the body this frame (RunnerBody.legDrivenRoot), at the sim's speed: while a planted foot pushes it goes
         /// on over that foot (the foot stays where it is; never past the foot's way behind the hip), and in a step's flight (no leg
         /// carried the body last frame) it flies on. A hurdle jump and a dive
-        /// keep their own flight. Standing with no press it glides on, more as the next press grows overdue (a stop coasts as before).
+        /// keep their own flight. On its feet with nothing pushing it stops (StopCoast): at once under 13 mph, sliding a while above.
         /// Read from last frame's legs: this frame's come after the root has moved.
         /// </summary>
         float LegCarry(RunnerSim sim, float dt)
@@ -2667,6 +2675,8 @@ namespace SpeedStars.Physical
         float CarryThisFrame(RunnerSim sim, float dt)
         {
             if (dt <= 0f) return 0f;
+            float coastT = _coastT;
+            _coastT = 0f;   // StopCoast carries the count on; any other frame ends the stop
             float want = sim.Speed * dt;
             // The dive (both keys) keeps its own flight. Not _dive: that is any hold's weight, and with it a one-key hold went on at the sim's
             // speed with no foot pushing (the hold's front foot carries the body but is not planted), the whole pose sliding.
@@ -2689,8 +2699,6 @@ namespace SpeedStars.Physical
             // After its push a held key's leg goes on at the glide it has until its hold begins: the coast below dropped the body between
             // the two and it jumped back at the hold (0.45 s holds in turn ran 5.5/2.6/5.5 m/s). A tap's key down after its push: the same.
             bool pushedOn = PushedOn(leftLeg) || PushedOn(rightLeg);
-            // A key pressed out of a hold's slowing whose foot has not landed yet: still slowing (the coast gave a frame's stall).
-            bool landing = _holdGlide < 1f && (Landing(leftLeg) || Landing(rightLeg));
             // A key held on with no foot pushing: the runner eases to a stand in its hold over HoldStopTime (user 17.11: smoothly, not nailed).
             // It stays standing when the key comes up (the sim's speed lives on in a hold); the next foot that pushes gives it its glide back.
             if (stance != null) _holdGlide = 1f;
@@ -2698,30 +2706,39 @@ namespace SpeedStars.Physical
             float glide = Mathf.SmoothStep(0f, 1f, _holdGlide);
             // A foot just put down is ahead of the hip: it carries the body on in full. Read with its last stance's place it stopped the body
             // dead for the frame of the press (4.1 -> 0 -> 4.8 m/s).
-            // A foot that came down with no press since (a swing landing on its own, TickLegs' Land) pushes only in a run: slow, it is where the
-            // runner stops (after a single hop the body went on 10 cm over the second foot).
+            // A foot that came down with no press since (a swing landing on its own, TickLegs' Land) pushes while the next press is still
+            // to come (running, a foot lands a little before its key: stopped there, a 0.45 s rhythm halted 0.15 s every step). Once that
+            // press is overdue it is no push: the body goes on over it only as a stop slides (after a single hop it went 10 cm more).
             if (stance != null)
             {
-                float unpressed = stance.selfLanded ? RunGlide(sim) : 1f;
-                return Mathf.Clamp(stance.needLock ? stanceWant : HeelEndShare * MaxReach(stance) - stance.behind, 0f, stanceWant * unpressed);
+                bool overdue = sim.Time - _lastRawPress > Mathf.Min(PressWaitMax, _rawGap * PressLate) ||
+                               sim.Time - stance.plantedAt > SelfPushMax;   // a foot lands that much before its key at most; a stop takes no extra step
+                float most = stance.selfLanded && overdue ? StopCoast(want * glide, dt, coastT) : stanceWant;
+                return Mathf.Clamp(stance.needLock ? most : HeelEndShare * MaxReach(stance) - stance.behind, 0f, most);
             }
-            if (inHold || pushedOn || landing) return want * glide;
+            // A press's foot on its way down (a catch): the step is coming, the body goes on (a key pressed a frame before its foot came down
+            // stopped it for that frame, 6.4 -> 0 -> 6.5 m/s).
+            if (inHold || pushedOn || Catching(leftLeg) || Catching(rightLeg)) return want * glide;
             if (!_carried) return want;
-            // Standing on its feet with nothing pushing: a runner whose keys stopped glides on as before (user 17.11: "let it glide when I let
-            // go, not stop dead"), coming in as the next press grows overdue, so a step a little late does not slide and a stop does not halt.
-            float since = (float)(sim.Time - sim.LastPressTime);
-            float coast = want * glide * Mathf.SmoothStep(0f, 1f, since / Mathf.Max(0.05f, GlideAfterSteps * sim.StepTime));
-            // Only a run glides: slower than GlideSpeed.x a runner on its feet stops where it stands. A single hop from the blocks (~1 m/s)
-            // landed and slid on both feet 0.5-0.9 m (user 18.11: "it must stop at once, not slide").
-            coast *= RunGlide(sim);
-            // ...but a body that was going does not stop dead in a frame. A foot leaving the ground a frame before the other one took the
-            // body, or a key pressed a frame before its foot came down, fell into the coast for that frame: 6.4 -> 0 -> 6.5 m/s, a shake.
-            return Mathf.Max(coast, Mathf.Min(want * glide, Mathf.Max(0f, _carrySpeed - CoastDecel * dt) * dt));
+            return StopCoast(want * glide, dt, coastT);
 
-            static float RunGlide(RunnerSim s) => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(GlideSpeed.x, GlideSpeed.y, s.Speed));
             static bool InHold(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Hold;
             static bool PushedOn(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Recover;
-            static bool Landing(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Push;
+            static bool Catching(Leg leg) => !leg.grounded && leg.phase == LegPhase.Push;
+        }
+
+        /// <summary>
+        /// The stop: nothing pushes and the runner is on its feet (or on a foot that came down on its own). Slower than StopSlideFrom
+        /// (13 mph) it stops where it is; faster it slides, braking at StopDecel: 0.5 s from 13 mph, longer the faster (user 18.11: "under
+        /// 13 no slide at all, at 13 about half a second"; the glide used to last about the same whatever the speed). The first StopGrace
+        /// keeps the speed: inside a run a foot leaves a frame before the next one takes the body, and that is not a stop.
+        /// </summary>
+        float StopCoast(float most, float dt, float coastT)
+        {
+            _coastT = coastT + dt;
+            if (coastT <= 0f) _stopSlides = _carrySpeed >= StopSlideFrom;
+            float v = _coastT <= StopGrace ? _carrySpeed : _stopSlides ? Mathf.Max(0f, _carrySpeed - StopDecel * dt) : 0f;
+            return Mathf.Min(most, v * dt);
         }
 
         /// <summary>
@@ -2925,7 +2942,7 @@ namespace SpeedStars.Physical
             _fastW = Mathf.InverseLerp(fastStrideSpeed.x, fastStrideSpeed.y, sim.Speed);
             _stepNow = false;
             bool mashing = !preview && _rawGap < MashGap && now - _lastRawPress < MashKeep;
-            if (dt > 0f) _mashW = Mathf.MoveTowards(_mashW, mashing ? 1f : 0f, dt / MashBlend);
+            if (dt > 0f) _mashW = mashing ? Mathf.MoveTowards(_mashW, 1f, dt / MashBlend) : 0f;
 
             // 1. Key poses.
             PoseData p;
