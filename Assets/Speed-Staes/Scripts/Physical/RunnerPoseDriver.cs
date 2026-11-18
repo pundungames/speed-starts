@@ -218,6 +218,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float[] tuckKnots;
             [System.NonSerialized] public bool swungSincePress;    // the leg has left the ground since the press the pose took (the press gate reads it)
             [System.NonSerialized] public bool standStep;          // this swing is a standing start's first step: it does not go back past where it began
+            [System.NonSerialized] public bool throwFwd;           // this reach is a held leg let go at a change of keys: thrown forward through the air (ThrowForward)
 
             public Vector3 RestBall => restAnkle + ballOffset;
             public double EndTime => phaseTime + duration;
@@ -485,11 +486,12 @@ namespace SpeedStars.Physical
         [Range(0f, 1f)] public float jumpStrideMin = 0.25f;
         [Tooltip("Plain running: from x m/s to y m/s the fast angles (recoverFast, kneeOpenFast) come in, linearly.")]
         public Vector2 fastStrideSpeed = new Vector2(2f, 8f);
-        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key). -45/125: at -60 the heel " +
-                 "came up to the hip behind (user 17.11).")]
-        public LegAngles recoverFast = new LegAngles(-45f, 125f);
-        [Tooltip("Plain running at low speed: the heel kick, the rear leg open behind (replaces recover; recoverFast is its faster pair).")]
-        public LegAngles recoverOpen = new LegAngles(-35f, 130f);
+        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key). -35/125: the rear " +
+                 "leg goes back -30 to -35 at most (user 18.11; at -60 the heel came up to the hip behind).")]
+        public LegAngles recoverFast = new LegAngles(-35f, 125f);
+        [Tooltip("Plain running at low speed: the heel kick, the rear leg open behind (replaces recover; recoverFast is its faster pair). " +
+                 "-30: the rear leg goes back -30 to -35 at most (user 18.11).")]
+        public LegAngles recoverOpen = new LegAngles(-30f, 130f);
         [Tooltip("Plain running: the folded pass, further back than mid (replaces mid; the hop keeps mid's own key).")]
         public LegAngles midRun = new LegAngles(0f, 55f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
@@ -497,11 +499,13 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running at fast-stride speed: the knee drive (kneeOpen's faster pair).")]
         public LegAngles kneeOpenFast = new LegAngles(70f, 170f);
         [Tooltip("Plain running: the thigh's peak with the knee still folded, the heel drawn up toward the belly (the shin is " +
-                 "thrown out only after this). Blended in by the run weight; a hop, a pair jump and a hold do not read it.")]
-        public LegAngles tuckPeak = new LegAngles(86f, 82f);
+                 "thrown out only after this). Blended in by the run weight; a hop, a pair jump and a hold do not read it. 100/76: the front " +
+                 "leg comes up higher from the hip, the thigh past level (user 18.11; was 86/82).")]
+        public LegAngles tuckPeak = new LegAngles(100f, 76f);
         [Tooltip("Plain running at a short step (the leg's press-to-press time at tuckFastPeriod.y or less): the tucked peak, taken whole (the stride's size does not " +
-                 "shrink it): the quicker the steps, the higher the knee and the more the heel is drawn up. Blended from tuckPeak by the rhythm.")]
-        public LegAngles tuckPeakFast = new LegAngles(108f, 45f);
+                 "shrink it): the quicker the steps, the higher the knee and the more the heel is drawn up. Blended from tuckPeak by the rhythm. " +
+                 "118: higher from the hip with tuckPeak (user 18.11; was 108).")]
+        public LegAngles tuckPeakFast = new LegAngles(118f, 45f);
         [Tooltip("The step time tuckPeakFast follows (s): half the leg's own press-to-press time (the keys alternate, so a leg is pressed every second step). x = no share (a slow step), y = the whole.")]
         public Vector2 tuckFastPeriod = new Vector2(0.34f, 0.22f);
         [Tooltip("Plain running: the shin thrown forward as the thigh comes down (thigh − (180 − knee) is the shin's angle, " +
@@ -1135,6 +1139,12 @@ namespace SpeedStars.Physical
         const float HeldTo = 0.6f;
         const float HoldRealPeak = 0.5f;       // a Hold whose real weight reached this was really held (a tap's ~0.3 weight gives ~0.05)
         const float HoldTippedLean = 30f;     // the hips leaned this far (deg) when a held leg is let go: it comes in under the body
+        const float ThrowTime = 0.25f;         // a held leg let go at a change of keys goes from behind to in front in this long (s)...
+        const float ThrowTuck = 70f;           // ...its knee folded this much more (deg) half way, so the foot clears the ground under the body
+        const double ThrowWindow = 0.3;        // ...also when the other key comes this long (s) after it was let go (on its way in under the body)
+        const float MashGap = 0.16f;           // keys pressed this close (s, smoothed, either key) are a mash: the body goes on at the sim's speed...
+        const float MashKeep = 0.25f;          // ...while the last press is this recent (s)
+        const float MashBlend = 0.15f;         // ...coming in and going out over this long (s)
 
         float _gaitW, _armW, _speedCurve;                  // gait weight 0..1 (the arms read it); speed curve 0..1
         int _armPresses;
@@ -1213,6 +1223,9 @@ namespace SpeedStars.Physical
         float _holdGlide = 1f;                     // legDrivenRoot: how much of its glide a runner in a hold still has (1 = all, 0 = standing)
         bool _holdStep;                            // legDrivenRoot: this stance pushes off from a hold's stand (at HoldStepSpeed at least)
         float _carrySpeed;                         // legDrivenRoot: how fast the legs carried the body last frame (m/s)
+        double _lastRawPress = -1.0;               // the last key press, either key, taken or not (sim time)
+        float _rawGap = 1f;                        // the time between key presses, smoothed (s)
+        float _mashW;                              // 0..1: the keys are a mash (MashGap): the body goes on at the sim's speed
         float _rootSpeed;                          // the root's own speed (m/s), smoothed
         const float LandHoldMax = 0.12f;           // the landing's no-rise hold ends after this (s) at the latest
         float _flightV;                            // the body height's speed (m/s) in the last flight frame, for hipMaxAccel
@@ -1426,6 +1439,14 @@ namespace SpeedStars.Physical
                 return;
             }
             l.held = true;
+            // A change of keys with a gap: the other key's leg, let go from a real hold a moment ago, is on its way in under the body
+            // (ReleaseHold's Rest): it is thrown forward instead, as if the keys had overlapped.
+            Leg letGo = Legs(1 - leg);
+            if (letGo.phase == LegPhase.Rest && !letGo.held && !letGo.grounded && !_ballistic && letGo.holdPeak >= HoldRealPeak &&
+                time - letGo.upAt < ThrowWindow) ThrowForward(letGo, time);
+            // Mashing is read from the raw keys (either one, taken or not): the gap between presses, smoothed.
+            if (_lastRawPress >= 0.0) _rawGap = Mathf.Lerp(_rawGap, (float)System.Math.Min(1.0, time - _lastRawPress), 0.5f);
+            _lastRawPress = time;
             // The rhythm is read from the key whether the pose takes the press or not: the gate keeps the taken ones apart, and a cycle fed by them
             // alone learns the gate's own gap and swings slowly forever.
             double keyGap = l.lastKey >= 0.0 ? time - l.lastKey : -1.0;
@@ -2092,6 +2113,9 @@ namespace SpeedStars.Physical
             _holdGlide = 1f;
             _holdStep = false;
             _carrySpeed = 0f;
+            _lastRawPress = -1.0;
+            _rawGap = 1f;
+            _mashW = 0f;
             _wasInJump = false;
             _haveRoot = false;
             _rootSpeed = 0f;
@@ -2128,6 +2152,19 @@ namespace SpeedStars.Physical
             leg.fromPitch = leg.pitch;
             leg.grounded = leg.needLock = leg.toeOff = false;
             leg.plantGap = 0f;
+            leg.throwFwd = false;
+        }
+
+        /// <summary>
+        /// A held leg let go at a change of keys (the other key is down): it is thrown straight forward, through the air with its knee
+        /// folded half way, into the reach that carries the body in front. Not a rule of the gait, a look (user 18.11: "the rear foot came
+        /// to the middle first, stepped there, then went on").
+        /// </summary>
+        void ThrowForward(Leg leg, double time)
+        {
+            leg.thighRate = leg.kneeRate = 0f;
+            Enter(leg, LegPhase.Reach, time, ThrowTime);
+            leg.throwFwd = true;
         }
 
         /// <summary>
@@ -2344,6 +2381,9 @@ namespace SpeedStars.Physical
                     LegAngles want = Target(leg, ownHold, otherHold);
                     float kneeEase = Mathf.SmoothStep(0f, 1f, Mathf.Min(1f, s * ReachKneeSpeed));
                     leg.angles = new LegAngles(Mathf.Lerp(leg.from.thigh, want.thigh, ease), Mathf.Lerp(leg.from.knee, want.knee, kneeEase));
+                    // Thrown forward from behind (ThrowForward): the knee opens with the thigh, folded half way, so the foot goes over the
+                    // ground under the body (opened early the leg stood straight there and the foot scraped it).
+                    if (leg.throwFwd) leg.angles.knee = Mathf.Lerp(leg.from.knee, want.knee, ease) - ThrowTuck * Mathf.Sin(Mathf.PI * ease);
                     pitch = Mathf.Lerp(leg.fromPitch, FrontPitch(), ease);
                     break;
                 }
@@ -2453,6 +2493,12 @@ namespace SpeedStars.Physical
             if (leg.holdPeak < HoldRealPeak)
             {
                 StartSwing(leg, time);
+                return;
+            }
+            Leg partner = leg == leftLeg ? rightLeg : leftLeg;
+            if (partner.held && !_ballistic)
+            {
+                ThrowForward(leg, time);
                 return;
             }
             leg.thighRate = leg.kneeRate = 0f;
@@ -2605,6 +2651,10 @@ namespace SpeedStars.Physical
         float LegCarry(RunnerSim sim, float dt)
         {
             float meters = CarryThisFrame(sim, dt);
+            // A mash: the steps come too quick for the legs to carry the body (a stance ran out of way and the body stood still 0.15 s
+            // while the gate let no other foot down). It goes on at the sim's speed, the legs stepping under it: a look, not the gait's
+            // rule (user 18.11: "keep it going, as if it took very quick small steps").
+            if (dt > 0f && _mashW > 0f && !_ballistic) meters = Mathf.Max(meters, sim.Speed * dt * _mashW);
             _carrySpeed = dt > 0f ? meters / dt : 0f;
             return meters;
         }
@@ -2807,7 +2857,8 @@ namespace SpeedStars.Physical
                     case LegPhase.Reach:
                         // A reaching foot carries the body once it is on the ground (or near it); in the air with its knee folded it does not: the
                         // body used to sink to it (hip 0.88 -> 0.78 on a late press). The hold (_dive) keeps the old rule.
-                        leg.carry = _dive > 0.3f || leg.ankle.y - AnkleGround(leg) <= (leg.carry ? ReachCarryExit : ReachCarryHeight);   // with a margin: no flicker
+                        // A leg thrown forward (ThrowForward) is in the air until it comes down: the body must not sink to its folded knee.
+                        leg.carry = (_dive > 0.3f && !leg.throwFwd) || leg.ankle.y - AnkleGround(leg) <= (leg.carry ? ReachCarryExit : ReachCarryHeight);   // with a margin: no flicker
                         break;
                     case LegPhase.Land: leg.carry = partner.phase == LegPhase.Hold; break;
                     default: leg.carry = false; break;
@@ -2859,6 +2910,8 @@ namespace SpeedStars.Physical
             _plainRun = 1f - Mathf.Max(_hop, _pair);
             _fastW = Mathf.InverseLerp(fastStrideSpeed.x, fastStrideSpeed.y, sim.Speed);
             _stepNow = false;
+            bool mashing = !preview && _rawGap < MashGap && now - _lastRawPress < MashKeep;
+            if (dt > 0f) _mashW = Mathf.MoveTowards(_mashW, mashing ? 1f : 0f, dt / MashBlend);
 
             // 1. Key poses.
             PoseData p;
@@ -3824,7 +3877,7 @@ namespace SpeedStars.Physical
             bool down = (holding && (leg.grounded || leg.carry)) || ankle.y <= ground + LockTouch;
             // A leg the gait has taken off the ground (its swing) is never held: held at toe-off, its foot stayed down 5-6 frames behind
             // while the body ran on and the leg stretched out back ("the legs always stay behind", 17.11).
-            bool swinging = leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid;
+            bool swinging = leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid || (leg.phase == LegPhase.Reach && leg.throwFwd);
             leg.floorLift = 0f;
             if (leg.locked)
             {
