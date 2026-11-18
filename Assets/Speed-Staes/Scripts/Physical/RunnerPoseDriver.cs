@@ -219,6 +219,7 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public bool swungSincePress;    // the leg has left the ground since the press the pose took (the press gate reads it)
             [System.NonSerialized] public bool standStep;          // this swing is a standing start's first step: it does not go back past where it began
             [System.NonSerialized] public bool throwFwd;           // this reach is a held leg let go at a change of keys: thrown forward through the air (ThrowForward)
+            [System.NonSerialized] public bool selfLanded;         // this stance is a swing that came down on its own (TickLegs' Land), not a press's
 
             public Vector3 RestBall => restAnkle + ballOffset;
             public double EndTime => phaseTime + duration;
@@ -1084,6 +1085,7 @@ namespace SpeedStars.Physical
         const float HoldStopTime = 0.5f;       // ...and a leg kept in its hold with nothing pushing eases the runner to a stand over this long (s)
         const float GlideAfterSteps = 1.5f;    // legDrivenRoot: a runner on its feet with no press glides on in full this many step times after it
         const float CoastDecel = 40f;          // ...and one that was going slows no faster than this on its feet with nothing pushing (m/s²)
+        static readonly Vector2 GlideSpeed = new Vector2(1.5f, 3f);   // ...gliding not at all below x m/s, in full from y (a run's stop glides, a hop's does not)
         const float HeelEndShare = 0.55f;      // running: the heel is fully up when the foot is this share of the leg's length behind the hip
         const float Overstretch = 0.985f;     // a planted leg this near its full length is at toe-off (the knee never locks)
         const float PinStopSpeed = 0.3f;       // a runner slower than this (m/s) with no key is standing: a foot is pinned as usual
@@ -1741,6 +1743,7 @@ namespace SpeedStars.Physical
         void BeginStance(Leg leg, double time, float minCatch = 0f)
         {
             leg.pressedAt = time;
+            leg.selfLanded = false;
             // A planted foot already flagged to leave (its leg out of length) keeps the flag: clearing it let the stance go on for a frame
             // with the leg at full stretch (knee 177) and the hip pushed up 4 cm, then the flag came back.
             if (!(leg.phase == LegPhase.Push && leg.grounded && leg.toeOff)) leg.toeOff = false;
@@ -2153,7 +2156,7 @@ namespace SpeedStars.Physical
             leg.fromPitch = leg.pitch;
             leg.grounded = leg.needLock = leg.toeOff = false;
             leg.plantGap = 0f;
-            leg.throwFwd = false;
+            leg.throwFwd = leg.selfLanded = false;
         }
 
         /// <summary>
@@ -2268,6 +2271,7 @@ namespace SpeedStars.Physical
                                 leg.pressedAt = time;
                                 Enter(leg, LegPhase.Push, time, 0f);
                                 leg.grounded = leg.needLock = true;
+                                leg.selfLanded = true;
                             }
                             break;
                     }
@@ -2694,18 +2698,27 @@ namespace SpeedStars.Physical
             float glide = Mathf.SmoothStep(0f, 1f, _holdGlide);
             // A foot just put down is ahead of the hip: it carries the body on in full. Read with its last stance's place it stopped the body
             // dead for the frame of the press (4.1 -> 0 -> 4.8 m/s).
+            // A foot that came down with no press since (a swing landing on its own, TickLegs' Land) pushes only in a run: slow, it is where the
+            // runner stops (after a single hop the body went on 10 cm over the second foot).
             if (stance != null)
-                return Mathf.Clamp(stance.needLock ? stanceWant : HeelEndShare * MaxReach(stance) - stance.behind, 0f, stanceWant);
+            {
+                float unpressed = stance.selfLanded ? RunGlide(sim) : 1f;
+                return Mathf.Clamp(stance.needLock ? stanceWant : HeelEndShare * MaxReach(stance) - stance.behind, 0f, stanceWant * unpressed);
+            }
             if (inHold || pushedOn || landing) return want * glide;
             if (!_carried) return want;
             // Standing on its feet with nothing pushing: a runner whose keys stopped glides on as before (user 17.11: "let it glide when I let
             // go, not stop dead"), coming in as the next press grows overdue, so a step a little late does not slide and a stop does not halt.
             float since = (float)(sim.Time - sim.LastPressTime);
             float coast = want * glide * Mathf.SmoothStep(0f, 1f, since / Mathf.Max(0.05f, GlideAfterSteps * sim.StepTime));
+            // Only a run glides: slower than GlideSpeed.x a runner on its feet stops where it stands. A single hop from the blocks (~1 m/s)
+            // landed and slid on both feet 0.5-0.9 m (user 18.11: "it must stop at once, not slide").
+            coast *= RunGlide(sim);
             // ...but a body that was going does not stop dead in a frame. A foot leaving the ground a frame before the other one took the
             // body, or a key pressed a frame before its foot came down, fell into the coast for that frame: 6.4 -> 0 -> 6.5 m/s, a shake.
             return Mathf.Max(coast, Mathf.Min(want * glide, Mathf.Max(0f, _carrySpeed - CoastDecel * dt) * dt));
 
+            static float RunGlide(RunnerSim s) => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(GlideSpeed.x, GlideSpeed.y, s.Speed));
             static bool InHold(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Hold;
             static bool PushedOn(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Recover;
             static bool Landing(Leg leg) => leg.held && !leg.grounded && leg.phase == LegPhase.Push;
