@@ -1098,6 +1098,7 @@ namespace SpeedStars.Physical
         const float LockSlack = 0.12f;         // ...and let go when the gait puts it further than this (m) from where it is held
         const float LockSlackHold = 0.5f;      // ...in a hold (a foot carried with the body: let go only for a step)
         const float LockMelt = 30f;            // a foot that has to go elsewhere goes there at this rate (1/s), once it is up
+        const float SwingMelt = 40f;           // ...a swinging leg's foot at this rate (1/s), at once: it is in the air already
         const float LockLift = 0.05f;          // ...its ankle this far (m) off the ground; a foot the gait would drag stays up this far too
         const float BallLiftShare = 0.6f;      // ...and its ball and tip this share of that
         const float AirIn = 0.05f;             // ...rising (and coming down) over this long (s): along the run only once it is half up
@@ -3908,6 +3909,23 @@ namespace SpeedStars.Physical
                 if (Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
                 ankle.z += leg.lockOffset;
                 ankle.y += up;
+                leg.floorLift = up * BallLiftShare;
+                leg.lastDrawn = transform.TransformPoint(ankle);
+                return ankle;
+            }
+            // A swinging leg (Recover, Mid, a key change's throw) is the gait's own: its foot is in the air, nothing to hold on the ground.
+            // What is left of the lock melts at once, never waiting to be "up" first: held back where it was last drawn the foot trailed the
+            // body by up to PinMeltMax and the leg stood out straight behind, the ankle hip-high (bones -88/180 where the gait had -57/118;
+            // user 18.11: "the rear knee is not as on RunAnimation").
+            if (swinging)
+            {
+                leg.airW = Mathf.MoveTowards(leg.airW, 0f, dt / AirIn);
+                leg.dragLeft = 0f;
+                float up = LockLift * Mathf.SmoothStep(0f, 1f, leg.airW);
+                leg.lockOffset *= Mathf.Exp(-SwingMelt * dt);
+                if (Mathf.Abs(leg.lockOffset) < 0.002f) leg.lockOffset = 0f;
+                ankle.z += leg.lockOffset;
+                ankle.y = Mathf.Max(ankle.y, ground + up);
                 leg.floorLift = up * BallLiftShare;
                 leg.lastDrawn = transform.TransformPoint(ankle);
                 return ankle;
