@@ -373,9 +373,9 @@ namespace SpeedStars.Physical
         public LegAngles contact = new LegAngles(22f, 165f);
         [Tooltip("Plain running only: the touchdown pose with the knee a little bent, the foot about as far ahead as contact " +
                  "(a classic run cycle's contact frame). Blended in by the run weight; a hop or a pair jump keeps contact. " +
-                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing. 30/165: the " +
-                 "foot ~15 cm further ahead than at 30/145, the stance ~1 cm lower (user 17.11: the front foot 15 further ahead).")]
-        public LegAngles contactRun = new LegAngles(30f, 165f);
+                 "The swing's last key, the catch and the hip's height all read it, so the leg does not straighten on landing. 30/145: the " +
+                 "RunAnimation branch's value, the front leg bent at the knee too (user 18.11; 30/165 put the foot 15 cm further ahead, the leg straight).")]
+        public LegAngles contactRun = new LegAngles(30f, 145f);
         [Tooltip("Hold only: the other leg's reach when a key is held. It opens forward nearly straight and the foot " +
                  "lands well ahead (the reference video: ~47° from straight down).")]
         public LegAngles reach = new LegAngles(47f, 175f);
@@ -486,12 +486,12 @@ namespace SpeedStars.Physical
         [Range(0f, 1f)] public float jumpStrideMin = 0.25f;
         [Tooltip("Plain running: from x m/s to y m/s the fast angles (recoverFast, kneeOpenFast) come in, linearly.")]
         public Vector2 fastStrideSpeed = new Vector2(2f, 8f);
-        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key). -35/125: the rear " +
-                 "leg goes back -30 to -35 at most (user 18.11; at -60 the heel came up to the hip behind).")]
-        public LegAngles recoverFast = new LegAngles(-35f, 125f);
+        [Tooltip("Plain running at fast-stride speed: the heel kick (replaces recover; the hop keeps recover's own key). -60/125: the " +
+                 "RunAnimation branch's value (user 18.11).")]
+        public LegAngles recoverFast = new LegAngles(-60f, 125f);
         [Tooltip("Plain running at low speed: the heel kick, the rear leg open behind (replaces recover; recoverFast is its faster pair). " +
-                 "-30: the rear leg goes back -30 to -35 at most (user 18.11).")]
-        public LegAngles recoverOpen = new LegAngles(-30f, 130f);
+                 "-55/125: the RunAnimation branch's value (user 18.11).")]
+        public LegAngles recoverOpen = new LegAngles(-55f, 125f);
         [Tooltip("Plain running: the folded pass, further back than mid (replaces mid; the hop keeps mid's own key).")]
         public LegAngles midRun = new LegAngles(0f, 55f);
         [Tooltip("Plain running at low speed: the knee drive with the shin opened out forward (replaces kneeDrive).")]
@@ -499,13 +499,13 @@ namespace SpeedStars.Physical
         [Tooltip("Plain running at fast-stride speed: the knee drive (kneeOpen's faster pair).")]
         public LegAngles kneeOpenFast = new LegAngles(70f, 170f);
         [Tooltip("Plain running: the thigh's peak with the knee still folded, the heel drawn up toward the belly (the shin is " +
-                 "thrown out only after this). Blended in by the run weight; a hop, a pair jump and a hold do not read it. 100/76: the front " +
-                 "leg comes up higher from the hip, the thigh past level (user 18.11; was 86/82).")]
-        public LegAngles tuckPeak = new LegAngles(100f, 76f);
+                 "thrown out only after this). Blended in by the run weight; a hop, a pair jump and a hold do not read it. 86/82: the " +
+                 "RunAnimation branch's value (user 18.11).")]
+        public LegAngles tuckPeak = new LegAngles(86f, 82f);
         [Tooltip("Plain running at a short step (the leg's press-to-press time at tuckFastPeriod.y or less): the tucked peak, taken whole (the stride's size does not " +
                  "shrink it): the quicker the steps, the higher the knee and the more the heel is drawn up. Blended from tuckPeak by the rhythm. " +
-                 "118: higher from the hip with tuckPeak (user 18.11; was 108).")]
-        public LegAngles tuckPeakFast = new LegAngles(118f, 45f);
+                 "108/45: the RunAnimation branch's value (user 18.11).")]
+        public LegAngles tuckPeakFast = new LegAngles(108f, 45f);
         [Tooltip("The step time tuckPeakFast follows (s): half the leg's own press-to-press time (the keys alternate, so a leg is pressed every second step). x = no share (a slow step), y = the whole.")]
         public Vector2 tuckFastPeriod = new Vector2(0.34f, 0.22f);
         [Tooltip("Plain running: the shin thrown forward as the thigh comes down (thigh − (180 − knee) is the shin's angle, " +
