@@ -895,12 +895,14 @@ namespace SpeedStars.Physical
         [Tooltip("Legs out in front of the hips lean the body back by up to this (deg), a counterweight: the one-key hop's free leg held " +
                  "out, a slow rhythm's long reach (the reference). Read from both legs' mean thigh angle (legsAheadRange), so plain " +
                  "running's legs, one in front and one behind, barely move it. It goes in as the whole body sitting back on the heels, " +
-                 "through legsAheadSpring; only while stepping (not the Ready crouch, the blocks, a dive, a jump or a two-key pair). 0 = off.")]
-        public float legsAheadLean = 30f;
+                 "through legsAheadSpring; only while stepping (not the Ready crouch, the blocks, a dive, a jump or a two-key pair). 0 = off. " +
+                 "15: at 30 a single hop from the wait threw the upper body back to -32 deg (user 18.11: \"it throws the upper body back\").")]
+        public float legsAheadLean = 15f;
         [Tooltip("Both legs' mean forward thigh angle (deg, world, + = forward) where the lean back starts (x) and is whole (y).")]
         public Vector2 legsAheadRange = new Vector2(10f, 40f);
-        [Tooltip("How the lean back follows the legs (damping 1: it eases in and out, never swings).")]
-        public SpringSettings legsAheadSpring = new SpringSettings(1.5f, 1f);
+        [Tooltip("How the lean back follows the legs (damping 1: it eases in and out, never swings). 1 Hz: at 1.5 the lean came in and " +
+                 "went out fast enough to read as a throw (18.11).")]
+        public SpringSettings legsAheadSpring = new SpringSettings(1f, 1f);
 
         [Header("Arms (deg, + = forward): one key moves one leg and one arm — right key: right leg + left arm")]
         [Tooltip("Upper arm (deg, −) with its leg all the way back — fixed: speed and the key poses do not move it, " +
@@ -1151,6 +1153,8 @@ namespace SpeedStars.Physical
         const float HeldTo = 0.6f;
         const float HoldRealPeak = 0.5f;       // a Hold whose real weight reached this was really held (a tap's ~0.3 weight gives ~0.05)
         const float HoldTippedLean = 30f;     // the hips leaned this far (deg) when a held leg is let go: it comes in under the body
+        const float HomeTuck = 30f;            // going home with no key, the knee folds this much more (deg) half way: the foot steps, it does not slide...
+        const float HomeStepSpan = 30f;        // ...in full when the thigh has this far (deg) to go, less on a shorter way
         const float ThrowTime = 0.25f;         // a held leg let go at a change of keys goes from behind to in front in this long (s)...
         const float ThrowTuck = 70f;           // ...its knee folded this much more (deg) half way, so the foot clears the ground under the body
         const double ThrowWindow = 0.3;        // ...also when the other key comes this long (s) after it was let go (on its way in under the body)
@@ -1178,6 +1182,7 @@ namespace SpeedStars.Physical
         float _lastHipY;                           // last frame's final hip height (runner space), for the rise limit
         bool _hipFree;                             // last frame's hip height was free to be limited (a run, not a dive)
         readonly float[] _sitW = new float[2];       // each leg's share in the sit-back pivot (blends over sitPivotBlend)
+        readonly float[] _sitCarryW = new float[2];  // each leg going round the pivot (carrying) or hanging from the hip, blended the same way
         int _hopPresses, _hopPrevLeg = -1;          // the press count last seen, and the leg of the press before
         double _hopPrevTime = -10.0;
         bool _hopRepeated;                          // the last KEY (taken or not) was the same key again: the hop is really on
@@ -1195,6 +1200,8 @@ namespace SpeedStars.Physical
         Spring _hopBody;                          // the hop weight's slow twin (hopBodySpring); _hopBodyW is what the body reads
         Spring _legsAhead;                        // the lean back against legs out in front (legsAheadLean, deg)
         float _hopBodyW;
+        Spring _hopLeanSpring;                    // the trunk's sit-back on hops in a row (not a standing press's single hop), on hopBodySpring
+        float _hopLeanW;
         bool _hopFreed;                           // a hop is open: the leg that is not the pressed one is the balance leg, whatever its idle weight has reached yet
         Spring _hopSpring, _pairSpring, _bothTip;   // the hop and pair weights' springs (gaitBlendSpring); the both-keys tip's (holdTipSpring)
         float _hop, _pair, _dive;                 // one-leg hop weight, two-keys-together weight, hold weight (dive) 0..1
@@ -2219,6 +2226,13 @@ namespace SpeedStars.Physical
                         Enter(leg, LegPhase.Rest, time, StockTime());
                         continue;
                     }
+                    // With no key and the body standing, a foot still planted goes home now, in one step (it stood on behind 0.2 s into the wait,
+                    // then went in three frames: "the rear foot snapped to the middle", 18.11). A body still sliding keeps its stance.
+                    if (_idleStock && leg.grounded && leg.phase == LegPhase.Push && _carrySpeed < PinStopSpeed && body && body.legDrivenRoot)
+                    {
+                        Enter(leg, LegPhase.Rest, time, StockTime());
+                        continue;
+                    }
                     switch (leg.phase)
                     {
                         case LegPhase.Hold:
@@ -2409,10 +2423,17 @@ namespace SpeedStars.Physical
                     pitch = FrontPitch();
                     break;
                 default:   // Rest
-                    leg.angles = LegAngles.Lerp(leg.from, Target(leg, ownHold, otherHold), ease);
+                {
+                    LegAngles home = Target(leg, ownHold, otherHold);
+                    leg.angles = LegAngles.Lerp(leg.from, home, ease);
+                    // Going home with no key (the wait), a foot with a way to go steps there: the knee folds half way, so it goes over the ground,
+                    // not along it, in one move (18.11).
+                    if (_idleStock && !leg.grounded)
+                        leg.angles.knee -= HomeTuck * Mathf.Clamp01(Mathf.Abs(home.thigh - leg.from.thigh) / HomeStepSpan) * Mathf.Sin(Mathf.PI * ease);
                     pitch = leg.fromPitch * (1f - ease);
                     if (_stanceW > 0f && leg != leftLeg) pitch = Mathf.Lerp(pitch, stanceRearToe, _stanceW);   // the rear heel up, the toes on the ground
                     break;
+                }
             }
             leg.angles.knee = Mathf.Min(leg.angles.knee, maxKnee);
             if (!leg.grounded && !preview && dt > 0f)
@@ -3014,7 +3035,7 @@ namespace SpeedStars.Physical
                 UpdateGait(sim, dt);
                 UpdateBounceLean(dt, ref lean, ref baseBend, ref bend);
                 // Hopping on one leg the hips' total tilt (the pose's plus the lean) goes to hopLean, whatever else asked for (SitBack below).
-                lean = Mathf.Lerp(lean, hopLean - p.pelvisPitch, _hopBodyW);   // a hold takes the weight away through its spring (hopTarget), not in a frame
+                lean = Mathf.Lerp(lean, hopLean - p.pelvisPitch, _hopLeanW);   // a hold takes the weight away through its spring (hopTarget), not in a frame
                 lean += Mathf.Lerp(stanceLean.x, stanceLean.y, _stanceSet) * _stanceW + driveLean * _driveW;   // the blocks / the drive: forward (the opposite of the brake)
                 lean -= brakeLean * _brakeRaw;                       // braking the whole body lies back about the heels (SitBack below)
                 lean += jumpLean * JumpWeight(sim) - hitSit * sim.HitWeight;
@@ -3229,6 +3250,10 @@ namespace SpeedStars.Physical
             _hop = Mathf.Clamp01(_hopSpring.Value);
             _hopBody.Step(off ? 0f : hopTarget, hopBodySpring.frequency, hopBodySpring.damping, dt);
             _hopBodyW = Mathf.Min(Mathf.Clamp01(_hopBody.Value), _hop);
+            // The trunk sits back (hopLean) on hops in a row, not on the single hop a press from a standstill makes: there it threw the
+            // upper body back ~20 deg in 0.2 s and brought it back as the runner went to its wait (user 18.11: "the upper body is thrown back").
+            _hopLeanSpring.Step(off ? 0f : hopTarget * (_hopRepeated ? 1f : 0f), hopBodySpring.frequency, hopBodySpring.damping, dt);
+            _hopLeanW = Mathf.Min(Mathf.Clamp01(_hopLeanSpring.Value), _hopBodyW);
             _pair = Mathf.Clamp01(_pairSpring.Value);
             for (int i = 0; i < 2; i++)
             {
@@ -3481,22 +3506,28 @@ namespace SpeedStars.Physical
             for (int i = 0; i < 2; i++)
             {
                 Leg leg = Legs(i);
-                if (!leg.carry)
+                // A leg that starts or stops carrying changes over through the same blend as the pivot: at once, a hop's balance leg
+                // coming down with the body sat back 26 deg moved its foot 15 cm in one frame (18.11).
+                // A planted foot goes round the pivot at once, as before (its nail is where it is drawn).
+                float w = _sitCarryW[i] = leg.grounded ? 1f : Mathf.MoveTowards(_sitCarryW[i], leg.carry ? 1f : 0f, step);
+                // A leg that is not held hangs from the hip's new place without turning with the trunk (the run's legs stay
+                // under it; only a hold and a dive, _dive, turn the legs with it). Turning it about the hip moved its foot by
+                // ~20 cm: at the touchdown the foot was nailed where the unturned leg is, and again at the toe-off.
+                Quaternion turn = Quaternion.Slerp(Quaternion.identity, r, leg.phase == LegPhase.Hold ? 1f : _dive);
+                Vector3 kneeHang = hip + turn * (leg.knee - oldHip), ankleHang = hip + turn * (leg.ankle - oldHip);
+                if (w <= 0f)
                 {
-                    // A leg that is not held hangs from the hip's new place without turning with the trunk (the run's legs stay
-                    // under it; only a hold and a dive, _dive, turn the legs with it). Turning it about the hip moved its foot by
-                    // ~20 cm: at the touchdown the foot was nailed where the unturned leg is, and again at the toe-off.
-                    Quaternion turn = Quaternion.Slerp(Quaternion.identity, r, leg.phase == LegPhase.Hold ? 1f : _dive);
-                    float oldZ = leg.ankle.z;
-                    leg.knee = hip + turn * (leg.knee - oldHip);
-                    leg.ankle = hip + turn * (leg.ankle - oldHip);
-                    leg.sitShiftZ = leg.ankle.z - oldZ;
+                    leg.sitShiftZ = ankleHang.z - leg.ankle.z;
+                    leg.knee = kneeHang;
+                    leg.ankle = ankleHang;
                     continue;
                 }
-                leg.knee = pivot + r * (leg.knee - pivot);
                 Vector3 heel = Heel(leg);
-                leg.ankle = heel + foot * (leg.ankle - heel);
-                leg.rock = rock;
+                Vector3 kneeTurned = pivot + r * (leg.knee - pivot), ankleTurned = heel + foot * (leg.ankle - heel);
+                if (w < 1f) leg.sitShiftZ = (ankleHang.z - leg.ankle.z) * (1f - w);
+                leg.knee = Vector3.Lerp(kneeHang, kneeTurned, w);
+                leg.ankle = Vector3.Lerp(ankleHang, ankleTurned, w);
+                leg.rock = rock * w;
             }
         }
 
@@ -3547,7 +3578,10 @@ namespace SpeedStars.Physical
                 // came forward and was pinned anew: a step of its own): the foot that let go stays with the body until it stops.
                 bool entry = gap <= TouchHeight && Mathf.Abs(leg.pinOffset) <= 0.002f && (!_idleStock || _rootSpeed < PinStopSpeed);
                 bool isBalanceLeg = leg.idle > IdleCarry && leg.phase != LegPhase.Hold && _dive <= 0.3f;
-                bool pin = allowed && !isBalanceLeg && !leg.grounded && phaseOk && (was ? gap <= TouchHeight * PinExit : entry);
+                // Going home with no key, the body standing: the foot is on its way (one step, UpdateLeg), not nailed half way and let go later
+                // ("it set itself a place behind and came to the middle from there again", 18.11).
+                bool homing = _idleStock && leg.phase == LegPhase.Rest && _now - leg.phaseTime < leg.duration && _carrySpeed < PinStopSpeed;
+                bool pin = allowed && !isBalanceLeg && !homing && !leg.grounded && phaseOk && (was ? gap <= TouchHeight * PinExit : entry);
                 if (pin && !was)
                 {
                     leg.pinPoint = transform.TransformPoint(leg.ankle);
@@ -4215,7 +4249,8 @@ namespace SpeedStars.Physical
             leftLeg.blendSet = rightLeg.blendSet = false;
             _surge.Reset();
             _landHold = false;
-            _hopBodyW = 0f;
+            _hopBodyW = _hopLeanW = 0f;
+            _hopLeanSpring.Reset();
             _pairSpring.Reset();
             _hopPrevLeg = -1;
             _standLeg = -1;
@@ -4234,7 +4269,7 @@ namespace SpeedStars.Physical
             _keyLastLeg = -1;
             _altStreak = 0;
             leftLeg.lastKey = rightLeg.lastKey = -1.0;
-            _sitW[0] = _sitW[1] = 0f;
+            _sitW[0] = _sitW[1] = _sitCarryW[0] = _sitCarryW[1] = 0f;
             _armKick = _armThrow = 0f;
             _armThrowSpring.Reset();
             _armClock = ArmIdle;
