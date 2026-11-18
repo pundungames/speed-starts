@@ -1092,6 +1092,7 @@ namespace SpeedStars.Physical
         const float StopSlideFrom = 13f / 2.23694f;   // legDrivenRoot: a runner stopping faster than this (13 mph, in m/s) slides; slower it stops where it is
         const float StopSlideTime = 0.5f;      // ...sliding this long (s) from 13 mph, at one braking: the faster, the longer (20 mph ~0.8 s)
         const float StopDecel = StopSlideFrom / StopSlideTime;
+        const float ReferenceFrame = 1f / 60f; // legDrivenRoot: the frame the stance's end is tuned at (s); a longer frame (30 fps phones) reaches past it
         const float StopGrace = 0.12f;         // ...but nothing pushing for less than this (s) is a run's change of feet, not a stop (a 0.45 s
                                                //    rhythm's stance foot goes home 0.07-0.12 s before the next key: stopped there, it stuttered)
         const float PressLate = 1.25f;         // a press is overdue past this share of the keys' own gap (_rawGap)...
@@ -2739,7 +2740,11 @@ namespace SpeedStars.Physical
                 bool overdue = sim.Time - _lastRawPress > Mathf.Min(PressWaitMax, _rawGap * PressLate) ||
                                sim.Time - stance.plantedAt > SelfPushMax;   // a foot lands that much before its key at most; a stop takes no extra step
                 float most = stance.selfLanded && overdue ? StopCoast(want * glide, dt, coastT) : stanceWant;
-                return Mathf.Clamp(stance.needLock ? most : HeelEndShare * MaxReach(stance) - stance.behind, 0f, most);
+                // The foot reaches the end of its way inside the frame, and the clamp cut the rest of the frame: a dip that grows with the
+                // frame's length (at 30 fps, a phone's default, 25-37% every step; at 60 fps once in 2 s). A frame longer than 1/60 s may go
+                // on past the end by what it adds, so any frame rate moves the body as 60 fps does (the foot stays nailed, the leg reaches).
+                float overshoot = sim.Speed * Mathf.Max(0f, dt - ReferenceFrame);
+                return Mathf.Clamp(stance.needLock ? most : HeelEndShare * MaxReach(stance) - stance.behind + overshoot, 0f, most);
             }
             // A press's foot on its way down (a catch): the step is coming, the body goes on (a key pressed a frame before its foot came down
             // stopped it for that frame, 6.4 -> 0 -> 6.5 m/s).
