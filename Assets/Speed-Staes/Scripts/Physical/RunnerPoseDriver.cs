@@ -643,8 +643,9 @@ namespace SpeedStars.Physical
         [Range(0.2f, 1f)] public float animSpeedUp = 0.5f;
         [Tooltip("A leg in front (or landed with nothing more coming) goes home this slowly; quicker with speed.")]
         public float frontHomeTime = 0.3f;
-        [Tooltip("With no key the legs go to the waiting stance in this time (s): the way home after a push, quicker than the front foot's way home (frontHomeTime).")]
-        public float stockReturnTime = 0.16f;
+        [Tooltip("With no key the legs go to the waiting stance in this time (s): the way home after a push. 0.35: at 0.16 the legs " +
+                 "snapped home and the way into the wait read as a hitch (user 18.11: \"smoother\").")]
+        public float stockReturnTime = 0.35f;
         [Tooltip("A leg's cycle (its press to its next press) is never shorter than this (s).")]
         public float stepTimeMin = 0.2f;
         [Tooltip("Presses further apart than this (s) end the run stance and the swing is never longer: sparser presses " +
@@ -680,8 +681,11 @@ namespace SpeedStars.Physical
         [Tooltip("While a key is down, home is the crouch below x m/s and the running home above y. With no key down " +
                  "home is the crouch: the runner heads straight for it, no upright stance on the way.")]
         public Vector2 restToBaseSpeed = new Vector2(0.5f, 3f);
-        [Tooltip("How fast it turns from the run stance to the Ready crouch and back (1/s).")]
+        [Tooltip("How fast it turns from the Ready crouch into the run stance (1/s).")]
         public float stanceBlend = 8f;
+        [Tooltip("How fast it turns from the run stance back to the Ready crouch when the keys stop (1/s). Slower than stanceBlend: at 8 " +
+                 "the way into the wait took ~0.12 s and read as a hitch (user 18.11: \"smoother\").")]
+        public float idleBlend = 4f;
 
         [Header("Body height (a planted foot asks for it; the other legs carry by their angles: the lowest carrying foot stands on the ground)")]
         [Tooltip("The pelvis follows the height the legs give through this spring (a foot it lags under is kept on the ground).")]
@@ -2964,7 +2968,7 @@ namespace SpeedStars.Physical
                 _stepNow = sim.Legs[0].Pressed || sim.Legs[1].Pressed || sim.InJump || _hopBufLeg >= 0 ||
                            (hopW > 0.5f && now - _motionAt < hopStopDelay) ||
                            (_lastPress >= 0.0 && now - _lastPress < Mathf.Lerp(stepTimeMax, hopStopDelay, hopW));
-                _stepping = Mathf.Lerp(_stepping, _stepNow ? 1f : 0f, 1f - Mathf.Exp(-stanceBlend * dt));
+                _stepping = Mathf.Lerp(_stepping, _stepNow ? 1f : 0f, 1f - Mathf.Exp(-(_stepNow ? stanceBlend : idleBlend) * dt));
                 p = PoseData.Lerp(Get(ready, RunnerPoseDefaults.Ready), Get(run, RunnerPoseDefaults.Run),
                     Mathf.SmoothStep(0f, 1f, sim.Speed / Mathf.Max(0.01f, runPoseSpeed)) * _stepping);
                 float excess = sim.Lean - sim.PoseLean;
@@ -3295,7 +3299,10 @@ namespace SpeedStars.Physical
             float target = 0f;
             if (!preview && brakePose && _idleStock && !sim.InJump)
             {
-                target = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(brakeSpeed.x, brakeSpeed.y, sim.Speed)) *
+                // By the speed the body really goes: with the legs carrying it a stop under 13 mph stands at once while the sim's speed
+                // falls slowly, and the brake (legs out in front, the body back) sat the standing runner on the air (18.11).
+                float speed = body && body.legDrivenRoot ? _carrySpeed : sim.Speed;
+                target = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(brakeSpeed.x, brakeSpeed.y, speed)) *
                          (1f - _hop) * (1f - _pair) * (1f - _dive) * (1f - _heldNow);
             }
             SpringSettings spring = target > _brakeSpring.Value ? brakeInSpring : brakeOutSpring;

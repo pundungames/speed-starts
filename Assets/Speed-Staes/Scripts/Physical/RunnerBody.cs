@@ -29,6 +29,9 @@ namespace SpeedStars.Physical
                  "body is in a step's flight, at the sim's speed, and nothing else moves the runner; the race reads that distance. The user's " +
                  "trial (17.11): \"move the runner by the legs alone\". Off = the root follows the sim's distance (shownSpeedSmoothing).")]
         public bool legDrivenRoot = true;
+        [Tooltip("How high (m) the root stands above where the runner was placed: the drawn feet sat this much in the road " +
+                 "(user 18.11: y 0.038). Read every frame, so it can be tuned in play.")]
+        public float groundHeight = 0.038f;
 
         public RunnerSim Sim { get; private set; }
 
@@ -97,10 +100,13 @@ namespace SpeedStars.Physical
             if (legDrivenRoot)
             {
                 Sim.SetDistance(_legDistance);   // the sim's own distance ran on at its speed this frame; the race goes by the legs
-                transform.position = _startPos + _forward * _legDistance;
+                transform.position = StartPoint + _forward * _legDistance;
             }
-            else transform.position = _startPos + _forward * ShownDistance(Time.deltaTime);
+            else transform.position = StartPoint + _forward * ShownDistance(Time.deltaTime);
         }
+
+        /// <summary>Where the run starts: where the runner was placed, groundHeight up.</summary>
+        Vector3 StartPoint => _startPos + Vector3.up * groundHeight;
 
         /// <summary>The legs carried the runner this far this frame (legDrivenRoot): the root and the race's distance go on by it.</summary>
         public void MoveAlong(float meters)
@@ -132,7 +138,7 @@ namespace SpeedStars.Physical
             _origin = Time.timeAsDouble;
             _shownDistance = _shownSpeed = _legDistance = 0f;
             if (input) input.Clear();
-            transform.position = _startPos;
+            transform.position = StartPoint;
             acceptInput = true;
             RunReset?.Invoke();
         }
