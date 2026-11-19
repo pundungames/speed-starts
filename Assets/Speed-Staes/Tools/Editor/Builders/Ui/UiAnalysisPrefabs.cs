@@ -43,6 +43,8 @@ namespace SpeedStars.Tools.Builders
         private const float RankTitleSize = 52f;
         private const float ColumnSize = 30f;
         private const float RowSize = 44f;
+        // Art px of air between two row canvases: the art stacked them with a 1 px overlap and the lines read as one crammed block.
+        private const float RowGap = 20.75f;
 
         private static readonly Color White = new Color(1f, 1f, 1f, 1f);
         private static readonly string[] Swatches = { "teal", "orange", "violet", "blue", "ochre", "slate" };
@@ -218,7 +220,7 @@ namespace SpeedStars.Tools.Builders
             RectTransform content = Kit.Node(viewport, "Content");
             Kit.Place(content, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(0f, 0f));
             VerticalLayoutGroup stack = content.gameObject.AddComponent<VerticalLayoutGroup>();
-            stack.spacing = (rowStep - firstRow[3]) * layout.Scale; // the row canvas is 1 px taller than the step
+            stack.spacing = RowGap * layout.Scale; // air between the rows, so each separator belongs to its own line
             stack.childAlignment = TextAnchor.UpperCenter;
             stack.childControlWidth = false;
             stack.childControlHeight = true;

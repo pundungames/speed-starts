@@ -559,10 +559,10 @@ namespace SpeedStars.Tools.Builders
             }
         }
 
-        /// <summary>A blue section title (the reference's underlined headings).</summary>
+        /// <summary>A white section title: on the panel's blue tile the old blue sank in, so the headings read in white.</summary>
         private static void Heading(RectTransform parent, string name, string caption)
         {
-            Text text = Kit.Label(parent, name, caption, P(HeadingSize), Kit.BlueText, TextAnchor.MiddleLeft);
+            Text text = Kit.Label(parent, name, caption, P(HeadingSize), Color.white, TextAnchor.MiddleLeft);
             text.fontStyle = FontStyle.Bold;
             Kit.PreferredHeight(text.gameObject, P(HeadingHeight));
         }
