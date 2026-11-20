@@ -50,6 +50,42 @@ namespace SpeedStars.PlayTests
         }
 
         [UnityTest]
+        public IEnumerator ThemeSelect_PatrolContinuesAcrossThemes_AndReturnsToHomePose()
+        {
+            yield return new WaitForSecondsRealtime(SpeedStars.UI.Flow.UnitySceneLoader.DepartureDuration + 0.1f);
+            Transform camera = Camera.main.transform;
+            Vector3 menuPosition = camera.position;
+            Quaternion menuRotation = camera.rotation;
+            HomeScreenView home = Require<HomeScreenView>();
+            var screen = RequireField<UiScreen>(home, "themeSelectScreen");
+            yield return Tap(RequireField<Button>(home, "environmentButton"), "environment button");
+            yield return WaitOpen(screen, "theme shop");
+            yield return WaitUntil(() => menuPosition.z - camera.position.z >= 12f, "camera to move along the track");
+            Assert.Less(camera.forward.z, -0.15f, "camera looks backward during the first leg");
+
+            var themes = Zenject.ProjectContext.Instance.Container.Resolve<SpeedStars.Meta.Contracts.IThemeService>();
+            Vector3 beforeSwitch = camera.position;
+            Quaternion rotationBeforeSwitch = camera.rotation;
+            Assert.IsTrue(themes.Step(themes.CanStep(1) ? 1 : -1));
+            Assert.Less(Vector3.Distance(beforeSwitch, camera.position), 0.01f);
+            Assert.Less(Quaternion.Angle(rotationBeforeSwitch, camera.rotation), 0.1f);
+            yield return WaitUntil(() => beforeSwitch.z - camera.position.z >= 8f, "camera to continue in the same direction");
+
+            yield return WaitUntil(() => menuPosition.z - camera.position.z >= 50f, "camera to approach the backward patrol limit", 16f);
+            yield return WaitUntil(() => menuPosition.z - camera.position.z <= 45f, "camera to turn back", 12f);
+            Assert.Greater(camera.forward.z, 0.1f, "camera looks forward after turning back");
+            yield return WaitUntil(() => camera.position.z - menuPosition.z >= 20f, "camera to pass Home and approach the forward limit", 26f);
+            Assert.Greater(Quaternion.Angle(menuRotation, camera.rotation), 20f, "camera must turn into the scenery");
+            yield return Tap(CloseButtonOf(screen), "theme shop Back");
+            yield return WaitUntil(() => !themes.IsBrowsing, "theme shop preview to end");
+            Assert.Greater(Vector3.Distance(menuPosition, camera.position), 10f, "camera must not snap to Home");
+            yield return new WaitForSecondsRealtime(0.45f);
+            Assert.Greater(Vector3.Distance(menuPosition, camera.position), 2f, "camera is still easing back");
+            yield return WaitUntil(() => Vector3.Distance(menuPosition, camera.position) < 0.01f, "camera to reach the menu pose", 1f);
+            Assert.Less(Quaternion.Angle(menuRotation, camera.rotation), 0.1f);
+        }
+
+        [UnityTest]
         public IEnumerator Emote_KeepsTheHomeResourceBar_WithoutItsOwnBoxes()
         {
             yield return OpenAndCheck("emoteButton", "cosmeticsScreen");
