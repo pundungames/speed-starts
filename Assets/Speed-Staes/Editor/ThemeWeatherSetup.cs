@@ -17,6 +17,10 @@ namespace SpeedStars.Editor
     {
         private const string Themes = "Assets/Speed-Staes/Prefabs/Themes/";
 
+        // The standard city is Serhat's own map: a LoopWayGenerator with no theme definition, so its weather is named
+        // on the view itself instead of coming from a definition.
+        private const string StandardCityMap = "Assets/Kevin Iglesias/Human Character Dummy/Models/LoopWay.prefab";
+
         [MenuItem("Speed Stars/Themes/Set Up Egypt Weather")]
         public static void Egypt() => Configure("Egypt", Themes + "LoopWay2.prefab", FillEgypt);
 
@@ -29,14 +33,19 @@ namespace SpeedStars.Editor
         [MenuItem("Speed Stars/Themes/Set Up Floating Sky Weather")]
         public static void FloatingSky() => Configure("FloatingSky", Themes + "LoopWay5.prefab", FillFloatingSky);
 
+        [MenuItem("Speed Stars/Themes/Set Up Standard City Weather")]
+        public static void StandardCity() => Configure("StandardCity", StandardCityMap, FillStandardCity, hasDefinition: false);
+
         /// <summary>Makes (or keeps) the theme's profile, points its definition at it and puts the view on its map.</summary>
-        private static void Configure(string theme, string mapPath, Action<ThemeWeather, string> fill)
+        private static void Configure(string theme, string mapPath, Action<ThemeWeather, string> fill, bool hasDefinition = true)
         {
             if (Application.isPlaying) throw new InvalidOperationException("Stop Play mode before writing prefabs.");
             if (PrefabStageUtility.GetCurrentPrefabStage() != null)
                 throw new InvalidOperationException("Save and close Prefab Mode before writing the map assets.");
 
             string folder = Themes + theme + "/";
+            if (!AssetDatabase.IsValidFolder(folder.TrimEnd('/'))) AssetDatabase.CreateFolder(Themes.TrimEnd('/'), theme);
+            if (!AssetDatabase.IsValidFolder(folder + "Materials")) AssetDatabase.CreateFolder(folder.TrimEnd('/'), "Materials");
             string weatherPath = folder + "Weather.asset";
             ThemeWeather weather = AssetDatabase.LoadAssetAtPath<ThemeWeather>(weatherPath);
             bool created = weather == null;
@@ -47,24 +56,27 @@ namespace SpeedStars.Editor
                 AssetDatabase.CreateAsset(weather, weatherPath);
             }
 
-            var definition = AssetDatabase.LoadAssetAtPath<LoopThemeDefinition>(folder + "Definition.asset")
-                ?? throw new InvalidOperationException("Missing " + folder + "Definition.asset");
-            if (definition.weather != weather)
+            if (hasDefinition)
             {
-                var so = new SerializedObject(definition);
-                so.FindProperty("weather").objectReferenceValue = weather;
-                so.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(definition);
+                var definition = AssetDatabase.LoadAssetAtPath<LoopThemeDefinition>(folder + "Definition.asset")
+                    ?? throw new InvalidOperationException("Missing " + folder + "Definition.asset");
+                if (definition.weather != weather)
+                {
+                    var so = new SerializedObject(definition);
+                    so.FindProperty("weather").objectReferenceValue = weather;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                    EditorUtility.SetDirty(definition);
+                }
             }
 
-            int removed = AttachView(mapPath);
+            int removed = AttachView(mapPath, hasDefinition ? null : weather);
             AssetDatabase.SaveAssets();
             Debug.Log($"ThemeWeatherSetup: {theme} weather {(created ? "created" : "kept")} at {weatherPath}; " +
                       $"{System.IO.Path.GetFileNameWithoutExtension(mapPath)} carries ThemeWeatherView ({removed} old desert script(s) removed).");
         }
 
         /// <summary>Puts the single weather view on a map prefab's root and takes the per-theme desert script off it.</summary>
-        private static int AttachView(string prefabPath)
+        private static int AttachView(string prefabPath, ThemeWeather named)
         {
             GameObject root = PrefabUtility.LoadPrefabContents(prefabPath);
             try
@@ -76,7 +88,14 @@ namespace SpeedStars.Editor
                     removed++;
                 }
                 // The view takes the profile from the ThemedLoopWay's definition, so the map keeps one source of truth.
-                if (root.GetComponent<ThemeWeatherView>() == null) root.AddComponent<ThemeWeatherView>();
+                // A map without a definition (the standard city) carries the profile on the view instead.
+                ThemeWeatherView view = root.GetComponent<ThemeWeatherView>() ?? root.AddComponent<ThemeWeatherView>();
+                if (named != null)
+                {
+                    var viewSo = new SerializedObject(view);
+                    viewSo.FindProperty("weather").objectReferenceValue = named;
+                    viewSo.ApplyModifiedPropertiesWithoutUndo();
+                }
                 PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
                 return removed;
             }
@@ -395,6 +414,75 @@ namespace SpeedStars.Editor
                     follow = new Vector3(-7f, 2.8f, 5f),
                     spin = new Vector2(-130f, 130f),
                     turbulence = 1.1f
+                }
+            };
+        }
+
+        /// <summary>
+        /// Standard City: the clear day the other themes are judged against, so its light and sky are left exactly as
+        /// the scene has them - no sky material, the sun and ambient it already had. What it gains is wind: green
+        /// leaves torn off the street trees and fine street dust running along the road.
+        /// </summary>
+        private static void FillStandardCity(ThemeWeather weather, string folder)
+        {
+            string materials = folder + "Materials/";
+            Material leaves = EnsureMaterial(materials + "City Leaves.mat", "Speed Stars/Weather Leaf", m =>
+            {
+                m.SetColor("_Color", new Color(0.44f, 0.68f, 0.26f));
+                m.SetColor("_Vein", new Color(0.72f, 0.86f, 0.42f));
+                m.SetFloat("_VeinStrength", 0.40f);
+                m.SetFloat("_Width", 0.52f);
+                m.SetFloat("_Edge", 0.12f);
+            });
+            Material motes = EnsureMaterial(materials + "City Motes.mat", "Speed Stars/Desert Dust", m =>
+                m.SetColor("_Color", Color.white));
+
+            // No sky material: the camera keeps its own blue sky, which is the look every other theme departs from.
+            weather.skyMaterial = null;
+            weather.sunColor = new Color(1f, 0.97f, 0.91f);
+            weather.sunIntensityScale = 1f;
+            weather.ambientSky = new Color(0.52f, 0.56f, 0.62f);
+            weather.ambientEquator = new Color(0.40f, 0.43f, 0.48f);
+            weather.ambientGround = new Color(0.26f, 0.27f, 0.30f);
+            weather.airTint = Color.white;
+            weather.airTintBlend = 0f;
+            weather.airStrengthBoost = 0f;
+            weather.airStartScale = 1f;
+            weather.airEndScale = 1f;
+            weather.worldTint = Color.white;
+            weather.worldTintBlend = 0f;
+            weather.layers = new[]
+            {
+                new WeatherLayer
+                {
+                    name = "Leaves On The City Wind",
+                    material = leaves,
+                    tint = new Color(0.50f, 0.72f, 0.28f, 0.95f),
+                    size = new Vector2(0.12f, 0.30f),
+                    lifetime = new Vector2(4f, 8f),
+                    speed = new Vector2(2.4f, 4.6f),
+                    direction = new Vector3(0.12f, -0.1f, 1f),
+                    gravity = 0.05f,
+                    rate = 26f,
+                    maxParticles = 180,
+                    boxSize = new Vector3(26f, 6f, 40f),
+                    follow = new Vector3(-7f, 2.6f, 5f),
+                    spin = new Vector2(-150f, 150f),
+                    turbulence = 1.4f
+                },
+                new WeatherLayer
+                {
+                    name = "Street Dust On The Gust",
+                    material = motes,
+                    tint = new Color(0.92f, 0.94f, 0.96f, 0.07f),
+                    size = new Vector2(0.08f, 0.30f),
+                    lifetime = new Vector2(3f, 6f),
+                    speed = new Vector2(1.6f, 3.2f),
+                    direction = new Vector3(0f, 0.04f, 1f),
+                    rate = 40f,
+                    maxParticles = 260,
+                    boxSize = new Vector3(24f, 2.4f, 38f),
+                    follow = new Vector3(-6.5f, 1f, 4f)
                 }
             };
         }
