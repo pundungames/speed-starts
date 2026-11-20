@@ -23,6 +23,9 @@ namespace SpeedStars.Editor
         [MenuItem("Speed Stars/Themes/Set Up Pirate Sea Weather")]
         public static void PirateSea() => Configure("PirateSea", Themes + "LoopWay4.prefab", FillPirateSea);
 
+        [MenuItem("Speed Stars/Themes/Set Up Rome Weather")]
+        public static void Rome() => Configure("RomeByzantium", Themes + "LoopWay3.prefab", FillRome);
+
         /// <summary>Makes (or keeps) the theme's profile, points its definition at it and puts the view on its map.</summary>
         private static void Configure(string theme, string mapPath, Action<ThemeWeather, string> fill)
         {
@@ -204,6 +207,84 @@ namespace SpeedStars.Editor
                     maxParticles = 260,
                     boxSize = new Vector3(24f, 4f, 38f),
                     follow = new Vector3(-6f, 1.6f, 4f)
+                }
+            };
+        }
+
+        /// <summary>
+        /// Rome: the last hour of light. The sun sits low and large in a gold sky that goes violet overhead, the light
+        /// falls warm and long, and the evening air carries leaves tumbling past with fine motes hanging in the glow.
+        /// </summary>
+        private static void FillRome(ThemeWeather weather, string folder)
+        {
+            string materials = folder + "Materials/";
+            Material sky = EnsureMaterial(materials + "Sunset Sky.mat", "Speed Stars/Theme Sky", m =>
+            {
+                m.SetColor("_Horizon", new Color(0.99f, 0.74f, 0.45f));
+                m.SetColor("_Zenith", new Color(0.33f, 0.33f, 0.53f));
+                m.SetFloat("_Break", 0.20f);
+                m.SetColor("_SunColor", new Color(1f, 0.94f, 0.73f));
+                m.SetColor("_GlowColor", new Color(1f, 0.70f, 0.40f));
+                m.SetVector("_SunPos", new Vector4(0.70f, 0.34f, 0f, 0f));
+                m.SetFloat("_SunSize", 0.055f);
+                m.SetFloat("_GlowStrength", 0.55f);
+                m.SetFloat("_GlowSpread", 12f);
+            });
+            Material leaves = EnsureMaterial(materials + "Autumn Leaves.mat", "Speed Stars/Weather Leaf", m =>
+            {
+                m.SetColor("_Color", new Color(0.86f, 0.50f, 0.20f));
+                m.SetColor("_Vein", new Color(1f, 0.80f, 0.50f));
+                m.SetFloat("_VeinStrength", 0.45f);
+                m.SetFloat("_Width", 0.55f);
+                m.SetFloat("_Edge", 0.12f);
+            });
+            Material motes = EnsureMaterial(materials + "Evening Motes.mat", "Speed Stars/Desert Dust", m =>
+                m.SetColor("_Color", Color.white));
+
+            weather.skyMaterial = sky;
+            weather.horizonFill = new Color(0.99f, 0.74f, 0.45f);
+            weather.sunColor = new Color(1f, 0.78f, 0.55f);
+            weather.sunIntensityScale = 0.85f;
+            weather.ambientSky = new Color(0.78f, 0.66f, 0.60f);
+            weather.ambientEquator = new Color(0.54f, 0.45f, 0.45f);
+            weather.ambientGround = new Color(0.27f, 0.22f, 0.24f);
+            weather.airTint = new Color(0.99f, 0.78f, 0.58f);
+            weather.airTintBlend = 0.50f;
+            weather.airStrengthBoost = 0.08f;
+            weather.airStartScale = 0.85f;
+            weather.airEndScale = 0.90f;
+            weather.layers = new[]
+            {
+                new WeatherLayer
+                {
+                    name = "Leaves On The Evening Wind",
+                    material = leaves,
+                    tint = new Color(0.90f, 0.54f, 0.24f, 0.95f),
+                    size = new Vector2(0.14f, 0.34f),
+                    lifetime = new Vector2(5f, 9f),
+                    speed = new Vector2(1.6f, 3.4f),
+                    direction = new Vector3(0.1f, -0.18f, 1f),
+                    gravity = 0.04f,
+                    rate = 14f,
+                    maxParticles = 140,
+                    boxSize = new Vector3(26f, 6f, 40f),
+                    follow = new Vector3(-7f, 2.6f, 5f),
+                    spin = new Vector2(-110f, 110f),
+                    turbulence = 0.9f
+                },
+                new WeatherLayer
+                {
+                    name = "Motes In The Low Sun",
+                    material = motes,
+                    tint = new Color(1f, 0.84f, 0.62f, 0.14f),
+                    size = new Vector2(0.10f, 0.38f),
+                    lifetime = new Vector2(7f, 12f),
+                    speed = new Vector2(0.2f, 0.6f),
+                    direction = new Vector3(0f, 0.05f, 1f),
+                    rate = 70f,
+                    maxParticles = 480,
+                    boxSize = new Vector3(24f, 4.5f, 38f),
+                    follow = new Vector3(-6.5f, 1.8f, 4f)
                 }
             };
         }

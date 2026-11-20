@@ -59,6 +59,12 @@ namespace SpeedStars.Themes
 
         [Tooltip("Streak layers only: how far a particle is stretched along its own velocity.")]
         [Min(0f)] public float streakLength = 3f;
+
+        [Tooltip("Spin range in degrees per second (min, max). Anything but zero also starts every particle at a random angle: leaves tumble, dust and rain do not need it.")]
+        public Vector2 spin;
+
+        [Tooltip("How hard the air pushes the particles off their straight path (0 = none). Leaves need it to wander; rain should fall straight.")]
+        [Min(0f)] public float turbulence;
     }
 
     /// <summary>

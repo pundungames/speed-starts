@@ -173,6 +173,24 @@ namespace SpeedStars.Themes
                     shape.rotation = Quaternion.LookRotation(direction, up).eulerAngles;
                 }
 
+                if (layer.spin != Vector2.zero)
+                {
+                    // A leaf that always faced the same way would read as a sticker, so it starts at any angle and keeps turning.
+                    main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+                    ParticleSystem.RotationOverLifetimeModule rotation = particles.rotationOverLifetime;
+                    rotation.enabled = true;
+                    rotation.z = new ParticleSystem.MinMaxCurve(layer.spin.x * Mathf.Deg2Rad, layer.spin.y * Mathf.Deg2Rad);
+                }
+
+                if (layer.turbulence > 0f)
+                {
+                    ParticleSystem.NoiseModule noise = particles.noise;
+                    noise.enabled = true;
+                    noise.strength = layer.turbulence;
+                    noise.frequency = 0.25f;
+                    noise.scrollSpeed = 0.4f;
+                }
+
                 var renderer = go.GetComponent<ParticleSystemRenderer>();
                 renderer.sharedMaterial = layer.material;
                 bool streak = layer.shape == WeatherParticleShape.Streak;
