@@ -1,4 +1,4 @@
-﻿using UnityEditor;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 using Kit = SpeedStars.Tools.Builders.UiBuildKit;
@@ -23,16 +23,6 @@ namespace SpeedStars.Tools.Builders
         private static readonly Vector2 PlayLabelMin = new Vector2(0.30f, 0.08f), PlayLabelMax = new Vector2(0.95f, 0.92f);
         private static readonly Vector2 RacerNameMin = new Vector2(0.45f, 0.78f), RacerNameMax = new Vector2(0.77f, 0.90f);
         private static readonly Vector2 HeightMin = new Vector2(0.09f, 0.34f), HeightMax = new Vector2(0.91f, 0.44f);
-        private static readonly Vector2 RacerOfDayMin = new Vector2(0.09f, 0.74f), RacerOfDayMax = new Vector2(0.91f, 0.92f);
-
-        // Parts of the character card the "Racer of the day" card hides (T-087): the day's racer cannot be changed.
-        // Paths are relative to CharacterCard; the new icon strip and player name go with the stat bars (T-097).
-        private static readonly string[] HiddenForRacerOfTheDay =
-        {
-            "Content/Select", "Content/Previous", "Content/Next", "Content/PowerBar", "Content/StaminaBar", "Content/HeightField",
-            "StatsStrip", "EditRacer", "Emote", "PlayerName"
-        };
-
         private const float PowerDefaultFill = 0.75f;
         private const float StaminaDefaultFill = 0.7f;
 
@@ -71,7 +61,6 @@ namespace SpeedStars.Tools.Builders
             BuildCharacterCard(root, layout);
             UiViewBinder.BindHome(root);
             BindSoundIcons(root);
-            BindRacerOfTheDay(root);
         }
 
         // ---- Character card (T-097): wider to the left, unchanged parts pinned to the right edge. Sizes in reference px (layout.json space).
@@ -142,11 +131,6 @@ namespace SpeedStars.Tools.Builders
             RectTransform height = Kit.Stretch(Kit.Node(content, "HeightField"));
             UiArt.Paint(height.gameObject, UiArt.Home("stats_height_field"), raycast: false);
             UiArt.Slot(height, "Label", "Height: 5'9", 44f, HeightMin, HeightMax);
-
-            // Race of the Day (T-087): the label that stands in for the name pill, arrows and buttons while that event is selected.
-            RectTransform racerOfDay = Kit.Stretch(Kit.Node(content, "RacerOfTheDay"));
-            UiArt.Slot(racerOfDay, "Label", "Racer of the day", 56f, RacerOfDayMin, RacerOfDayMax, TextAnchor.MiddleCenter);
-            racerOfDay.gameObject.SetActive(false); // the view switches it on
 
             BuildStatsStrip(cardRoot, cardW, canvasH, stripRef, storeW, storeH, homePower, homeStamina, homeHeight);
 
@@ -226,25 +210,6 @@ namespace SpeedStars.Tools.Builders
             if (importer.spriteBorder == border) return;
             importer.spriteBorder = border;
             importer.SaveAndReimport();
-        }
-
-        /// <summary>The "Racer of the day" label and the card parts HomeScreenView hides while Race of the Day is selected.</summary>
-        private static void BindRacerOfTheDay(RectTransform root)
-        {
-            var view = new SerializedObject(root.GetComponent<SpeedStars.UI.Home.HomeScreenView>());
-            Transform label = root.Find("CharacterCard/Content/RacerOfTheDay");
-            if (label == null) throw new System.InvalidOperationException("UiV2Prefabs: HomeScreen has no CharacterCard/Content/RacerOfTheDay.");
-            view.FindProperty("racerOfTheDayRoot").objectReferenceValue = label.gameObject;
-
-            SerializedProperty hidden = view.FindProperty("hiddenForRacerOfTheDay");
-            hidden.arraySize = HiddenForRacerOfTheDay.Length;
-            for (int i = 0; i < HiddenForRacerOfTheDay.Length; i++)
-            {
-                Transform part = root.Find("CharacterCard/" + HiddenForRacerOfTheDay[i]);
-                if (part == null) throw new System.InvalidOperationException($"UiV2Prefabs: HomeScreen has no CharacterCard/{HiddenForRacerOfTheDay[i]}.");
-                hidden.GetArrayElementAtIndex(i).objectReferenceValue = part.gameObject;
-            }
-            view.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void StatBar(Transform card, string name, string empty, string fill, float amount)

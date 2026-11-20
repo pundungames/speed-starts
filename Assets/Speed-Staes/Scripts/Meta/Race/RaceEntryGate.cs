@@ -13,26 +13,39 @@ namespace SpeedStars.Meta.Race
     /// access (spends nothing), else one Entry Ticket. A spent ticket is saved at once (no refund on quit, PDF §1.2).
     /// A confirmed entry stays pending until the race scene takes it, so a double tap on the same event pays once.
     /// </summary>
-    public sealed class RaceEntryGate : IRaceEntryGate
+    public sealed class RaceEntryGate : IRaceEntryGate, IDailyRaceEntryStatus
     {
         private readonly ProgressRepository _repository;
         private readonly IClock _clock;
         private readonly RaceEventCatalog _catalog;
         private readonly EntryTicketService _tickets;
+        private readonly IRaceOfTheDay _daily;
 
         private RaceEventId _pendingId;
         private EntryResult _pendingResult;
 
         public RaceEntryGate(ProgressRepository repository, IClock clock, RaceEventCatalog catalog,
-            EntryTicketService tickets)
+            EntryTicketService tickets, IRaceOfTheDay daily = null)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _tickets = tickets ?? throw new ArgumentNullException(nameof(tickets));
+            _daily = daily;
         }
 
         public bool HasPendingEntry { get; private set; }
+
+        public TimeSpan DailyRaceCooldown
+        {
+            get
+            {
+                long started = _repository.Current.LastDailyRaceEntryUtcTicks;
+                if (started <= 0) return TimeSpan.Zero;
+                long elapsed = Math.Max(0L, _clock.UtcNow.Ticks - started);
+                return TimeSpan.FromTicks(Math.Max(0L, TimeSpan.TicksPerDay - elapsed));
+            }
+        }
 
         public EntryResult Enter(RaceEventId id)
         {
@@ -41,6 +54,7 @@ namespace SpeedStars.Meta.Race
             if (!_catalog.TryGet(id, out RaceEventDefinition definition)) return EntryResult.UnknownEvent;
             if (!definition.IsPlayable) return EntryResult.NotPlayable;
 
+            if (IsDaily(id) && DailyRaceCooldown > TimeSpan.Zero) return EntryResult.NotPlayable;
             if (!definition.RequiresTicket) return Confirm(id, EntryResult.EnteredFree);
 
             PlayerProgress progress = _repository.Current
@@ -63,8 +77,15 @@ namespace SpeedStars.Meta.Race
             }
             HasPendingEntry = false;
             _pendingId = default;
+            if (IsDaily(id))
+            {
+                _repository.Current.LastDailyRaceEntryUtcTicks = _clock.UtcNow.Ticks;
+                _repository.Save();
+            }
             return true;
         }
+
+        private bool IsDaily(RaceEventId id) => _daily != null && _daily.IsRaceOfTheDay(id);
 
         private EntryResult Confirm(RaceEventId id, EntryResult result)
         {

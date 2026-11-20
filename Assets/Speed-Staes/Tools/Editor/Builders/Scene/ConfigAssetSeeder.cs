@@ -47,7 +47,7 @@ namespace SpeedStars.Tools.Builders
         private static readonly EventSeed[] Events =
         {
             new EventSeed("training", "Practice", 100f, ticket: false, gems: false, playable: true),
-            new EventSeed("race_of_the_day", "Race of the Day", 0f, ticket: false, gems: false, playable: true), // T-087: open, free; length and outfit come from RaceOfTheDayConfig
+            new EventSeed("race_of_the_day", "Race of the Day", 100f, ticket: false, gems: false, playable: true), // Free daily 100 m with its own rotating outfit
             new EventSeed("100m", "100m", 100f, ticket: false, gems: false, playable: true),
             new EventSeed("200m", "200m", 200f, ticket: true, gems: false, playable: true),
             new EventSeed("400m", "400m", 400f, ticket: true, gems: true, playable: true),
@@ -86,7 +86,7 @@ namespace SpeedStars.Tools.Builders
 
         // ---- Race of the Day (T-087) ----
         // Distances: reference measurement 03.11 (60 m on 30.10, 150 m on 03.11) widened to a list; flat races only, user can edit the asset.
-        private static readonly float[] RaceOfTheDayDistances = { 60f, 100f, 150f, 200f, 300f };
+        private static readonly float[] RaceOfTheDayDistances = { 100f };
 
         private readonly struct LookSeed
         {

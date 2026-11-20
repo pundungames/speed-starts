@@ -55,6 +55,7 @@ namespace SpeedStars.UI.Race
 
         public void RequestExit() => _logic.Exit();
 
+        public bool CanRestart => _logic.CanRestart;
         public void RequestRestart() => _logic.Restart();
     }
 }

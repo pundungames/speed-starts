@@ -80,4 +80,9 @@ namespace SpeedStars.Meta.Contracts
         /// <summary>The race scene takes the confirmed entry exactly once; false when there is none.</summary>
         bool TryTakePending(out RaceEventId id);
     }
+
+    public interface IDailyRaceEntryStatus
+    {
+        TimeSpan DailyRaceCooldown { get; }
+    }
 }

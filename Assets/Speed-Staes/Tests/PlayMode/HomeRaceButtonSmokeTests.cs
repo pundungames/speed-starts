@@ -328,6 +328,61 @@ namespace SpeedStars.PlayTests
         }
 
         [UnityTest]
+        public IEnumerator RaceOfTheDay_FromEventPicker_Starts100MetersAndLocksAfterEntry()
+        {
+            PlayerProgress progress = Container.Resolve<ProgressRepository>().Current;
+            long before = progress.LastDailyRaceEntryUtcTicks;
+            ICosmeticService cosmetics = Container.Resolve<ICosmeticService>();
+            int originalPreset = cosmetics.SelectedPreset;
+            progress.LastDailyRaceEntryUtcTicks = 0;
+            try
+            {
+                HomeScreenView home = Require<HomeScreenView>();
+                var picker = Require<EventSelectScreenView>();
+                yield return Tap(RequireField<Button>(home, "eventSelectButton"), "event picker");
+                yield return WaitOpen(picker, "event picker");
+                yield return Tap(RequireField<Button>(picker, "raceOfTheDayButton"), "Race of the Day");
+                yield return Tap(RequireField<Button>(picker, "continueButton"), "confirm daily race");
+                yield return WaitOpen(home, "Home after daily race selection");
+                Assert.IsTrue(RequireField<Button>(home, "editRacerButton").gameObject.activeInHierarchy);
+                yield return Tap(RequireField<Button>(home, "nextRacerButton"), "change the daily race preset");
+                Assert.AreNotEqual(originalPreset, cosmetics.SelectedPreset);
+                Assert.IsFalse(Container.Resolve<ICosmeticPreview>().IsPreviewing, "the event must not preview a different outfit");
+                Transform menuRunner = Object.FindObjectsOfType<MonoBehaviour>()
+                    .First(behaviour => behaviour.GetType().Name == "MenuCharacter").transform;
+                string[] expectedParts = ActiveOutfitParts(menuRunner);
+                yield return Tap(RequireField<Button>(home, "playButton"), "daily race Play");
+                yield return WaitForScene(RaceScene);
+                yield return WaitUntil(() => FindRaceSession()?.TargetDistance == 100f, "100 m daily race");
+                Assert.Greater(progress.LastDailyRaceEntryUtcTicks, 0L);
+                var signal = (IRaceStartSignal)FindRaceSession();
+                yield return WaitUntil(() => signal.StartPhase == RaceStartPhase.Go, "daily race GO", 12f);
+                Transform raceRunner = Object.FindObjectsOfType<MonoBehaviour>()
+                    .First(behaviour => behaviour.GetType().Name == "RaceRunnerOutfit").transform;
+                CollectionAssert.AreEquivalent(expectedParts, ActiveOutfitParts(raceRunner));
+                Assert.IsFalse(RequireField<Button>(Require<RaceHudView>(), "restartButton").interactable);
+                yield return Tap(RequireField<Button>(Require<RaceHudView>(), "exitButton"), "exit daily race");
+                yield return WaitForScene(HomeScene);
+                home = Require<HomeScreenView>();
+                Assert.IsFalse(RequireField<Button>(home, "playButton").interactable, "daily race stays locked after leaving");
+            }
+            finally
+            {
+                progress.LastDailyRaceEntryUtcTicks = before;
+                cosmetics.SelectPreset(originalPreset);
+            }
+        }
+
+        private static string[] ActiveOutfitParts(Transform runner)
+        {
+            Transform accessories = runner.Find("Accessories");
+            Assert.IsNotNull(accessories, "runner has an Accessories root");
+            return accessories.Cast<Transform>()
+                .SelectMany(slot => slot.Cast<Transform>().Where(part => part.gameObject.activeSelf)
+                    .Select(part => slot.name + "/" + part.name)).ToArray();
+        }
+
+        [UnityTest]
         public IEnumerator Race_ExitButton_ReturnsToHome()
         {
             SetTickets(1);

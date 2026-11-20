@@ -262,6 +262,7 @@ namespace SpeedStars.UI.Race
         {
             if (!_emotesSubscribed) SubscribeEmotes(); // the control may be injected after OnEnable
             if (_session == null) return;
+            if (restartButton != null && _actions is RaceFlow flow) restartButton.interactable = flow.CanRestart;
             if (timeText == null)
             {
                 if (!_warnedMissing)

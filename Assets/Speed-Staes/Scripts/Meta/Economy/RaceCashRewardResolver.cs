@@ -20,12 +20,14 @@ namespace SpeedStars.Meta.Economy
         private readonly IEconomyLedger _ledger;
         private readonly ProgressRepository _repository;
         private readonly IPlayerSettings _settings;
+        private readonly IRaceOfTheDay _daily;
 
         /// <param name="settings">Source of the player's difficulty; null = the full configured bonus (no settings system).</param>
         public RaceCashRewardResolver(RaceEventCatalog events, EconomyConfig config, IEconomyLedger ledger,
-            ProgressRepository repository, IPlayerSettings settings = null)
+            ProgressRepository repository, IPlayerSettings settings = null, IRaceOfTheDay daily = null)
         {
             _settings = settings;
+            _daily = daily;
             _events = events ?? throw new ArgumentNullException(nameof(events));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _ledger = ledger ?? throw new ArgumentNullException(nameof(ledger));
@@ -48,7 +50,10 @@ namespace SpeedStars.Meta.Economy
             int passed = Math.Max(0, Math.Min(totalOpponents, outcome.RunnerCount - outcome.Rank));
             int opponentBonus = (int)Math.Round((double)_config.RaceOpponentBonusCash * passed / totalOpponents, MidpointRounding.AwayFromZero);
 
-            var reward = new RaceCashReward(_config.RaceFinishCash, ScaledDifficultyBonus(_config.RaceDifficultyBonusCash, _settings != null ? _settings.CompetitorDifficulty : 1f), opponentBonus, passed, totalOpponents);
+            int multiplier = _daily != null && _daily.IsRaceOfTheDay(outcome.EventId) ? 2 : 1;
+            int difficultyBonus = ScaledDifficultyBonus(_config.RaceDifficultyBonusCash, _settings != null ? _settings.CompetitorDifficulty : 1f);
+            var reward = new RaceCashReward(_config.RaceFinishCash * multiplier, difficultyBonus * multiplier,
+                opponentBonus * multiplier, passed, totalOpponents);
             if (reward.Total < 1) return RaceCashReward.None;
 
             if (_ledger.Grant(EconomyCurrency.Cash, reward.Total, "race-cash:" + payoutId) != TransactionResult.Done)

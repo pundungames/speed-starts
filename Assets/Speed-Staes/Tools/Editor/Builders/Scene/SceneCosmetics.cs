@@ -51,8 +51,7 @@ namespace SpeedStars.Tools.Builders
             Prop(so, "session").objectReferenceValue = session;
             RaceBots bots = FindIn<RaceBots>(scene);
             if (bots != null) Prop(so, "bots").objectReferenceValue = bots;
-            else Warn(Source, "No RaceBots in the scene; only the player's runner will wear the day's outfit.");
-            Prop(so, "playerApplier").objectReferenceValue = AddApplier(runner);
+            else Warn(Source, "No RaceBots in the scene; no daily opponent outfits will be applied.");
             Apply(so);
 
             EditorSceneManager.MarkSceneDirty(scene);

@@ -33,6 +33,21 @@ namespace SpeedStars.Tests.Meta.Economy
             => _k.CashRewards.Resolve(_k.Outcome(EconomyTestKit.PaidEvent, rank, 12.5, runners), id);
 
         [Test]
+        public void DailyRace_DoublesEveryCashComponent_AndOnlyPaysOnce()
+        {
+            var eventId = EconomyTestKit.PaidEvent;
+            var daily = new SpeedStars.Meta.DailyRace.RaceOfTheDayService(_k.Kit.Clock, eventId.Value, new[] { 100f }, null);
+            var resolver = new RaceCashRewardResolver(_k.Events, _k.Kit.Economy, _k.Ledger, _k.Kit.Repository, daily: daily);
+            RaceOutcome outcome = _k.Outcome(eventId, 1, 12.5, Runners);
+            RaceCashReward reward = resolver.Resolve(outcome, "daily-attempt");
+            Assert.AreEqual(Finish * 2, reward.Finish);
+            Assert.AreEqual(Difficulty * 2, reward.Difficulty);
+            Assert.AreEqual(OpponentFull * 2, reward.Opponents);
+            Assert.AreEqual(reward.Total, _k.Progress.Cash);
+            Assert.IsTrue(resolver.Resolve(outcome, "daily-attempt").IsEmpty);
+        }
+
+        [Test]
         public void Winner_GetsFinishDifficultyAndFullOpponentBonus_AndTheWalletMatches()
         {
             RaceCashReward reward = Pay(1);

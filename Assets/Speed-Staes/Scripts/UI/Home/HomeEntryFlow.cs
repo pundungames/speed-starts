@@ -20,6 +20,8 @@ namespace SpeedStars.UI.Home
             _sceneFlow = sceneFlow ?? throw new ArgumentNullException(nameof(sceneFlow));
         }
 
+        public TimeSpan DailyRaceCooldown => (_gate as IDailyRaceEntryStatus)?.DailyRaceCooldown ?? TimeSpan.Zero;
+
         /// <summary>Enters <paramref name="id"/>; the race scene is requested only for a successful entry.</summary>
         public EntryOutcome TryEnter(RaceEventId id)
         {

@@ -513,6 +513,11 @@ namespace SpeedStars.UI.Race
             }
         }
 
+        internal void SetRaceAgainAvailable(bool available)
+        {
+            if (raceAgainButton != null) raceAgainButton.interactable = available;
+        }
+
         public void SetPracticeAvailable(bool available)
         {
             _practiceAvailable = available;

@@ -110,6 +110,17 @@ namespace SpeedStars.UI.Race
             if (!_gate.TryTakePending(out id))
             {
                 id = _selection.Selected;
+                // An editor scene started directly must still consume the daily entry.
+                if (IsDaily(id) && _gate is IDailyRaceEntryStatus)
+                {
+                    if (_gate.Enter(id) == EntryResult.EnteredFree && _gate.TryTakePending(out id))
+                    {
+                        BeginRace(id);
+                        return;
+                    }
+                    id = FindPracticeEvent();
+                    if (id.IsEmpty) return;
+                }
                 if (!_warnedFreeStart)
                 {
                     _warnedFreeStart = true;
@@ -139,12 +150,13 @@ namespace SpeedStars.UI.Race
                 return false;
             }
             _current = info;
+            if (_results is ResultsScreenView resultsScreen) resultsScreen.SetRaceAgainAvailable(!IsDaily(id));
             _hasCurrent = true;
             _resultsOpen = false;
             _practiceFinished = false;
             _analysisPlayerSeries = null;
             _payoutId = Guid.NewGuid().ToString("N"); // one reward id per race start: a repeated finish cannot pay twice
-            // The Race of the Day takes its length from the day's rule (the catalog has none); everything else from the catalog.
+            // The daily configuration takes priority over the catalog fallback.
             _currentDistance = IsDaily(info.Id) && _daily.Today.DistanceMeters > 0f ? _daily.Today.DistanceMeters : info.DistanceMeters;
             _session.RequestStart(new RaceStartRequest(info.Id, _currentDistance));
             return true;
@@ -339,9 +351,11 @@ namespace SpeedStars.UI.Race
         /// Resets an unfinished attempt directly. From Results, enters a new race through the entry gate.
         /// Ignored before the first start or during a scene move.
         /// </summary>
+        public bool CanRestart => _hasCurrent && !IsDaily(_current.Id);
+
         public void Restart()
         {
-            if (!_started || !_hasCurrent || _sceneFlow.IsTransitioning) return;
+            if (!_started || !CanRestart || _sceneFlow.IsTransitioning) return;
 
             // Restarting an unfinished attempt must not be blocked by the entry balance.
             // Results Race Again still enters a new race through the gate below.

@@ -1,4 +1,3 @@
-using System.Linq;
 using NUnit.Framework;
 using SpeedStars.UI.Home;
 using TMPro;
@@ -48,7 +47,7 @@ namespace SpeedStars.Tests.UI.Builders
         [Test]
         public void OldParts_LiveInContent()
         {
-            foreach (string part in new[] { "Select", "Previous", "Next", "PowerBar", "StaminaBar", "HeightField", "RacerOfTheDay" })
+            foreach (string part in new[] { "Select", "Previous", "Next", "PowerBar", "StaminaBar", "HeightField" })
                 Find("CharacterCard/Content/" + part);
         }
 
@@ -75,18 +74,6 @@ namespace SpeedStars.Tests.UI.Builders
             Assert.AreEqual("EditRacer", ((Component)so.FindProperty("editRacerButton").objectReferenceValue)?.name, "editRacerButton");
             Assert.AreEqual("Emote", ((Component)so.FindProperty("emoteButton").objectReferenceValue)?.name, "emoteButton");
             Assert.AreEqual("Name", ((Component)so.FindProperty("racerNameText").objectReferenceValue)?.name, "racerNameText");
-        }
-
-        [Test]
-        public void RaceOfTheDay_HidesTheNewParts()
-        {
-            var so = new SerializedObject(Load().GetComponent<HomeScreenView>());
-            SerializedProperty hidden = so.FindProperty("hiddenForRacerOfTheDay");
-            var names = Enumerable.Range(0, hidden.arraySize)
-                .Select(i => ((GameObject)hidden.GetArrayElementAtIndex(i).objectReferenceValue)?.name).ToList();
-            foreach (string part in new[] { "StatsStrip", "PlayerName", "EditRacer", "Emote", "PowerBar", "StaminaBar", "HeightField" })
-                Assert.Contains(part, names, "hidden list lacks " + part);
-            Assert.IsFalse(names.Contains(null), "an entry of the hidden list is not bound");
         }
 
         private static GameObject Load()

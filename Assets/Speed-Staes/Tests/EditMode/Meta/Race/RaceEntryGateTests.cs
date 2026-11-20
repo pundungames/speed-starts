@@ -46,6 +46,28 @@ namespace SpeedStars.Tests.Meta.Race
         }
 
         [Test]
+        public void DailyRace_IsFreeAndUnlocks24HoursAfterStart_EvenAfterReload()
+        {
+            Setup(2);
+            var daily = new SpeedStars.Meta.DailyRace.RaceOfTheDayService(_kit.Clock, Free.Value, new[] { 100f }, null);
+            var gate = new RaceEntryGate(_kit.Repository, _kit.Clock, _catalog, _tickets, daily);
+            Assert.AreEqual(EntryResult.EnteredFree, gate.Enter(Free));
+            Assert.AreEqual(TimeSpan.Zero, gate.DailyRaceCooldown, "a pending scene load has not used the attempt");
+            Assert.IsTrue(gate.TryTakePending(out _));
+            Assert.AreEqual(2, _kit.Progress.EntryTickets);
+
+            var reloaded = new SpeedStars.Meta.Persistence.ProgressRepository(_kit.Store,
+                () => new SpeedStars.Meta.Persistence.StartingBalances(0, 0, 0, 0));
+            reloaded.Load();
+            gate = new RaceEntryGate(reloaded, _kit.Clock, _catalog, new EntryTicketService(reloaded, _kit.Clock, _kit.Economy), daily);
+            _kit.Clock.Advance(TimeSpan.FromHours(23) + TimeSpan.FromMinutes(59));
+            Assert.AreEqual(TimeSpan.FromMinutes(1), gate.DailyRaceCooldown);
+            Assert.AreEqual(EntryResult.NotPlayable, gate.Enter(Free));
+            _kit.Clock.Advance(TimeSpan.FromMinutes(1));
+            Assert.AreEqual(EntryResult.EnteredFree, gate.Enter(Free));
+        }
+
+        [Test]
         public void Enter_PaidEvent_SpendsOneAndSavesImmediately()
         {
             Setup(2);

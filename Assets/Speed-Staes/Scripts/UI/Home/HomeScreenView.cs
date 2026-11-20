@@ -80,13 +80,6 @@ namespace SpeedStars.UI.Home
         [Tooltip("CharacterCard/PlayerName: the player's name from Settings, under the Edit racer and Emote buttons; empty when no name is set. Optional.")]
         [SerializeField] private TMP_Text playerNameText;
 
-        [Header("Racer of the day")]
-        [Tooltip("CharacterCard/RacerOfTheDay: the 'Racer of the day' label, shown only while Race of the Day is the selected event. Optional.")]
-        [SerializeField] private GameObject racerOfTheDayRoot;
-
-        [Tooltip("Card parts hidden while Race of the Day is selected: the preset name and arrows, Edit racer, Emote, the player name, the stat bars and their icon strip (the day's racer cannot be changed).")]
-        [SerializeField] private GameObject[] hiddenForRacerOfTheDay = new GameObject[0];
-
         [Header("Relay team")]
         [Tooltip("CharacterCard/RelayLeg: the leg row (label and arrows), shown only while a relay event is selected. Optional.")]
         [SerializeField] private GameObject relayLegRoot;
@@ -139,9 +132,8 @@ namespace SpeedStars.UI.Home
         private IDailyGift _dailyGift;
         private ISevenDayRewards _sevenDay;
         private IRaceOfTheDay _raceOfTheDay;
-        private ICosmeticPreview _preview;
         private IRelayTeam _relayTeam;
-        private bool _dailyOutfitShown;
+        private float _nextDailyStatusRefresh;
         private bool _relayShown;
         private bool _adoptSelectedPreset;
         private int _presetBeforeRelay;
@@ -174,10 +166,9 @@ namespace SpeedStars.UI.Home
 
         /// <summary>Optional so a scene without Race of the Day still opens; the card then never changes.</summary>
         [Inject]
-        public void ConstructHomeDaily([InjectOptional] IRaceOfTheDay raceOfTheDay, [InjectOptional] ICosmeticPreview preview)
+        public void ConstructHomeDaily([InjectOptional] IRaceOfTheDay raceOfTheDay)
         {
             _raceOfTheDay = raceOfTheDay;
-            _preview = preview;
         }
 
         [Inject]
@@ -323,32 +314,6 @@ namespace SpeedStars.UI.Home
         }
 
         /// <summary>
-        /// Race of the Day selected: the card shows "Racer of the day" with the day's outfit on the character, and Edit racer, Emote and the
-        /// preset arrows are hidden. Any other event: the player's own card and outfit (the preview is released).
-        /// </summary>
-        private void RefreshRacerOfTheDay()
-        {
-            if (_raceOfTheDay == null) return;
-            bool daily = _raceOfTheDay.IsRaceOfTheDay(_selection.Selected);
-            if (racerOfTheDayRoot != null) racerOfTheDayRoot.SetActive(daily);
-            if (hiddenForRacerOfTheDay != null)
-                foreach (GameObject part in hiddenForRacerOfTheDay)
-                    if (part != null) part.SetActive(!daily);
-
-            switch (RacerCardRules.Decide(daily, _dailyOutfitShown))
-            {
-                case RacerCardAction.ShowDailyOutfit:
-                    if (_preview != null) _preview.Show(_raceOfTheDay.Today.Outfit);
-                    _dailyOutfitShown = _preview != null;
-                    break;
-                case RacerCardAction.RestoreOwnOutfit:
-                    if (_preview != null) _preview.Reset();
-                    _dailyOutfitShown = false;
-                    break;
-            }
-        }
-
-        /// <summary>
         /// A relay event selected (and it is not the Race of the Day): the leg row shows and the card is the selected leg's racer, so the
         /// name, stat bars, Edit racer and Emote follow that leg through the selected preset. The player's own preset is remembered when
         /// the relay starts and comes back when it ends.
@@ -397,11 +362,29 @@ namespace SpeedStars.UI.Home
 
         private void RefreshEventName()
         {
-            RefreshRacerOfTheDay();
             RefreshRelay();
             if (racerNameText != null && _cosmetics == null && string.IsNullOrEmpty(racerNameText.text)) racerNameText.text = HomeTexts.DefaultRacerName;
             if (heightText != null && string.IsNullOrEmpty(heightText.text)) heightText.text = HomeTexts.RacerHeight;
-            eventNameText.text = _catalog.TryGet(_selection.Selected, out RaceEventDefinition definition)
+            RefreshSelectedRaceStatus();
+        }
+
+        private bool DailyRaceSelected => _raceOfTheDay != null && _raceOfTheDay.IsRaceOfTheDay(_selection.Selected);
+
+        private void Update()
+        {
+            if (_selection == null || !DailyRaceSelected || Time.unscaledTime < _nextDailyStatusRefresh) return;
+            RefreshSelectedRaceStatus();
+        }
+
+        private void RefreshSelectedRaceStatus()
+        {
+            _nextDailyStatusRefresh = Time.unscaledTime + 1f;
+            bool daily = DailyRaceSelected;
+            var remaining = daily ? _entryFlow.DailyRaceCooldown : System.TimeSpan.Zero;
+            bool onCooldown = remaining > System.TimeSpan.Zero;
+            playButton.interactable = !onCooldown;
+            if (daily) eventNameText.text = onCooldown ? $"NEXT IN {CountdownFormatter.Format(remaining)}" : "RACE OF THE DAY · 100 M";
+            else eventNameText.text = _catalog.TryGet(_selection.Selected, out RaceEventDefinition definition)
                 ? definition.DisplayName
                 : string.Empty;
         }
@@ -496,6 +479,7 @@ namespace SpeedStars.UI.Home
                     break;
                 case PlayStep.EnterNow:
                     _entryFlow.TryEnter(definition.Id);
+                    if (DailyRaceSelected) RefreshSelectedRaceStatus();
                     break;
             }
         }
