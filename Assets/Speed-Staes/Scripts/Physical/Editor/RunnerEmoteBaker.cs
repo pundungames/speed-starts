@@ -31,15 +31,24 @@ namespace SpeedStars.Physical.EditorTools
 
         static void Bake(string path)
         {
+            bool victory = Path.GetFileNameWithoutExtension(path) == "Excited";
             AnimationClip clip = null;
             foreach (var asset in AssetDatabase.LoadAllAssetsAtPath(path))
-                if (asset is AnimationClip c && !c.name.StartsWith("__preview")) clip = c;
+                if (asset is AnimationClip c && !c.name.StartsWith("__preview") && (!victory || !clip || c.length > clip.length))
+                    clip = c;
             if (!clip) return;
 
             var scene = EditorSceneManager.NewPreviewScene();
             try
             {
                 var source = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path), scene);
+                if (victory)
+                {
+                    // This FBX already uses the runner's B-* skeleton.
+                    BakeVictoryClip(source, clip);
+                    return;
+                }
+
                 var target = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Character), scene);
                 ToBindPose(source);
 
@@ -77,6 +86,27 @@ namespace SpeedStars.Physical.EditorTools
             {
                 EditorSceneManager.ClosePreviewScene(scene);
             }
+        }
+
+        static void BakeVictoryClip(GameObject source, AnimationClip clip)
+        {
+            var bones = UpperBones(source.transform);
+            if (bones.Count == 0) throw new System.InvalidOperationException("Excited has no runner bones.");
+
+            int frameCount = Mathf.CeilToInt(clip.length * FrameRate) + 1;
+            var data = ScriptableObject.CreateInstance<RunnerEmoteData>();
+            data.frameRate = FrameRate;
+            data.bones = bones.ConvertAll(bone => bone.name).ToArray();
+            data.frames = new Quaternion[frameCount * bones.Count];
+
+            for (int frame = 0; frame < frameCount; frame++)
+            {
+                clip.SampleAnimation(source, Mathf.Min(frame / FrameRate, clip.length));
+                for (int bone = 0; bone < bones.Count; bone++)
+                    data.frames[frame * bones.Count + bone] = bones[bone].localRotation;
+            }
+
+            AssetDatabase.CreateAsset(data, "Assets/Speed-Staes/Resources/Excited.asset");
         }
 
         /// <summary>A Mixamo file opens on its first frame; the skin remembers the T-pose the avatar needs.</summary>

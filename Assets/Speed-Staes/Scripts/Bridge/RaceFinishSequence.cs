@@ -40,6 +40,9 @@ namespace SpeedStars.Bridge
         bool _isPlayer;
         float _emoteSeconds;
         float _emoteAgain;
+        RunnerEmote _victoryEmote;
+        RunnerEmoteData _victoryClip;
+        bool _victoryStarted;
 
         [Inject]
         void Construct([InjectOptional] RaceEmotes emotes) => _emotes = emotes;
@@ -82,6 +85,11 @@ namespace SpeedStars.Bridge
             }
 
             _rank = outcome.Rank;
+            if (_isPlayer && _rank == 1)
+            {
+                _victoryEmote = _body.GetComponentInChildren<RunnerEmote>();
+                if (_victoryEmote) _victoryClip = Resources.Load<RunnerEmoteData>("Excited");
+            }
             _cooldown = RunnerCooldown.Begin(_body, _config);
             TakeCamera();
             _savedTimeScale = Time.timeScale;
@@ -112,6 +120,10 @@ namespace SpeedStars.Bridge
         void Stop()
         {
             _onResultsDue = null;
+            if (_victoryEmote) _victoryEmote.StopVictoryIdle();
+            _victoryEmote = null;
+            _victoryClip = null;
+            _victoryStarted = false;
             if (_timeline == null) return;
             _timeline = null;
             Time.timeScale = _savedTimeScale;
@@ -129,7 +141,17 @@ namespace SpeedStars.Bridge
             if (!wasHolding || Time.timeScale != _savedTimeScale)
                 Time.timeScale = _timeline.Phase == RaceFinishPhase.Holding ? _savedTimeScale : _timeline.TimeScale * _savedTimeScale;
 
-            if (_timeline.TakeEmoteDue())
+            bool emoteDue = _timeline.TakeEmoteDue();
+            if (_victoryEmote && _victoryClip)
+            {
+                if (Replaying) _victoryEmote.StopVictoryIdle();
+                else if (_cooldown && _cooldown.Speed <= 0f && _victoryEmote.PlayVictoryIdle(_victoryClip) && !_victoryStarted)
+                {
+                    _victoryStarted = true;
+                    _timeline.EmoteStarted(_victoryClip.Length);
+                }
+            }
+            else if (emoteDue)
             {
                 _emoteSeconds = PlayEmote();
                 _timeline.EmoteStarted(_emoteSeconds);

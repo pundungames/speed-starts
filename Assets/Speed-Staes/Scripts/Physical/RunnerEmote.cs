@@ -30,7 +30,7 @@ namespace SpeedStars.Physical
         Quaternion[] _base, _written;
         int _next;
         float _clock, _weight;
-        bool _playing, _cut;
+        bool _playing, _cut, _victoryIdle;
 
         void Awake()
         {
@@ -63,6 +63,24 @@ namespace SpeedStars.Physical
             _playing = true;
         }
 
+        public bool PlayVictoryIdle(RunnerEmoteData clip)
+        {
+            if (!clip || clip.Length <= 0f) return false;
+            if (_victoryIdle) return true;
+
+            Stop();
+            Bind(clip);
+            _clock = 0f;
+            _playing = true;
+            _victoryIdle = true;
+            return true;
+        }
+
+        public void StopVictoryIdle()
+        {
+            if (_victoryIdle) Stop();
+        }
+
         void Stop()
         {
             if (_clip)
@@ -70,6 +88,7 @@ namespace SpeedStars.Physical
                     if (_bones[i]) _bones[i].localRotation = _base[i];
             _playing = false;
             _weight = 0f;
+            _victoryIdle = false;
             _clip = null;
         }
 
@@ -98,10 +117,11 @@ namespace SpeedStars.Physical
             if (_playing)
             {
                 _clock += Time.deltaTime;
-                if (_clock >= _clip.Length) _playing = false;
+                if (_victoryIdle) _clock = Mathf.Repeat(_clock, _clip.Length);
+                else if (_clock >= _clip.Length) _playing = false;
             }
             // Out in time: the fade ends with the clip, it never freezes on the last frame.
-            bool wanted = _playing && !_cut && _clip.Length - _clock > fadeTime;
+            bool wanted = _victoryIdle || (_playing && !_cut && _clip.Length - _clock > fadeTime);
             _weight = Mathf.MoveTowards(_weight, wanted ? 1f : 0f, Time.deltaTime / Mathf.Max(0.01f, fadeTime));
         }
 
@@ -131,7 +151,7 @@ namespace SpeedStars.Physical
 
         void OnGUI()
         {
-            if (!showName || !_clip || !_playing) return;
+            if (!showName || !_clip || !_playing || _victoryIdle) return;
             GUI.Label(new Rect(Screen.width * 0.5f - 150f, 10f, 300f, 24f), $"{_clip.name}  {_clock:0.0} / {_clip.Length:0.0}");
         }
     }
