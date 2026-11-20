@@ -113,7 +113,6 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "titleText", window.Find("Title").GetComponent<Text>());
             Ref(so, "balanceText", balance.Find("Value").GetComponent<Text>());
             Ref(so, "balanceBox", balance);
-            Ref(so, "offerIcon", (RectTransform)offer.Find("Icon"));
             Ref(so, "amountText", offer.Find("Amount").GetComponent<Text>());
             Ref(so, "captionText", offer.Find("Caption").GetComponent<Text>());
             Ref(so, "counterText", offer.Find("Counter").GetComponent<Text>());

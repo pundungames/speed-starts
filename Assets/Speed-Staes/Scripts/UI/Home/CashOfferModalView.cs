@@ -1,6 +1,8 @@
+using System;
 using System.Globalization;
 using DG.Tweening;
 using SpeedStars.Core.Audio;
+using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Rewards;
@@ -32,9 +34,6 @@ namespace SpeedStars.UI.Home
 
         [Tooltip("Window/Balance: the Cash row; the flying diamond lands here and it punches.")]
         [SerializeField] private RectTransform balanceBox;
-
-        [Tooltip("Window/Offer/Icon: where the diamond takes off.")]
-        [SerializeField] private RectTransform offerIcon;
 
         [Tooltip("Window/Offer/Amount: '+200'.")]
         [SerializeField] private TMP_Text amountText;
@@ -86,7 +85,8 @@ namespace SpeedStars.UI.Home
         private IHaptics _haptics;
         private Tween _shake;
         private Tween _spin;
-        private Tween _count;
+        private ResourceBarView _resourceBar;
+        private Action<int> _revealCash;
         private Tween _punch;
         private Vector3 _balanceBaseScale = Vector3.one;
         private int _pendingPayment; // Cash already paid but not yet shown in the balance (the diamond is still flying)
@@ -157,17 +157,17 @@ namespace SpeedStars.UI.Home
 
             amountText.text = model.AmountText;
             counterText.text = model.CounterText;
-            watchAdButton.interactable = model.WatchInteractable;
+            watchAdButton.interactable = model.WatchInteractable && _pendingPayment == 0;
             watchAdLabel.gameObject.SetActive(!model.ShowSpinner);
             SetSpinner(model.ShowSpinner);
             noteText.gameObject.SetActive(model.NoteText.Length > 0);
             noteText.text = model.NoteText;
-            if (_count == null) balanceText.text = (_frozenBalance ?? _wallet.Cash - _pendingPayment).ToString(CultureInfo.InvariantCulture);
+            balanceText.text = (_frozenBalance ?? _wallet.Cash - _pendingPayment).ToString(CultureInfo.InvariantCulture);
         }
 
         private void OnWatchAd()
         {
-            if (_cash == null || !_cash.IsAvailable) return; // closed offer, or an ad already runs (double tap)
+            if (_cash == null || !_cash.IsAvailable || _pendingPayment > 0) return; // closed offer, or an ad already runs (double tap)
 
             int before = _wallet.Cash;
             _frozenBalance = before;
@@ -195,40 +195,37 @@ namespace SpeedStars.UI.Home
             _sfx?.Play(SfxId.Claim);
             _haptics?.Tap();
             int paid = Mathf.Max(0, _wallet.Cash - cashBefore);
-            _pendingPayment = paid; // the balance keeps its old value until the diamond lands
+            if (!flight || paid <= 0)
+            {
+                Refresh();
+                PunchBalance();
+                return;
+            }
+
+            if (!_resourceBar) _resourceBar = FindObjectOfType<ResourceBarView>();
+            if (_resourceBar) _revealCash = _resourceBar.HoldReward(SevenDayRewardKind.Cash, paid);
+            _pendingPayment = paid;
             Refresh();
-            if (flight == null || _motion == null)
+            flight.PlayBurst(balanceBox, paid, (arrived, count) =>
             {
-                OnDiamondLanded(paid);
-                return;
-            }
-            flight.Play(_motion, offerIcon, balanceBox, () => OnDiamondLanded(paid));
-        }
-
-        /// <summary>The diamond arrived: the balance counts up to the wallet value and punches.</summary>
-        private void OnDiamondLanded(int paid)
-        {
-            _pendingPayment = 0;
-            int target = _wallet.Cash;
-            PunchBalance();
-            if (_motion == null || paid <= 0)
-            {
-                balanceText.text = target.ToString(CultureInfo.InvariantCulture);
-                return;
-            }
-
-            int shown = target - paid;
-            Tween count = DOTween.To(() => shown, v =>
-            {
-                shown = v;
-                balanceText.text = v.ToString(CultureInfo.InvariantCulture);
-            }, target, _motion.CounterDuration).SetEase(_motion.CounterEase).SetUpdate(true).SetLink(gameObject);
-            count.OnComplete(() =>
-            {
-                _count = null;
+                int portion = (int)((long)paid * arrived / count - (long)paid * (arrived - 1) / count);
+                _pendingPayment -= portion;
+                _revealCash?.Invoke(portion);
+                if (arrived == count)
+                {
+                    ReleaseCashDisplay();
+                    if (_resourceBar) _resourceBar.SlideCounter(SevenDayRewardKind.Cash);
+                    PunchBalance();
+                }
                 Refresh();
             });
-            _count = count;
+        }
+
+        private void ReleaseCashDisplay()
+        {
+            _pendingPayment = 0;
+            _revealCash?.Invoke(int.MaxValue);
+            _revealCash = null;
         }
 
         private void PunchBalance()
@@ -276,13 +273,7 @@ namespace SpeedStars.UI.Home
             KillSpin();
             KillPunch();
             if (flight != null) flight.Cancel();
-            if (_count != null)
-            {
-                Tween running = _count;
-                _count = null;
-                running.Kill();
-            }
-            _pendingPayment = 0;
+            ReleaseCashDisplay();
             _frozenBalance = null;
         }
 

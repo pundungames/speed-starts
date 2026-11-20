@@ -10,11 +10,11 @@ namespace SpeedStars.UI.Rewards
 {
     /// <summary>
     /// Daily gift ticket burst (prefab RewardFlight, a scene object on the overlay canvas, starts
-    /// inactive). <see cref="Play"/> waits for the popup to close, shows three red tickets in the middle of the screen, bends them
+    /// inactive). <see cref="Play"/> waits for the popup to close, shows the awarded tickets in the middle of the screen, bends them
     /// along a slight arc to the Entry Ticket box of the resource bar and punches that box on arrival. While it runs a
     /// transparent blocker keeps the menu from taking taps, so the menu is free again when the ticket has landed. The flight
     /// only draws: the ticket was added and saved before it started, so a missing target or a killed tween never loses it.
-    /// The existing ticket art is reused for all three positions.
+    /// The existing ticket art is reused for each icon.
     /// </summary>
     public sealed class TicketFlightView : MonoBehaviour
     {
@@ -72,38 +72,23 @@ namespace SpeedStars.UI.Rewards
             RectTransform target = resourceBar.EntryTicketBox;
             Vector3 start = area.TransformPoint(area.rect.center);
             Vector3 end = target.TransformPoint(target.rect.center);
-            Vector3 arc = Vector3.up * (config.ArcHeight * area.lossyScale.y);
-            Vector3 spread = area.TransformVector(Vector3.right * (icon.rect.width * 0.85f));
-            float progress = 0f;
-
-            Sequence flight = DOTween.Sequence();
-            flight.AppendInterval(Mathf.Max(0f, delay));
-            flight.AppendCallback(() =>
+            Sequence flight = DOTween.Sequence().SetUpdate(true).SetLink(gameObject);
+            int icons = Mathf.Clamp(granted, 1, _icons.Length);
+            for (int i = 0; i < icons; i++)
             {
-                foreach (RectTransform ticket in _icons) ticket.gameObject.SetActive(true);
-                Place(start, end, arc, spread, 0f);
-            });
-            flight.AppendInterval(0.12f);
-            flight.Append(DOTween.To(() => progress, p =>
-                {
-                    progress = p;
-                    Place(start, end, arc, spread, p);
-                }, 1f, config.FlightDuration * 1.55f).SetEase(config.FlightEase));
-            flight.SetUpdate(true);
-            flight.SetLink(gameObject);
+                RectTransform ticket = _icons[i];
+                ticket.localScale = _iconScale;
+                int portion = (int)((long)granted * (i + 1) / icons - (long)granted * i / icons);
+                CashFlightIcon.AddBurstIcon(flight, ticket, area, start, icon.rect.size,
+                    () => target ? target.TransformPoint(target.rect.center) : end,
+                    i, icons, Mathf.Max(0f, delay), () =>
+                    {
+                        _reveal?.Invoke(portion);
+                        resourceBar.SlideCounter(SevenDayRewardKind.EntryTicket);
+                    });
+            }
             flight.OnComplete(() => Land(target));
             _flight = flight;
-        }
-
-        private void Place(Vector3 start, Vector3 end, Vector3 arc, Vector3 spread, float p)
-        {
-            Vector3 center = Vector3.Lerp(start, end, p) + arc * Mathf.Sin(p * Mathf.PI);
-            Vector3 scale = _iconScale * Mathf.Lerp(config.StartScale * 1.18f, config.EndScale, p);
-            for (int i = 0; i < _icons.Length; i++)
-            {
-                _icons[i].position = center + spread * ((i - 1) * (1f - p));
-                _icons[i].localScale = scale;
-            }
         }
 
         /// <summary>Arrival: the ticket disappears, the box punches once, the widget (and its blocker) switches off.</summary>
@@ -111,7 +96,6 @@ namespace SpeedStars.UI.Rewards
         {
             _flight = null;
             RevealReward();
-            resourceBar.SlideCounter(SevenDayRewardKind.EntryTicket);
             PunchTarget(target);
             gameObject.SetActive(false);
         }

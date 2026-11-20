@@ -5,6 +5,7 @@ using SpeedStars.Core.Services;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
+using SpeedStars.UI.Rewards;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -248,51 +249,33 @@ namespace SpeedStars.UI.Home
             overlay.sortingLayerID = root.sortingLayerID;
             overlay.sortingOrder = 30000;
 
-            Vector2 center = area.rect.center;
+            Vector3 center = area.TransformPoint(area.rect.center);
             Vector2 artCenter = RewardArtCenter(kind);
             Action<int> reveal = HoldReward(kind, amount);
             var flight = DOTween.Sequence().SetUpdate(true).SetTarget(this).SetLink(gameObject);
-            const int iconsPerWave = 3;
-            int icons = Mathf.Clamp(amount, iconsPerWave, 12);
+            int icons = Mathf.Min(amount, 9);
             float size = Mathf.Clamp(source.rect.height * 0.65f, area.rect.height * 0.17f, area.rect.height * 0.21f);
             float spriteAspect = target.sprite.rect.width / target.sprite.rect.height;
             Vector2 iconSize = new Vector2(size * Mathf.Max(1f, spriteAspect), size);
             for (int i = 0; i < icons; i++)
             {
                 int portion = (int)((long)amount * (i + 1) / icons - (long)amount * i / icons);
-                int lane = i % iconsPerWave;
-                int groupSize = Mathf.Min(iconsPerWave, icons - i + lane);
-                Vector2 start = center + Vector2.right * ((lane - (groupSize - 1) * 0.5f) * size * 0.95f);
-                float launch = (i / iconsPerWave) * 0.34f + lane * 0.035f;
-                const float centerHold = 0.12f;
-                const float travelSeconds = 0.64f;
                 var icon = new GameObject("Reward Icon", typeof(RectTransform), typeof(Image));
                 var rect = (RectTransform)icon.transform;
                 rect.SetParent(area, false);
                 rect.pivot = artCenter;
                 rect.sizeDelta = iconSize;
-                rect.anchoredPosition = start;
                 var image = icon.GetComponent<Image>();
                 image.sprite = target.sprite;
                 image.preserveAspect = true;
                 image.raycastTarget = false;
-                icon.SetActive(false);
-
-                flight.InsertCallback(launch, () => icon.SetActive(true));
-                flight.Insert(launch + centerHold, DOVirtual.Float(0f, 1f, travelSeconds, progress =>
-                {
-                    if (!target) return;
-                    Vector2 end = InFlightLayer(target, artCenter, area, root);
-                    float arc = Mathf.Min(Vector2.Distance(start, end) * 0.22f, 125f);
-                    rect.anchoredPosition = Vector2.Lerp(start, end, progress) + Vector2.up * (arc * Mathf.Sin(Mathf.PI * progress));
-                    rect.localScale = Vector3.one * Mathf.Lerp(1f, 0.42f, progress);
-                }).SetEase(Ease.InOutSine));
-                flight.InsertCallback(launch + centerHold + travelSeconds, () =>
-                {
-                    icon.SetActive(false);
-                    reveal(portion);
-                    if (portion > 0) SlideCounter(label);
-                });
+                CashFlightIcon.AddBurstIcon(flight, rect, area, center, new Vector2(size, size * 0.76f),
+                    () => target ? area.TransformPoint(InFlightLayer(target, artCenter, area, root)) : center,
+                    i, icons, 0f, () =>
+                    {
+                        reveal(portion);
+                        SlideCounter(label);
+                    });
             }
             flight.OnKill(() =>
             {
