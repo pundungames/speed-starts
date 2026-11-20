@@ -1,7 +1,7 @@
 # Speed Stars (speed-starts) — Proje Devir Notu
 
 > Bu dosya Claude Code tarafından her oturumda otomatik okunur. Projeye yeni bir oturumla devam ederken
-> bağlam buradan gelir. Son güncelleme: 2026-10-27.
+> bağlam buradan gelir. Son güncelleme: 2026-11-20.
 > **Ayrıntılı rehber:** `Assets/Speed-Staes/Scripts/Physical/PlayerController.md` — oturumun başında oku
 > (bölüm 8: Inspector'daki her alan tek tek).
 
@@ -105,6 +105,37 @@ Rig (Control Rig): `Hip target` (MultiParent → `B-hips`), `Spine Root/Tip Targ
   sabit `armBack`/`elbowBack`.
 - **Baş hızlı koşuda gövdeyle aynı çizgide** (Run pozu `headDown` = 1). Gövde sadece X ekseninde döner.
 
+## Sistem: tema havası (2026-11-20)
+
+Geri bildirim: "beş tema atmosferik olarak birbirine çok benziyor". Sebebi menü kamerasındaki **sabit mavi gökyüzü**
+(`ThemePreviewSky.mat`), kapalı fog ve tek güneşti; tek fark uzak nesnelerdeki haze tonuydu. Mısır'ın `EgyptDesertAtmosphere`
+scripti vardı ama sadece play'de ve sadece menüde çalışıyordu, yarışa hiç ulaşmıyordu.
+
+Artık **havası olan her tema aynı kodu çalıştırır, farkı veri yapar** (kullanıcının "özel durum olmasın" kuralı):
+
+| Parça | Görev |
+|---|---|
+| `Scripts/Themes/ThemeWeather.cs` | Profil varlığı: gök materyali + ufuk dolgusu, güneş rengi/şiddet çarpanı, üç ambient rengi, dünya geneli hava (ton/karışım/güç artışı/mesafe çarpanları), `WeatherLayer[]` (ton, boyut, ömür, hız, yön, yerçekimi, oran, tavan, kutu, kamera takip ofseti, streak uzunluğu). |
+| `Scripts/Themes/ThemeWeatherView.cs` | Tek sürücü. Dünyanın kökünde durur; menüde `SetActive`, yarışta dünya değişimi onu açıp kapatır. Gök arkalığı quad'ı + partikül katmanlarını kurar, kamerayla taşır, çıkışta kamera/ambient/güneşi **aynen geri verir** (statik `_holder`: temalar hangi sırada açılırsa açılsın birbirinin değerini silmez). **Sadece play modunda** çalışır — ambient/gök sahne ayarı, editörde yazmak Home.unity'yi kirletirdi. |
+| `ThemeAtmosphere.AirBlend` | Üreticinin nesne başına yazdığı haze'i tema geneli ton/güç/mesafeyle kaydırır; sıfır alan "dokunma" demek, yazılı derinlik kompozisyonu korunur. Sahipli (`SetAir`/`ClearAir`). |
+| `LoopThemeDefinition.weather` | Tek doğruluk kaynağı: menü prefabı da yarış dünyası da profili buradan alır (view'ın `weather` alanı boşsa tanıma bakar). |
+| `Shaders/ThemeSky.shader` | Genel gök: ufuk/zenit + kırılma, isteğe bağlı güneş diski ve parıltı (disk boyutu 0 = kapalı gök). |
+| `Shaders/WeatherStreak.shader` | Uzayan damla (yağmur): iki ucu sönen ince çizgi, `ParticleSystemRenderMode.Stretch`. |
+| `Editor/ThemeWeatherSetup.cs` | `Speed Stars → Themes → Set Up <tema> Weather`: materyalleri ve profili yoksa üretir, Definition'ı bağlar, harita prefabına view'ı takar. Var olan `Weather.asset` kullanıcınındır, ezilmez. |
+
+Kurulu profiller (ölçümler play'de, Home sahnesi, menü kamerası):
+
+- **Mısır** (`Prefabs/Themes/Egypt/Weather.asset`, `LoopWay2`): sıcak turuncu gök + güneş diski, güneş `1,.82,.56` ×0.96,
+  trilight sıcak kum ambient, hava tonu %55 / +0.12 / mesafe ×0.8–0.85. İki toz katmanı: asılı altın zerreler (alfa .16,
+  boyut .12–.45, 90/sn, tavan 600, kutu 26×5×40, ofset −7/2/+5) ve yerden savrulan kum (alfa .18, .10–.35, 120/sn,
+  tavan 500, 22×1.6×34, −6/0.7/+3). **Ders:** ilk değerler kameradan 22 m uzakta ve alfa .10 olduğu için hiç
+  görünmüyordu; toz kameranın önünde, ince taneli ve çok sayıda olmalı — iri tane "leke" gibi duruyor.
+- **Pirate Sea** (`Prefabs/Themes/PirateSea/Weather.asset`, `LoopWay4`): güneş diski yok, sadece bulut ardı aydınlık;
+  gök `.47,.53,.58` → `.16,.21,.29`, güneş `.62,.70,.80` ×0.55, soğuk ambient, hava tonu %70 / +0.20 / mesafe ×0.6–0.65.
+  Yağmur (streak, hız 18–26, uzunluk 5.5, 750/sn, tavan 1600, kutu 30×10×44) + deniz sisi (40/sn). 122 FPS.
+
+Yarış tarafı: `RaceThemeView` açtığı dünyaya view'ı iliştirir, profil `Definition`'dan gelir — yani hava artık yarışta da var.
+
 ## Son ölçümler (2026-10-27, play)
 
 | Durum | Sonuç |
@@ -124,9 +155,19 @@ Rig (Control Rig): `Hip target` (MultiParent → `B-hips`), `Spine Root/Tip Targ
 - Bekleyen fikirler: Mid fazında ayağın da ~−50'ye açılması (kullanıcı önce kendisi bakacak); hızlı bas-çek
   tepesinde boynun çok kıvrık görünmesi (`waistTopShare` düşürülebilir).
 - Play'e girince ilk saniyelerde kendiliğinden bir basış geliyor (kaynağı bakılmadı).
+- **Havası olmayan üç tema:** Standart Şehir, Roma ve Gökyüzü Adaları hâlâ sabit mavi gökyüzünü paylaşıyor; her biri
+  için bir `Weather.asset` + kurulum aracına bir satır yeterli (Roma: alçak altın saat; Gökyüzü: soluk yüksek irtifa).
+- **Fırtınaya uymayan iki şey (kullanıcı şimdilik "böyle kalsın" dedi):** denizdeki beyaz bulutlar ve parlak mavi su.
+  Hava perspektifi yalnızca `Desert Pixel Paint` ve `Pastel Building` shader'larına uygulanıyor; su Pirate Sea'nin kendi
+  `Painted Ocean.mat`'ı (tek materyalle koyulur), bulutlar `Materials/Clouds/` altında ortak (temaya özel materyal ya da
+  profile "dünya tonu" alanı gerekir).
+- `ThemeRunPlayground.unity` sahnesinde eski `EgyptDesertAtmosphere` ayrı bir sahne nesnesinde duruyor (o yüzden script
+  silinmedi); o sahnede yeni view ile üst üste biner. Serhat'ın sahnesi, dokunulmadı.
 
 ## Durum
 
+- Tema havası `main`'de, **push edilmedi**: `e73876f8` (sistem + Mısır), `f1adbcee` (Mısır toz ayarı),
+  `f34c6154` (Pirate Sea fırtınası) — main origin'in 3 commit önünde.
 - Sistem `main`'de; kullanıcı 2026-10-27'ye kadarki işi commit etti. Tooltip ekleri ve bu md güncellemesi
   **commit edilmedi** (kullanıcı kendisi commit eder). Unity ana klasörü
   (`speed-starts`) açıyor. Worktree'den çalışan oturumda ana klasörde `Edit` kancayla engelleniyor; küçük Python
