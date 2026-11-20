@@ -124,6 +124,9 @@ namespace SpeedStars.Bridge
 
             ThemedLoopWay world = themedWorlds[themedIndex];
             if (world == null) return;
+            // The theme's air rides on its own world: the view reads the weather of the world's definition and turns
+            // itself on and off with the world, exactly as the main menu's showcase does.
+            if (world.GetComponent<ThemeWeatherView>() == null) world.gameObject.AddComponent<ThemeWeatherView>();
             world.runner = runner;
             float themedOffset = Mathf.Floor((z - ThemedLoopWay.StartZ) / ThemedLoopWay.SectionLength) * ThemedLoopWay.SectionLength;
             world.transform.position = new Vector3(shiftX, 0f, themedOffset);

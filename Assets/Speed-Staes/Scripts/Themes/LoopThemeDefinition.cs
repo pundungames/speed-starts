@@ -14,6 +14,8 @@ namespace SpeedStars.Themes
         public Material[] mountainMaterials;
         public bool waterAcrossRoad,noGround;
         public float backgroundHeight;
+        [Tooltip("The air of this theme: sky, sun, ambient, haze and the airborne layers (ThemeWeatherView reads it). Empty = the scene keeps its own look.")]
+        public ThemeWeather weather;
     }
 }
 
