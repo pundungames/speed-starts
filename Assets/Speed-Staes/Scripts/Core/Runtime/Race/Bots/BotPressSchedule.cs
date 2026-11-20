@@ -115,16 +115,22 @@ namespace SpeedStars.Core.Race.Bots
             double reaction = Math.Max(plan.ReactionSeconds, 0.0);
             double lastRelease = 0.0;
             double nominal = reaction, drift = 0.0, driftTarget = 0.0, rushRatio = 1.0, recoverRatio = 1.0;
-            int leg = 1, rushLeft = 0, recoverLeft = 0, phraseLeft = 0, stumbleLeft = 0;
+            int leg = 1, rushLeft = 0, recoverLeft = 0, phraseLeft = 0, stumbleLeft = 0, fastLeft = 0;
             bool pauseNext = false;
 
             for (int k = 0; ; k++)
             {
                 bool stumbling = false;
+                if (k >= CleanStartPresses && fastLeft == 0 && rushLeft == 0 && recoverLeft == 0 &&
+                    stumbleLeft == 0 && !pauseNext && plan.FastSectionChance > 0f &&
+                    plan.FastSectionPresses > 0 && plan.FastPeriodSeconds > 0f && random.NextDouble() < plan.FastSectionChance)
+                    fastLeft = plan.FastSectionPresses;
+                bool fast = fastLeft > 0;
                 if (k > 0)
                 {
                     double ratio = 1.0 + drift;
-                    if (rushLeft > 0)
+                    if (fast) { ratio = Math.Min(1.0, plan.FastPeriodSeconds / period); fastLeft--; }
+                    else if (rushLeft > 0)
                     {
                         ratio = rushRatio;
                         if (--rushLeft == 0) StartRecovery(q, random, ref recoverLeft, ref recoverRatio);
@@ -154,12 +160,12 @@ namespace SpeedStars.Core.Race.Bots
                     drift += (driftTarget - drift) * PhraseGlide;
                 }
 
-                double press = nominal + Offset(plan, period, random);
+                double press = nominal + (fast ? 0.0 : Offset(plan, period, random));
                 if (press < reaction) press = reaction;                          // never before the reaction
                 if (k > 0 && press < lastRelease + MinGapSeconds) press = lastRelease + MinGapSeconds;
                 if (press >= horizonSeconds) break;
 
-                bool settled = k >= CleanStartPresses && rushLeft == 0 && recoverLeft == 0 && stumbleLeft == 0 && !pauseNext && !stumbling;
+                bool settled = !fast && k >= CleanStartPresses && rushLeft == 0 && recoverLeft == 0 && stumbleLeft == 0 && !pauseNext && !stumbling;
                 bool sameFoot = stumbling ? random.NextDouble() < 0.5
                     : settled && wrongFootChance > 0.0 && random.NextDouble() < wrongFootChance;
                 if (!sameFoot) leg = 1 - leg;
@@ -173,7 +179,8 @@ namespace SpeedStars.Core.Race.Bots
                     stumbleLeft = random.Next(StumbleMin, StumbleMax + 1);
                 }
 
-                double keyHold = rushLeft > 0 ? Math.Min(hold, period * rushRatio * 0.5)
+                double keyHold = fast ? Math.Min(hold, plan.FastPeriodSeconds * 0.55)
+                    : rushLeft > 0 ? Math.Min(hold, period * rushRatio * 0.5)
                     : stumbling ? hold * (0.6 + 1.2 * random.NextDouble())
                     : hold;
                 double release = press + keyHold;

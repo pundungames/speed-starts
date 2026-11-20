@@ -23,6 +23,7 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private long timedAccessExpiresUtcTicks;
         [SerializeField] private long entryRegenDueUtcTicks;
         [SerializeField] private string dailyGiftDayKey = string.Empty;
+        [SerializeField, Min(0)] private int totalRaceWins;
         [SerializeField] private long lastDailyRaceEntryUtcTicks;
         [SerializeField] private SevenDayCheckInState sevenDay = new SevenDayCheckInState();
         [SerializeField] private List<string> ownedCosmeticIds = new List<string>();
@@ -137,6 +138,12 @@ namespace SpeedStars.Meta.Persistence
         public string DailyGiftDayKey { get => dailyGiftDayKey; set => dailyGiftDayKey = value ?? string.Empty; }
 
         public SevenDayCheckInState SevenDay => sevenDay;
+
+        public int TotalRaceWins
+        {
+            get => Mathf.Max(0, totalRaceWins);
+            set => totalRaceWins = Mathf.Max(0, value);
+        }
 
         /// <summary>UTC time of the last daily race start. Zero means the player has not entered.</summary>
         public long LastDailyRaceEntryUtcTicks

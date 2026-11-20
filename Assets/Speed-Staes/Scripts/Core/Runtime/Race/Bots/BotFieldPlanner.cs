@@ -23,7 +23,7 @@ namespace SpeedStars.Core.Race.Bots
         /// <param name="skillRange">The player's own skill range (settings window), 0..1; null = the config's.</param>
         /// <param name="count">How many to plan; null = the config's bot count (a relay plans one per team).</param>
         public static IReadOnlyList<BotPlan> Plan(BotRaceConfig config, float? playerReferenceSeconds, Random random, BotEventProfile profile = null,
-            float? difficulty = null, float? skillRange = null, int? count = null)
+            float? difficulty = null, float? skillRange = null, int? count = null, int? totalWins = null)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (random == null) throw new ArgumentNullException(nameof(random));
@@ -37,7 +37,15 @@ namespace SpeedStars.Core.Race.Bots
                 ? playerReferenceSeconds.Value
                 : BotEventSetup.Fallback(config, profile);
             IReadOnlyList<BotCalibrationPoint> table = BotEventSetup.Table(config, profile);
-            float center = reference * Lerp(config.EasyMultiplier, config.HardMultiplier, Clamp01(difficulty ?? config.Difficulty));
+            int tier = !totalWins.HasValue ? -1 : totalWins.Value <= 5 ? 0 : totalWins.Value <= 30 ? 1 : 2;
+            float chosenDifficulty = difficulty ?? config.Difficulty;
+            float effectiveDifficulty = tier < 0 ? chosenDifficulty :
+                Lerp(tier == 0 ? 0.24f : tier == 1 ? 0.68f : 1f, Clamp01(chosenDifficulty), 0.35f);
+            float rhythmErrors = tier < 0 ? 1f : tier == 0 ? 1.6f : tier == 1 ? 0.8f : 0.52f;
+            float earlyStartChance = tier == 0 ? 0.28f : tier == 1 ? 0.055f : 0.02f;
+            float fastChance = tier < 0 ? 0f : tier == 0 ? 0.008f : tier == 1 ? 0.045f : 0.075f;
+            int fastPresses = tier == 0 ? 3 : tier == 1 ? 6 : 9;
+            float center = reference * Lerp(config.EasyMultiplier, config.HardMultiplier, effectiveDifficulty);
             float spread = Lerp(config.NarrowSpread, config.WideSpread, Clamp01(skillRange ?? config.SkillRange));
             center *= RaceMultiplier(config, (float)random.NextDouble());
 
@@ -67,15 +75,18 @@ namespace SpeedStars.Core.Race.Bots
                 // that the factor turns into the target.
                 float plain = Clamp01(BotSkillCurve.SkillForSeconds(table, targets[i]));
                 float skill = Clamp01(BotSkillCurve.SkillForSeconds(table, targets[i] / config.StyleTimeFactor(style, plain)));
+                bool anticipates = tier >= 0 && random.NextDouble() < earlyStartChance;
                 plans.Add(new BotPlan(
                     who.name, who.countryCode, targets[i], skill,
-                    reactionSeconds: Lerp(config.ReactionWorstSeconds, config.ReactionBestSeconds, skill),
+                    reactionSeconds: Lerp(config.ReactionWorstSeconds, config.ReactionBestSeconds, skill) + (anticipates ? 0.32f : 0f),
                     pressPeriodSeconds: Lerp(config.PeriodWorstSeconds, config.PeriodBestSeconds, skill),
                     holdSeconds: Lerp(config.HoldWorstSeconds, config.HoldBestSeconds, skill),
-                    jitterSeconds: Lerp(config.JitterWorstMs, config.JitterBestMs, skill) * 0.001f,
-                    mistakeChance: Lerp(config.MistakeWorstChance, config.MistakeBestChance, skill),
+                    jitterSeconds: Lerp(config.JitterWorstMs, config.JitterBestMs, skill) * 0.001f * rhythmErrors,
+                    mistakeChance: Clamp01(Lerp(config.MistakeWorstChance, config.MistakeBestChance, skill) * rhythmErrors),
                     mistakeShiftRatio: config.MistakeShiftRatio,
-                    quirks: config.QuirksFor(skill, style)));
+                    quirks: config.QuirksFor(skill, style),
+                    fastSectionChance: fastChance, fastSectionPresses: fastPresses,
+                    fastPeriodSeconds: config.PeriodBestSeconds, anticipatesStart: anticipates));
             }
             return plans;
         }

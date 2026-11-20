@@ -29,10 +29,17 @@ namespace SpeedStars.Core.Race.Bots
         public readonly float MistakeShiftRatio;
         /// <summary>What makes the bot look like a person pressing keys: wrong foot, rushes, tempo drift. Never null.</summary>
         public readonly BotQuirks Quirks;
+        /// <summary>Chance per eligible press to find a sustained, accurate fast rhythm.</summary>
+        public readonly float FastSectionChance;
+        public readonly int FastSectionPresses;
+        public readonly float FastPeriodSeconds;
+        /// <summary>The bot visibly flinches in SET and reacts more slowly after GO.</summary>
+        public readonly bool AnticipatesStart;
 
         public BotPlan(string name, string countryCode, float targetSeconds, float skill, float reactionSeconds,
             float pressPeriodSeconds, float holdSeconds, float jitterSeconds, float mistakeChance, float mistakeShiftRatio,
-            BotQuirks quirks = null)
+            BotQuirks quirks = null, float fastSectionChance = 0f, int fastSectionPresses = 0,
+            float fastPeriodSeconds = 0f, bool anticipatesStart = false)
         {
             Name = name ?? string.Empty;
             CountryCode = countryCode ?? string.Empty;
@@ -45,6 +52,10 @@ namespace SpeedStars.Core.Race.Bots
             MistakeChance = mistakeChance;
             MistakeShiftRatio = mistakeShiftRatio;
             Quirks = quirks ?? BotQuirks.None;
+            FastSectionChance = fastSectionChance;
+            FastSectionPresses = fastSectionPresses;
+            FastPeriodSeconds = fastPeriodSeconds;
+            AnticipatesStart = anticipatesStart;
         }
     }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using SpeedStars.Core.Race;
 using SpeedStars.Core.Services;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 
@@ -37,6 +38,7 @@ namespace SpeedStars.UI.Race
         private readonly Func<RaceEventId, bool> _isPractice; // optional: without it every event ends with Results
         private readonly Func<RaceEventId> _findPracticeEvent; // optional: without it the Results Practice button stays off
         private readonly IRaceFinishSequence _finishSequence; // optional: without it the Results open on the line
+        private readonly ProgressRepository _progress;
         private readonly IUiView _finishCurtain = new EmptyScreen();
         private readonly List<DayBestRecord> _dayScratch = new List<DayBestRecord>();
 
@@ -59,9 +61,10 @@ namespace SpeedStars.UI.Race
             IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null,
             IDayBestSource dayBests = null, IClock clock = null, IRaceTraces traces = null,
             IRaceCashRewardResolver cashRewards = null, IRaceOfTheDay raceOfTheDay = null, Func<RaceEventId, bool> isPractice = null,
-            Func<RaceEventId> findPracticeEvent = null, IRaceFinishSequence finishSequence = null)
+            Func<RaceEventId> findPracticeEvent = null, IRaceFinishSequence finishSequence = null, ProgressRepository progress = null)
         {
             _finishSequence = finishSequence;
+            _progress = progress;
             _findPracticeEvent = findPracticeEvent;
             _isPractice = isPractice;
             _daily = raceOfTheDay;
@@ -199,6 +202,7 @@ namespace SpeedStars.UI.Race
             else title = outcome.EventId.ToString();
 
             _resultsOpen = true;
+            RecordWin(outcome);
             if (string.IsNullOrEmpty(_payoutId)) _payoutId = Guid.NewGuid().ToString("N");
             int gems = _rewards.Resolve(outcome, _payoutId); // once per race (the guard above); the resolver pays once per id too
             RaceCashReward cash = _cashRewards != null ? _cashRewards.Resolve(outcome, _payoutId) : RaceCashReward.None; // ticketed events only; once per payout id
@@ -339,6 +343,17 @@ namespace SpeedStars.UI.Race
                 return true;
             }
             return false;
+        }
+
+        private void RecordWin(RaceOutcome outcome)
+        {
+            PlayerProgress player = _progress?.Current;
+            if (player == null || outcome.Rank != 1 || outcome.RunnerCount <= 1 ||
+                !(outcome.TimeSeconds > 0d) || double.IsInfinity(outcome.TimeSeconds) ||
+                player.TotalRaceWins == int.MaxValue) return;
+
+            player.TotalRaceWins++;
+            _progress.Save();
         }
 
         private void OnRaceAgain()

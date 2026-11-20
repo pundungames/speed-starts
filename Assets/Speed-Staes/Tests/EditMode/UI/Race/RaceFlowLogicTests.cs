@@ -254,6 +254,33 @@ namespace SpeedStars.Tests.UI.Race
             Assert.AreEqual(ResultsTexts.NoValue, _results.Presented.PersonalBestValue);
         }
 
+        [TestCase(1, 4, 1)]
+        [TestCase(2, 4, 0)]
+        [TestCase(1, 1, 0)]
+        public void Finished_CountsOnlyCompetitiveWinsOnceAndSaves(int rank, int runners, int expected)
+        {
+            var kit = new SpeedStars.Tests.Meta.Tickets.TicketTestKit(0);
+            try
+            {
+                _gate.Pending = Dash;
+                _gate.HasPendingEntry = true;
+                var flow = new RaceFlowLogic(_session, _gate, _selection, _lookup, _navigator, _sceneFlow,
+                    _results, _rewards, _prompt, progress: kit.Repository);
+                flow.Start();
+                var outcome = new RaceOutcome(Dash, 10d, 100f, rank, runners);
+                _session.Finish(outcome);
+                _session.Finish(outcome);
+
+                var reloaded = new SpeedStars.Meta.Persistence.ProgressRepository(kit.Store,
+                    () => new SpeedStars.Meta.Persistence.StartingBalances(0, 0, 0, 0));
+                Assert.AreEqual(expected, reloaded.Load().TotalRaceWins);
+            }
+            finally
+            {
+                kit.Dispose();
+            }
+        }
+
         [Test]
         public void Finished_Twice_ShowsResultsOnce()
         {
@@ -571,18 +598,18 @@ namespace SpeedStars.Tests.UI.Race
         }
 
         [Test]
-        public void Daily_RaceAgain_TakesTheDaysDistanceAgain()
+        public void Daily_RestartAndRaceAgain_KeepTheSingleAttempt()
         {
-            var daily = new FakeDaily { Distance = 150f };
+            var daily = new FakeDaily { Distance = 100f };
             var flow = MakeDaily(daily);
             flow.Start();
-            _session.Finish(Outcome(Daily, 9.589));
-
-            daily.Distance = 300f; // the day rolled over meanwhile
             flow.Restart();
+            Assert.AreEqual(1, _session.Requests.Count, "restart cannot reset a daily attempt");
 
-            Assert.AreEqual(2, _session.Requests.Count);
-            Assert.AreEqual(300f, _session.Requests[1].DistanceMeters);
+            _session.Finish(Outcome(Daily, 9.589));
+            flow.Restart();
+            Assert.AreEqual(1, _session.Requests.Count, "Race Again cannot open a second attempt");
+            Assert.IsTrue(flow.ResultsOpen);
         }
 
         [Test]

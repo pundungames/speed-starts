@@ -566,7 +566,8 @@ namespace SpeedStars.Bridge
         BotPressSchedule Schedule(BotPlan plan, float reactionSeconds, float periodFactor = 1f)
         {
             var legPlan = new BotPlan(plan.Name, plan.CountryCode, plan.TargetSeconds, plan.Skill, reactionSeconds, plan.PressPeriodSeconds * periodFactor,
-                plan.HoldSeconds, plan.JitterSeconds, plan.MistakeChance, plan.MistakeShiftRatio, plan.Quirks);
+                plan.HoldSeconds, plan.JitterSeconds, plan.MistakeChance, plan.MistakeShiftRatio, plan.Quirks,
+                plan.FastSectionChance, plan.FastSectionPresses, plan.FastPeriodSeconds * periodFactor, plan.AnticipatesStart);
             return new BotPressSchedule(legPlan, _random, plan.TargetSeconds * scheduleHorizonFactor + scheduleHorizonPadding);
         }
 

@@ -3,6 +3,7 @@ using SpeedStars.Core.Race;
 using SpeedStars.Core.Services;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using Zenject;
@@ -22,9 +23,9 @@ namespace SpeedStars.UI.Race
             [InjectOptional] IPersonalBests records, [InjectOptional] IWallet wallet, [InjectOptional] IPlayerSettings settings,
             [InjectOptional] IDayBestSource dayBests, [InjectOptional] IClock clock, [InjectOptional] IRaceTraces traces,
             [InjectOptional] IRaceCashRewardResolver cashRewards, [InjectOptional] IRaceOfTheDay raceOfTheDay,
-            [InjectOptional] RaceEventCatalog catalog, [InjectOptional] IRaceFinishSequence finishSequence)
+            [InjectOptional] RaceEventCatalog catalog, [InjectOptional] IRaceFinishSequence finishSequence, [InjectOptional] ProgressRepository progress)
         {
-            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings, dayBests, clock, traces, cashRewards, raceOfTheDay, IsPracticeIn(catalog), FindPracticeIn(catalog), finishSequence);
+            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings, dayBests, clock, traces, cashRewards, raceOfTheDay, IsPracticeIn(catalog), FindPracticeIn(catalog), finishSequence, progress);
         }
 
         /// <summary>The first playable, free event without opponents (the rule of the Practice panel); empty id when the catalog has none.</summary>

@@ -32,6 +32,41 @@ namespace SpeedStars.Tests.RaceBots
             => BotFieldPlanner.Plan(c, reference, new System.Random(seed));
 
         [Test]
+        public void WinThresholds_PlanFasterFieldsAndLongerFastSections()
+        {
+            IReadOnlyList<BotPlan> At(int wins) =>
+                BotFieldPlanner.Plan(_config, 15f, new System.Random(43), totalWins: wins);
+            var novice = At(5);
+            var normal = At(6);
+            var advanced = At(31);
+            Assert.AreEqual(novice[0].TargetSeconds, At(0)[0].TargetSeconds);
+            Assert.AreEqual(normal[0].TargetSeconds, At(30)[0].TargetSeconds);
+            Assert.Less(normal[0].TargetSeconds, novice[0].TargetSeconds);
+            Assert.Less(advanced[0].TargetSeconds, normal[0].TargetSeconds);
+            Assert.Greater(novice[0].MistakeChance, normal[0].MistakeChance);
+            Assert.Greater(normal[0].FastSectionChance, novice[0].FastSectionChance);
+            Assert.Greater(normal[0].FastSectionPresses, novice[0].FastSectionPresses);
+            Assert.Greater(advanced[0].FastSectionPresses, normal[0].FastSectionPresses);
+            int EarlyStarts(int wins) => Enumerable.Range(0, 32).Sum(seed =>
+                BotFieldPlanner.Plan(_config, 15f, new System.Random(seed), totalWins: wins)
+                    .Count(bot => bot.AnticipatesStart));
+            Assert.Greater(EarlyStarts(5), EarlyStarts(6), "novices anticipate GO more often");
+        }
+
+        [Test]
+        public void FastSections_UseSustainedAccurateCadence()
+        {
+            var bot = new BotPlan("Runner", "", 12f, 0.5f, 0.15f, 0.5f, 0.07f, 0f, 0f, 0f,
+                fastSectionChance: 1f, fastSectionPresses: 6, fastPeriodSeconds: 0.24f);
+            var presses = new BotPressSchedule(bot, new System.Random(17), 6d).Events.Where(e => e.IsPress).ToArray();
+            for (int i = 4; i < 10; i++)
+            {
+                Assert.AreEqual(0.24d, presses[i].Time - presses[i - 1].Time, 0.0001d);
+                Assert.AreNotEqual(presses[i - 1].Leg, presses[i].Leg);
+            }
+        }
+
+        [Test]
         public void HigherDifficulty_ShortensEveryTarget()
         {
             Set("raceRandomRatio", 0f);

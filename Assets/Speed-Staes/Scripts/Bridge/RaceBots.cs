@@ -4,6 +4,7 @@ using SpeedStars.Core.Race;
 using SpeedStars.Core.Race.Bots;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Persistence;
 using SpeedStars.Physical;
 using SpeedStars.Runner;
 using UnityEngine;
@@ -89,6 +90,8 @@ namespace SpeedStars.Bridge
         CosmeticCatalog _catalog;
         IPlayerSettings _settings;
         IPersonalBests _bests;
+        ProgressRepository _progress;
+        double _setStartedAt;
         RaceEventCatalog _events;
 
         bool _initialized;
@@ -161,6 +164,9 @@ namespace SpeedStars.Bridge
 
         [Inject]
         void ConstructRelayTeam([InjectOptional] IRelayTeam team) => _relayTeam = team;
+
+        [Inject]
+        void ConstructProgress([InjectOptional] ProgressRepository progress) => _progress = progress;
 
         [Inject]
         void Construct([InjectOptional] ICosmeticService cosmetics, [InjectOptional] CosmeticCatalog catalog,
@@ -323,6 +329,7 @@ namespace SpeedStars.Bridge
         {
             ApplyStartStance(phase);
             if (phase == RaceStartPhase.Ready) BeginRound();
+            else if (phase == RaceStartPhase.Set) _setStartedAt = Time.timeAsDouble;
             else if (phase == RaceStartPhase.Go) StartRace();
             // Idle (the player finished / the countdown was cancelled): the bots keep running, the order keeps updating.
         }
@@ -372,7 +379,7 @@ namespace SpeedStars.Bridge
             bool tuned = _settings != null && _settings.HasCompetitorTuning;
             IReadOnlyList<BotPlan> plans = HasOpponents()
                 ? BotFieldPlanner.Plan(config, ReferenceSeconds(profile), _random, profile,
-                    tuned ? _settings.CompetitorDifficulty : (float?)null, tuned ? _settings.CompetitorSkillRange : (float?)null)
+                    tuned ? _settings.CompetitorDifficulty : (float?)null, tuned ? _settings.CompetitorSkillRange : (float?)null, totalWins: _progress?.Current?.TotalRaceWins)
                 : Array.Empty<BotPlan>();
             int[] lanes = ShuffledLanes(_bots.Count);
             // Without a profile the target is a 100 m equivalent while the run is the real length: the key schedule has to last for it.
@@ -464,7 +471,11 @@ namespace SpeedStars.Bridge
                 BuildRunners(); // first frame: every scene Start has run
                 if (_runnersReady && _roundPending) BeginRound();
             }
-            if (!_racing) return;
+            if (!_racing)
+            {
+                ShowEarlyStartFlinches();
+                return;
+            }
 
             double now = Time.timeAsDouble;
             for (int i = 0; i < _bots.Count; i++)
@@ -479,6 +490,15 @@ namespace SpeedStars.Bridge
                 }
                 DriveJump(bot);
             }
+        }
+
+        void ShowEarlyStartFlinches()
+        {
+            if (!session || session.StartPhase != RaceStartPhase.Set) return;
+            double elapsed = Time.timeAsDouble - _setStartedAt;
+            RunnerStartStance pose = elapsed >= 0.42 && elapsed < 0.64 ? RunnerStartStance.None : RunnerStartStance.Set;
+            foreach (Bot bot in _bots)
+                if (bot.Active && bot.Plan.AnticipatesStart && bot.Driver) bot.Driver.startStance = pose;
         }
 
         void LateUpdate()
@@ -601,7 +621,7 @@ namespace SpeedStars.Bridge
             bool tuned = _settings != null && _settings.HasCompetitorTuning;
             int teams = HasOpponents() ? _relay.TeamCount : 1;
             IReadOnlyList<BotPlan> plans = BotFieldPlanner.Plan(config, BotEventSetup.ReferenceSeconds(profile, best, legMeters), _random, profile,
-                tuned ? _settings.CompetitorDifficulty : (float?)null, tuned ? _settings.CompetitorSkillRange : (float?)null, teams);
+                tuned ? _settings.CompetitorDifficulty : (float?)null, tuned ? _settings.CompetitorSkillRange : (float?)null, teams, _progress?.Current?.TotalRaceWins);
 
             _relay.BeginRound(plans, plans.Count > 0 ? _random.Next(plans.Count) : -1, _playerName, _playerFlag, definition.RelayLegCount, RaceDistance,
                 definition.BatonMaterial);
