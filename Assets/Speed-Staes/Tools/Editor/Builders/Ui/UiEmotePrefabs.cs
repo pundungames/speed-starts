@@ -222,8 +222,13 @@ namespace SpeedStars.Tools.Builders
             layout.PlaceOnScreen(node, layout.Get("purchase"));
             background = UiArt.Paint(node.gameObject, Art("purchase_background"), raycast: true);
             Button button = UiArt.MakeButton(node.gameObject, background, true, alphaHit: false);
-            UiArt.Layer(node, "Icon", Art("purchase_icon"));
             Vector4 icon = UiArt.AlphaBounds(ArtPath("purchase_icon"));
+            Vector4 cash = UiArt.AlphaBounds(ArtPath("diamond_icon"));
+            // Fit the visible Cash diamond into the original purchase icon slot.
+            Vector2 scale = new Vector2((icon.z - icon.x) / (cash.z - cash.x), (icon.w - icon.y) / (cash.w - cash.y));
+            RectTransform iconRect = UiArt.Layer(node, "Icon", Art("diamond_icon")).rectTransform;
+            iconRect.anchorMin = new Vector2(icon.x - cash.x * scale.x, icon.y - cash.y * scale.y);
+            iconRect.anchorMax = iconRect.anchorMin + scale;
             price = UiArt.Slot(node, "Price", "0", PurchasePriceSize, new Vector2(icon.z + PriceGap, 0.12f), new Vector2(PriceEdge, 0.88f));
             return button;
         }

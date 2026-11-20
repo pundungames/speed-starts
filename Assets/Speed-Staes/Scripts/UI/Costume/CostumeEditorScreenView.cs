@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using DG.Tweening;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
@@ -408,7 +409,9 @@ namespace SpeedStars.UI.Costume
         {
             foreach (CostumeSkinSwatchView swatch in _swatches) swatch.gameObject.SetActive(false);
 
-            IReadOnlyList<CosmeticItemInfo> items = _service.GetItems(_model.Category);
+            IReadOnlyList<CosmeticItemInfo> items = _service.GetItems(_model.Category)
+                .OrderByDescending(CostumeItemCardView.UsesPremiumStyle)
+                .ToList();
             for (int i = 0; i < items.Count; i++)
             {
                 if (i == _cards.Count)

@@ -46,6 +46,25 @@ namespace SpeedStars.Bridge
         Quaternion _restChestLocal;
         bool _bound;
 
+        sealed class Leg
+        {
+            public Transform thigh, shin;
+            public Quaternion thighRest, shinRest;
+            public Vector3 thighAxis, shinAxis;
+        }
+
+        Leg _leftLeg, _rightLeg;
+        float _runWeight, _runPhase;
+        bool _legsPosed;
+
+        internal void SetTransitionRun(float weight, float phase)
+        {
+            _runWeight = weight;
+            _runPhase = phase;
+        }
+
+        void OnDisable() => RestoreLegs();
+
         void Awake() => Initialize();
         void OnEnable() => Initialize();
 
@@ -58,6 +77,8 @@ namespace SpeedStars.Bridge
             bool r = Bind(_right, "B-upperArm.R", "B-forearm.R");
             _chest = FindDeep(_root, "B-chest");
             if (_chest) _restChestLocal = _chest.localRotation;
+            _leftLeg = BindLeg("B-shin.L");
+            _rightLeg = BindLeg("B-shin.R");
             _bound = l || r;
         }
 
@@ -74,16 +95,57 @@ namespace SpeedStars.Bridge
             return true;
         }
 
+        Leg BindLeg(string shinName)
+        {
+            Transform shin = FindDeep(_root, shinName);
+            if (!shin || !shin.parent) return null;
+            Transform thigh = shin.parent;
+            return new Leg
+            {
+                thigh = thigh,
+                shin = shin,
+                thighRest = thigh.localRotation,
+                shinRest = shin.localRotation,
+                thighAxis = thigh.InverseTransformDirection(_root.right),
+                shinAxis = shin.InverseTransformDirection(_root.right)
+            };
+        }
+
         void LateUpdate()
         {
             if (!_bound) { Initialize(); if (!_bound) return; }
             float breath = Mathf.Sin(Time.time * breathRate * Mathf.PI * 2f);
-            if (_chest) _chest.localRotation = _restChestLocal * Quaternion.Euler(breathChest * breath, 0f, 0f);
-            Pose(_left, breath);
-            Pose(_right, breath);
+            float stride = Mathf.Sin(_runPhase * 2f * Mathf.PI);
+            if (_chest) _chest.localRotation = _restChestLocal * Quaternion.Euler(breathChest * breath + 14f * _runWeight, 0f, 0f);
+            Pose(_left, breath, stride);
+            Pose(_right, breath, -stride);
+            if (_runWeight > 0f)
+            {
+                PoseLeg(_leftLeg, stride, _runWeight);
+                PoseLeg(_rightLeg, -stride, _runWeight);
+                _legsPosed = true;
+            }
+            else RestoreLegs();
         }
 
-        void Pose(Arm a, float breath)
+        static void PoseLeg(Leg leg, float stride, float weight)
+        {
+            if (leg == null) return;
+            float thigh = (8f - 38f * stride) * weight;
+            float knee = (12f + 57f * Mathf.Max(0f, -stride)) * weight;
+            leg.thigh.localRotation = leg.thighRest * Quaternion.AngleAxis(thigh, leg.thighAxis);
+            leg.shin.localRotation = leg.shinRest * Quaternion.AngleAxis(knee, leg.shinAxis);
+        }
+
+        void RestoreLegs()
+        {
+            if (!_legsPosed) return;
+            PoseLeg(_leftLeg, 0f, 0f);
+            PoseLeg(_rightLeg, 0f, 0f);
+            _legsPosed = false;
+        }
+
+        void Pose(Arm a, float breath, float stride)
         {
             if (a.upper == null || a.fore == null) return;
             float o = (armOutward + breathArm * breath) * Mathf.Deg2Rad;
@@ -92,8 +154,8 @@ namespace SpeedStars.Bridge
             Quaternion inv = Quaternion.Inverse(rootRot);
 
             // Runner-space rotation R as a world rotation: root * R * root^-1, applied on the bone's rest world rotation.
-            Quaternion upperR = rootRot * Quaternion.Euler(-armSwing, 0f, 0f) * hang * inv;
-            Quaternion foreR = rootRot * Quaternion.Euler(-elbowBend, 0f, 0f) * inv;
+            Quaternion upperR = rootRot * Quaternion.Euler(-armSwing - 34f * stride * _runWeight, 0f, 0f) * hang * inv;
+            Quaternion foreR = rootRot * Quaternion.Euler(-Mathf.Lerp(elbowBend, 80f, _runWeight), 0f, 0f) * inv;
 
             a.upper.localRotation = a.restUpperLocal;
             a.upper.rotation = upperR * a.upper.rotation;

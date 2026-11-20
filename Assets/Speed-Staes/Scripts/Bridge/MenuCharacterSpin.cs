@@ -32,6 +32,7 @@ namespace SpeedStars.Bridge
 
         SpinMotion _motion;
         Quaternion _restLocal;
+        Quaternion _transitionRotation = Quaternion.identity;
         bool _initialized;
         bool _dragging;
         float _lastX;
@@ -95,7 +96,19 @@ namespace SpeedStars.Bridge
                 _motion.Step(dt);
             }
 
-            target.localRotation = _restLocal * Quaternion.AngleAxis(-_motion.Yaw, Vector3.up);
+            ApplyRotation();
+        }
+
+        internal void SetTransitionRotation(Quaternion rotation)
+        {
+            Initialize();
+            _transitionRotation = rotation;
+            ApplyRotation();
+        }
+
+        void ApplyRotation()
+        {
+            target.localRotation = _restLocal * Quaternion.AngleAxis(-_motion.Yaw, Vector3.up) * _transitionRotation;
         }
 
         /// <summary>True when any raycast-target UI element is under the point (a button, popup, panel).</summary>

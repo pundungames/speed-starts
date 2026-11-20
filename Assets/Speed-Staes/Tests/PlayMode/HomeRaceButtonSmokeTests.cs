@@ -80,6 +80,24 @@ namespace SpeedStars.PlayTests
         // ---- 1. Home opens ----
 
         [UnityTest]
+        public IEnumerator Home_FirstFrameEntry_CompletesAFullRunnerTurn()
+        {
+            // Load directly, as on launch, without a preceding SceneFlow request.
+            yield return UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(HomeScene);
+            MonoBehaviour runner = Object.FindObjectsOfType<MonoBehaviour>()
+                .First(behaviour => behaviour.GetType().Name == "MenuCharacter");
+            float previousYaw = runner.transform.eulerAngles.y;
+            float totalYaw = 0f;
+            yield return WaitUntil(() =>
+            {
+                float yaw = runner.transform.eulerAngles.y;
+                totalYaw += Mathf.DeltaAngle(previousYaw, yaw);
+                previousYaw = yaw;
+                return Mathf.Abs(totalYaw) >= 358f;
+            }, "one complete runner rotation on direct Home entry");
+        }
+
+        [UnityTest]
         public IEnumerator Home_Opens_WithHomeScreenVisible_AndNoErrorLogs()
         {
             HomeScreenView home = Require<HomeScreenView>();
@@ -255,7 +273,7 @@ namespace SpeedStars.PlayTests
         public IEnumerator Play_WithTicket_UseEntryTicket_LoadsRaceScene_AndSpendsOneTicket()
         {
             int before = SetTickets(1);
-            yield return EnterRaceWithTicket();
+            yield return EnterRaceWithTicket(verifyDepartureMotion: true);
 
             Assert.Less(Container.Resolve<IEntryTickets>().Count, before, "entering a ticketed race must spend a ticket");
             Assert.IsNotNull(Require<RaceHudView>(), "Race scene has no HUD");
@@ -269,6 +287,9 @@ namespace SpeedStars.PlayTests
 
             RaceHudView hud = Require<RaceHudView>();
             yield return Tap(RequireField<Button>(hud, "exitButton"), "HUD Exit");
+            yield return new WaitForSecondsRealtime(0.25f);
+            Assert.AreEqual(RaceScene, UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                "Race must stay on screen during the departure animation");
             yield return WaitForScene(HomeScene);
 
             HomeScreenView home = Require<HomeScreenView>();
@@ -448,7 +469,7 @@ namespace SpeedStars.PlayTests
             return (float)field.GetValue(camera);
         }
 
-        private IEnumerator EnterRaceWithTicket()
+        private IEnumerator EnterRaceWithTicket(bool verifyDepartureMotion = false)
         {
             SelectTicketEvent();
             HomeScreenView home = Require<HomeScreenView>();
@@ -456,7 +477,37 @@ namespace SpeedStars.PlayTests
 
             yield return Tap(RequireField<Button>(home, "playButton"), "Play button");
             yield return WaitOpen(gate, "entry gate");
+            Camera camera = Camera.main;
+            GameObject runner = null;
+            Quaternion cameraStart = Quaternion.identity;
+            Quaternion runnerStart = Quaternion.identity;
+            if (verifyDepartureMotion)
+            {
+                yield return new WaitForSecondsRealtime(UnitySceneLoader.DepartureDuration);
+                Assert.IsNotNull(camera);
+                runner = Object.FindObjectsOfType<MonoBehaviour>()
+                    .First(behaviour => behaviour.GetType().Name == "MenuCharacter").gameObject;
+                cameraStart = camera.transform.rotation;
+                runnerStart = runner.transform.rotation;
+            }
+
             yield return Tap(RequireField<Button>(gate, "useTicketButton"), "Use Entry Ticket");
+            if (verifyDepartureMotion)
+            {
+                float totalYaw = 0f;
+                float previousYaw = runnerStart.eulerAngles.y;
+                float peakCameraAngle = 0f;
+                yield return WaitUntil(() =>
+                {
+                    Assert.IsTrue(camera && runner, "Home must remain visible through a full runner turn");
+                    float yaw = runner.transform.eulerAngles.y;
+                    totalYaw += Mathf.DeltaAngle(previousYaw, yaw);
+                    previousYaw = yaw;
+                    peakCameraAngle = Mathf.Max(peakCameraAngle, Quaternion.Angle(cameraStart, camera.transform.rotation));
+                    return Mathf.Abs(totalYaw) >= 358f;
+                }, "one complete runner rotation before Home unloads");
+                Assert.Greater(peakCameraAngle, 2f, "The camera must move during the turn");
+            }
             yield return WaitForScene(RaceScene);
         }
 

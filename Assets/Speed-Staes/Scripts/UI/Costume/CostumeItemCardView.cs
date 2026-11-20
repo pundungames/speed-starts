@@ -107,7 +107,7 @@ namespace SpeedStars.UI.Costume
         {
             CosmeticId = item.Id;
             icon.sprite = picture;
-            _premium = item.IsPremium;
+            _premium = UsesPremiumStyle(item);
             _forSale = item.IsForSale;
             _currency = item.Currency;
             if (priceText != null) priceText.text = item.Price.ToString();
@@ -120,6 +120,9 @@ namespace SpeedStars.UI.Costume
                 premiumIcon.enabled = hasPicture && _premium;
             }
         }
+
+        internal static bool UsesPremiumStyle(CosmeticItemInfo item)
+            => item.IsForSale && item.Currency == CosmeticCurrency.PurpleGem;
 
         public void SetState(bool selected, bool locked, bool disabled = false)
         {
