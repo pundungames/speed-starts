@@ -297,7 +297,7 @@ namespace SpeedStars.PlayTests
         // ---- 5. Play without a ticket ----
 
         [UnityTest]
-        public IEnumerator Play_WithoutTicket_OpensEntryGate_AndCloseClosesIt()
+        public IEnumerator Play_WithoutTicket_OpensTicketsStoreAndCloseClosesIt()
         {
             SelectTicketEvent();
             SetTickets(0);
@@ -308,6 +308,8 @@ namespace SpeedStars.PlayTests
 
             yield return Tap(RequireField<Button>(home, "playButton"), "Play button");
             yield return WaitOpen(gate, "entry gate");
+            Assert.AreEqual("TICKETS STORE", RequireField<TMP_Text>(gate, "titleText").text);
+            Assert.IsFalse(RequireField<Button>(gate, "useTicketButton").gameObject.activeSelf);
             Assert.AreEqual(HomeScene, UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, "no ticket: Play must not leave Home");
 
             yield return Tap(CloseButtonOf(gate), "entry gate Close");
@@ -318,7 +320,46 @@ namespace SpeedStars.PlayTests
         // ---- 6. Play with a ticket: Race scene, exit, results ----
 
         [UnityTest]
-        public IEnumerator Play_WithTicket_UseEntryTicket_LoadsRaceScene_AndSpendsOneTicket()
+        public IEnumerator Play_WithTimedAccess_ShowsVipAndStartsWithoutSpendingATicket()
+        {
+            SetTickets(0);
+            SelectTicketEvent();
+            Container.Resolve<ProgressRepository>().Current.TimedAccessExpiresUtcTicks =
+                System.DateTime.UtcNow.AddMinutes(15).Ticks;
+            HomeScreenView home = Require<HomeScreenView>();
+            Button play = RequireField<Button>(home, "playButton");
+            TMP_Text cost = play.transform.Find("Entry Cost").GetComponent<TMP_Text>();
+            yield return WaitUntil(() => cost.text.StartsWith("VIP FREE"), "VIP Play style");
+
+            yield return Tap(play, "VIP Play");
+            Assert.IsFalse(RequireField<EntryGateModalView>(home, "entryGateModal").IsVisible);
+            Assert.IsNull(Field<GameObject>(home, "_entryOverlay"), "VIP entry does not fly a one-use ticket");
+            yield return WaitForScene(RaceScene);
+            Assert.AreEqual(0, Container.Resolve<IEntryTickets>().Count);
+        }
+
+        [UnityTest]
+        public IEnumerator Sprints100m_WithNoTickets_StartsDirectlyWithoutEntryGate()
+        {
+            SetTickets(0);
+            var sprint = new RaceEventId("100m");
+            Container.Resolve<IRaceSelection>().Select(sprint);
+            HomeScreenView home = Require<HomeScreenView>();
+            var gate = RequireField<EntryGateModalView>(home, "entryGateModal");
+            yield return Tap(RequireField<Button>(home, "playButton"), "SPRINTS 100M Play");
+
+            yield return WaitUntil(() =>
+            {
+                Assert.IsFalse(gate && gate.gameObject.activeInHierarchy, "free 100 m must bypass the entry popup");
+                return UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == RaceScene;
+            }, "free 100 m to start", 15f);
+
+            yield return WaitUntil(() => FindRaceSession()?.TargetDistance == 100f, "100 m sprint session");
+            Assert.AreEqual(0, Container.Resolve<IEntryTickets>().Count, "no ticket is spent");
+        }
+
+        [UnityTest]
+        public IEnumerator Play_WithTicket_FliesToPlayAndStartsWithoutConfirmation()
         {
             int before = SetTickets(1);
             yield return EnterRaceWithTicket(verifyDepartureMotion: true);
@@ -578,8 +619,6 @@ namespace SpeedStars.PlayTests
             HomeScreenView home = Require<HomeScreenView>();
             EntryGateModalView gate = RequireField<EntryGateModalView>(home, "entryGateModal");
 
-            yield return Tap(RequireField<Button>(home, "playButton"), "Play button");
-            yield return WaitOpen(gate, "entry gate");
             Camera camera = Camera.main;
             GameObject runner = null;
             Quaternion cameraStart = Quaternion.identity;
@@ -594,7 +633,18 @@ namespace SpeedStars.PlayTests
                 runnerStart = runner.transform.rotation;
             }
 
-            yield return Tap(RequireField<Button>(gate, "useTicketButton"), "Use Entry Ticket");
+            Button play = RequireField<Button>(home, "playButton");
+            TMP_Text entryCost = play.transform.Find("Entry Cost").GetComponent<TMP_Text>();
+            entryCost.ForceMeshUpdate();
+            Assert.AreEqual("x1", entryCost.GetParsedText());
+            Assert.Less(entryCost.textInfo.characterInfo[0].pointSize, entryCost.textInfo.characterInfo[1].pointSize);
+            int ticketsBefore = Container.Resolve<IEntryTickets>().Count;
+            yield return Tap(play, "Play button");
+            Assert.IsFalse(gate.IsVisible, "the ticket store is only used when short of tickets");
+            var overlay = RequireField<GameObject>(home, "_entryOverlay");
+            Assert.IsTrue(overlay.transform.Find("Flying Entry Ticket").gameObject.activeInHierarchy);
+            Assert.AreEqual(ticketsBefore, Container.Resolve<IEntryTickets>().Count);
+            yield return WaitUntil(() => overlay.transform.Find("Loading") != null, "the ticket to land and loading to start", 1f);
             if (verifyDepartureMotion)
             {
                 float totalYaw = 0f;

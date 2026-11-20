@@ -102,6 +102,12 @@ namespace SpeedStars.UI.Home
         [Tooltip("Window/GetTickets/WatchAd/Spinner: turns while an ad runs; inactive otherwise.")]
         [SerializeField] private RectTransform watchAdSpinner;
 
+        [Header("Tickets Store Art")]
+        [SerializeField] private Sprite storePanelArt;
+        [SerializeField] private Sprite storeHeaderArt;
+        [SerializeField] private Sprite storeButtonArt;
+        [SerializeField] private Sprite storeWatchIcon;
+
         [Header("Countdown")]
         [Tooltip("Seconds between countdown redraws (Timed window, next ticket).")]
         [Min(0.1f)]
@@ -130,6 +136,22 @@ namespace SpeedStars.UI.Home
         private HomeEntryFlow _entryFlow;
         private ScreenNavigator _navigator;
         private RaceEventDefinition _event;
+        private bool _storeOnly;
+        private GameObject[] _entryContent;
+        private Vector2 _entryWindowSize;
+        private RectTransform _storePanel;
+        private Sprite _storeFrameSprite;
+        private Sprite _storeVipIcon;
+        private Sprite _storeDiamondIcon;
+        private Sprite _storeWatchDisplay;
+        private Button _raceAdOffer;
+        private Button _raceCashOffer;
+        private Button _vipAdOffer;
+        private Button _vipCashOffer;
+        private Button _activateVip;
+        private TMP_Text _vipAdLabel;
+        private bool _vipAdBusy;
+        private IEconomyLedger _ledger;
         private Tween _shake;
         private Tween _punch;
         private Tween _ticketPunch;
@@ -175,10 +197,11 @@ namespace SpeedStars.UI.Home
         }
 
         [Inject]
-        public void ConstructEntryGateAds(IEntryTicketSource ticketSource, ProgressRepository progress, [InjectOptional] IRewardedAds ads)
+        public void ConstructEntryGateAds(IEntryTicketSource ticketSource, ProgressRepository progress, IEconomyLedger ledger, [InjectOptional] IRewardedAds ads)
         {
             _ticketSource = ticketSource;
             _progress = progress;
+            _ledger = ledger;
             _ads = ads; // null in a build without an ad service: WATCH AD stays closed
         }
 
@@ -192,12 +215,254 @@ namespace SpeedStars.UI.Home
         }
 
         /// <summary>Opens the modal for <paramref name="definition"/> through the navigator's popup layer.</summary>
-        public void Open(RaceEventDefinition definition)
+        public void Open(RaceEventDefinition definition) => Open(definition, false);
+
+        public void OpenStore(RaceEventDefinition definition) => Open(definition, true);
+
+        private void Open(RaceEventDefinition definition, bool storeOnly)
         {
             _event = definition;
+            _storeOnly = storeOnly;
+            ApplyShopLayout();
             Refresh();
             _navigator.OpenPopup(this);
         }
+
+        private void ApplyShopLayout()
+        {
+            if (!_storePanel && !_storeOnly) return;
+            if (!_storePanel)
+            {
+                _entryWindowSize = window.sizeDelta;
+                var children = new System.Collections.Generic.List<GameObject>();
+                foreach (Transform child in window)
+                {
+                    if (child.name != "Close" && child.gameObject.activeSelf) children.Add(child.gameObject);
+                }
+                _entryContent = children.ToArray();
+                BuildStore();
+            }
+
+            window.sizeDelta = _storeOnly ? new Vector2(_entryWindowSize.y * 0.93f, _entryWindowSize.y) : _entryWindowSize;
+            foreach (GameObject child in _entryContent) child.SetActive(!_storeOnly);
+            _storePanel.gameObject.SetActive(_storeOnly);
+        }
+
+        private void BuildStore()
+        {
+            Color32 navy = new Color32(16, 32, 67, 255);
+            Color32 race = new Color32(255, 249, 244, 255);
+            Color32 vip = new Color32(255, 242, 201, 255);
+            Color32 blue = new Color32(176, 232, 250, 255);
+            Color32 red = new Color32(255, 39, 59, 255);
+            Color32 gold = new Color32(244, 168, 23, 255);
+
+            // Preserve the day-card sprite's corners and outline when it fills the larger store window.
+            const float panelSlice = 18f;
+            _storeFrameSprite = Sprite.Create(storePanelArt.texture, storePanelArt.rect, new Vector2(.5f, .5f),
+                storePanelArt.pixelsPerUnit, 0, SpriteMeshType.FullRect, Vector4.one * panelSlice);
+            _storePanel = StoreRect("Tickets Store", window, 0f, 0f, 1f, 1f);
+            Image backdrop = StoreSurface("Background", _storePanel, 0f, -.04f, 1f, 1f, _storeFrameSprite, Color.white);
+            backdrop.raycastTarget = true;
+            RectTransform header = StoreSurface("Header", _storePanel, .045f, .865f, .955f, .962f, storeHeaderArt, Color.white).rectTransform;
+            TMP_Text heading = StoreText("TICKETS STORE", header, 0f, 0f, 1f, 1f, 60, Color.white);
+            heading.alignment = TextAlignmentOptions.CenterGeoAligned;
+            StoreSection("RACE TICKETS", .81f, red, navy);
+            StoreSection("TIMED VIP TICKET", .43f, gold, navy);
+
+            Image raceIcon = ticketIcon.GetComponentInChildren<Image>(true);
+            Image vipIcon = timedStatus.Find("Icon")?.GetComponentInChildren<Image>(true);
+            // These two sprites share their texture canvas with transparent padding.
+            _storeVipIcon = CropStoreIcon(vipIcon ? vipIcon.sprite : null, new Rect(52f, 81f, 83f, 68f));
+            _storeWatchDisplay = CropStoreIcon(storeWatchIcon, new Rect(30f, 18f, 84f, 68f));
+            ResourceBarView bar = FindObjectOfType<ResourceBarView>(true);
+            Image cashIcon = null;
+            if (bar)
+            {
+                foreach (Transform item in bar.GetComponentsInChildren<Transform>(true))
+                {
+                    if (item.name != "Cash") continue;
+                    cashIcon = item.Find("Icon")?.GetComponent<Image>();
+                    break;
+                }
+            }
+            Sprite diamond = cashIcon ? cashIcon.sprite : null;
+            _storeDiamondIcon = CropStoreIcon(diamond, new Rect(23f, 15f, 78f, 68f));
+            _economy.TryGetRewardedAdEntryTickets(out int raceAdCount);
+            _economy.TryGetEntryTicketCashPrice(out int racePrice);
+            _economy.TryGetTimedTicketCashPrice(out int vipPrice);
+            _raceAdOffer = StoreCard("Race ad", .04f, .50f, race, navy, raceIcon ? raceIcon.sprite : null, $"x{raceAdCount}", "WATCH 1 AD", navy, Color.white, storeWatchIcon, OnWatchAd);
+            _raceCashOffer = StoreCard("Race cash", .52f, .50f, race, navy, raceIcon ? raceIcon.sprite : null, "x1", racePrice.ToString(), blue, navy, _storeDiamondIcon ? _storeDiamondIcon : diamond, OnBuyWithCash);
+            _vipAdOffer = StoreCard("VIP ad", .04f, .12f, vip, navy, _storeVipIcon, "x1", "WATCH 3 ADS", navy, Color.white, storeWatchIcon, OnWatchVipAd);
+            _vipAdLabel = _vipAdOffer.GetComponentInChildren<TMP_Text>();
+            _vipCashOffer = StoreCard("VIP cash", .52f, .12f, vip, navy, _storeVipIcon, "x1", vipPrice.ToString(), blue, navy, _storeDiamondIcon ? _storeDiamondIcon : diamond, OnBuyVipTicket);
+            _activateVip = StoreButton("USE TIMED TICKET", _storePanel, .25f, .035f, .75f, .098f, gold, navy, null, OnUseTimed);
+
+            Transform close = window.Find("Close");
+            if (close) close.SetAsLastSibling();
+        }
+
+        private void StoreSection(string caption, float y, Color accent, Color ink)
+        {
+            StoreImage("Accent", _storePanel, .04f, y, .051f, y + .035f, accent);
+            TMP_Text label = StoreText(caption, _storePanel, .066f, y - .005f, .40f, y + .04f, 32, ink);
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            StoreImage("Rule", _storePanel, .42f, y + .016f, .96f, y + .018f, new Color32(209, 200, 187, 255));
+        }
+
+        private Button StoreCard(string name, float x, float y, Color fill, Color ink, Sprite icon, string count,
+            string actionLabel, Color actionColor, Color textColor, Sprite actionIcon, UnityEngine.Events.UnityAction action)
+        {
+            RectTransform card = StoreSurface(name, _storePanel, x, y, x + .44f, y + .29f, storePanelArt, fill).rectTransform;
+            if (icon == _storeVipIcon)
+                StoreIcon(icon, card, .13f, .425f, .48f, .935f);
+            else
+                StoreIcon(icon, card, .105f, .39f, .505f, .97f);
+            StoreText(count, card, .50f, .41f, .80f, .93f, 72, ink);
+            return StoreButton(actionLabel, card, .095f, .072f, .905f, .342f, actionColor, textColor, actionIcon, action);
+        }
+
+        private Button StoreButton(string caption, RectTransform parent, float left, float bottom, float right, float top,
+            Color fill, Color ink, Sprite icon, UnityEngine.Events.UnityAction action)
+        {
+            Image face = StoreSurface(caption, parent, left, bottom, right, top, storeButtonArt, fill);
+            RectTransform rect = face.rectTransform;
+            face.raycastTarget = true;
+            Button button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = face;
+            button.onClick.AddListener(action);
+
+            if (icon && icon == storeWatchIcon)
+            {
+                StoreIcon(_storeWatchDisplay ? _storeWatchDisplay : icon, rect, .09f, .23f, .25f, .77f);
+                StoreText(caption, rect, .29f, .06f, .94f, .94f, 34, ink);
+            }
+            else if (icon)
+            {
+                // Keep the price group centered and size the diamond against the button height.
+                float groupLeft = caption.Length > 2 ? .27f : .30f;
+                float priceLeft = groupLeft + .21f;
+                StoreIcon(icon, rect, groupLeft, .12f, priceLeft - .02f, .88f);
+                TMP_Text price = StoreText(caption, rect, priceLeft, .06f, .81f, .94f, 48, ink);
+                price.alignment = TextAlignmentOptions.MidlineLeft;
+            }
+            else
+            {
+                StoreText(caption, rect, .06f, .06f, .94f, .94f, 34, ink);
+            }
+            return button;
+        }
+
+        private static Image StoreSurface(string name, RectTransform parent, float left, float bottom, float right, float top,
+            Sprite sprite, Color tint)
+        {
+            Image image = StoreImage(name, parent, left, bottom, right, top, tint);
+            image.sprite = sprite;
+            if (sprite && sprite.border != Vector4.zero) image.type = Image.Type.Sliced;
+            return image;
+        }
+
+        private static Image StoreImage(string name, RectTransform parent, float left, float bottom, float right, float top, Color color)
+        {
+            Image image = StoreRect(name, parent, left, bottom, right, top).gameObject.AddComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private static Sprite CropStoreIcon(Sprite source, Rect crop)
+        {
+            if (!source || crop.xMax > source.rect.width || crop.yMax > source.rect.height) return null;
+            crop.position += source.rect.position;
+            Sprite icon = Sprite.Create(source.texture, crop, new Vector2(.5f, .5f), source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+            icon.name = source.name;
+            return icon;
+        }
+
+        private static void StoreIcon(Sprite source, RectTransform parent, float left, float bottom, float right, float top)
+        {
+            if (!source) return;
+            Image icon = StoreImage(source.name, parent, left, bottom, right, top, Color.white);
+            icon.sprite = source;
+            icon.preserveAspect = true;
+        }
+
+        private TMP_Text StoreText(string value, RectTransform parent, float left, float bottom, float right, float top, float size, Color color)
+        {
+            TextMeshProUGUI label = StoreRect(value, parent, left, bottom, right, top).gameObject.AddComponent<TextMeshProUGUI>();
+            label.font = titleText.font;
+            label.text = value;
+            label.fontSize = size;
+            label.fontSizeMax = size;
+            label.fontSizeMin = size * .6f;
+            label.enableAutoSizing = true;
+            label.alignment = TextAlignmentOptions.Center;
+            label.color = color;
+            label.raycastTarget = false;
+            return label;
+        }
+
+        private static RectTransform StoreRect(string name, RectTransform parent, float left, float bottom, float right, float top)
+        {
+            var rect = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = new Vector2(left, bottom);
+            rect.anchorMax = new Vector2(right, top);
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            return rect;
+        }
+
+        private void RefreshStore(EntryGateModel model, EntryGateAdFlow ad)
+        {
+            if (!_storeOnly || !_storePanel) return;
+            _raceCashOffer.interactable = model.BuyWithCashInteractable;
+            _raceAdOffer.interactable = watchAdButton.interactable && !_vipAdBusy;
+            _vipCashOffer.interactable = _timedShop != null && _economy.TryGetTimedTicketCashPrice(out int price) && _wallet.Cash >= price;
+            _vipAdOffer.interactable = !_vipAdBusy && !ad.IsBusy && _ads != null && _ads.IsReady;
+            int watched = _progress.Current.VipStoreAdsWatched;
+            _vipAdLabel.text = _vipAdBusy ? "LOADING..." : watched > 0 ? $"WATCH {3 - watched} {(watched == 2 ? "AD" : "ADS")}" : "WATCH 3 ADS";
+            _activateVip.gameObject.SetActive(model.ShowUseTimedButton);
+        }
+
+        private void OnBuyVipTicket()
+        {
+            if (_timedShop.TryBuyWithCash(Guid.NewGuid().ToString("N")) != TimedTicketPurchaseResult.Bought) Shake();
+            Refresh();
+        }
+
+        private void OnWatchVipAd()
+        {
+            if (_vipAdBusy || AdFlow.IsBusy || _ads == null || !_ads.IsReady) return;
+
+            _vipAdBusy = true;
+            Refresh();
+            bool answered = false;
+            try
+            {
+                _ads.Show(result =>
+                {
+                    if (answered) return;
+                    answered = true;
+                    _vipAdBusy = false;
+                    if (result == AdResult.Completed)
+                    {
+                        PlayerProgress progress = _progress.Current;
+                        int watched = progress.VipStoreAdsWatched + 1;
+                        progress.VipStoreAdsWatched = watched % 3;
+                        if (watched == 3) _ledger.Grant(EconomyCurrency.TimedTicket, 1, Guid.NewGuid().ToString("N"));
+                        SaveProgress();
+                    }
+                    if (this && isActiveAndEnabled) Refresh();
+                });
+            }
+            catch
+            {
+                _vipAdBusy = false;
+                Refresh();
+                throw;
+            }
+        }
+
 
         /// <summary>Built on first use (after injection); the flow outlives the window being closed, so a late ad result still pays out.</summary>
         private EntryGateAdFlow AdFlow => _adFlow ?? (_adFlow = new EntryGateAdFlow(_ads, _ticketSource, _economy, SaveProgress));
@@ -256,6 +521,10 @@ namespace SpeedStars.UI.Home
             if (buyWithCashButton != null) buyWithCashButton.onClick.RemoveListener(OnBuyWithCash);
             if (watchAdButton != null) watchAdButton.onClick.RemoveListener(OnWatchAd);
             if (useTimedCashButton != null) useTimedCashButton.onClick.RemoveListener(OnUseTimedCash);
+            if (_storeFrameSprite) Destroy(_storeFrameSprite);
+            if (_storeVipIcon) Destroy(_storeVipIcon);
+            if (_storeDiamondIcon) Destroy(_storeDiamondIcon);
+            if (_storeWatchDisplay) Destroy(_storeWatchDisplay);
             base.OnDestroy();
         }
 
@@ -272,10 +541,11 @@ namespace SpeedStars.UI.Home
                 timedCashPrice: timedCashPrice, accessDuration: _economy != null ? _economy.TimedAccessDuration : TimeSpan.Zero);
             EntryGateModel model = EntryGateModel.Build(state);
 
-            eventNameText.text = _event.DisplayName;
+            titleText.text = _storeOnly ? "TICKETS STORE" : HomeTexts.EntryGateTitle;
+            eventNameText.text = _storeOnly ? "RACE TICKETS" : _event.DisplayName;
             ticketCountText.text = HomeTexts.TicketsHeld(HomeTexts.TicketCount(Mathf.Max(0, _tickets.Count - _pendingAdTickets), _tickets.Cap));
             DateTime? nextTicket = _tickets.NextTicketUtc;
-            refillText.gameObject.SetActive(nextTicket.HasValue);
+            refillText.gameObject.SetActive(!_storeOnly && nextTicket.HasValue);
             if (nextTicket.HasValue) refillText.text = HomeTexts.NextTicketIn(CountdownFormatter.Format(nextTicket.Value - _clock.UtcNow));
             useTimedButton.gameObject.SetActive(model.ShowUseTimedButton);
             if (useTimedCashButton != null)
@@ -284,18 +554,19 @@ namespace SpeedStars.UI.Home
                 useTimedCashButton.interactable = model.TimedCashInteractable;
                 if (useTimedCashLabel != null) useTimedCashLabel.text = model.TimedCashLabel;
             }
-            offersCaption.text = model.OffersCaption;
+            offersCaption.text = _storeOnly ? "REFILL TICKETS" : model.OffersCaption;
             buyWithCashButton.interactable = model.BuyWithCashInteractable;
             cashPriceText.text = model.CashPriceText;
             watchAdButton.interactable = model.WatchAdInteractable && !ad.IsBusy && _pendingAdTickets == 0;
             watchAdLabel.gameObject.SetActive(!ad.IsBusy);
             SetSpinner(ad.IsBusy);
-            useTicketButton.gameObject.SetActive(model.ShowUseTicketButton);
+            useTicketButton.gameObject.SetActive(!_storeOnly && model.ShowUseTicketButton);
             useTicketButton.interactable = model.UseTicketInteractable;
             remainingText.gameObject.SetActive(false); // a refusal warning (OnUseTicket) lives until the next redraw
             useTicketLabel.color = model.UseTicketInteractable ? useTicketLabelReady : useTicketLabelDisabled;
-            timedLabel.text = model.TimedStatusText;
+            timedLabel.text = _storeOnly ? (timedActive ? "VIP ACTIVE" : "TIMED VIP TICKET") : model.TimedStatusText;
             timedValue.text = model.TimedValueText;
+            RefreshStore(model, ad);
         }
 
         private void OnUseTicket()
@@ -362,7 +633,7 @@ namespace SpeedStars.UI.Home
         private void OnWatchAd()
         {
             EntryGateAdFlow ad = AdFlow;
-            if (!ad.IsAvailable || _pendingAdTickets > 0) return;
+            if (!ad.IsAvailable || _vipAdBusy || _pendingAdTickets > 0) return;
 
             int before = _tickets.Count;
             if (ad.TryStart(outcome => OnAdFinished(outcome, before))) Refresh();

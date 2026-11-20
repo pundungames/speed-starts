@@ -129,10 +129,7 @@ namespace SpeedStars.PlayTests
                 progress.TimedAccessExpiresUtcTicks = 0;
                 container.Resolve<IEntryTickets>().Refresh();
 
-                EntryGateModalView gate = RequireField<EntryGateModalView>(home, "entryGateModal");
-                yield return Tap(RequireField<Button>(home, "playButton"), "Play button");
-                yield return WaitOpen(gate, "entry gate");
-                yield return Tap(RequireField<Button>(gate, "useTicketButton"), "Use Entry Ticket");
+                yield return Tap(RequireField<Button>(home, "playButton"), "Play button (ticketed sprint)");
                 yield return WaitForScene(RaceScene);
 
                 // Countdown: the SET word (or, on a very slow load, whatever is up by then), taken before the race moves on.

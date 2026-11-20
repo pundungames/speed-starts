@@ -19,6 +19,7 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private int purpleGems;
         [SerializeField] private int entryTickets;
         [SerializeField] private int timedTickets;
+        [SerializeField] private int vipStoreAdsWatched;
         [SerializeField] private long timedAccessExpiresUtcTicks;
         [SerializeField] private long entryRegenDueUtcTicks;
         [SerializeField] private string dailyGiftDayKey = string.Empty;
@@ -120,6 +121,8 @@ namespace SpeedStars.Meta.Persistence
         public int Cash { get => cash; set => cash = value; }
         public int PurpleGems { get => purpleGems; set => purpleGems = value; }
         public int EntryTickets { get => entryTickets; set => entryTickets = value; }
+
+        public int VipStoreAdsWatched { get => vipStoreAdsWatched; set => vipStoreAdsWatched = value; }
 
         /// <summary>Unused Timed Tickets in stock (not the running access window).</summary>
         public int TimedTickets { get => timedTickets; set => timedTickets = value; }

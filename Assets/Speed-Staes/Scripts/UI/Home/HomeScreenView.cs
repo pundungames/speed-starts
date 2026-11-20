@@ -1,4 +1,6 @@
+using DG.Tweening;
 using SpeedStars.Core.Race;
+using SpeedStars.Core.Services;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
@@ -18,7 +20,7 @@ namespace SpeedStars.UI.Home
     /// </summary>
     public sealed class HomeScreenView : UiScreen
     {
-        [Tooltip("Play: starts the race (through the entry gate modal for ticketed events).")]
+        [Tooltip("Play: starts the race or opens the ticket store when a ticket is missing.")]
         [SerializeField] private Button playButton;
 
         [Tooltip("EventSelect (root button): opens the event select screen.")]
@@ -126,6 +128,20 @@ namespace SpeedStars.UI.Home
         private RaceEventCatalog _catalog;
         private IWallet _wallet;
         private HomeEntryFlow _entryFlow;
+        private IEntryTickets _entryTickets;
+        private IClock _clock;
+        private ResourceBarView _resourceBar;
+        private Image _playBackground;
+        private Image _playFlag;
+        private TMP_Text _playLabel;
+        private TMP_Text _playFare;
+        private Image _playFareIcon;
+        private Sprite _freePlaySprite;
+        private Vector2 _freeLabelMin, _freeLabelMax;
+        private Color _freePlayColor;
+        private Color _freeLabelColor;
+        private Tween _entryFlight;
+        private GameObject _entryOverlay;
         private IPlayerSettings _settings;
         private ICosmeticService _cosmetics;
         private Sprite _soundOnSprite;
@@ -172,13 +188,15 @@ namespace SpeedStars.UI.Home
         }
 
         [Inject]
-        public void ConstructHome(ScreenNavigator navigator, IRaceSelection selection, RaceEventCatalog catalog, IWallet wallet, HomeEntryFlow entryFlow)
+        public void ConstructHome(ScreenNavigator navigator, IRaceSelection selection, RaceEventCatalog catalog, IWallet wallet, HomeEntryFlow entryFlow, IEntryTickets entryTickets, IClock clock)
         {
             _navigator = navigator;
             _selection = selection;
             _catalog = catalog;
             _wallet = wallet;
             _entryFlow = entryFlow;
+            _entryTickets = entryTickets;
+            _clock = clock;
         }
 
         /// <summary>Optional so a scene without these services still opens; the settings and preset buttons then do nothing.</summary>
@@ -257,6 +275,7 @@ namespace SpeedStars.UI.Home
             base.OnEnable();
             EnsureSelection();
             _selection.Changed += RefreshEventName;
+            _wallet.Changed += RefreshPlayStyle;
             if (_settings != null) _settings.Changed += RefreshSound;
             if (_settings != null) _settings.Changed += RefreshPlayerName;
             if (_cosmetics != null) _cosmetics.Changed += RefreshPresets;
@@ -275,6 +294,8 @@ namespace SpeedStars.UI.Home
         protected override void OnDisable()
         {
             _selection.Changed -= RefreshEventName;
+            _wallet.Changed -= RefreshPlayStyle;
+            ClearEntryOverlay();
             if (_settings != null) _settings.Changed -= RefreshSound;
             if (_settings != null) _settings.Changed -= RefreshPlayerName;
             if (_cosmetics != null) _cosmetics.Changed -= RefreshPresets;
@@ -372,7 +393,8 @@ namespace SpeedStars.UI.Home
 
         private void Update()
         {
-            if (_selection == null || !DailyRaceSelected || Time.unscaledTime < _nextDailyStatusRefresh) return;
+            if (_entryOverlay && _entryFlight == null && !_entryFlow.IsTransitioning) ClearEntryOverlay();
+            if (_selection == null || Time.unscaledTime < _nextDailyStatusRefresh) return;
             RefreshSelectedRaceStatus();
         }
 
@@ -382,7 +404,8 @@ namespace SpeedStars.UI.Home
             bool daily = DailyRaceSelected;
             var remaining = daily ? _entryFlow.DailyRaceCooldown : System.TimeSpan.Zero;
             bool onCooldown = remaining > System.TimeSpan.Zero;
-            playButton.interactable = !onCooldown;
+            playButton.interactable = !onCooldown && !_entryOverlay;
+            RefreshPlayStyle();
             if (daily) eventNameText.text = onCooldown ? $"NEXT IN {CountdownFormatter.Format(remaining)}" : "RACE OF THE DAY · 100 M";
             else eventNameText.text = _catalog.TryGet(_selection.Selected, out RaceEventDefinition definition)
                 ? definition.DisplayName
@@ -463,25 +486,187 @@ namespace SpeedStars.UI.Home
             _navigator.OpenPopup(settingsPopup);
         }
 
+        private void RefreshPlayStyle()
+        {
+            if (_catalog == null || !playButton) return;
+            if (!_playBackground && !CachePlayGraphics()) return;
+            bool ticketed = _catalog.TryGet(_selection.Selected, out RaceEventDefinition race) && race.RequiresTicket;
+            bool vip = ticketed && _wallet.TimedAccessActive;
+            Image source = ticketed ? TicketArt(vip) : null;
+
+            RectTransform label = _playLabel.rectTransform;
+            _playFlag.enabled = !ticketed;
+            _playFare.gameObject.SetActive(ticketed);
+            _playFareIcon.gameObject.SetActive(ticketed && source);
+            label.anchorMin = ticketed ? new Vector2(0.06f, _freeLabelMin.y) : _freeLabelMin;
+            label.anchorMax = ticketed ? new Vector2(0.51f, _freeLabelMax.y) : _freeLabelMax;
+            _playLabel.color = vip ? new Color32(48, 31, 10, 255) : _freeLabelColor;
+
+            Image ticketBox = source ? source.transform.parent.GetComponent<Image>() : null;
+            _playBackground.sprite = ticketed && ticketBox && ticketBox.sprite ? ticketBox.sprite : _freePlaySprite;
+            _playBackground.color = ticketed
+                ? (vip ? new Color32(255, 204, 73, 255) : new Color32(66, 103, 149, 255))
+                : _freePlayColor;
+            _playFare.color = _playLabel.color;
+            _playFare.fontSize = _playLabel.fontSize * (vip ? 0.44f : 1f);
+            Place(_playFare.rectTransform, new Vector2(vip ? 0.66f : 0.63f, 0.08f), new Vector2(vip ? 0.97f : 0.93f, 0.92f));
+            _playFareIcon.sprite = source ? source.sprite : null;
+            _playFare.text = vip && _wallet.TimedAccessEndsUtc.HasValue
+                ? $"VIP FREE\n{CountdownFormatter.Format(_wallet.TimedAccessEndsUtc.Value - _clock.UtcNow)}"
+                : "<size=72%>x</size>1";
+        }
+
+        private bool CachePlayGraphics()
+        {
+            Transform root = playButton.transform;
+            _playBackground = playButton.GetComponent<Image>();
+            _playFlag = root.Find("Icon")?.GetComponent<Image>();
+            _playLabel = root.Find("Label")?.GetComponent<TMP_Text>();
+            if (!_playBackground || !_playFlag || !_playLabel)
+            {
+                _playBackground = null;
+                return false;
+            }
+            _freePlaySprite = _playBackground.sprite;
+            _freePlayColor = _playBackground.color;
+            _freeLabelColor = _playLabel.color;
+            _freeLabelMin = _playLabel.rectTransform.anchorMin;
+            _freeLabelMax = _playLabel.rectTransform.anchorMax;
+
+            _playFare = Instantiate(_playLabel, root);
+            _playFare.name = "Entry Cost";
+            _playFare.raycastTarget = false;
+            _playFare.enableAutoSizing = false;
+            _playFare.alignment = TextAlignmentOptions.Center;
+            _playFareIcon = MakeImage("Entry Ticket", root);
+            Place(_playFareIcon.rectTransform, new Vector2(0.44f, 0.10f), new Vector2(0.73f, 0.90f));
+            return true;
+        }
+
+        private Image TicketArt(bool vip)
+        {
+            if (!_resourceBar) _resourceBar = FindObjectOfType<ResourceBarView>();
+            if (!_resourceBar) return null;
+            Transform box = vip ? _resourceBar.transform.Find("TimedTicket") : _resourceBar.EntryTicketBox;
+            return box ? box.Find("Icon")?.GetComponent<Image>() : null;
+        }
+
         private void OnPlay()
         {
-            bool exists = _catalog.TryGet(_selection.Selected, out RaceEventDefinition definition);
-            PlayStep step = HomeEntryRules.DecidePlay(
-                exists,
-                exists && definition.IsPlayable,
-                exists && definition.RequiresTicket,
-                _wallet.TimedAccessActive);
+            if (_entryOverlay || _entryFlow.IsTransitioning || !_catalog.TryGet(_selection.Selected, out RaceEventDefinition definition)
+                || !definition.IsPlayable) return;
 
-            switch (step)
+            if (definition.RequiresTicket && !_wallet.TimedAccessActive)
             {
-                case PlayStep.OpenGate:
-                    entryGateModal.Open(definition);
-                    break;
-                case PlayStep.EnterNow:
-                    _entryFlow.TryEnter(definition.Id);
-                    if (DailyRaceSelected) RefreshSelectedRaceStatus();
-                    break;
+                _entryTickets.Refresh();
+                if (_entryTickets.Count == 0)
+                {
+                    entryGateModal.OpenStore(definition);
+                    return;
+                }
+                if (FlyEntryTicket(definition)) return;
             }
+            EnterRace(definition);
+        }
+
+        private bool FlyEntryTicket(RaceEventDefinition definition)
+        {
+            Image art = TicketArt(false);
+            Canvas canvas = playButton.GetComponentInParent<Canvas>();
+            if (!art || !art.sprite || !canvas || !_playLabel) return false;
+
+            Canvas root = canvas.rootCanvas;
+            _entryOverlay = new GameObject("Ticket Entry Transition", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            var area = (RectTransform)_entryOverlay.transform;
+            area.SetParent(root.transform, false);
+            Place(area, Vector2.zero, Vector2.one);
+            Canvas overlay = _entryOverlay.GetComponent<Canvas>();
+            overlay.overrideSorting = true;
+            overlay.sortingLayerID = root.sortingLayerID;
+            overlay.sortingOrder = 30000;
+
+            Image blocker = MakeImage("Input Blocker", area);
+            Place(blocker.rectTransform, Vector2.zero, Vector2.one);
+            blocker.color = new Color(0f, 0f, 0f, 0.001f);
+            blocker.raycastTarget = true;
+
+            Image ticket = MakeImage("Flying Entry Ticket", area);
+            ticket.sprite = art.sprite;
+            float size = area.rect.height * 0.15f;
+            ticket.rectTransform.sizeDelta = Vector2.one * size;
+            Vector2 from = MapToOverlay(art.rectTransform, area, root);
+            Vector2 to = MapToOverlay(_playFareIcon.rectTransform, area, root);
+            ticket.rectTransform.anchoredPosition = from;
+            playButton.interactable = false;
+            _entryFlight = DOVirtual.Float(0f, 1f, 0.72f, progress =>
+            {
+                ticket.rectTransform.anchoredPosition = Vector2.Lerp(from, to, progress)
+                    + Vector2.up * (Mathf.Sin(Mathf.PI * progress) * size * 0.8f);
+                ticket.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.7f, 1.05f, progress);
+            }).SetEase(Ease.InOutSine).SetUpdate(true).SetLink(gameObject).OnComplete(() =>
+            {
+                _entryFlight = null;
+                ticket.gameObject.SetActive(false);
+                if (EnterRace(definition) == EntryOutcome.StartRace && _entryFlow.IsTransitioning) ShowLoading(area);
+                else ClearEntryOverlay();
+            });
+            return true;
+        }
+
+        private EntryOutcome EnterRace(RaceEventDefinition definition)
+        {
+            EntryOutcome outcome = _entryFlow.TryEnter(definition.Id);
+            if (outcome == EntryOutcome.NoTicket) entryGateModal.OpenStore(definition);
+            return outcome;
+        }
+
+        private void ShowLoading(RectTransform area)
+        {
+            TMP_Text loading = Instantiate(_playLabel, area);
+            loading.name = "Loading";
+            loading.text = "LOADING…";
+            loading.alignment = TextAlignmentOptions.Center;
+            loading.color = Color.white;
+            loading.raycastTarget = false;
+            Place(loading.rectTransform, new Vector2(0.25f, 0.04f), new Vector2(0.75f, 0.14f));
+        }
+
+        private void ClearEntryOverlay()
+        {
+            _entryFlight?.Kill();
+            _entryFlight = null;
+            if (!_entryOverlay) return;
+            _entryOverlay.SetActive(false);
+            Destroy(_entryOverlay);
+            _entryOverlay = null;
+            if (isActiveAndEnabled) RefreshSelectedRaceStatus();
+        }
+
+        private static Image MakeImage(string name, Transform parent)
+        {
+            var node = new GameObject(name, typeof(RectTransform), typeof(Image));
+            node.transform.SetParent(parent, false);
+            Image image = node.GetComponent<Image>();
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private static void Place(RectTransform rect, Vector2 min, Vector2 max)
+        {
+            rect.anchorMin = min;
+            rect.anchorMax = max;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+        }
+
+        private static Vector2 MapToOverlay(RectTransform item, RectTransform area, Canvas root)
+        {
+            Canvas source = item.GetComponentInParent<Canvas>().rootCanvas;
+            Camera fromCamera = source.renderMode == RenderMode.ScreenSpaceOverlay ? null : source.worldCamera;
+            Camera toCamera = root.renderMode == RenderMode.ScreenSpaceOverlay ? null : root.worldCamera;
+            Vector2 pixel = RectTransformUtility.WorldToScreenPoint(fromCamera, item.TransformPoint(item.rect.center));
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(area, pixel, toCamera, out Vector2 local);
+            return local;
         }
 
         private void OnEnvironment() => PushScreen(themeSelectScreen, nameof(themeSelectScreen));
