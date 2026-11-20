@@ -118,9 +118,12 @@ Artık **havası olan her tema aynı kodu çalıştırır, farkı veri yapar** (
 | `Scripts/Themes/ThemeWeather.cs` | Profil varlığı: gök materyali + ufuk dolgusu, güneş rengi/şiddet çarpanı, üç ambient rengi, dünya geneli hava (ton/karışım/güç artışı/mesafe çarpanları), `WeatherLayer[]` (ton, boyut, ömür, hız, yön, yerçekimi, oran, tavan, kutu, kamera takip ofseti, streak uzunluğu). |
 | `Scripts/Themes/ThemeWeatherView.cs` | Tek sürücü. Dünyanın kökünde durur; menüde `SetActive`, yarışta dünya değişimi onu açıp kapatır. Gök arkalığı quad'ı + partikül katmanlarını kurar, kamerayla taşır, çıkışta kamera/ambient/güneşi **aynen geri verir** (statik `_holder`: temalar hangi sırada açılırsa açılsın birbirinin değerini silmez). **Sadece play modunda** çalışır — ambient/gök sahne ayarı, editörde yazmak Home.unity'yi kirletirdi. |
 | `ThemeAtmosphere.AirBlend` | Üreticinin nesne başına yazdığı haze'i tema geneli ton/güç/mesafeyle kaydırır; sıfır alan "dokunma" demek, yazılı derinlik kompozisyonu korunur. Sahipli (`SetAir`/`ClearAir`). |
-| `LoopThemeDefinition.weather` | Tek doğruluk kaynağı: menü prefabı da yarış dünyası da profili buradan alır (view'ın `weather` alanı boşsa tanıma bakar). |
-| `Shaders/ThemeSky.shader` | Genel gök: ufuk/zenit + kırılma, isteğe bağlı güneş diski ve parıltı (disk boyutu 0 = kapalı gök). |
+| `LoopThemeDefinition.weather` | Tek doğruluk kaynağı: menü prefabı da yarış dünyası da profili buradan alır (view'ın `weather` alanı boşsa tanıma bakar). Tanımı olmayan tek harita Standart Şehir; orada profil doğrudan view'ın alanında. |
+| Profildeki `worldTint`/`worldTintBlend` | Yakın dünyanın saate uyması. Temanın bütün renk kanallarını (`_Color`, `_BaseColor`, `_FrontColor`, `_SideColor`, `_WindowColor`, `_ShadowColor`, `_LightColor`, `_ShadeColor`, `_PaintShadow`, `_PaintLight`, `_Tint`) **çarpar** — ışık gibi, yani koyu boya koyu kalır. Taban her zaman materyalin kendi rengi, bu yüzden tema iki kez açılınca ton katlanmaz. Bu shader'lar ışığa tepki vermediği için ambient/güneşi kısmak yakın planı değiştirmez; tek yol budur. |
+| `WeatherLayer.spin` / `.turbulence` | Dönüş aralığı (sıfırdan farklıysa tane rastgele açıyla doğar) ve havanın taneyi yolundan savurması. Yaprak/taç yaprak bunları kullanır, yağmur ve toz sıfır bırakır. |
+| `Shaders/ThemeSky.shader` | Genel gök: ufuk/zenit + kırılma, **isteğe bağlı orta renk bandı** (`_Mid`/`_MidHeight`/`_MidWidth`/`_MidBlend`; güç 0 = eski iki renkli gök aynen durur), isteğe bağlı güneş diski ve parıltı (disk boyutu 0 = kapalı gök). |
 | `Shaders/WeatherStreak.shader` | Uzayan damla (yağmur): iki ucu sönen ince çizgi, `ParticleSystemRenderMode.Stretch`. |
+| `Shaders/WeatherLeaf.shader` | Yaprak / taç yaprak: sivri uçlu oval, ortasında açık damar. Tanenin kendi dönüşü onu çevirir. |
 | `Editor/ThemeWeatherSetup.cs` | `Speed Stars → Themes → Set Up <tema> Weather`: materyalleri ve profili yoksa üretir, Definition'ı bağlar, harita prefabına view'ı takar. Var olan `Weather.asset` kullanıcınındır, ezilmez. |
 
 Kurulu profiller (ölçümler play'de, Home sahnesi, menü kamerası):
@@ -134,7 +137,31 @@ Kurulu profiller (ölçümler play'de, Home sahnesi, menü kamerası):
   gök `.47,.53,.58` → `.16,.21,.29`, güneş `.62,.70,.80` ×0.55, soğuk ambient, hava tonu %70 / +0.20 / mesafe ×0.6–0.65.
   Yağmur (streak, hız 18–26, uzunluk 5.5, 750/sn, tavan 1600, kutu 30×10×44) + deniz sisi (40/sn). 122 FPS.
 
-Yarış tarafı: `RaceThemeView` açtığı dünyaya view'ı iliştirir, profil `Definition`'dan gelir — yani hava artık yarışta da var.
+- **Roma** (`RomeByzantium`, `LoopWay3`): gün batımı. Gök kırılması 0.78 (altın yukarıda), güneş alçak ve iri, ışık
+  `1,.68,.42` ×0.80, hava tonu %62, dünya tonu `1,.78,.56` ×0.55. Turuncu yapraklar (dönüş ±110°/sn, türbülans 0.9,
+  20/sn) + alçak güneşte parlayan zerreler. **Ders:** gökteki renk bandı ekranın alt yarısındaysa yol ve manzara onu
+  kapatır, hiç görünmez — bant görünen göğün yüksekliğine konmalı.
+- **Gökyüzü Adaları** (`FloatingSky`, `LoopWay5`): altın–pembe şafak. Ufuk `1,.82,.40`, pembe bant 0.90'da (genişlik
+  0.22), zenit leylak `.52,.44,.70`, güneş parıltısı altın. Dünya tonu `1,.80,.70` ×0.62. Üç katman: kameranın altından
+  akan bulut denizi (iri, alfa .07), altın zerreler, pembe taç yapraklar (`Weather Leaf`, dönüş ±130°/sn).
+- **Standart Şehir** (`StandardCity`, Serhat'ın `Kevin Iglesias/.../LoopWay.prefab`'ı): referans gündüz. **Gök materyali
+  yok** (kamera kendi mavi skybox'ında kalır), hava ve dünya tonu sıfır. Eklenen tek şey rüzgâr: yeşil yapraklar
+  (hız 2.4–4.6, dönüş ±150°/sn, türbülans 1.4, 26/sn) + çok sönük sokak tozu. Tanımı olmadığı için profil view'ın
+  alanına yazıldı; kurulum aracı klasörü ve materyalleri kendi açar.
+
+Yarış tarafı: `RaceThemeView` açtığı dünyaya view'ı iliştirir, profil `Definition`'dan gelir — hava yarışta da var.
+Yarış dünyası akarak kurulduğu için view saniyede bir kez **yeni `ThemeChunk`'ları** tarayıp onlara da dünya tonunu
+uygular (hepsini değil, sadece yenilerini).
+
+### Yarış ölçümü (2026-11-20, Race sahnesi, 7 sn ritimle koşarak)
+
+| Kontrol | Sonuç |
+|---|---|
+| Hava uygulanıyor mu | Evet: kamera `SolidColor` tema rengine geçiyor, ambient/güneş yazılıyor |
+| Partikül kutusu takibi | Koşucu z=32, kamera z=33.4, yağmur kutusu z=38.4 (kamera + ofset) — doğru |
+| Yoğunluk / FPS | 709 canlı damla + 224 sis, 109 FPS (editör) |
+| Akan yeni bölümler | Tonlanıyor (ör. `.49,.30,.18` → `.23,.16,.11`) |
+| Roma yarışta | Gün batımı göğü, sıcak yapılar, uçuşan yapraklar — doğru |
 
 ## Son ölçümler (2026-10-27, play)
 
@@ -155,19 +182,20 @@ Yarış tarafı: `RaceThemeView` açtığı dünyaya view'ı iliştirir, profil 
 - Bekleyen fikirler: Mid fazında ayağın da ~−50'ye açılması (kullanıcı önce kendisi bakacak); hızlı bas-çek
   tepesinde boynun çok kıvrık görünmesi (`waistTopShare` düşürülebilir).
 - Play'e girince ilk saniyelerde kendiliğinden bir basış geliyor (kaynağı bakılmadı).
-- **Havası olmayan üç tema:** Standart Şehir, Roma ve Gökyüzü Adaları hâlâ sabit mavi gökyüzünü paylaşıyor; her biri
-  için bir `Weather.asset` + kurulum aracına bir satır yeterli (Roma: alçak altın saat; Gökyüzü: soluk yüksek irtifa).
-- **Fırtınaya uymayan iki şey (kullanıcı şimdilik "böyle kalsın" dedi):** denizdeki beyaz bulutlar ve parlak mavi su.
-  Hava perspektifi yalnızca `Desert Pixel Paint` ve `Pastel Building` shader'larına uygulanıyor; su Pirate Sea'nin kendi
-  `Painted Ocean.mat`'ı (tek materyalle koyulur), bulutlar `Materials/Clouds/` altında ortak (temaya özel materyal ya da
-  profile "dünya tonu" alanı gerekir).
+- **Beş temanın beşinin de havası var** (2026-11-20). Kalan iki kozmetik iş: denizin suyu yarışta menüdekinden parlak
+  okunuyor (`Painted Canal` shader'ı kendi parlaklığını ekliyor; `Painted Ocean.mat`'ın temel rengi koyultulabilir) ve
+  `Road Painted` shader'ında renk özelliği olmadığı için **yol dünya tonundan etkilenmiyor** (shader'a `_Tint` eklenir).
+- Yapılmayan fikirler: denizde ıslak zemin + şimşek (profile aralık/renk alanı), tema sesi (`AudioService` var, profile
+  döngü klibi eklenebilir), tema geçişinin yumuşatılması (şu an gök/ışık bir karede zıplıyor), telefonda profiler —
+  tema açılışındaki ~1000 renderer'lık ton taraması takılma yapıyor mu bakılmadı.
 - `ThemeRunPlayground.unity` sahnesinde eski `EgyptDesertAtmosphere` ayrı bir sahne nesnesinde duruyor (o yüzden script
   silinmedi); o sahnede yeni view ile üst üste biner. Serhat'ın sahnesi, dokunulmadı.
 
 ## Durum
 
-- Tema havası `main`'de, **push edilmedi**: `e73876f8` (sistem + Mısır), `f1adbcee` (Mısır toz ayarı),
-  `f34c6154` (Pirate Sea fırtınası) — main origin'in 3 commit önünde.
+- Tema havası `main`'de ve **push edildi** (2026-11-20): `e73876f8` sistem + Mısır, `f1adbcee` Mısır toz ayarı,
+  `f34c6154` Pirate Sea fırtınası, `a0d825f3` devir notu, `9c8f0c2c` Roma, `38bad5ce` dünya tonu, `743ce6cd` Gökyüzü
+  Adaları, `a1024dbc` Standart Şehir rüzgârı.
 - Sistem `main`'de; kullanıcı 2026-10-27'ye kadarki işi commit etti. Tooltip ekleri ve bu md güncellemesi
   **commit edilmedi** (kullanıcı kendisi commit eder). Unity ana klasörü
   (`speed-starts`) açıyor. Worktree'den çalışan oturumda ana klasörde `Edit` kancayla engelleniyor; küçük Python
