@@ -19051,6 +19051,9 @@ MonoBehaviour:
   end: 100.83865
   landmarkSummary: 'Working marine coast: Marine Gunsmith and Powder Store, Harbor
     Shipwright Drydock'
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &1857942355343452341
 GameObject:
   m_ObjectHideFlags: 0
@@ -23884,6 +23887,9 @@ MonoBehaviour:
   end: 161.26883
   landmarkSummary: 'Working marine coast: Marine Sailcloth Weaving Pavilion, Marine
     Tidal Waterwheel Workshop'
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &2421009004484864615
 GameObject:
   m_ObjectHideFlags: 0
@@ -26703,6 +26709,7 @@ GameObject:
   m_Component:
   - component: {fileID: 9165424664069000861}
   - component: {fileID: 8383773720555241371}
+  - component: {fileID: 1329067004630536326}
   m_Layer: 0
   m_Name: LoopWay4
   m_TagString: Untagged
@@ -26746,7 +26753,23 @@ MonoBehaviour:
   streamAtRuntime: 1
   runner: {fileID: 0}
   retireDistance: 90
+  viewCamera: {fileID: 0}
+  forceRetireDistance: 300
+  buildAheadDistance: 150
   romanLampSpacing: 11.81
+--- !u!114 &1329067004630536326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2767154276559255575}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e2b8d6417c04f3ab9d75e0c2a86f4d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  weather: {fileID: 0}
 --- !u!1 &2775446608805063985
 GameObject:
   m_ObjectHideFlags: 0
@@ -36429,6 +36452,9 @@ MonoBehaviour:
   start: 221.69899
   end: 282.12915
   landmarkSummary: 'Working marine coast: Marine Harbor Master Balcony'
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &3837965379991599266
 GameObject:
   m_ObjectHideFlags: 0
@@ -65239,6 +65265,9 @@ MonoBehaviour:
   end: 40.408478
   landmarkSummary: 'Working marine coast: Marine Chandlery Rope and Sail Shop, Marine
     Maritime Chapel Pier'
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &7096751663743563999
 GameObject:
   m_ObjectHideFlags: 0
@@ -69484,6 +69513,9 @@ MonoBehaviour:
   end: 342.55933
   landmarkSummary: 'Working marine coast: Harbor Cargo Crane Pier, Marine Fishmonger
     and Net Loft'
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &7552308921395917525
 GameObject:
   m_ObjectHideFlags: 0
@@ -85747,6 +85779,9 @@ MonoBehaviour:
   end: 221.699
   landmarkSummary: 'Working marine coast: Harbor Covered Market Pier, Marine Salt
     Packing Warehouse'
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &9105993760590665949
 GameObject:
   m_ObjectHideFlags: 0
