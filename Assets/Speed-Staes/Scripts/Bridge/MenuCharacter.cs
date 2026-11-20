@@ -2,7 +2,10 @@ using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Physical;
 using SpeedStars.Runner;
+using SpeedStars.UI.Costume;
 using SpeedStars.UI.Flow;
+using SpeedStars.UI.Framework;
+using SpeedStars.UI.Home;
 using UnityEngine;
 using Zenject;
 
@@ -25,11 +28,15 @@ namespace SpeedStars.Bridge
         bool _applied;
         ICosmeticPreview _preview;
         CosmeticCatalog _catalog;
+        ICosmeticService _cosmetics;
+        ScreenNavigator _navigator;
+        int? _lastPreset;
         CosmeticApplier _applier;
         bool _subscribed;
 
         const float SpinDegrees = 360f;
-        const float PoseHoldDuration = 0.25f;
+        const float ScenePoseHoldDuration = 0.25f;
+        const float PresetMotionDuration = 2f;
         SceneFlow _flow;
         bool _flowSubscribed;
         Transform _runnerRoot;
@@ -40,16 +47,21 @@ namespace SpeedStars.Bridge
         Vector3 _cameraPosition;
         Quaternion _cameraRotation;
         float _motionTime;
+        float _motionDuration;
+        float _poseHoldDuration;
         bool _leaving;
         bool _moving;
 
         // Optional so a scene without the cosmetic bindings still shows the (bare) character; Start warns about it.
         [Inject]
-        void Construct([InjectOptional] ICosmeticPreview preview, [InjectOptional] CosmeticCatalog catalog, [InjectOptional] SceneFlow flow)
+        void Construct([InjectOptional] ICosmeticPreview preview, [InjectOptional] CosmeticCatalog catalog,
+            [InjectOptional] SceneFlow flow, [InjectOptional] ICosmeticService cosmetics, [InjectOptional] ScreenNavigator navigator)
         {
             _preview = preview;
             _catalog = catalog;
             _flow = flow;
+            _cosmetics = cosmetics;
+            _navigator = navigator;
             if (isActiveAndEnabled) SubscribeToSceneFlow();
         }
 
@@ -60,6 +72,8 @@ namespace SpeedStars.Bridge
             Initialize();
             Subscribe();
             SubscribeToSceneFlow();
+            _lastPreset = _cosmetics?.SelectedPreset;
+            Wear();
         }
 
         void Start()
@@ -96,7 +110,7 @@ namespace SpeedStars.Bridge
             else if (_leaving) RestoreMotion();
         }
 
-        void BeginMotion(bool leaving)
+        void BeginMotion(bool leaving, bool moveCamera = true)
         {
             RestoreMotion();
             _leaving = leaving;
@@ -105,7 +119,7 @@ namespace SpeedStars.Bridge
             _idle = _runnerRoot.GetComponent<MenuIdlePose>();
             _runnerRest = _runnerRoot.localRotation;
 
-            Camera camera = Camera.main;
+            Camera camera = moveCamera ? Camera.main : null;
             _camera = camera && camera.gameObject.scene == gameObject.scene ? camera.transform : null;
             if (_camera)
             {
@@ -114,6 +128,8 @@ namespace SpeedStars.Bridge
             }
 
             _motionTime = 0f;
+            _motionDuration = moveCamera ? UnitySceneLoader.DepartureDuration : PresetMotionDuration;
+            _poseHoldDuration = moveCamera ? ScenePoseHoldDuration : 0f;
             _moving = true;
             ApplyMotion(0f);
         }
@@ -121,9 +137,8 @@ namespace SpeedStars.Bridge
         void LateUpdate()
         {
             if (!_moving) return;
-            float duration = UnitySceneLoader.DepartureDuration;
             _motionTime += Time.unscaledDeltaTime;
-            float progress = Mathf.Clamp01((_motionTime - PoseHoldDuration) / (duration - PoseHoldDuration));
+            float progress = Mathf.Clamp01((_motionTime - _poseHoldDuration) / (_motionDuration - _poseHoldDuration));
             ApplyMotion(progress);
             if (progress >= 1f && !_leaving) RestoreMotion();
         }
@@ -142,7 +157,7 @@ namespace SpeedStars.Bridge
             else _runnerRoot.localRotation = _runnerRest * turn;
             if (_idle)
             {
-                float phase = (2.7f * progress - 0.9f * progress * progress) * (UnitySceneLoader.DepartureDuration - PoseHoldDuration);
+                float phase = (2.7f * progress - 0.9f * progress * progress) * (_motionDuration - _poseHoldDuration);
                 _idle.SetTransitionRun(runWeight, phase);
             }
 
@@ -179,7 +194,17 @@ namespace SpeedStars.Bridge
             var root = runner ? runner : gameObject;
             if (!_applier) _applier = root.GetComponent<CosmeticApplier>() ?? root.AddComponent<CosmeticApplier>();
             _applier.Apply(_preview.Current, _catalog);
+
+            int? preset = _cosmetics?.SelectedPreset;
+            bool changedPreset = _lastPreset.HasValue && preset.HasValue && _lastPreset.Value != preset.Value;
+            _lastPreset = preset;
+            if (!changedPreset || _leaving || !IsPresetScreen()) return;
+
+            BeginMotion(leaving: false, moveCamera: false);
         }
+
+        bool IsPresetScreen() =>
+            _navigator?.CurrentScreen is HomeScreenView || _navigator?.CurrentScreen is CostumeEditorScreenView;
 
         /// <summary>Idempotent; also callable from tests or a builder (AddComponent skips Awake in EditMode).</summary>
         public void Initialize()

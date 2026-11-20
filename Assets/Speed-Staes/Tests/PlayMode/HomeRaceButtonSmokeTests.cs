@@ -98,6 +98,54 @@ namespace SpeedStars.PlayTests
         }
 
         [UnityTest]
+        public IEnumerator Home_SavedRacerChange_RestartsTheFullTurn()
+        {
+            yield return new WaitForSecondsRealtime(UnitySceneLoader.DepartureDuration + 0.1f);
+            HomeScreenView home = Require<HomeScreenView>();
+            ICosmeticService cosmetics = Container.Resolve<ICosmeticService>();
+            int originalPreset = cosmetics.SelectedPreset;
+            Transform runner = Object.FindObjectsOfType<MonoBehaviour>()
+                .First(behaviour => behaviour.GetType().Name == "MenuCharacter").transform;
+            Transform camera = Camera.main.transform;
+            Vector3 cameraPosition = camera.position;
+            Quaternion cameraRotation = camera.rotation;
+            float previousYaw = runner.eulerAngles.y;
+            float totalYaw = 0f;
+
+            try
+            {
+                Quaternion rest = runner.rotation;
+                Button next = RequireField<Button>(home, "nextRacerButton");
+                yield return Tap(next, "next saved racer");
+                int firstPreset = cosmetics.SelectedPreset;
+                Assert.AreNotEqual(originalPreset, firstPreset);
+                yield return WaitUntil(() => Quaternion.Angle(rest, runner.rotation) >= 45f, "first racer to start turning");
+                next.onClick.Invoke();
+                Assert.AreNotEqual(firstPreset, cosmetics.SelectedPreset);
+                Assert.Less(Quaternion.Angle(rest, runner.rotation), 1f, "each new racer starts from the rest heading");
+                float restartedAt = Time.realtimeSinceStartup;
+                float startedTurningAt = -1f;
+                yield return WaitUntil(() =>
+                {
+                    float yaw = runner.eulerAngles.y;
+                    totalYaw += Mathf.DeltaAngle(previousYaw, yaw);
+                    previousYaw = yaw;
+                    if (startedTurningAt < 0f && Mathf.Abs(totalYaw) >= 2f)
+                        startedTurningAt = Time.realtimeSinceStartup;
+                    Assert.Less(Vector3.Distance(cameraPosition, camera.position), 0.01f);
+                    Assert.Less(Quaternion.Angle(cameraRotation, camera.rotation), 0.1f);
+                    return Mathf.Abs(totalYaw) >= 358f;
+                }, "one complete turn after switching saved racer");
+                Assert.Less(startedTurningAt - restartedAt, 0.22f, "the new racer starts without the scene intro hold");
+                Assert.Less(Time.realtimeSinceStartup - restartedAt, 2.15f, "the preset spin finishes within two seconds");
+            }
+            finally
+            {
+                cosmetics.SelectPreset(originalPreset);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Home_Opens_WithHomeScreenVisible_AndNoErrorLogs()
         {
             HomeScreenView home = Require<HomeScreenView>();
