@@ -53383,6 +53383,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1185065511504026780}
   - component: {fileID: 8905700036903273129}
+  - component: {fileID: 2953204320791401143}
   m_Layer: 0
   m_Name: LoopWay3
   m_TagString: Untagged
@@ -53426,7 +53427,23 @@ MonoBehaviour:
   streamAtRuntime: 1
   runner: {fileID: 0}
   retireDistance: 45
+  viewCamera: {fileID: 0}
+  forceRetireDistance: 300
+  buildAheadDistance: 150
   romanLampSpacing: 11.81
+--- !u!114 &2953204320791401143
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3350889110461699513}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e2b8d6417c04f3ab9d75e0c2a86f4d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  weather: {fileID: 0}
 --- !u!1 &3351294616923571061
 GameObject:
   m_ObjectHideFlags: 0
@@ -60996,6 +61013,9 @@ MonoBehaviour:
   end: 100.83865
   landmarkSummary: 'Civic forecourt - Marble Forum Temple: Tiered Fountain Garden,
     Marble Forum Temple'
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &3917204411033232532
 GameObject:
   m_ObjectHideFlags: 0
@@ -77441,6 +77461,9 @@ MonoBehaviour:
   end: 40.408478
   landmarkSummary: 'Measured Roman street clusters: Art Blacksmith Forge Workshop,
     Art Olive Oil Merchant Loggia'
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &4941955516501426466
 GameObject:
   m_ObjectHideFlags: 0
@@ -84763,6 +84786,9 @@ MonoBehaviour:
   end: 221.699
   landmarkSummary: 'Measured Roman street clusters: Art Stonemason Open Workshop,
     Art Portico Corner Insula'
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &5329181066063300926
 GameObject:
   m_ObjectHideFlags: 0
@@ -101615,6 +101641,9 @@ MonoBehaviour:
   start: 100.83865
   end: 161.26883
   landmarkSummary: 'Civic forecourt - Oval Roman Amphitheatre: Oval Roman Amphitheatre'
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &6310904039439582056
 GameObject:
   m_ObjectHideFlags: 0

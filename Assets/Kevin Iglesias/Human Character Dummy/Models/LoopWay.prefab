@@ -108168,6 +108168,9 @@ MonoBehaviour:
   start: 168.46883
   end: 228.899
   frontageKind: Hospital
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &2928358406901155177
 GameObject:
   m_ObjectHideFlags: 0
@@ -129812,6 +129815,9 @@ MonoBehaviour:
   start: 47.60848
   end: 108.03865
   frontageKind: Bus Stop
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &3556147083342029465
 GameObject:
   m_ObjectHideFlags: 0
@@ -140378,6 +140384,9 @@ MonoBehaviour:
   start: 108.03865
   end: 168.46883
   frontageKind: Pocket Park
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &3823582880165969017
 GameObject:
   m_ObjectHideFlags: 0
@@ -318823,6 +318832,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4829042342210470391}
   - component: {fileID: 2483987495362281397}
+  - component: {fileID: 7793562679993888643}
   m_Layer: 0
   m_Name: LoopWay
   m_TagString: Untagged
@@ -318887,6 +318897,9 @@ MonoBehaviour:
   streamAtRuntime: 1
   runner: {fileID: 0}
   retireDistance: 25
+  viewCamera: {fileID: 0}
+  forceRetireDistance: 300
+  buildAheadDistance: 150
   lampSpacing: 11.81
   cloudCountRange: {x: 0, y: 2}
   segmentLength: 60.430172
@@ -319071,6 +319084,19 @@ MonoBehaviour:
   - 45.058857
   configured: 1
   generatedRoot: {fileID: 8741348059981358582}
+--- !u!114 &7793562679993888643
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8342602064857009021}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e2b8d6417c04f3ab9d75e0c2a86f4d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  weather: {fileID: 11400000, guid: be9763bf7798352498558a40e73d9a52, type: 2}
 --- !u!1 &8344201045404741596
 GameObject:
   m_ObjectHideFlags: 0
