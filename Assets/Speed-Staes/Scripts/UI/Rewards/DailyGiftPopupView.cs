@@ -142,12 +142,13 @@ namespace SpeedStars.UI.Rewards
                 return;
             }
 
+            int before = _tickets.Count;
             switch (RewardPanelsModel.OutcomeOf(_gift.Claim()))
             {
                 case DailyClaimOutcome.Fly:
                     _sfx?.Play(SfxId.Claim); // only a granted ticket sounds; the full view is not a reward
                     Close();
-                    if (flight != null) flight.Play(_closeMotion != null ? _closeMotion.PopupClose.Duration : 0f);
+                    if (flight != null) flight.Play(_closeMotion != null ? _closeMotion.PopupClose.Duration : 0f, before);
                     else Debug.LogWarning($"{name}: the flight widget is not bound; the ticket is granted without the flight.", this);
                     break;
                 case DailyClaimOutcome.ShowFull:

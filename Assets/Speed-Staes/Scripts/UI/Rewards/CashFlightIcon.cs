@@ -2,6 +2,7 @@ using System;
 using DG.Tweening;
 using SpeedStars.UI.Framework;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace SpeedStars.UI.Rewards
 {
@@ -68,6 +69,86 @@ namespace SpeedStars.UI.Rewards
                 _flight = null;
                 Hide();
                 landed?.Invoke();
+            });
+            _flight = flight;
+        }
+
+        /// <summary>Reuses the Cash art for a single burst starting at the screen center.</summary>
+        public void PlayBurst(RectTransform target, int amount, Action<int, int> landed)
+        {
+            Cancel();
+            Image template = GetComponent<Image>();
+            Canvas canvas = GetComponentInParent<Canvas>();
+            if (!target || !template || !template.sprite || !canvas || amount <= 0)
+            {
+                landed?.Invoke(1, 1);
+                return;
+            }
+
+            RectTransform area = (RectTransform)canvas.rootCanvas.transform;
+            RectTransform origin = (RectTransform)transform;
+            Vector3 center = area.TransformPoint(area.rect.center);
+            Vector3 arc = origin.TransformVector(Vector3.up * 52f);
+            RectTransform targetIcon = target.Find("Icon") as RectTransform;
+            if (!targetIcon) targetIcon = target;
+
+            int count = Mathf.Clamp(amount, 3, 9);
+            var icons = new GameObject[count];
+            gameObject.SetActive(true);
+            template.enabled = false;
+            Sequence flight = DOTween.Sequence().SetUpdate(true).SetLink(gameObject);
+            for (int i = 0; i < count; i++)
+            {
+                const float spreadTime = 0.20f;
+                float travel = 0.58f + i * 0.032f;
+                // The golden angle spreads icons into a cluster without forming radial rows.
+                float angle = i * 2.399963f;
+                float radius = i == 0 ? 0f : 1.85f * Mathf.Sqrt((i + 1f) / count);
+                Vector3 offset = origin.TransformVector(new Vector3(
+                    Mathf.Cos(angle) * origin.rect.width * radius,
+                    Mathf.Sin(angle) * origin.rect.height * radius, 0f));
+                Vector3 start = center + offset * 0.55f;
+                Vector3 scattered = center + offset;
+                int arrival = i + 1;
+                var clip = new GameObject("Race Reward Diamond", typeof(RectTransform), typeof(Image));
+                icons[i] = clip;
+                var rect = (RectTransform)clip.transform;
+                rect.SetParent(origin, false);
+                rect.sizeDelta = origin.rect.size * 1.35f;
+                rect.position = start;
+                rect.localScale = Vector3.one * 0.72f;
+                Image image = clip.GetComponent<Image>();
+                image.sprite = template.sprite;
+                image.preserveAspect = true;
+                image.raycastTarget = false;
+                flight.Insert(0f, DOVirtual.Float(0f, 1f, spreadTime, progress =>
+                {
+                    rect.position = Vector3.Lerp(start, scattered, progress);
+                    rect.localScale = Vector3.one * Mathf.Lerp(0.72f, 1.18f, progress);
+                }).SetEase(Ease.OutCubic));
+                flight.Insert(spreadTime, DOVirtual.Float(0f, 1f, travel, progress =>
+                {
+                    if (!targetIcon) return;
+                    Vector3 end = targetIcon.TransformPoint(targetIcon.rect.center);
+                    rect.position = Vector3.Lerp(scattered, end, progress) + arc * Mathf.Sin(Mathf.PI * progress);
+                    rect.localScale = Vector3.one * Mathf.Lerp(1.18f, 0.30f, progress);
+                }).SetEase(Ease.InOutSine));
+                flight.InsertCallback(spreadTime + travel, () =>
+                {
+                    clip.SetActive(false);
+                    landed?.Invoke(arrival, count);
+                });
+            }
+            flight.OnComplete(() =>
+            {
+                _flight = null;
+                Hide();
+            });
+            flight.OnKill(() =>
+            {
+                if (template) template.enabled = true;
+                foreach (GameObject clip in icons)
+                    if (clip) Destroy(clip);
             });
             _flight = flight;
         }

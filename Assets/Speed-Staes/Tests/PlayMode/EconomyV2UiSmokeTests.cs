@@ -260,6 +260,22 @@ namespace SpeedStars.PlayTests
             Assert.AreEqual($"Rivals beaten +{paid.Opponents}", lines[2].text);
             Assert.IsTrue(groups[2].gameObject.activeSelf);
 
+            TMP_Text counter = RequireField<TMP_Text>(breakdown, "counterText");
+            counter.text = "100";
+            results.Show();
+            var flight = RequireField<SpeedStars.UI.Rewards.CashFlightIcon>(breakdown, "flight");
+            yield return WaitUntil(() =>
+            {
+                int visible = 0;
+                foreach (Transform icon in flight.transform)
+                    if (icon.gameObject.activeInHierarchy) visible++;
+                return visible >= 3;
+            }, "three race diamonds to be visible together");
+            Assert.AreEqual(100 - paid.Total, int.Parse(counter.text), "balance waits for the first diamond");
+            yield return WaitUntil(() => int.Parse(counter.text) > 100 - paid.Total, "the first race diamond to land");
+            Assert.Less(int.Parse(counter.text), 100, "the balance is counting up across arrivals");
+            yield return WaitUntil(() => int.Parse(counter.text) == 100 && !flight.IsFlying, "all race diamonds to land");
+
             results.ShowCashReward(RaceCashReward.None); // a solo run after it
             Assert.IsFalse(breakdown.IsShown, "an empty reward hides the block (and clears the previous race's)");
             yield return null;

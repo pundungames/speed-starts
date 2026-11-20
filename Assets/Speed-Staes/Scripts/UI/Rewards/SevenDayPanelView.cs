@@ -3,6 +3,7 @@ using SpeedStars.Core.Audio;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Costume;
 using SpeedStars.UI.Framework;
+using SpeedStars.UI.Home;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -43,6 +44,7 @@ namespace SpeedStars.UI.Rewards
         private UiMotionConfig _cardMotion;
         private ISfx _sfx;
         private bool _claiming;
+        private ResourceBarView _resourceBar;
 
         [Inject]
         public void ConstructSevenDay(ISevenDayRewards rewards, UiMotionConfig motion, [InjectOptional] ICosmeticService cosmetics)
@@ -135,7 +137,10 @@ namespace SpeedStars.UI.Rewards
             int available = RewardPanelsModel.AvailableIndex(states);
             if (available < 0) return;
 
-            int dayIndex = _rewards.Cards[available].DayNumber - 1;
+            SevenDayCard reward = _rewards.Cards[available];
+            int dayIndex = reward.DayNumber - 1;
+            if (!_resourceBar) _resourceBar = FindObjectOfType<ResourceBarView>();
+            int balanceBefore = _resourceBar ? _resourceBar.Balance(reward.Kind) : 0;
             _claiming = true;
             claimButton.interactable = false;
             SevenDayClaimResult result = _rewards.Claim(); // raises Changed: the cards redraw (and Home's red dot follows)
@@ -143,7 +148,10 @@ namespace SpeedStars.UI.Rewards
 
             if (result == SevenDayClaimResult.Claimed) _sfx?.Play(SfxId.Reward);
             if (result == SevenDayClaimResult.Claimed && dayIndex >= 0 && dayIndex < dayCards.Length && dayCards[dayIndex] != null)
+            {
+                if (_resourceBar) _resourceBar.FlyReward(reward.Kind, balanceBefore, dayCards[dayIndex].transform as RectTransform);
                 dayCards[dayIndex].Punch(_cardMotion);
+            }
             Redraw();
         }
     }

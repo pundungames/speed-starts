@@ -7,6 +7,7 @@ using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Framework;
+using SpeedStars.UI.Rewards;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -149,6 +150,10 @@ namespace SpeedStars.UI.Home
         private ISfx _sfx;
         private IHaptics _haptics;
         private TimedCashUnlock _timedCashUnlock;
+        private CashFlightIcon _ticketFlight;
+        private ResourceBarView _resourceBar;
+        private int _pendingAdTickets;
+        private Action<int> _revealAdTickets;
 
         [Inject]
         public void ConstructEntryGate(IEntryTickets tickets, IWallet wallet, HomeEntryFlow entryFlow, ScreenNavigator navigator)
@@ -228,6 +233,8 @@ namespace SpeedStars.UI.Home
             _wallet.Changed -= Refresh;
             KillShake();
             KillPunch();
+            if (_ticketFlight) _ticketFlight.Cancel();
+            FinishAdTicketFlight();
             KillSpin(); // an ad that is still running keeps going; Refresh restores the spinner on the next open
             base.OnDisable();
         }
@@ -266,7 +273,7 @@ namespace SpeedStars.UI.Home
             EntryGateModel model = EntryGateModel.Build(state);
 
             eventNameText.text = _event.DisplayName;
-            ticketCountText.text = HomeTexts.TicketsHeld(model.TicketCountText);
+            ticketCountText.text = HomeTexts.TicketsHeld(HomeTexts.TicketCount(Mathf.Max(0, _tickets.Count - _pendingAdTickets), _tickets.Cap));
             DateTime? nextTicket = _tickets.NextTicketUtc;
             refillText.gameObject.SetActive(nextTicket.HasValue);
             if (nextTicket.HasValue) refillText.text = HomeTexts.NextTicketIn(CountdownFormatter.Format(nextTicket.Value - _clock.UtcNow));
@@ -280,7 +287,7 @@ namespace SpeedStars.UI.Home
             offersCaption.text = model.OffersCaption;
             buyWithCashButton.interactable = model.BuyWithCashInteractable;
             cashPriceText.text = model.CashPriceText;
-            watchAdButton.interactable = model.WatchAdInteractable && !ad.IsBusy;
+            watchAdButton.interactable = model.WatchAdInteractable && !ad.IsBusy && _pendingAdTickets == 0;
             watchAdLabel.gameObject.SetActive(!ad.IsBusy);
             SetSpinner(ad.IsBusy);
             useTicketButton.gameObject.SetActive(model.ShowUseTicketButton);
@@ -355,22 +362,74 @@ namespace SpeedStars.UI.Home
         private void OnWatchAd()
         {
             EntryGateAdFlow ad = AdFlow;
-            if (!ad.IsAvailable) return; // closed offer, or an ad already runs (double tap)
+            if (!ad.IsAvailable || _pendingAdTickets > 0) return;
 
-            if (ad.TryStart(OnAdFinished)) Refresh(); // the spinner (a result that came at once has already refreshed through OnAdFinished)
+            int before = _tickets.Count;
+            if (ad.TryStart(outcome => OnAdFinished(outcome, before))) Refresh();
         }
 
         /// <summary>
         /// The ad ended, maybe after the window was closed or the scene left. The flow has already paid out by now; this
         /// only shows it, and only while the window is up.
         /// </summary>
-        private void OnAdFinished(AdWatchOutcome outcome)
+        private void OnAdFinished(AdWatchOutcome outcome, int previousBalance)
         {
             if (this == null || !isActiveAndEnabled) return;
 
+            if (outcome != AdWatchOutcome.Granted)
+            {
+                Refresh();
+                Shake();
+                return;
+            }
+
+            int awarded = _tickets.Count - previousBalance;
+            Image art = ticketIcon ? ticketIcon.GetComponentInChildren<Image>() : null;
+            if (awarded <= 0 || !art || !art.sprite)
+            {
+                Refresh();
+                PlayTicketPunch();
+                return;
+            }
+
+            if (!_ticketFlight)
+            {
+                var host = new GameObject("Ad Ticket Burst", typeof(RectTransform), typeof(Image), typeof(CashFlightIcon));
+                host.SetActive(false);
+                var rect = (RectTransform)host.transform;
+                rect.SetParent(transform, false);
+                rect.sizeDelta = Vector2.one * Mathf.Max(85f, art.rectTransform.rect.height);
+                Image image = host.GetComponent<Image>();
+                image.sprite = art.sprite;
+                image.raycastTarget = false;
+                _ticketFlight = host.GetComponent<CashFlightIcon>();
+            }
+
+            if (!_resourceBar) _resourceBar = FindObjectOfType<ResourceBarView>();
+            if (_resourceBar) _revealAdTickets = _resourceBar.HoldReward(SevenDayRewardKind.EntryTicket, awarded);
+            _pendingAdTickets = awarded;
             Refresh();
-            if (outcome == AdWatchOutcome.Granted) PlayTicketPunch();
-            else Shake();
+
+            _ticketFlight.PlayBurst(art.rectTransform, awarded, (arrived, count) =>
+            {
+                int portion = (int)((long)awarded * arrived / count - (long)awarded * (arrived - 1) / count);
+                _pendingAdTickets -= portion;
+                _revealAdTickets?.Invoke(portion);
+                if (arrived == count)
+                {
+                    FinishAdTicketFlight();
+                    if (_resourceBar) _resourceBar.SlideCounter(SevenDayRewardKind.EntryTicket);
+                    PlayTicketPunch();
+                }
+                Refresh();
+            });
+        }
+
+        private void FinishAdTicketFlight()
+        {
+            _pendingAdTickets = 0;
+            _revealAdTickets?.Invoke(int.MaxValue);
+            _revealAdTickets = null;
         }
 
         /// <summary>The ad ticket is written to the save right away (the grant itself does not save).</summary>

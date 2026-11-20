@@ -15,7 +15,7 @@ namespace SpeedStars.UI.Race
     /// The Cash breakdown of the Results screen, under the Cash counter (economy v2): "+30" and the lines "Finished race +10",
     /// "Difficulty bonus +10", "Rivals beaten +10" (a line that paid 0 is hidden, an empty reward hides the block). The prefab holds
     /// every object; this binds and fills them. <see cref="Present"/> only sets the content (the lines start faded out);
-    /// <see cref="Play"/> reveals total and lines one after another, flies a diamond to the Cash counter, counts the counter
+    /// <see cref="Play"/> reveals total and lines one after another, flies groups of diamonds to the Cash counter, counts the counter
     /// up from what the wallet held before the race and punches its box. A screen that closes mid-way, or a run without a
     /// motion config, lands on the final look at once. What each line says is decided by <see cref="CashBreakdown"/>.
     /// </summary>
@@ -52,7 +52,6 @@ namespace SpeedStars.UI.Race
         private bool _hasContent;
         private bool _playedForContent;
         private Sequence _reveal;
-        private Tween _count;
         private Tween _punch;
         private Vector3 _boxBaseScale = Vector3.one;
         private bool _boxScaleKnown;
@@ -145,28 +144,22 @@ namespace SpeedStars.UI.Race
         private void FlyToCounter()
         {
             _reveal = null;
-            RectTransform from = totalGroup != null ? (RectTransform)totalGroup.transform : null;
-            if (flight == null) { Land(); return; }
-            flight.Play(_motion, from, counterBox, Land);
+            if (flight == null) { LandDiamond(1, 1); return; }
+            flight.PlayBurst(counterBox, _current.Total, LandDiamond);
         }
 
-        /// <summary>The diamond arrived: the counter counts up to the final value, its box punches, the reward sounds.</summary>
-        private void Land()
+        private void LandDiamond(int arrived, int count)
         {
+            if (counterText != null)
+            {
+                int start = CashBreakdown.CounterStart(_finalCounter, _current.Total);
+                int value = start + (int)(((long)_finalCounter - start) * arrived / count);
+                counterText.text = value.ToString(CultureInfo.InvariantCulture);
+            }
+            if (arrived != count) return;
             _sfx?.Play(SfxId.Reward);
             _haptics?.Tap();
             PunchBox();
-            if (counterText == null || _motion == null) { SnapCounter(); return; }
-
-            int start = CashBreakdown.CounterStart(_finalCounter, _current.Total);
-            int shownValue = start;
-            Tween count = DOTween.To(() => shownValue, v =>
-            {
-                shownValue = v;
-                counterText.text = v.ToString(CultureInfo.InvariantCulture);
-            }, _finalCounter, _motion.CounterDuration).SetEase(_motion.CounterEase).SetUpdate(true).SetLink(gameObject);
-            count.OnComplete(() => { _count = null; SnapCounter(); });
-            _count = count;
         }
 
         private void PunchBox()
@@ -211,9 +204,13 @@ namespace SpeedStars.UI.Race
         /// <summary>Everything back to the final look: a closed or interrupted reveal must not leave faded lines or a half-counted Cash.</summary>
         private void Stop()
         {
-            bool wasRunning = _reveal != null || _count != null || (flight != null && flight.IsFlying);
+            bool wasRunning = _reveal != null || (flight != null && flight.IsFlying);
             StopAnimation();
-            if (wasRunning && _hasContent) SetVisibleState(1f);
+            if (wasRunning && _hasContent)
+            {
+                SnapCounter();
+                SetVisibleState(1f);
+            }
         }
 
         private void StopAnimation()
@@ -225,13 +222,6 @@ namespace SpeedStars.UI.Race
                 running.Kill();
             }
             if (flight != null) flight.Cancel();
-            if (_count != null)
-            {
-                Tween running = _count;
-                _count = null;
-                running.Kill();
-                SnapCounter();
-            }
             KillPunch();
         }
 
@@ -248,7 +238,7 @@ namespace SpeedStars.UI.Race
 
         private void OnDisable()
         {
-            bool unfinished = _reveal != null || _count != null || (flight != null && flight.IsFlying);
+            bool unfinished = _reveal != null || (flight != null && flight.IsFlying);
             StopAnimation();
             if (unfinished)
             {

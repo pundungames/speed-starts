@@ -1,5 +1,6 @@
 using System.Collections;
 using NUnit.Framework;
+using TMPro;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Home;
@@ -79,16 +80,60 @@ namespace SpeedStars.PlayTests
             yield return WaitOpen(popup, "daily gift popup (opens by itself on Home)");
             Assert.IsNull(Field<Button>(popup, "closeButton"), "the claimable gift has no X");
 
+            TMP_Text ticketCounter = RequireField<TMP_Text>(Require<ResourceBarView>(), "entryTicketText");
+            string beforeLabel = ticketCounter.text;
             yield return Tap(RequireField<Button>(popup, "actionButton"), "daily gift CLAIM");
+            Assert.AreEqual(beforeLabel, ticketCounter.text, "the ticket is still flying");
             yield return WaitClosed(popup, "daily gift popup after CLAIM");
 
             TicketFlightView flight = RequireField<TicketFlightView>(popup, "flight");
             yield return WaitUntil(() => !flight.gameObject.activeSelf, "the ticket flight to land", 10f);
             Assert.AreEqual(before + 1, Container.Resolve<IEntryTickets>().Count, "CLAIM must add exactly one Entry Ticket");
+            Assert.AreNotEqual(beforeLabel, ticketCounter.text, "the ticket counter updates on arrival");
             Assert.AreEqual(DailyGiftState.NotDue, Container.Resolve<IDailyGift>().State, "the day's gift is taken");
         }
 
         // ---- 7 day panel ----
+
+        [UnityTest]
+        public IEnumerator SevenDay_CashCounter_FollowsIndividualDiamondArrivals()
+        {
+            PlayerProgress progress = Container.Resolve<ProgressRepository>().Current;
+            int savedCash = progress.Cash;
+            int savedClaims = progress.SevenDay.ClaimedCount;
+            string savedDay = progress.SevenDay.LastClaimDayKey;
+            var transactions = new System.Collections.Generic.List<string>(progress.ProcessedTransactionIds);
+            int claimIndex = 0;
+            while (transactions.Contains($"sevenday:{claimIndex}")) claimIndex += 7;
+            progress.SevenDay.ClaimedCount = claimIndex;
+            progress.SevenDay.LastClaimDayKey = string.Empty;
+
+            try
+            {
+                HomeScreenView home = Require<HomeScreenView>();
+                SevenDayPanelView panel = Require<SevenDayPanelView>();
+                TMP_Text counter = RequireField<TMP_Text>(Require<ResourceBarView>(), "cashText");
+                IWallet wallet = Container.Resolve<IWallet>();
+                yield return Tap(RequireField<Button>(home, "sevenDayButton"), "7-day button");
+                yield return WaitOpen(panel, "7-day panel");
+
+                yield return Tap(RequireField<Button>(panel, "claimButton"), "cash reward CLAIM");
+                int awardedCash = wallet.Cash;
+                Assert.Greater(awardedCash, savedCash, "the reward is credited immediately");
+                Assert.AreEqual(savedCash, int.Parse(counter.text), "the counter waits for the first diamond");
+                yield return WaitUntil(() => int.Parse(counter.text) > savedCash, "first diamond to land");
+                Assert.Less(int.Parse(counter.text), awardedCash, "other diamonds are still in flight");
+                yield return WaitUntil(() => int.Parse(counter.text) == awardedCash, "all diamonds to reach the counter");
+            }
+            finally
+            {
+                progress.Cash = savedCash;
+                progress.SevenDay.ClaimedCount = savedClaims;
+                progress.SevenDay.LastClaimDayKey = savedDay;
+                progress.ProcessedTransactionIds.Clear();
+                progress.ProcessedTransactionIds.AddRange(transactions);
+            }
+        }
 
         [UnityTest]
         public IEnumerator SevenDay_Panel_ShowsSevenCards_AndClaimAndRedDotFollowTheService()

@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using DG.Tweening;
 using SpeedStars.Core.Services;
+using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
 using TMPro;
@@ -13,7 +16,7 @@ namespace SpeedStars.UI.Home
     /// Resource bar (prefab ResourceBar, on the overlay canvas): Purple Gems, Entry Tickets with the regen countdown,
     /// Timed Tickets and Cash. Visible while the Home screen or one of <c>alsoVisibleOn</c> (theme select, emote) is the top
     /// screen, so those screens show this same bar instead of a copy; other full screens have their own columns. Popups do not hide it. Redraws when the wallet or tickets change; about once a second it calls
-    /// <c>IEntryTickets.Refresh</c> (regen is lazy) and updates the countdown. Binds existing texts, creates nothing.
+    /// <c>IEntryTickets.Refresh</c> (regen is lazy) and updates the countdown. Draws claimed rewards on the shared overlay.
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
     public sealed class ResourceBarView : MonoBehaviour
@@ -61,6 +64,7 @@ namespace SpeedStars.UI.Home
         private ScreenNavigator _navigator;
         private CanvasGroup _group;
         private float _elapsed;
+        private readonly Dictionary<SevenDayRewardKind, int> _inFlight = new Dictionary<SevenDayRewardKind, int>();
         private UiScreen _wardrobeOwner;
         private Vector2 _homePosition, _wardrobePosition;
 
@@ -127,6 +131,8 @@ namespace SpeedStars.UI.Home
             if (cashPlusButton != null) cashPlusButton.onClick.RemoveListener(OnCashPlus);
             _wallet.Changed -= Redraw;
             _tickets.Changed -= Redraw;
+            DOTween.Kill(this);
+            _inFlight.Clear();
         }
 
         private void OnScreenChanged(IUiView top) => ApplyVisibility();
@@ -172,9 +178,9 @@ namespace SpeedStars.UI.Home
         private void Redraw()
         {
             purpleGemText.text = _wallet.PurpleGems.ToString();
-            cashText.text = _wallet.Cash.ToString();
+            cashText.text = VisibleBalance(SevenDayRewardKind.Cash).ToString();
             RedrawTimed();
-            entryTicketText.text = HomeTexts.TicketCount(_tickets.Count, _tickets.Cap);
+            entryTicketText.text = HomeTexts.TicketCount(VisibleBalance(SevenDayRewardKind.EntryTicket), _tickets.Cap);
             RedrawCountdown();
         }
 
@@ -184,7 +190,169 @@ namespace SpeedStars.UI.Home
             DateTime? ends = _wallet.TimedAccessEndsUtc;
             timedTicketText.text = _wallet.TimedAccessActive && ends.HasValue
                 ? CountdownFormatter.Format(ends.Value - _clock.UtcNow)
-                : _wallet.TimedTickets.ToString();
+                : VisibleBalance(SevenDayRewardKind.TimedTicket).ToString();
+        }
+
+        internal int Balance(SevenDayRewardKind kind)
+        {
+            switch (kind)
+            {
+                case SevenDayRewardKind.Cash: return _wallet.Cash;
+                case SevenDayRewardKind.EntryTicket: return _tickets.Count;
+                case SevenDayRewardKind.TimedTicket: return _wallet.TimedTickets;
+                default: return 0;
+            }
+        }
+
+        private int Pending(SevenDayRewardKind kind) => _inFlight.TryGetValue(kind, out int amount) ? amount : 0;
+        private int VisibleBalance(SevenDayRewardKind kind) => Mathf.Max(0, Balance(kind) - Pending(kind));
+
+        // The reward is already saved. Hold only its presentation so unrelated wallet changes remain live.
+        internal Action<int> HoldReward(SevenDayRewardKind kind, int amount)
+        {
+            int remaining = amount;
+            _inFlight[kind] = Pending(kind) + remaining;
+            Redraw();
+            return count =>
+            {
+                int revealed = Mathf.Min(remaining, count);
+                if (revealed <= 0) return;
+                remaining -= revealed;
+                int pending = Pending(kind) - revealed;
+                if (pending > 0) _inFlight[kind] = pending;
+                else _inFlight.Remove(kind);
+                if (isActiveAndEnabled) Redraw();
+            };
+        }
+
+        internal void FlyReward(SevenDayRewardKind kind, int previousBalance, RectTransform source)
+        {
+            int amount = Balance(kind) - previousBalance;
+            TMP_Text label = RewardLabel(kind);
+            if (amount <= 0 || !source || !label || !isActiveAndEnabled || _group.alpha <= 0f) return;
+
+            RectTransform box = label.rectTransform.parent as RectTransform;
+            Image target = box ? box.Find("Icon")?.GetComponent<Image>() : null;
+            Canvas parentCanvas = GetComponentInParent<Canvas>();
+            if (!target || !target.sprite || !parentCanvas) return;
+
+            Canvas root = parentCanvas.rootCanvas;
+            var layer = new GameObject("Reward Attraction", typeof(RectTransform), typeof(Canvas));
+            var area = (RectTransform)layer.transform;
+            area.SetParent(root.transform, false);
+            area.anchorMin = Vector2.zero;
+            area.anchorMax = Vector2.one;
+            area.offsetMin = area.offsetMax = Vector2.zero;
+            var overlay = layer.GetComponent<Canvas>();
+            overlay.overrideSorting = true;
+            overlay.sortingLayerID = root.sortingLayerID;
+            overlay.sortingOrder = 30000;
+
+            Vector2 center = area.rect.center;
+            Vector2 artCenter = RewardArtCenter(kind);
+            Action<int> reveal = HoldReward(kind, amount);
+            var flight = DOTween.Sequence().SetUpdate(true).SetTarget(this).SetLink(gameObject);
+            const int iconsPerWave = 3;
+            int icons = Mathf.Clamp(amount, iconsPerWave, 12);
+            float size = Mathf.Clamp(source.rect.height * 0.65f, area.rect.height * 0.17f, area.rect.height * 0.21f);
+            float spriteAspect = target.sprite.rect.width / target.sprite.rect.height;
+            Vector2 iconSize = new Vector2(size * Mathf.Max(1f, spriteAspect), size);
+            for (int i = 0; i < icons; i++)
+            {
+                int portion = (int)((long)amount * (i + 1) / icons - (long)amount * i / icons);
+                int lane = i % iconsPerWave;
+                int groupSize = Mathf.Min(iconsPerWave, icons - i + lane);
+                Vector2 start = center + Vector2.right * ((lane - (groupSize - 1) * 0.5f) * size * 0.95f);
+                float launch = (i / iconsPerWave) * 0.34f + lane * 0.035f;
+                const float centerHold = 0.12f;
+                const float travelSeconds = 0.64f;
+                var icon = new GameObject("Reward Icon", typeof(RectTransform), typeof(Image));
+                var rect = (RectTransform)icon.transform;
+                rect.SetParent(area, false);
+                rect.pivot = artCenter;
+                rect.sizeDelta = iconSize;
+                rect.anchoredPosition = start;
+                var image = icon.GetComponent<Image>();
+                image.sprite = target.sprite;
+                image.preserveAspect = true;
+                image.raycastTarget = false;
+                icon.SetActive(false);
+
+                flight.InsertCallback(launch, () => icon.SetActive(true));
+                flight.Insert(launch + centerHold, DOVirtual.Float(0f, 1f, travelSeconds, progress =>
+                {
+                    if (!target) return;
+                    Vector2 end = InFlightLayer(target, artCenter, area, root);
+                    float arc = Mathf.Min(Vector2.Distance(start, end) * 0.22f, 125f);
+                    rect.anchoredPosition = Vector2.Lerp(start, end, progress) + Vector2.up * (arc * Mathf.Sin(Mathf.PI * progress));
+                    rect.localScale = Vector3.one * Mathf.Lerp(1f, 0.42f, progress);
+                }).SetEase(Ease.InOutSine));
+                flight.InsertCallback(launch + centerHold + travelSeconds, () =>
+                {
+                    icon.SetActive(false);
+                    reveal(portion);
+                    if (portion > 0) SlideCounter(label);
+                });
+            }
+            flight.OnKill(() =>
+            {
+                reveal(int.MaxValue);
+                if (layer) Destroy(layer);
+            });
+        }
+
+        private TMP_Text RewardLabel(SevenDayRewardKind kind)
+        {
+            switch (kind)
+            {
+                case SevenDayRewardKind.Cash: return cashText;
+                case SevenDayRewardKind.EntryTicket: return entryTicketText;
+                case SevenDayRewardKind.TimedTicket: return timedTicketText;
+                default: return null;
+            }
+        }
+
+        internal void SlideCounter(SevenDayRewardKind kind) => SlideCounter(RewardLabel(kind));
+
+        private void SlideCounter(TMP_Text label)
+        {
+            if (!label || DOTween.IsTweening(label.rectTransform)) return;
+            RectTransform rect = label.rectTransform;
+            Vector2 rest = rect.anchoredPosition;
+            DOVirtual.Float(0f, 1f, 0.15f, t => rect.anchoredPosition = rest + Vector2.up * (6f * Mathf.Sin(Mathf.PI * t)))
+                .SetEase(Ease.Linear).SetUpdate(true).SetTarget(rect).SetLink(gameObject)
+                .OnKill(() => { if (rect) rect.anchoredPosition = rest; });
+        }
+
+        // The shared HUD art includes transparent padding. Use the center of its visible pixels.
+        private static Vector2 RewardArtCenter(SevenDayRewardKind kind)
+        {
+            switch (kind)
+            {
+                case SevenDayRewardKind.Cash: return new Vector2(62f / 243f, 49f / 102f);
+                case SevenDayRewardKind.TimedTicket: return new Vector2(61.5f / 243f, 47.5f / 102f);
+                default: return new Vector2(0.5f, 0.5f);
+            }
+        }
+
+        private static Vector2 InFlightLayer(Image image, Vector2 artCenter, RectTransform area, Canvas overlayRoot)
+        {
+            RectTransform rect = image.rectTransform;
+            Rect drawing = image.GetPixelAdjustedRect();
+            if (image.preserveAspect)
+            {
+                Vector2 spriteSize = image.sprite.rect.size;
+                Vector2 fit = spriteSize * Mathf.Min(drawing.width / spriteSize.x, drawing.height / spriteSize.y);
+                drawing.position += Vector2.Scale(drawing.size - fit, rect.pivot);
+                drawing.size = fit;
+            }
+            Vector2 center = drawing.position + Vector2.Scale(drawing.size, artCenter);
+            Canvas sourceRoot = image.canvas.rootCanvas;
+            Camera sourceCamera = sourceRoot.renderMode == RenderMode.ScreenSpaceOverlay ? null : sourceRoot.worldCamera;
+            Camera overlayCamera = overlayRoot.renderMode == RenderMode.ScreenSpaceOverlay ? null : overlayRoot.worldCamera;
+            Vector2 screen = RectTransformUtility.WorldToScreenPoint(sourceCamera, rect.TransformPoint(center));
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(area, screen, overlayCamera, out Vector2 position);
+            return position;
         }
 
         private void RedrawCountdown()

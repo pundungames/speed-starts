@@ -94,8 +94,14 @@ namespace SpeedStars.PlayTests
             RectTransform spinner = RequireField<RectTransform>(gate, "watchAdSpinner");
             Assert.IsTrue(spinner.gameObject.activeSelf || tickets.Count > before, "the button shows the loading spinner while the ad runs");
 
-            yield return WaitUntil(() => tickets.Count > before, "the ad ticket to arrive", 15f);
-            yield return null;
+            yield return WaitUntil(() => tickets.Count > before, "the ad ticket to be granted", 15f);
+            var flight = RequireField<SpeedStars.UI.Rewards.CashFlightIcon>(gate, "_ticketFlight");
+            Assert.IsTrue(flight.IsFlying);
+            Assert.That(flight.transform.childCount, Is.GreaterThanOrEqualTo(3), "the animation has several ticket icons");
+            var counter = RequireField<TMP_Text>(gate, "ticketCountText");
+            Assert.AreEqual(HomeTexts.TicketsHeld(HomeTexts.TicketCount(before, tickets.Cap)), counter.text);
+            yield return WaitUntil(() => !flight.IsFlying, "the ticket icons to land");
+            Assert.AreEqual(HomeTexts.TicketsHeld(HomeTexts.TicketCount(tickets.Count, tickets.Cap)), counter.text);
 
             Assert.IsFalse(spinner.gameObject.activeSelf, "the spinner goes away when the ad ended");
             Assert.IsTrue(RequireField<TMP_Text>(gate, "watchAdLabel").gameObject.activeSelf, "the WATCH AD label is back");
