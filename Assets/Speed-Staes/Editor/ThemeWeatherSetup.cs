@@ -26,6 +26,9 @@ namespace SpeedStars.Editor
         [MenuItem("Speed Stars/Themes/Set Up Rome Weather")]
         public static void Rome() => Configure("RomeByzantium", Themes + "LoopWay3.prefab", FillRome);
 
+        [MenuItem("Speed Stars/Themes/Set Up Floating Sky Weather")]
+        public static void FloatingSky() => Configure("FloatingSky", Themes + "LoopWay5.prefab", FillFloatingSky);
+
         /// <summary>Makes (or keeps) the theme's profile, points its definition at it and puts the view on its map.</summary>
         private static void Configure(string theme, string mapPath, Action<ThemeWeather, string> fill)
         {
@@ -291,6 +294,107 @@ namespace SpeedStars.Editor
                     maxParticles = 480,
                     boxSize = new Vector3(24f, 4.5f, 38f),
                     follow = new Vector3(-6.5f, 1.8f, 4f)
+                }
+            };
+        }
+
+        /// <summary>
+        /// Floating Sky: dawn above the cloud line. Gold at the horizon, a pink band over it, deep lilac overhead, and
+        /// the sun low and warm behind the islands. The cloud sea drifts past below the camera, gold dust hangs in the
+        /// light and petals turn on the wind. The premium theme, so it is the one that looks least like a day outside.
+        /// </summary>
+        private static void FillFloatingSky(ThemeWeather weather, string folder)
+        {
+            string materials = folder + "Materials/";
+            Material sky = EnsureMaterial(materials + "Dawn Sky.mat", "Speed Stars/Theme Sky", m =>
+            {
+                // The clouds and the road take the lower two thirds of the frame, so the gold has to live high to be
+                // seen at all: it fills the sky up to the break, pink sits in a band above it and lilac only at the top.
+                m.SetColor("_Horizon", new Color(1f, 0.82f, 0.40f));
+                m.SetColor("_Mid", new Color(1f, 0.68f, 0.74f));
+                m.SetFloat("_MidHeight", 0.90f);
+                m.SetFloat("_MidWidth", 0.22f);
+                m.SetFloat("_MidBlend", 0.90f);
+                m.SetColor("_Zenith", new Color(0.52f, 0.44f, 0.70f));
+                m.SetFloat("_Break", 0.78f);
+                m.SetColor("_SunColor", new Color(1f, 0.95f, 0.80f));
+                m.SetColor("_GlowColor", new Color(1f, 0.82f, 0.45f));
+                m.SetVector("_SunPos", new Vector4(0.20f, 0.56f, 0f, 0f));
+                m.SetFloat("_SunSize", 0.055f);
+                m.SetFloat("_GlowStrength", 0.70f);
+                m.SetFloat("_GlowSpread", 6f);
+            });
+            Material motes = EnsureMaterial(materials + "Sky Motes.mat", "Speed Stars/Desert Dust", m =>
+                m.SetColor("_Color", Color.white));
+            Material petals = EnsureMaterial(materials + "Sky Petals.mat", "Speed Stars/Weather Leaf", m =>
+            {
+                m.SetColor("_Color", new Color(1f, 0.72f, 0.80f));
+                m.SetColor("_Vein", new Color(1f, 0.90f, 0.84f));
+                m.SetFloat("_VeinStrength", 0.35f);
+                m.SetFloat("_Width", 0.50f);
+                m.SetFloat("_Edge", 0.14f);
+            });
+
+            weather.skyMaterial = sky;
+            weather.horizonFill = new Color(1f, 0.84f, 0.58f);
+            weather.sunColor = new Color(1f, 0.80f, 0.66f);
+            weather.sunIntensityScale = 0.78f;
+            weather.ambientSky = new Color(0.86f, 0.68f, 0.70f);
+            weather.ambientEquator = new Color(0.62f, 0.50f, 0.56f);
+            weather.ambientGround = new Color(0.30f, 0.26f, 0.34f);
+            weather.airTint = new Color(1f, 0.80f, 0.78f);
+            weather.airTintBlend = 0.60f;
+            weather.airStrengthBoost = 0.10f;
+            weather.airStartScale = 0.75f;
+            weather.airEndScale = 0.85f;
+            weather.worldTint = new Color(1f, 0.80f, 0.70f);
+            weather.worldTintBlend = 0.62f;
+            weather.layers = new[]
+            {
+                new WeatherLayer
+                {
+                    name = "Cloud Sea Drifting Below",
+                    material = motes,
+                    tint = new Color(1f, 0.86f, 0.86f, 0.07f),
+                    size = new Vector2(3f, 8f),
+                    lifetime = new Vector2(12f, 18f),
+                    speed = new Vector2(0.3f, 0.8f),
+                    direction = new Vector3(0f, 0f, 1f),
+                    rate = 10f,
+                    maxParticles = 120,
+                    boxSize = new Vector3(34f, 2f, 46f),
+                    follow = new Vector3(-8f, -1.4f, 6f)
+                },
+                new WeatherLayer
+                {
+                    name = "Gold Dust In The Dawn",
+                    material = motes,
+                    tint = new Color(1f, 0.82f, 0.56f, 0.15f),
+                    size = new Vector2(0.10f, 0.40f),
+                    lifetime = new Vector2(8f, 13f),
+                    speed = new Vector2(0.2f, 0.6f),
+                    direction = new Vector3(0f, 0.08f, 1f),
+                    rate = 70f,
+                    maxParticles = 450,
+                    boxSize = new Vector3(26f, 5f, 40f),
+                    follow = new Vector3(-7f, 2.2f, 5f)
+                },
+                new WeatherLayer
+                {
+                    name = "Petals On The High Wind",
+                    material = petals,
+                    tint = new Color(1f, 0.74f, 0.82f, 0.95f),
+                    size = new Vector2(0.10f, 0.26f),
+                    lifetime = new Vector2(5f, 9f),
+                    speed = new Vector2(1.4f, 3f),
+                    direction = new Vector3(0.08f, -0.1f, 1f),
+                    gravity = 0.02f,
+                    rate = 24f,
+                    maxParticles = 130,
+                    boxSize = new Vector3(26f, 6f, 40f),
+                    follow = new Vector3(-7f, 2.8f, 5f),
+                    spin = new Vector2(-130f, 130f),
+                    turbulence = 1.1f
                 }
             };
         }

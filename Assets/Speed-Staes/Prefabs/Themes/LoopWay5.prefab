@@ -8550,6 +8550,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1876296448336573445}
   - component: {fileID: 9074292849998570481}
+  - component: {fileID: 289130828732524147}
   m_Layer: 0
   m_Name: LoopWay5
   m_TagString: Untagged
@@ -8593,7 +8594,23 @@ MonoBehaviour:
   streamAtRuntime: 1
   runner: {fileID: 0}
   retireDistance: 60
+  viewCamera: {fileID: 0}
+  forceRetireDistance: 300
+  buildAheadDistance: 150
   romanLampSpacing: 11.81
+--- !u!114 &289130828732524147
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082648433970893450}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e2b8d6417c04f3ab9d75e0c2a86f4d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  weather: {fileID: 0}
 --- !u!1 &1087948360611561813
 GameObject:
   m_ObjectHideFlags: 0
@@ -12138,6 +12155,9 @@ MonoBehaviour:
   end: 100.83865
   landmarkSummary: Sky Rebuilt Botanical Conservatory, Sky Rebuilt Terraced Crystal
     Mine
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &1593194201247818659
 GameObject:
   m_ObjectHideFlags: 0
@@ -31875,6 +31895,9 @@ MonoBehaviour:
   start: 100.83865
   end: 161.26883
   landmarkSummary: Sky Rebuilt Canvas Market Terrace
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &3964390524607633568
 GameObject:
   m_ObjectHideFlags: 0
@@ -48952,6 +48975,9 @@ MonoBehaviour:
   start: 221.69899
   end: 282.12915
   landmarkSummary: Sky Tiered Copper Roof Pagoda, Sky Rebuilt Airship Terminal
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &6252084913944421865
 GameObject:
   m_ObjectHideFlags: 0
@@ -52523,6 +52549,9 @@ MonoBehaviour:
   start: -20.021694
   end: 40.408478
   landmarkSummary: Sky Rebuilt Asymmetric Castle, Sky Prism Portal Sanctuary
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &6667489455008618247
 GameObject:
   m_ObjectHideFlags: 0
@@ -67398,6 +67427,9 @@ MonoBehaviour:
   start: 161.26883
   end: 221.699
   landmarkSummary: Sky Rebuilt Resonance Ruins, Sky Wind Turbine Foundry
+  worldBounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &8469516320512920037
 GameObject:
   m_ObjectHideFlags: 0
