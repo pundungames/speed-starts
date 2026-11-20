@@ -115,6 +115,13 @@ namespace SpeedStars.Themes
         [Tooltip("Multiplies where the haze is full (smaller = the horizon disappears sooner). 1 = keep.")]
         [Min(0.05f)] public float airEndScale = 1f;
 
+        [Header("The world's own colours")]
+        [Tooltip("Colour the theme's objects are multiplied by, the way light would: the hour of the day on the near world, which the haze alone cannot reach because these shaders paint flat and barely answer to light. White changes nothing.")]
+        public Color worldTint = Color.white;
+
+        [Tooltip("How much of that multiplied colour the world takes (0 = the objects keep their own colours). Multiplying keeps the contrast, so a storm darkens without flattening.")]
+        [Range(0f, 1f)] public float worldTintBlend;
+
         [Header("Airborne layers")]
         [Tooltip("Dust, rain and the like. Each layer is one camera-following ParticleSystem.")]
         public WeatherLayer[] layers = new WeatherLayer[0];

@@ -40,6 +40,16 @@ namespace SpeedStars.Themes
         private readonly List<Layer> _layers = new List<Layer>();
         private GameObject _sky;
 
+        // Every colour these painted shaders expose. A world keeps the names it has and ignores the rest.
+        private static readonly string[] TintedColours =
+        {
+            "_Color", "_BaseColor", "_FrontColor", "_SideColor", "_WindowColor",
+            "_ShadowColor", "_LightColor", "_ShadeColor", "_PaintShadow", "_PaintLight", "_Tint"
+        };
+
+        private readonly HashSet<Transform> _tintedChunks = new HashSet<Transform>();
+        private float _nextChunkSweep;
+
         /// <summary>The profile that is applied: the field, else the one on this world's theme definition.</summary>
         public ThemeWeather Weather
         {
@@ -53,10 +63,57 @@ namespace SpeedStars.Themes
 
         private void OnEnable() => Apply();
 
+        private const float ChunkSweepSeconds = 0.75f;
+
         private void LateUpdate()
         {
             if (_holder == null) Apply(); // Camera.main was not there yet when the world opened
             Follow();
+            SweepNewChunks();
+        }
+
+        /// <summary>
+        /// The race builds its world section by section while the runner moves, so sections born after the theme opened
+        /// would keep their daylight colours. Only the new sections are walked, and only a few times a second.
+        /// </summary>
+        private void SweepNewChunks()
+        {
+            if (_holder != this || Time.unscaledTime < _nextChunkSweep) return;
+            _nextChunkSweep = Time.unscaledTime + ChunkSweepSeconds;
+            ThemeWeather profile = Weather;
+            if (profile == null || profile.worldTintBlend <= 0f) return;
+            foreach (ThemeChunk chunk in GetComponentsInChildren<ThemeChunk>(true))
+                if (_tintedChunks.Add(chunk.transform)) Tint(profile, chunk.transform);
+        }
+
+        /// <summary>
+        /// Pulls every colour of the world towards the theme's tint. The material's own colour is the base each time, so
+        /// opening a theme twice never doubles the tint, and the block keeps whatever the haze wrote into it.
+        /// </summary>
+        private static void Tint(ThemeWeather profile, Transform root)
+        {
+            if (profile.worldTintBlend <= 0f) return;
+            var block = new MaterialPropertyBlock();
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] materials = renderer.sharedMaterials;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    Material material = materials[i];
+                    if (material == null) continue;
+                    bool touched = false;
+                    renderer.GetPropertyBlock(block, i);
+                    foreach (string name in TintedColours)
+                    {
+                        if (!material.HasProperty(name)) continue;
+                        Color own = material.GetColor(name);
+                        // The tint multiplies, the way light does: dark paint stays dark, so the world keeps its contrast.
+                        block.SetColor(name, Color.Lerp(own, own * profile.worldTint, profile.worldTintBlend));
+                        touched = true;
+                    }
+                    if (touched) renderer.SetPropertyBlock(block, i);
+                }
+            }
         }
 
         private void OnDisable() => Restore();
@@ -83,6 +140,12 @@ namespace SpeedStars.Themes
             RenderSettings.ambientSkyColor = profile.ambientSky;
             RenderSettings.ambientEquatorColor = profile.ambientEquator;
             RenderSettings.ambientGroundColor = profile.ambientGround;
+
+            // Before the sky and the layers exist, so the tint reaches the world only and not our own particles.
+            Tint(profile, transform);
+            _tintedChunks.Clear();
+            foreach (ThemeChunk chunk in GetComponentsInChildren<ThemeChunk>(true)) _tintedChunks.Add(chunk.transform);
+            _nextChunkSweep = Time.unscaledTime + ChunkSweepSeconds;
 
             if (profile.skyMaterial != null)
             {
@@ -249,6 +312,7 @@ namespace SpeedStars.Themes
                 _sun = null;
             }
             ThemeAtmosphere.ClearAir(this);
+            _tintedChunks.Clear();
 
             foreach (Layer layer in _layers)
                 if (layer.root != null) Discard(layer.root.gameObject);

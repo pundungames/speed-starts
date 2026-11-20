@@ -24,6 +24,8 @@ MonoBehaviour:
   airStrengthBoost: 0.12
   airStartScale: 0.8
   airEndScale: 0.85
+  worldTint: {r: 1, g: 0.88, b: 0.7, a: 1}
+  worldTintBlend: 0.12
   layers:
   - name: Hanging Golden Desert Dust
     material: {fileID: 2100000, guid: 3d964fbf946d7c3469584a5255b06f12, type: 2}
@@ -39,6 +41,8 @@ MonoBehaviour:
     boxSize: {x: 26, y: 5, z: 40}
     follow: {x: -7, y: 2, z: 5}
     streakLength: 3
+    spin: {x: 0, y: 0}
+    turbulence: 0
   - name: Sand Sweeping Over The Ground
     material: {fileID: 2100000, guid: 3d964fbf946d7c3469584a5255b06f12, type: 2}
     shape: 0
@@ -53,3 +57,5 @@ MonoBehaviour:
     boxSize: {x: 22, y: 1.6, z: 34}
     follow: {x: -6, y: 0.7, z: 3}
     streakLength: 3
+    spin: {x: 0, y: 0}
+    turbulence: 0

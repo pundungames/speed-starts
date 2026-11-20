@@ -24,6 +24,8 @@ MonoBehaviour:
   airStrengthBoost: 0.2
   airStartScale: 0.6
   airEndScale: 0.65
+  worldTint: {r: 0.38, g: 0.46, b: 0.55, a: 1}
+  worldTintBlend: 0.85
   layers:
   - name: Rain
     material: {fileID: 2100000, guid: c26665b44a4f0d6418eed40c5d7294e3, type: 2}
@@ -39,6 +41,8 @@ MonoBehaviour:
     boxSize: {x: 30, y: 10, z: 44}
     follow: {x: -7, y: 5.5, z: 5}
     streakLength: 5.5
+    spin: {x: 0, y: 0}
+    turbulence: 0
   - name: Sea Mist Off The Water
     material: {fileID: 2100000, guid: 43e991e0db19c7c4291864c52fddb569, type: 2}
     shape: 0
@@ -53,3 +57,5 @@ MonoBehaviour:
     boxSize: {x: 24, y: 4, z: 38}
     follow: {x: -6, y: 1.6, z: 4}
     streakLength: 3
+    spin: {x: 0, y: 0}
+    turbulence: 0

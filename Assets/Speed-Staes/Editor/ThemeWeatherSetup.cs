@@ -101,6 +101,8 @@ namespace SpeedStars.Editor
             weather.ambientGround = new Color(0.36f, 0.27f, 0.18f);
             weather.airTint = new Color(1f, 0.84f, 0.62f);
             weather.airTintBlend = 0.55f;
+            weather.worldTint = new Color(1f, 0.88f, 0.70f);
+            weather.worldTintBlend = 0.12f;
             weather.airStrengthBoost = 0.12f;
             weather.airStartScale = 0.8f;
             weather.airEndScale = 0.85f;
@@ -172,6 +174,8 @@ namespace SpeedStars.Editor
             weather.ambientGround = new Color(0.15f, 0.18f, 0.22f);
             weather.airTint = new Color(0.48f, 0.56f, 0.62f);
             weather.airTintBlend = 0.70f;
+            weather.worldTint = new Color(0.38f, 0.46f, 0.55f);
+            weather.worldTintBlend = 0.85f;
             weather.airStrengthBoost = 0.20f;
             weather.airStartScale = 0.60f;
             weather.airEndScale = 0.65f;
@@ -250,6 +254,8 @@ namespace SpeedStars.Editor
             weather.ambientGround = new Color(0.27f, 0.22f, 0.24f);
             weather.airTint = new Color(0.99f, 0.78f, 0.58f);
             weather.airTintBlend = 0.50f;
+            weather.worldTint = new Color(1f, 0.78f, 0.56f);
+            weather.worldTintBlend = 0.55f;
             weather.airStrengthBoost = 0.08f;
             weather.airStartScale = 0.85f;
             weather.airEndScale = 0.90f;
