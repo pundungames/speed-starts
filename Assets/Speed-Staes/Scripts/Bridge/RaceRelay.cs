@@ -590,7 +590,7 @@ namespace SpeedStars.Bridge
             leg.PlayerHeld[0] = leg.PlayerHeld[1] = false;
             leg.Arms.Clear();
             if (leg.PlayerTeam && WearTeamOutfit(leg)) return;
-            _owner.DressRunner(leg.Look);
+            _owner.DressRunner(leg.Look, includePremium: !leg.PlayerTeam);
         }
 
         /// <summary>A leg of the player's team wears its saved preset. False when the team is not wired: the caller dresses it at random.</summary>

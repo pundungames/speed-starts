@@ -88,6 +88,7 @@ namespace SpeedStars.Bridge
 
         ICosmeticService _cosmetics;
         CosmeticCatalog _catalog;
+        readonly List<CosmeticDefinition> _premiumOutfits = new List<CosmeticDefinition>();
         IPlayerSettings _settings;
         IPersonalBests _bests;
         ProgressRepository _progress;
@@ -174,6 +175,14 @@ namespace SpeedStars.Bridge
         {
             _cosmetics = cosmetics;
             _catalog = catalog;
+            _premiumOutfits.Clear();
+            if (_catalog)
+            {
+                foreach (CosmeticCategory category in CosmeticOutfit.Categories)
+                    foreach (CosmeticDefinition item in _catalog.GetByCategory(category))
+                        if (item.IsPremium && item.IsForSale && item.Currency == CosmeticCurrency.PurpleGem)
+                            _premiumOutfits.Add(item);
+            }
             _settings = settings;
             _bests = bests;
         }
@@ -736,13 +745,22 @@ namespace SpeedStars.Bridge
         }
 
         /// <summary>A random outfit and skin tone from what the cosmetic services know; without them the bot keeps the prefab's look.</summary>
-        void Dress(Bot bot) => DressRunner(bot.Look);
+        void Dress(Bot bot) => DressRunner(bot.Look, includePremium: true);
 
         /// <summary>A random outfit and skin tone on one runner copy (a bot or a relay runner).</summary>
-        internal void DressRunner(CosmeticApplier look)
+        internal void DressRunner(CosmeticApplier look, bool includePremium)
         {
             if (_cosmetics == null || _catalog == null || look == null) return;
             CosmeticOutfit outfit = _cosmetics.CreateRandomOutfit(_random);
+            if (includePremium && _premiumOutfits.Count > 0)
+            {
+                // Rival outfits use the catalog directly. They do not affect the player's purchases or presets.
+                CosmeticDefinition item = _premiumOutfits[_random.Next(_premiumOutfits.Count)];
+                var slot = new CosmeticSlot(item.Id, string.Empty);
+                for (int channel = 0; channel < item.Channels.Count; channel++)
+                    slot = slot.WithColor(channel, item.DefaultColorAt(channel));
+                outfit = outfit.WithSlot(item.Category, slot);
+            }
             IReadOnlyList<string> tones = _catalog.SkinTones;
             if (tones.Count > 0) outfit = outfit.WithSkinColor(tones[_random.Next(tones.Count)]);
             look.Initialize();
