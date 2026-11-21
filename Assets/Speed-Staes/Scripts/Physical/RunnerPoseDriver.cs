@@ -210,6 +210,8 @@ namespace SpeedStars.Physical
             [System.NonSerialized] public float cycle;      // this leg's own press-to-press time (s), smoothed; 0 = never pressed
             [System.NonSerialized] public float riseW;      // the free-foot floor's weight (0..1), see FreeRiseTime
             [System.NonSerialized] public bool swapStance;   // this stance is a change of leg's: a whole step's stance (behind the hip), then the hop's swing
+            [System.NonSerialized] public Vector3 swingAnkleOffset, swingHintOffset;
+            [System.NonSerialized] public Vector3 catchAnkleOffset, catchHintOffset;
             [System.NonSerialized] public float swingLen;   // the swing's time (s)
             [System.NonSerialized] public double pressedAt = -10.0, lastPress = -1.0, swingT0, lastKey = -1.0;
             [System.NonSerialized] public LegAngles[] keys, slope;   // swing keys (start, recover, mid, drive, contact) and their slopes
@@ -1235,6 +1237,7 @@ namespace SpeedStars.Physical
         float _amp = 1f;                           // this frame's stride (strideMin..1)
         float _dipAmp = 1f;                        // the stride under the old 0.25 floor: sizes the stance dip, so slow running does not sink deeper
         float _plainRun = 1f;                      // 1 = plain running, 0 = hop or pair jump (they keep today's keys)
+        float _compactSwingWeight;
         float _fastW;                              // 0..1: speed through fastStrideSpeed
         float _extent = 0.8f;                      // hip joint height above the foot in a run (m)
         Vector3 _lastRootPos;                      // the root last frame
@@ -1386,6 +1389,8 @@ namespace SpeedStars.Physical
             leg.cycle = 0f;
             leg.idle = 0f;
             leg.swingLen = 0f;
+            leg.swingAnkleOffset = leg.swingHintOffset = Vector3.zero;
+            leg.catchAnkleOffset = leg.catchHintOffset = Vector3.zero;
             leg.pressedAt = -10.0;
             leg.lastPress = -1.0;
             leg.lastKey = -1.0;
@@ -1834,6 +1839,8 @@ namespace SpeedStars.Physical
                 Mathf.Abs(c.knee - leg.angles.knee) / Mathf.Max(1f, catchSpeed * KneeSpeedFactor)), Mathf.Lerp(MinCatch, HopMinCatch, _hop * (1f - _pair)), MaxCatch);
             dur = Mathf.Max(dur, minCatch);
             Enter(leg, LegPhase.Push, time, dur);
+            leg.catchAnkleOffset = leg.swingAnkleOffset;
+            leg.catchHintOffset = leg.swingHintOffset;
             float spanT = c.thigh - leg.angles.thigh, spanK = c.knee - leg.angles.knee;
             leg.keys[4] = c;
             leg.slope[0] = new LegAngles(LimitSlope(leg.thighRate * dur, spanT), LimitSlope(leg.kneeRate * dur, spanK));
@@ -2139,6 +2146,7 @@ namespace SpeedStars.Physical
             _stopSlides = false;
             _lastRawPress = -1.0;
             _rawGap = 1f;
+            _compactSwingWeight = 0f;
             _mashW = 0f;
             _wasInJump = false;
             _haveRoot = false;
@@ -2970,6 +2978,7 @@ namespace SpeedStars.Physical
             _dipAmp = Mathf.Lerp(DipStrideMin, 1f, StrideDrive(sim));
             _plainRun = 1f - Mathf.Max(_hop, _pair);
             _fastW = Mathf.InverseLerp(fastStrideSpeed.x, fastStrideSpeed.y, sim.Speed);
+            _compactSwingWeight = Mathf.Lerp(_compactSwingWeight, _fastW, 1f - Mathf.Exp(-8f * dt));
             _stepNow = false;
             bool mashing = !preview && _rawGap < MashGap && now - _lastRawPress < MashKeep;
             if (dt > 0f) _mashW = mashing ? Mathf.MoveTowards(_mashW, 1f, dt / MashBlend) : 0f;
@@ -3915,9 +3924,60 @@ namespace SpeedStars.Physical
             Vector3 drawn = FootLock(leg, ankle, joint, dt);
             // The knee goes half the way the lock moved the foot, so the hint stays in front of the drawn knee.
             Vector3 knee = leg.knee + shift + new Vector3(0f, 0f, (drawn.z - ankle.z) * 0.5f);
-            leg.target.position = transform.TransformPoint(drawn);
             float th = leg.thighWorld * Mathf.Deg2Rad;
-            leg.hint.position = transform.TransformPoint(knee + leg.sideTurn * new Vector3(0f, Mathf.Sin(th), Mathf.Cos(th)) * HintDistance);
+            Vector3 baseDrawn = drawn;
+            Vector3 baseHint = knee + leg.sideTurn * new Vector3(0f, Mathf.Sin(th), Mathf.Cos(th)) * HintDistance;
+            leg.swingAnkleOffset = leg.swingHintOffset = Vector3.zero;
+            // Advance the drawn swing at speed. The gait and foot lock still use the original contact timing.
+            if (!preview && !_jumping && !leg.grounded && (leg.phase == LegPhase.Recover || leg.phase == LegPhase.Mid))
+            {
+                float share = SwingShare(leg, _now);
+                float envelope = 4f * share * (1f - share);
+                float lead = 0.10f * _fastW * _plainRun * envelope * envelope;
+                if (lead > 0f)
+                {
+                    LegAngles current = EvalSwing(leg, share);
+                    LegAngles ahead = EvalSwing(leg, share + lead);
+                    float shin = th - (180f - leg.angles.knee) * Mathf.Deg2Rad;
+                    float thighAdvance = (ahead.thigh - current.thigh) * Mathf.Deg2Rad;
+                    float shinAdvance = thighAdvance + (ahead.knee - current.knee) * Mathf.Deg2Rad;
+                    Vector3 kneeOffset = BendOffset(th, thighAdvance, leg.thighLength);
+                    Vector3 ankleOffset = kneeOffset + BendOffset(shin, shinAdvance, leg.shinLength);
+                    drawn += ankleOffset;
+                    knee += kneeOffset;
+                    th += thighAdvance;
+                }
+
+                // A small visual pullback during the forward swing, with no offset at contact.
+                float forwardSwing = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(leg.knots[1], leg.knots[2], share));
+                float forwardReach = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, leg.shinLength, drawn.z - joint.z));
+                float pullback = 0.02f * _compactSwingWeight * _plainRun * envelope * envelope * forwardSwing * forwardReach;
+                drawn.z -= pullback;
+                knee.z -= pullback * 0.5f;
+                leg.swingAnkleOffset = drawn - baseDrawn;
+                leg.swingHintOffset = knee + leg.sideTurn * new Vector3(0f, Mathf.Sin(th), Mathf.Cos(th)) * HintDistance - baseHint;
+            }
+            Vector3 hint = baseHint + leg.swingHintOffset;
+            // Keep the last drawn swing offsets when an early press starts the catch.
+            if (!preview && !_jumping && !leg.grounded && leg.phase == LegPhase.Push && leg.duration > 0f)
+            {
+                float progress = Mathf.Clamp01((float)(_now - leg.phaseTime) / leg.duration);
+                float weight = 1f - Mathf.SmoothStep(0f, 1f, progress);
+                drawn += leg.catchAnkleOffset * weight;
+                hint += leg.catchHintOffset * weight;
+            }
+            else
+            {
+                leg.catchAnkleOffset = leg.catchHintOffset = Vector3.zero;
+            }
+            leg.target.position = transform.TransformPoint(drawn);
+            leg.hint.position = transform.TransformPoint(hint);
+        }
+
+        static Vector3 BendOffset(float angle, float advance, float length)
+        {
+            float next = angle + advance;
+            return new Vector3(0f, Mathf.Cos(angle) - Mathf.Cos(next), Mathf.Sin(next) - Mathf.Sin(angle)) * length;
         }
 
         /// <summary>
