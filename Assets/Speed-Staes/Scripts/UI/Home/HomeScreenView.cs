@@ -136,6 +136,9 @@ namespace SpeedStars.UI.Home
         private TMP_Text _playLabel;
         private TMP_Text _playFare;
         private Image _playFareIcon;
+        [SerializeField] private Sprite ticketPlaySprite;
+        [SerializeField] private Sprite vipPlaySprite;
+
         private Sprite _freePlaySprite;
         private Vector2 _freeLabelMin, _freeLabelMax;
         private Color _freePlayColor;
@@ -502,11 +505,9 @@ namespace SpeedStars.UI.Home
             label.anchorMax = ticketed ? new Vector2(0.51f, _freeLabelMax.y) : _freeLabelMax;
             _playLabel.color = vip ? new Color32(48, 31, 10, 255) : _freeLabelColor;
 
-            Image ticketBox = source ? source.transform.parent.GetComponent<Image>() : null;
-            _playBackground.sprite = ticketed && ticketBox && ticketBox.sprite ? ticketBox.sprite : _freePlaySprite;
-            _playBackground.color = ticketed
-                ? (vip ? new Color32(255, 204, 73, 255) : new Color32(66, 103, 149, 255))
-                : _freePlayColor;
+            Sprite paidSprite = vip ? vipPlaySprite : ticketPlaySprite;
+            _playBackground.sprite = ticketed && paidSprite ? paidSprite : _freePlaySprite;
+            _playBackground.color = _freePlayColor;
             _playFare.color = _playLabel.color;
             _playFare.fontSize = _playLabel.fontSize * (vip ? 0.44f : 1f);
             Place(_playFare.rectTransform, new Vector2(vip ? 0.66f : 0.63f, 0.08f), new Vector2(vip ? 0.97f : 0.93f, 0.92f));
