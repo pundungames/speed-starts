@@ -169,6 +169,7 @@ namespace SpeedStars.Meta.Persistence
         {
             PlayerProgress progress = RequireCurrent();
             progress.CosmeticPresets.Clear();
+            progress.StarterPresetsPending = false;
             progress.SelectedPresetIndex = 0;
             Reclaim();
             Save();
@@ -189,6 +190,7 @@ namespace SpeedStars.Meta.Persistence
             return new PlayerProgress
             {
                 SchemaVersion = CurrentSchemaVersion,
+                StarterPresetsPending = true,
                 Cash = start.Cash,
                 PurpleGems = start.PurpleGems,
                 EntryTickets = start.EntryTickets,

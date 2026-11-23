@@ -263,15 +263,43 @@ namespace SpeedStars.Tests.Meta.Cosmetics
         }
 
         [Test]
-        public void NewPlayer_EveryPresetStartsWithTheDefaultOutfit()
+        public void NewPlayer_UsesDefaultFirstAndSavesEightDistinctStarterPalettes()
         {
             var k = Kit(0);
+            ConfigFixture.SetInt(k.Catalog, "presetCount", 9);
+            // A non-wardrobe system may save before cosmetics are first read.
+            k.Repository.Save();
+            k.Open();
 
             Assert.AreEqual(0, k.Service.SelectedPreset);
+            Assert.AreEqual(k.Service.DefaultOutfit, k.Service.GetOutfit(0));
+            var colors = new System.Collections.Generic.HashSet<string>();
+            var outfits = new CosmeticOutfit[8];
+            for (int i = 1; i < 9; i++)
+            {
+                CosmeticOutfit outfit = k.Service.GetOutfit(i);
+                CosmeticSlot top = outfit.Get(CosmeticCategory.Tops);
+                Assert.AreEqual(CosmeticTestKit.TopA, top.CosmeticId);
+                Assert.IsNotEmpty(top.ColorHex);
+                Assert.IsTrue(colors.Add(top.ColorHex), $"Custom {i + 1} reused a starter color.");
+                outfits[i - 1] = outfit;
+            }
+            Assert.IsEmpty(k.Progress.OwnedCosmeticIds, "Starter outfits use free items without unlocking anything.");
+
+            k.Open();
+            for (int i = 1; i < 9; i++)
+                Assert.AreEqual(outfits[i - 1], k.Service.GetOutfit(i));
+        }
+
+        [Test]
+        public void ExistingProfile_WithoutPresetsKeepsDefaultOutfits()
+        {
+            var k = Kit(0);
+            k.Store.Write(ProgressRepository.SaveKey, "{\"schemaVersion\":2}");
+            k.Open();
+
             for (int i = 0; i < k.Service.PresetCount; i++)
                 Assert.AreEqual(k.Service.DefaultOutfit, k.Service.GetOutfit(i));
-            Assert.AreEqual(CosmeticTestKit.HatA, k.Service.DefaultOutfit.Get(CosmeticCategory.Headwear).CosmeticId);
-            Assert.AreEqual("AA0000", k.Service.DefaultOutfit.Get(CosmeticCategory.Headwear).ColorHex);
         }
 
         [Test]
@@ -293,12 +321,13 @@ namespace SpeedStars.Tests.Meta.Cosmetics
         {
             var k = Kit(0);
             CosmeticOutfit defaults = k.Service.DefaultOutfit;
+            CosmeticOutfit otherBefore = k.Service.GetOutfit(2);
 
             k.Service.SaveOutfit(1, defaults.With(CosmeticCategory.Headwear, CosmeticTestKit.HatB));
 
             Assert.AreEqual(CosmeticTestKit.HatB, k.Service.GetOutfit(1).Get(CosmeticCategory.Headwear).CosmeticId);
             Assert.AreEqual(defaults, k.Service.GetOutfit(0));
-            Assert.AreEqual(defaults, k.Service.GetOutfit(2));
+            Assert.AreEqual(otherBefore, k.Service.GetOutfit(2));
         }
 
         [Test]

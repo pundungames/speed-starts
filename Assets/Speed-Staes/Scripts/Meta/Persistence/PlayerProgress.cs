@@ -30,6 +30,7 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private List<SelectedCosmetic> selectedCosmetics = new List<SelectedCosmetic>();
         [SerializeField] private List<CosmeticPreset> cosmeticPresets = new List<CosmeticPreset>();
         [SerializeField] private int selectedPresetIndex;
+        [SerializeField] private bool starterPresetsPending;
         [SerializeField] private List<EventBestTime> bestTimes = new List<EventBestTime>();
         [SerializeField] private List<string> processedTransactionIds = new List<string>();
         [SerializeField] private long lastSeenUtcTicks;
@@ -165,6 +166,9 @@ namespace SpeedStars.Meta.Persistence
 
         /// <summary>Racer presets (Custom 1..N), in order. Filled up to the configured count by the cosmetic service.</summary>
         public List<CosmeticPreset> CosmeticPresets => cosmeticPresets;
+
+        /// <summary>New profiles still waiting for their initial wardrobe. Existing saves default to false.</summary>
+        internal bool StarterPresetsPending { get => starterPresetsPending; set => starterPresetsPending = value; }
 
         /// <summary>Index into <c>CosmeticPresets</c> of the preset worn in menu and race.</summary>
         public int SelectedPresetIndex { get => selectedPresetIndex; set => selectedPresetIndex = value; }

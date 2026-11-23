@@ -19,6 +19,18 @@ namespace SpeedStars.Meta.Cosmetics
         private readonly IEconomyLedger _ledger;
         private readonly CosmeticCatalog _catalog;
 
+        private static readonly (string Main, string Accent)[] StarterPalettes =
+        {
+            ("E35046", "602434"), // coral / burgundy
+            ("F28A34", "563325"), // orange / copper
+            ("F3CD42", "83601C"), // gold / ochre
+            ("65A947", "254D2D"), // leaf green / pine
+            ("24B9AA", "1B5B63"), // turquoise / petrol
+            ("3C83DD", "233977"), // blue / indigo
+            ("9B65D5", "4B2C73"), // violet / plum
+            ("E866AB", "782D59")  // pink / raspberry
+        };
+
         public CosmeticService(ProgressRepository repository, IEconomyLedger ledger, CosmeticCatalog catalog)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
@@ -249,26 +261,68 @@ namespace SpeedStars.Meta.Cosmetics
                 CosmeticColor.Normalize(slot.ColorAt(1)), CosmeticColor.Normalize(slot.ColorAt(2)));
 
         /// <summary>
-        /// Fills missing presets with the default outfit and keeps the selected index valid. Idempotent; changes the live
-        /// progress without saving (it is written with the next save, and re-derived identically if it never is).
+        /// New profiles get a shuffled set of starter colors saved immediately. Existing profiles and additional slots
+        /// created by a catalog expansion keep the standard default outfits.
         /// </summary>
         private void EnsurePresets()
         {
             PlayerProgress progress = Progress;
             int count = PresetCount;
+            bool provision = progress.StarterPresetsPending && progress.CosmeticPresets.Count == 0 && _repository.CanSave;
+            var palettes = provision ? ShuffleStarterPalettes() : null;
+            CosmeticOutfit defaults = progress.CosmeticPresets.Count < count ? DefaultOutfit : null;
+
             while (progress.CosmeticPresets.Count < count)
             {
+                int index = progress.CosmeticPresets.Count;
+                CosmeticOutfit outfit = palettes != null && index > 0 && index <= palettes.Length
+                    ? WithStarterColors(defaults, palettes[index - 1])
+                    : defaults;
                 var preset = new CosmeticPreset();
-                CosmeticOutfit defaults = DefaultOutfit;
                 foreach (CosmeticCategory category in CosmeticOutfit.Categories)
                 {
-                    CosmeticSlot slot = defaults.Get(category);
+                    CosmeticSlot slot = outfit.Get(category);
                     if (!slot.IsEmpty) preset.Slots.Add(ToSaved(category, slot));
                 }
                 progress.CosmeticPresets.Add(preset);
             }
             if (progress.SelectedPresetIndex < 0 || progress.SelectedPresetIndex >= count) progress.SelectedPresetIndex = 0;
+            if (provision)
+            {
+                progress.StarterPresetsPending = false;
+                _repository.Save();
+            }
             GrandfatherWornItems(progress);
+        }
+
+        private static (string Main, string Accent)[] ShuffleStarterPalettes()
+        {
+            var result = ((string Main, string Accent)[])StarterPalettes.Clone();
+            var random = new Random();
+            for (int i = result.Length - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                (result[i], result[j]) = (result[j], result[i]);
+            }
+            return result;
+        }
+
+        private CosmeticOutfit WithStarterColors(CosmeticOutfit outfit, (string Main, string Accent) palette)
+        {
+            bool hasTop = !outfit.Get(CosmeticCategory.Tops).IsEmpty;
+            foreach (CosmeticCategory category in CosmeticOutfit.Categories)
+            {
+                CosmeticSlot slot = outfit.Get(category);
+                if (slot.IsEmpty || !_catalog.TryGet(slot.CosmeticId, out CosmeticDefinition item) || !IsOwned(item)) continue;
+                if (hasTop && (category == CosmeticCategory.Glasses || category == CosmeticCategory.Leggings)) continue;
+
+                bool main = !hasTop || category == CosmeticCategory.Tops;
+                slot = slot.WithColor(0, main ? palette.Main : palette.Accent);
+                for (int channel = 1; channel < item.Channels.Count; channel++)
+                    slot = slot.WithColor(channel, palette.Accent);
+                outfit = outfit.WithSlot(category, slot);
+            }
+            return outfit;
         }
 
         /// <summary>
