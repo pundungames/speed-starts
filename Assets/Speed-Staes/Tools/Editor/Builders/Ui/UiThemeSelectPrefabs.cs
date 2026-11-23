@@ -147,8 +147,8 @@ namespace SpeedStars.Tools.Builders
         private static RectTransform GemIcon(RectTransform action, Vector4 area)
         {
             RectTransform holder = Kit.Span(Kit.Node(action, "GemIcon"), new Vector2(area.x, area.y), new Vector2(area.z, area.w));
-            string path = ArtFolder + "/purple_gem_icon.png";
-            Vector4 bounds = AlphaBounds("purple_gem_icon");
+            string path = UiArt.PurpleGemPath;
+            Vector4 bounds = UiArt.AlphaBounds(path);
             UiArt.ReadPngSize(path, out int width, out int height);
             float visibleWidth = (bounds.z - bounds.x) * width;
             float visibleHeight = (bounds.w - bounds.y) * height;
@@ -158,7 +158,7 @@ namespace SpeedStars.Tools.Builders
             var fitter = fit.gameObject.AddComponent<AspectRatioFitter>();
             fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
             fitter.aspectRatio = visibleWidth / visibleHeight;
-            UiArt.CanvasLayer(fit, "Art", Art("purple_gem_icon"), bounds);
+            UiArt.CanvasLayer(fit, "Art", UiArt.PurpleGem(), bounds);
             holder.gameObject.SetActive(false);
             return holder;
         }

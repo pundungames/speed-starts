@@ -16,6 +16,7 @@ namespace SpeedStars.Tools.Builders
     {
         public const string ArtRoot = UiPrefabPaths.Root + "/Art";
         public const string HomeArt = ArtRoot + "/Home";
+        public const string PurpleGemPath = HomeArt + "/purple_gem_icon.png";
         public const string RaceArt = ArtRoot + "/Race";
         public const string LayoutPath = HomeArt + "/layout.json";
         public const string RaceHudArt = ArtRoot + "/RaceHud";
@@ -260,6 +261,8 @@ namespace SpeedStars.Tools.Builders
 
         public static Sprite Home(string file) => Load(HomeArt + "/" + file + ".png");
 
+        public static Sprite PurpleGem() => Load(PurpleGemPath);
+
         public static Sprite Race(string file) => Load(RaceArt + "/" + file + ".png");
 
         /// <summary>Race HUD part (UI/Art/RaceHud: cropped, native size = canvas units).</summary>
@@ -342,6 +345,25 @@ namespace SpeedStars.Tools.Builders
             image.fillCenter = fillCenter;
             image.pixelsPerUnitMultiplier = borderMultiplier;
             return image;
+        }
+
+        /// <summary>Centers visible sprite pixels inside the original art slot while preserving their aspect ratio.</summary>
+        public static void FitArtSlot(RectTransform layer, string spritePath, string slotPath)
+        {
+            Vector4 art = AlphaBounds(spritePath);
+            Vector4 slot = AlphaBounds(slotPath);
+            ReadPngSize(spritePath, out int artWidth, out int artHeight);
+            ReadPngSize(slotPath, out int slotWidth, out int slotHeight);
+
+            var canvasScale = new Vector2((float)artWidth / slotWidth, (float)artHeight / slotHeight);
+            float fit = Mathf.Min(
+                (slot.z - slot.x) / ((art.z - art.x) * canvasScale.x),
+                (slot.w - slot.y) / ((art.w - art.y) * canvasScale.y));
+            Vector2 scale = canvasScale * fit;
+            var slotCenter = new Vector2((slot.x + slot.z) * 0.5f, (slot.y + slot.w) * 0.5f);
+            var artCenter = new Vector2((art.x + art.z) * 0.5f, (art.y + art.w) * 0.5f);
+            layer.anchorMin = slotCenter - Vector2.Scale(artCenter, scale);
+            layer.anchorMax = layer.anchorMin + scale;
         }
 
         /// <summary>A child stretched over its parent that shows one art layer. Never catches taps.</summary>

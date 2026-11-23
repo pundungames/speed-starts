@@ -208,8 +208,9 @@ namespace SpeedStars.Tools.Builders
         private static RectTransform CurrencyIcon(RectTransform parent, string name, string artFile, Vector4 area)
         {
             RectTransform holder = Kit.Span(Kit.Node(parent, name), new Vector2(area.x, area.y), new Vector2(area.z, area.w));
-            string path = ArtFolder + "/" + artFile + ".png";
-            Vector4 bounds = AlphaBounds(artFile);
+            bool isGem = artFile == GemIconArt;
+            string path = isGem ? UiArt.PurpleGemPath : ArtFolder + "/" + artFile + ".png";
+            Vector4 bounds = UiArt.AlphaBounds(path);
             UiArt.ReadPngSize(path, out int width, out int height);
             float visibleWidth = (bounds.z - bounds.x) * width;
             float visibleHeight = (bounds.w - bounds.y) * height;
@@ -219,7 +220,7 @@ namespace SpeedStars.Tools.Builders
             var fitter = fit.gameObject.AddComponent<AspectRatioFitter>();
             fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
             fitter.aspectRatio = visibleWidth / visibleHeight;
-            UiArt.CanvasLayer(fit, "Art", Art(artFile), bounds);
+            UiArt.CanvasLayer(fit, "Art", isGem ? UiArt.PurpleGem() : Art(artFile), bounds);
             holder.gameObject.SetActive(false);
             return holder;
         }
@@ -514,7 +515,16 @@ namespace SpeedStars.Tools.Builders
             RectTransform box = Kit.Node(parent, nodeName);
             layout.PlaceOnScreen(box, layout.Get(artName));
             UiArt.Paint(box.gameObject, Art(artName + "_background"), raycast: false);
-            UiArt.Layer(box, "Icon", Art(artName + "_icon"));
+            string iconArt = artName + "_icon";
+            if (iconArt == GemIconArt)
+            {
+                Image gem = UiArt.Layer(box, "Icon", UiArt.PurpleGem());
+                UiArt.FitArtSlot(gem.rectTransform, UiArt.PurpleGemPath, ArtFolder + "/" + iconArt + ".png");
+            }
+            else
+            {
+                UiArt.Layer(box, "Icon", Art(iconArt));
+            }
             Vector4 icon = AlphaBounds(artName + "_icon");
             return UiArt.Slot(box, "Value", "0", ValueSize, ValueMin, new Vector2(1f - ValueMin.x, icon.y - ValueTop));
         }
@@ -681,7 +691,8 @@ namespace SpeedStars.Tools.Builders
             layout.PlaceOnScreen(node, layout.Get("purchase"));
             background = UiArt.Paint(node.gameObject, Art("purchase_background"), raycast: true);
             Button button = UiArt.MakeButton(node.gameObject, background, true, alphaHit: false);
-            UiArt.Layer(node, PurchaseGemIconName, Art("purchase_icon"));
+            Image gem = UiArt.Layer(node, PurchaseGemIconName, UiArt.PurpleGem());
+            UiArt.FitArtSlot(gem.rectTransform, UiArt.PurpleGemPath, ArtFolder + "/purchase_icon.png");
             Vector4 icon = AlphaBounds("purchase_icon");
             CurrencyIcon(node, CashIconName, CashIconArt, icon);
             price = UiArt.Slot(node, "Price", "0", PriceSize, new Vector2(icon.z + PriceGap, 0.12f), new Vector2(PriceEdge, 0.88f));
