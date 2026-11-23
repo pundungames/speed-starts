@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using SpeedStars.Core.Race;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Framework;
 using TMPro;
 using UnityEngine;
@@ -59,17 +61,40 @@ namespace SpeedStars.UI.Home
         private RaceEventCatalog _catalog;
         private IRaceSelection _selection;
         private ScreenNavigator _navigator;
+        private FirstRunGuide _firstRun;
         private EventSelectModel _model;
         private Tween _shake;
         private Vector2 _continueBase;
         private bool _continueBaseKnown;
 
+        internal event Action GuideSelectionChanged;
+
+        internal RectTransform GuideTarget(RaceEventId id)
+        {
+            if (_model == null) return null;
+            if (_model.TryGetCurrent(out EventSelectEntry current) && current.Id == id)
+                return continueButton ? (RectTransform)continueButton.transform : null;
+
+            for (int category = 0; category < cards.Length; category++)
+            {
+                for (int distance = 0; distance < _model.DistanceCount(category); distance++)
+                {
+                    if (_model.EntryAt(category, distance).Id != id) continue;
+                    return _model.Target == EventSelectTarget.Category && _model.CategoryIndex == category
+                        ? cards[category].DistanceTarget(distance) : cards[category].CardTarget;
+                }
+            }
+            return null;
+        }
+
         [Inject]
-        public void ConstructEventSelect(RaceEventCatalog catalog, IRaceSelection selection, ScreenNavigator navigator)
+        public void ConstructEventSelect(RaceEventCatalog catalog, IRaceSelection selection, ScreenNavigator navigator,
+            [InjectOptional] FirstRunGuide firstRun = null)
         {
             _catalog = catalog;
             _selection = selection;
             _navigator = navigator;
+            _firstRun = firstRun;
         }
 
         protected override void Awake()
@@ -164,6 +189,7 @@ namespace SpeedStars.UI.Home
             practiceMark.enabled = _model.Target == EventSelectTarget.Practice;
             continueDimmed.SetActive(!_model.CanContinue);
             continueLabel.text = _model.CanContinue ? layout.ContinueLabel : HomeTexts.ComingSoonButton;
+            GuideSelectionChanged?.Invoke();
         }
 
         private void OnCategory(EventCategory category)
@@ -195,6 +221,7 @@ namespace SpeedStars.UI.Home
                 return;
             }
             _selection.Select(entry.Id);
+            _firstRun?.SelectMode(entry.Id);
             _navigator.Back();
         }
 

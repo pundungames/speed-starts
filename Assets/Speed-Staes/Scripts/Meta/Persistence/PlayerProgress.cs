@@ -89,6 +89,7 @@ namespace SpeedStars.Meta.Persistence
         [SerializeField] private List<string> ownedEmoteIds = new List<string>();
         [SerializeField] private string equippedEmoteId = string.Empty;
         [SerializeField] private bool raceTutorialDone;
+        [SerializeField] private FirstRunStage firstRunStage;
         [SerializeField] private bool hurdleSwipeHintSeen;
         [SerializeField] private bool relaySwipeHintSeen;
 
@@ -112,6 +113,7 @@ namespace SpeedStars.Meta.Persistence
 
         /// <summary>The first race's tutorial has been seen. No schema bump: an older save opens as not seen.</summary>
         public bool RaceTutorialDone { get => raceTutorialDone; set => raceTutorialDone = value; }
+        internal FirstRunStage FirstRunStage { get => firstRunStage; set => firstRunStage = value; }
         public bool HurdleSwipeHintSeen { get => hurdleSwipeHintSeen; set => hurdleSwipeHintSeen = value; }
         public bool RelaySwipeHintSeen { get => relaySwipeHintSeen; set => relaySwipeHintSeen = value; }
 

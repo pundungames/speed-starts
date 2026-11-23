@@ -22,6 +22,12 @@ namespace SpeedStars.UI.Home
 
         public bool IsTransitioning => _sceneFlow.IsTransitioning;
 
+        internal event Action<bool> TransitionChanged
+        {
+            add => _sceneFlow.TransitionChanged += value;
+            remove => _sceneFlow.TransitionChanged -= value;
+        }
+
         public TimeSpan DailyRaceCooldown => (_gate as IDailyRaceEntryStatus)?.DailyRaceCooldown ?? TimeSpan.Zero;
 
         /// <summary>Enters <paramref name="id"/>; the race scene is requested only for a successful entry.</summary>

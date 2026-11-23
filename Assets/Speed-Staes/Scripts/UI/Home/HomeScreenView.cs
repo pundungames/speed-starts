@@ -3,6 +3,7 @@ using SpeedStars.Core.Race;
 using SpeedStars.Core.Services;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Rewards;
 using TMPro;
@@ -150,6 +151,11 @@ namespace SpeedStars.UI.Home
         private Sprite _soundOnSprite;
         private IDailyGift _dailyGift;
         private ISevenDayRewards _sevenDay;
+        private FirstRunGuide _firstRun;
+        private FirstRunPointer _firstRunPointer;
+        private bool _giftAfterReveal;
+        private bool _firstRunLaunchRequested;
+        private bool _firstRunRevealStarted;
         private IRaceOfTheDay _raceOfTheDay;
         private IRelayTeam _relayTeam;
         private float _nextDailyStatusRefresh;
@@ -219,10 +225,12 @@ namespace SpeedStars.UI.Home
 
         /// <summary>Optional so a scene without the reward services still opens; the daily gift then stays closed and the red dot as built.</summary>
         [Inject]
-        public void ConstructHomeRewards([InjectOptional] IDailyGift dailyGift, [InjectOptional] ISevenDayRewards sevenDay)
+        public void ConstructHomeRewards([InjectOptional] IDailyGift dailyGift, [InjectOptional] ISevenDayRewards sevenDay,
+            [InjectOptional] FirstRunGuide firstRun = null)
         {
             _dailyGift = dailyGift;
             _sevenDay = sevenDay;
+            _firstRun = firstRun;
         }
 
         protected override void Awake()
@@ -251,7 +259,106 @@ namespace SpeedStars.UI.Home
         {
             // The root screen of the stack: pushing the screen that is already on top changes nothing.
             _navigator.Push(this);
-            TryOpenDailyGift();
+            if (_firstRun?.IsActive != true)
+            {
+                TryOpenDailyGift();
+                return;
+            }
+
+            _navigator.CurrentScreenChanged += OnGuideScreenChanged;
+            _navigator.PopupStackChanged += RefreshFirstRunPointer;
+            _firstRun.Changed += RefreshFirstRunPointer;
+            _entryFlow.TransitionChanged += OnGuideTransitionChanged;
+            _selection.Changed += RefreshFirstRunPointer;
+            if (eventSelectScreen) eventSelectScreen.GuideSelectionChanged += RefreshFirstRunPointer;
+
+            _firstRun.CheckFirstReward();
+            switch (_firstRun.Stage)
+            {
+                case FirstRunStage.FirstRace:
+                case FirstRunStage.SecondRace:
+                    _selection.Select(FirstRunGuide.Sprint100);
+                    break;
+                case FirstRunStage.ModePlay:
+                    _selection.Select(FirstRunGuide.Sprint200);
+                    break;
+                case FirstRunStage.FirstReward:
+                    if (_sevenDay?.HasClaimable == true) OnSevenDay();
+                    break;
+            }
+            RefreshFirstRunPointer();
+        }
+
+        private void CompleteResourceReveal()
+        {
+            _giftAfterReveal = true;
+            _firstRun.FinishResourceReveal();
+        }
+
+        private void OnGuideScreenChanged(IUiView screen) => RefreshFirstRunPointer();
+
+        private void OnGuideTransitionChanged(bool transitioning) => RefreshFirstRunPointer();
+
+        private void RefreshFirstRunPointer()
+        {
+            if (!_entryFlow.IsTransitioning && ReferenceEquals(_navigator.CurrentScreen, this))
+            {
+                if (_firstRun.Stage == FirstRunStage.Welcome && !_firstRunLaunchRequested)
+                {
+                    _firstRunLaunchRequested = true;
+                    _selection.Select(FirstRunGuide.Sprint100);
+                    _entryFlow.TryEnter(FirstRunGuide.Sprint100);
+                }
+                else if (_firstRun.Stage == FirstRunStage.ResourceReveal && !_firstRunRevealStarted)
+                {
+                    _firstRunRevealStarted = true;
+                    _resourceBar = FindObjectOfType<ResourceBarView>(true);
+                    if (_resourceBar) _resourceBar.RevealFirstRun(CompleteResourceReveal);
+                    else CompleteResourceReveal();
+                }
+            }
+
+            if (_giftAfterReveal && !_firstRun.IsActive && _navigator.PopupCount == 0 &&
+                ReferenceEquals(_navigator.CurrentScreen, this))
+            {
+                _giftAfterReveal = false;
+                TryOpenDailyGift();
+            }
+
+            RectTransform target = null;
+            FirstRunStage stage = _firstRun.Stage;
+            if (!_entryFlow.IsTransitioning)
+            {
+                IUiView popup = _navigator.TopPopup;
+                IUiView screen = _navigator.CurrentScreen;
+                if (popup != null)
+                {
+                    if (stage == FirstRunStage.FirstReward && ReferenceEquals(popup, sevenDayPopup))
+                        target = (sevenDayPopup as SevenDayPanelView)?.FirstClaimTarget;
+                }
+                else if (stage == FirstRunStage.ModeGuide && ReferenceEquals(screen, eventSelectScreen))
+                    target = eventSelectScreen.GuideTarget(FirstRunGuide.Sprint200);
+                else if (ReferenceEquals(screen, this))
+                {
+                    switch (stage)
+                    {
+                        case FirstRunStage.FirstReward:
+                            target = (RectTransform)sevenDayButton.transform;
+                            break;
+                        case FirstRunStage.FirstRace:
+                        case FirstRunStage.SecondRace:
+                        case FirstRunStage.ModePlay:
+                            target = (RectTransform)playButton.transform;
+                            break;
+                        case FirstRunStage.ModeGuide:
+                            target = (RectTransform)eventSelectButton.transform;
+                            break;
+                    }
+                }
+            }
+
+            if (target && !_firstRunPointer) _firstRunPointer = FirstRunPointer.Create(GetComponentInParent<Canvas>());
+            if (_firstRunPointer) _firstRunPointer.PointAt(target);
         }
 
         /// <summary>
@@ -260,7 +367,7 @@ namespace SpeedStars.UI.Home
         /// </summary>
         private void TryOpenDailyGift()
         {
-            if (_dailyGift == null) return;
+            if (_dailyGift == null || _firstRun?.IsActive == true) return;
 
             bool open = RewardPanelsModel.ShouldAutoOpenDailyGift(
                 _dailyGift.State, ReferenceEquals(_navigator.CurrentScreen, this), _navigator.PopupCount > 0);
@@ -309,6 +416,16 @@ namespace SpeedStars.UI.Home
 
         protected override void OnDestroy()
         {
+            if (_firstRun != null)
+            {
+                _navigator.CurrentScreenChanged -= OnGuideScreenChanged;
+                _navigator.PopupStackChanged -= RefreshFirstRunPointer;
+                _firstRun.Changed -= RefreshFirstRunPointer;
+                _entryFlow.TransitionChanged -= OnGuideTransitionChanged;
+                _selection.Changed -= RefreshFirstRunPointer;
+                if (eventSelectScreen) eventSelectScreen.GuideSelectionChanged -= RefreshFirstRunPointer;
+            }
+            if (_firstRunPointer) Destroy(_firstRunPointer.gameObject);
             if (playButton != null) playButton.onClick.RemoveListener(OnPlay);
             if (eventSelectButton != null) eventSelectButton.onClick.RemoveListener(OnEventSelect);
             if (editRacerButton != null) editRacerButton.onClick.RemoveListener(OnEditRacer);
@@ -554,8 +671,27 @@ namespace SpeedStars.UI.Home
 
         private void OnPlay()
         {
-            if (_entryOverlay || _entryFlow.IsTransitioning || !_catalog.TryGet(_selection.Selected, out RaceEventDefinition definition)
-                || !definition.IsPlayable) return;
+            if (_entryOverlay || _entryFlow.IsTransitioning) return;
+
+            switch (_firstRun?.Stage)
+            {
+                case FirstRunStage.Welcome:
+                case FirstRunStage.FirstRace:
+                case FirstRunStage.SecondRace:
+                    _selection.Select(FirstRunGuide.Sprint100);
+                    break;
+                case FirstRunStage.FirstReward:
+                    OnSevenDay();
+                    return;
+                case FirstRunStage.ModeGuide:
+                    OnEventSelect();
+                    return;
+                case FirstRunStage.ModePlay:
+                    _selection.Select(FirstRunGuide.Sprint200);
+                    break;
+            }
+
+            if (!_catalog.TryGet(_selection.Selected, out RaceEventDefinition definition) || !definition.IsPlayable) return;
 
             if (definition.RequiresTicket && !_wallet.TimedAccessActive)
             {
@@ -565,7 +701,7 @@ namespace SpeedStars.UI.Home
                     entryGateModal.OpenStore(definition);
                     return;
                 }
-                if (FlyEntryTicket(definition)) return;
+                if (_firstRun?.IsActive != true && FlyEntryTicket(definition)) return;
             }
             EnterRace(definition);
         }
@@ -618,6 +754,7 @@ namespace SpeedStars.UI.Home
         {
             EntryOutcome outcome = _entryFlow.TryEnter(definition.Id);
             if (outcome == EntryOutcome.NoTicket) entryGateModal.OpenStore(definition);
+            if (outcome == EntryOutcome.StartRace && _firstRunPointer) _firstRunPointer.PointAt(null);
             return outcome;
         }
 

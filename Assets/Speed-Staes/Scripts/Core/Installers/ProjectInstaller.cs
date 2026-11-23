@@ -84,6 +84,7 @@ namespace SpeedStars.Installers
 
             Container.Bind<ISaveStore>().FromMethod(_ => FileSaveStore.CreateDefault()).AsSingle();
             Container.Bind<ProgressRepository>().FromMethod(CreateProgress).AsSingle();
+            Container.Bind<FirstRunGuide>().AsSingle();
             Container.Bind(typeof(IClock), typeof(ClockService)).FromMethod(CreateClock).AsSingle();
 
             Container.BindInstance(scenes);

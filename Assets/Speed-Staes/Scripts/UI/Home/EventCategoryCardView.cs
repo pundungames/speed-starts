@@ -74,6 +74,9 @@ namespace SpeedStars.UI.Home
         private bool _bound;
 
         public EventCategory Category => category;
+        internal RectTransform CardTarget => button ? (RectTransform)button.transform : null;
+        internal RectTransform DistanceTarget(int index) => index >= 0 && index < _distanceCount
+            ? (RectTransform)distances[index].Button.transform : null;
 
         /// <summary>Fills the card once: title, one label per race, and the tap callbacks. Slots beyond the labels are switched off.</summary>
         public void Bind(string title, IReadOnlyList<string> distanceLabels, Action<EventCategory> onCard, Action<EventCategory, int> onDistance)

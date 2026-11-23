@@ -191,6 +191,7 @@ namespace SpeedStars.Meta.Persistence
             {
                 SchemaVersion = CurrentSchemaVersion,
                 StarterPresetsPending = true,
+                FirstRunStage = FirstRunStage.Welcome,
                 Cash = start.Cash,
                 PurpleGems = start.PurpleGems,
                 EntryTickets = start.EntryTickets,

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using SpeedStars.Core.Race;
 using SpeedStars.Physical;
+using SpeedStars.UI.Race;
 using UnityEngine;
 
 namespace SpeedStars.Bridge
@@ -15,7 +16,7 @@ namespace SpeedStars.Bridge
     /// The runner's own clock still starts at the first press after GO (Malik's RaceController; see the T-039 needs).
     /// </summary>
     [DefaultExecutionOrder(10)]
-    public sealed class RaceSessionAdapter : MonoBehaviour, IRaceSession, IRaceTelemetry, IRaceStartSignal
+    public sealed class RaceSessionAdapter : MonoBehaviour, IRaceSession, IRaceTelemetry, IRaceStartSignal, IRaceWelcomeInput
     {
         [SerializeField, Tooltip("The scene's RaceController (race length, clock, state).")]
         RaceController race;
@@ -215,6 +216,11 @@ namespace SpeedStars.Bridge
             body.RunReset += OnRunReset;
             body.Tapped += OnTapped;
             _subscribed = true;
+        }
+
+        public void HoldInputForWelcome()
+        {
+            if (body) body.acceptInput = false;
         }
 
         public void RequestStart(RaceStartRequest request)

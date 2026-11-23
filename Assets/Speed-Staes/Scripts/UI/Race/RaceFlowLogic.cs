@@ -39,6 +39,7 @@ namespace SpeedStars.UI.Race
         private readonly Func<RaceEventId> _findPracticeEvent; // optional: without it the Results Practice button stays off
         private readonly IRaceFinishSequence _finishSequence; // optional: without it the Results open on the line
         private readonly ProgressRepository _progress;
+        private readonly FirstRunGuide _guide;
         private readonly IUiView _finishCurtain = new EmptyScreen();
         private readonly List<DayBestRecord> _dayScratch = new List<DayBestRecord>();
 
@@ -61,10 +62,11 @@ namespace SpeedStars.UI.Race
             IPersonalBests records = null, IWallet wallet = null, IPlayerSettings settings = null,
             IDayBestSource dayBests = null, IClock clock = null, IRaceTraces traces = null,
             IRaceCashRewardResolver cashRewards = null, IRaceOfTheDay raceOfTheDay = null, Func<RaceEventId, bool> isPractice = null,
-            Func<RaceEventId> findPracticeEvent = null, IRaceFinishSequence finishSequence = null, ProgressRepository progress = null)
+            Func<RaceEventId> findPracticeEvent = null, IRaceFinishSequence finishSequence = null, ProgressRepository progress = null, FirstRunGuide guide = null)
         {
             _finishSequence = finishSequence;
             _progress = progress;
+            _guide = guide;
             _findPracticeEvent = findPracticeEvent;
             _isPractice = isPractice;
             _daily = raceOfTheDay;
@@ -93,7 +95,7 @@ namespace SpeedStars.UI.Race
         public bool PracticeFinished => _practiceFinished;
 
         /// <summary>The race scene opened: take the entry and start. Safe to call once; repeats are ignored.</summary>
-        public void Start()
+        public void Start(Func<Action, bool> showWelcome = null)
         {
             if (_started) return;
             _started = true;
@@ -105,7 +107,7 @@ namespace SpeedStars.UI.Race
             if (_results is IResultsPracticeView practiceView)
             {
                 practiceView.PracticeRequested += OnPractice;
-                practiceView.SetPracticeAvailable(!FindPracticeEvent().IsEmpty);
+                practiceView.SetPracticeAvailable(_guide?.IsActive != true && !FindPracticeEvent().IsEmpty);
             }
             if (_traces != null) _traces.TracesChanged += OnTracesChanged;
 
@@ -130,7 +132,15 @@ namespace SpeedStars.UI.Race
                     UnityEngine.Debug.LogWarning($"[RaceFlow] No pending entry (Race scene started directly); starting '{id}' for free.");
                 }
             }
-            BeginRace(id);
+            bool welcome = _guide?.Stage == FirstRunStage.Welcome && id == FirstRunGuide.Sprint100;
+            if (welcome && showWelcome != null && showWelcome(() => StartFirstRace(id))) return;
+            if (welcome) StartFirstRace(id);
+            else BeginRace(id);
+        }
+
+        private void StartFirstRace(RaceEventId id)
+        {
+            if (_started && BeginRace(id)) _guide.AcceptWelcome();
         }
 
         public void Dispose()
@@ -153,7 +163,11 @@ namespace SpeedStars.UI.Race
                 return false;
             }
             _current = info;
-            if (_results is ResultsScreenView resultsScreen) resultsScreen.SetRaceAgainAvailable(!IsDaily(id));
+            if (_results is ResultsScreenView resultsScreen)
+            {
+                resultsScreen.SetRaceAgainAvailable(!IsDaily(id));
+                resultsScreen.SetGuideReturnHome(false);
+            }
             _hasCurrent = true;
             _resultsOpen = false;
             _practiceFinished = false;
@@ -162,6 +176,7 @@ namespace SpeedStars.UI.Race
             // The daily configuration takes priority over the catalog fallback.
             _currentDistance = IsDaily(info.Id) && _daily.Today.DistanceMeters > 0f ? _daily.Today.DistanceMeters : info.DistanceMeters;
             _session.RequestStart(new RaceStartRequest(info.Id, _currentDistance));
+            _guide?.RaceStarted(id);
             return true;
         }
 
@@ -202,6 +217,9 @@ namespace SpeedStars.UI.Race
             else title = outcome.EventId.ToString();
 
             _resultsOpen = true;
+            _guide?.RecordFinish(outcome);
+            if (_guide?.RequiresHomeAfterFinish == true && _results is ResultsScreenView guidedResults)
+                guidedResults.SetGuideReturnHome(true);
             RecordWin(outcome);
             if (string.IsNullOrEmpty(_payoutId)) _payoutId = Guid.NewGuid().ToString("N");
             int gems = _rewards.Resolve(outcome, _payoutId); // once per race (the guard above); the resolver pays once per id too
@@ -359,7 +377,8 @@ namespace SpeedStars.UI.Race
         private void OnRaceAgain()
         {
             if (!_resultsOpen) return;
-            Restart();
+            if (_guide?.RequiresHomeAfterFinish == true) Exit();
+            else Restart();
         }
 
         /// <summary>

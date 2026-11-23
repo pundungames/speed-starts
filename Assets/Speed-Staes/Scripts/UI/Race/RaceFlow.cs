@@ -17,15 +17,20 @@ namespace SpeedStars.UI.Race
     public sealed class RaceFlow : IInitializable, ITickable, IDisposable, IRaceHudActions
     {
         private readonly RaceFlowLogic _logic;
+        private readonly IRaceSession _session;
+        private readonly ResultsScreenView _results;
 
         public RaceFlow(IRaceSession session, IRaceEntryGate gate, IRaceSelection selection, IRaceEventLookup events,
             ScreenNavigator navigator, SceneFlow sceneFlow, IResultsView results, IRaceRewardResolver rewards, [InjectOptional] IEntryGatePrompt prompt,
             [InjectOptional] IPersonalBests records, [InjectOptional] IWallet wallet, [InjectOptional] IPlayerSettings settings,
             [InjectOptional] IDayBestSource dayBests, [InjectOptional] IClock clock, [InjectOptional] IRaceTraces traces,
             [InjectOptional] IRaceCashRewardResolver cashRewards, [InjectOptional] IRaceOfTheDay raceOfTheDay,
-            [InjectOptional] RaceEventCatalog catalog, [InjectOptional] IRaceFinishSequence finishSequence, [InjectOptional] ProgressRepository progress)
+            [InjectOptional] RaceEventCatalog catalog, [InjectOptional] IRaceFinishSequence finishSequence, [InjectOptional] ProgressRepository progress,
+            [InjectOptional] FirstRunGuide guide = null)
         {
-            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings, dayBests, clock, traces, cashRewards, raceOfTheDay, IsPracticeIn(catalog), FindPracticeIn(catalog), finishSequence, progress);
+            _session = session;
+            _results = results as ResultsScreenView;
+            _logic = new RaceFlowLogic(session, gate, selection, events, navigator, sceneFlow, results, rewards, prompt, records, wallet, settings, dayBests, clock, traces, cashRewards, raceOfTheDay, IsPracticeIn(catalog), FindPracticeIn(catalog), finishSequence, progress, guide);
         }
 
         /// <summary>The first playable, free event without opponents (the rule of the Practice panel); empty id when the catalog has none.</summary>
@@ -47,7 +52,14 @@ namespace SpeedStars.UI.Race
             return id => catalog.TryGet(id, out RaceEventDefinition definition) && !definition.HasOpponents;
         }
 
-        public void Initialize() => _logic.Start();
+        public void Initialize() => _logic.Start(ShowWelcome);
+
+        private bool ShowWelcome(Action accepted)
+        {
+            if (!FirstRunWelcomeOverlay.TryShow(_results, accepted)) return false;
+            (_session as IRaceWelcomeInput)?.HoldInputForWelcome();
+            return true;
+        }
 
         /// <summary>Samples the run for the Analysis chart (ITickable comes with BindInterfacesAndSelfTo).</summary>
         public void Tick() => _logic.Tick();

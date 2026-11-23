@@ -4,6 +4,7 @@ using DG.Tweening;
 using SpeedStars.Core.Services;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Rewards;
 using TMPro;
@@ -65,6 +66,8 @@ namespace SpeedStars.UI.Home
         private ScreenNavigator _navigator;
         private CanvasGroup _group;
         private Image[] _backgrounds;
+        private FirstRunGuide _firstRun;
+        private bool _revealingFirstRun;
         private float _elapsed;
         private readonly Dictionary<SevenDayRewardKind, int> _inFlight = new Dictionary<SevenDayRewardKind, int>();
         private UiScreen _wardrobeOwner;
@@ -105,9 +108,11 @@ namespace SpeedStars.UI.Home
 
         /// <summary>Optional so a scene without a navigator keeps the bar always shown.</summary>
         [Inject]
-        public void ConstructResourceBarNavigation([InjectOptional] ScreenNavigator navigator)
+        public void ConstructResourceBarNavigation([InjectOptional] ScreenNavigator navigator,
+            [InjectOptional] FirstRunGuide firstRun = null)
         {
             _navigator = navigator;
+            _firstRun = firstRun;
         }
 
         private void Awake()
@@ -197,9 +202,55 @@ namespace SpeedStars.UI.Home
             bool wardrobe = _wardrobeOwner != null && ReferenceEquals(top, _wardrobeOwner);
             if (_wardrobeOwner != null) ((RectTransform)transform).anchoredPosition = wardrobe ? _wardrobePosition : _homePosition;
             bool visible = wardrobe || homeScreen == null || top == null || ReferenceEquals(top, homeScreen) || IsAlsoVisibleOn(top);
+            visible &= _firstRun?.IsActive != true || _revealingFirstRun;
             _group.alpha = visible ? 1f : 0f;
             _group.blocksRaycasts = visible;
             _group.interactable = visible;
+        }
+
+        internal void RevealFirstRun(Action finished)
+        {
+            var counters = new List<(RectTransform Rect, CanvasGroup Group, Vector3 Scale, float Alpha, bool Raycasts)>();
+            foreach (Transform child in transform)
+            {
+                if (!(child is RectTransform rect) || !child.gameObject.activeSelf) continue;
+                CanvasGroup group = child.GetComponent<CanvasGroup>();
+                if (!group) group = child.gameObject.AddComponent<CanvasGroup>();
+                counters.Add((rect, group, rect.localScale, group.alpha, group.blocksRaycasts));
+                rect.localScale *= 0.62f;
+                group.alpha = 0f;
+                group.blocksRaycasts = false;
+            }
+            counters.Sort((left, right) => right.Rect.anchoredPosition.y.CompareTo(left.Rect.anchoredPosition.y));
+
+            Sequence reveal = DOTween.Sequence().SetTarget(this).SetUpdate(true).SetLink(gameObject);
+            reveal.AppendInterval(0.32f);
+            reveal.AppendCallback(() =>
+            {
+                _revealingFirstRun = true;
+                ApplyVisibility();
+            });
+            foreach (var counter in counters)
+            {
+                reveal.AppendCallback(() => counter.Group.alpha = counter.Alpha);
+                reveal.Append(counter.Rect.DOScale(counter.Scale * 1.12f, 0.27f).SetEase(Ease.OutCubic));
+                reveal.Append(counter.Rect.DOScale(counter.Scale, 0.18f).SetEase(Ease.InOutSine));
+                reveal.AppendCallback(() => counter.Group.blocksRaycasts = counter.Raycasts);
+            }
+            reveal.AppendInterval(0.6f);
+            reveal.OnComplete(() => finished());
+            reveal.OnKill(() =>
+            {
+                foreach (var counter in counters)
+                {
+                    if (counter.Rect) counter.Rect.localScale = counter.Scale;
+                    if (!counter.Group) continue;
+                    counter.Group.alpha = counter.Alpha;
+                    counter.Group.blocksRaycasts = counter.Raycasts;
+                }
+                _revealingFirstRun = false;
+                if (isActiveAndEnabled) ApplyVisibility();
+            });
         }
 
         private bool IsAlsoVisibleOn(IUiView top)

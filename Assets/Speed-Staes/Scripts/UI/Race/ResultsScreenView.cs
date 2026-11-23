@@ -4,6 +4,7 @@ using DG.Tweening;
 using SpeedStars.Core.Audio;
 using SpeedStars.Core.Race;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Leaderboard;
 using TMPro;
@@ -126,6 +127,7 @@ namespace SpeedStars.UI.Race
 
         private UiMotionConfig _resultsMotion;
         private ScreenNavigator _resultsNavigator;
+        private SceneFlow _sceneFlow;
         private ILeaderboard _resultsLeaderboard;
         private IRaceSelection _resultsSelection;
         private readonly List<ResultsTableRowView> _rows = new List<ResultsTableRowView>();
@@ -145,6 +147,8 @@ namespace SpeedStars.UI.Race
         private ResultsGemRewardPresentation _gemPresentation;
         private bool _practiceAvailable;
         private ISfx _sfx;
+        private bool _guideReturnHome;
+        private FirstRunPointer _returnPointer;
 
         public event Action PracticeRequested;
         public event Action RaceAgainRequested;
@@ -158,11 +162,13 @@ namespace SpeedStars.UI.Race
 
         /// <summary>Optional so a scene without the leaderboard keeps the cards as dashes and the High Scores button off.</summary>
         [Inject]
-        public void InjectResultsNavigator([InjectOptional] ScreenNavigator navigator, [InjectOptional] ILeaderboard leaderboard, [InjectOptional] IRaceSelection selection)
+        public void InjectResultsNavigator([InjectOptional] ScreenNavigator navigator, [InjectOptional] ILeaderboard leaderboard,
+            [InjectOptional] IRaceSelection selection, [InjectOptional] SceneFlow sceneFlow = null)
         {
             _resultsNavigator = navigator;
             _resultsLeaderboard = leaderboard;
             _resultsSelection = selection;
+            _sceneFlow = sceneFlow;
         }
 
         /// <summary>Optional: without a bound sound system the record punch is silent.</summary>
@@ -244,14 +250,18 @@ namespace SpeedStars.UI.Race
                 if (_hasPresented) RefreshRows(animateNew: false); // a runner may have finished between Present and opening
             }
             PlayReveal();
+            if (_sceneFlow != null) _sceneFlow.TransitionChanged += OnSceneTransitionChanged;
+            UpdateReturnPointer();
         }
 
         protected override void OnDisable()
         {
             if (_standings != null) _standings.Changed -= OnStandingsChanged;
+            if (_sceneFlow != null) _sceneFlow.TransitionChanged -= OnSceneTransitionChanged;
             base.OnDisable();
             KillDenied();
             KillReveal();
+            if (_returnPointer) _returnPointer.PointAt(null);
             _pendingGemFlight = 0;
             _gemPresentation?.Stop();
             RestoreItems();
@@ -263,6 +273,7 @@ namespace SpeedStars.UI.Race
             KillDenied();
             KillReveal();
             _gemPresentation?.Stop();
+            if (_returnPointer) Destroy(_returnPointer.gameObject);
             if (highScoresButton != null) highScoresButton.onClick.RemoveListener(OnHighScoresClicked);
             if (practiceButton != null) practiceButton.onClick.RemoveListener(OnPracticeClicked);
             if (raceAgainButton != null) raceAgainButton.onClick.RemoveListener(OnRaceAgainClicked);
@@ -541,6 +552,23 @@ namespace SpeedStars.UI.Race
         internal void SetRaceAgainAvailable(bool available)
         {
             if (raceAgainButton != null) raceAgainButton.interactable = available;
+        }
+
+        internal void SetGuideReturnHome(bool guided)
+        {
+            _guideReturnHome = guided;
+            if (guided) SetRaceAgainAvailable(false);
+            UpdateReturnPointer();
+        }
+
+        private void OnSceneTransitionChanged(bool transitioning) => UpdateReturnPointer();
+
+        private void UpdateReturnPointer()
+        {
+            RectTransform target = _guideReturnHome && _sceneFlow?.IsTransitioning != true && isActiveAndEnabled && mainMenuButton
+                ? (RectTransform)mainMenuButton.transform : null;
+            if (target && !_returnPointer) _returnPointer = FirstRunPointer.Create(GetComponentInParent<Canvas>());
+            if (_returnPointer) _returnPointer.PointAt(target);
         }
 
         public void SetPracticeAvailable(bool available)

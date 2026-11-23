@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using SpeedStars.Core.Audio;
 using SpeedStars.Meta.Contracts;
+using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Costume;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
@@ -45,13 +46,17 @@ namespace SpeedStars.UI.Rewards
         private ISfx _sfx;
         private bool _claiming;
         private ResourceBarView _resourceBar;
+        private FirstRunGuide _firstRun;
+
+        internal RectTransform FirstClaimTarget => claimButton && claimButton.interactable ? (RectTransform)claimButton.transform : null;
 
         [Inject]
-        public void ConstructSevenDay(ISevenDayRewards rewards, UiMotionConfig motion, [InjectOptional] ICosmeticService cosmetics)
+        public void ConstructSevenDay(ISevenDayRewards rewards, UiMotionConfig motion, [InjectOptional] ICosmeticService cosmetics, [InjectOptional] FirstRunGuide firstRun = null)
         {
             _rewards = rewards;
             _cardMotion = motion;
             _cosmetics = cosmetics;
+            _firstRun = firstRun;
         }
 
         /// <summary>Optional: without a bound sound system the claim is silent.</summary>
@@ -146,7 +151,11 @@ namespace SpeedStars.UI.Rewards
             SevenDayClaimResult result = _rewards.Claim(); // raises Changed: the cards redraw (and Home's red dot follows)
             _claiming = false;
 
-            if (result == SevenDayClaimResult.Claimed) _sfx?.Play(SfxId.Reward);
+            if (result == SevenDayClaimResult.Claimed)
+            {
+                _sfx?.Play(SfxId.Reward);
+                _firstRun?.CheckFirstReward();
+            }
             if (result == SevenDayClaimResult.Claimed && dayIndex >= 0 && dayIndex < dayCards.Length && dayCards[dayIndex] != null)
             {
                 if (_resourceBar) _resourceBar.FlyReward(reward.Kind, balanceBefore, dayCards[dayIndex].transform as RectTransform);
