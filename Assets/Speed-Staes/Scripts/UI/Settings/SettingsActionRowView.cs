@@ -1,5 +1,4 @@
 using System;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,7 +18,7 @@ namespace SpeedStars.UI.Settings
         [SerializeField] private Image background;
 
         [Tooltip("Row caption.")]
-        [SerializeField] private TMP_Text label;
+        [SerializeField] private Text label;
 
         [Tooltip("Row background while usable.")]
         [SerializeField] private Sprite enabledSprite;

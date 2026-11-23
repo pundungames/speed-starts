@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,12 +19,12 @@ namespace SpeedStars.UI.Home
         [SerializeField] private GameObject selectedLayer;
 
         [Tooltip("Label drawn over the button (the race's display name).")]
-        [SerializeField] private TMP_Text label;
+        [SerializeField] private Text label;
 
         public Button Button => button;
         public GameObject NormalLayer => normalLayer;
         public GameObject SelectedLayer => selectedLayer;
-        public TMP_Text Label => label;
+        public Text Label => label;
     }
 
     /// <summary>
@@ -54,7 +53,7 @@ namespace SpeedStars.UI.Home
         [SerializeField] private GameObject headerSelected;
 
         [Tooltip("Card/Title: header text.")]
-        [SerializeField] private TMP_Text titleText;
+        [SerializeField] private Text titleText;
 
         [Tooltip("Card/Distances: parent of the distance buttons, visible only while the card is selected.")]
         [SerializeField] private GameObject distanceRoot;

@@ -1,7 +1,6 @@
 using System.Globalization;
 using SpeedStars.UI.Framework;
 using DG.Tweening;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,13 +13,13 @@ namespace SpeedStars.UI.Race
     public sealed class ResultsTableRowView : MonoBehaviour
     {
         [Tooltip("Rank: place number.")]
-        [SerializeField] private TMP_Text rankText;
+        [SerializeField] private Text rankText;
 
         [Tooltip("Name: runner name.")]
-        [SerializeField] private TMP_Text nameText;
+        [SerializeField] private Text nameText;
 
         [Tooltip("Time: race time.")]
-        [SerializeField] private TMP_Text timeText;
+        [SerializeField] private Text timeText;
 
         [Tooltip("PlayerHighlight: the red outline, shown only on the player's own line.")]
         [SerializeField] private GameObject playerHighlight;
@@ -38,10 +37,10 @@ namespace SpeedStars.UI.Race
         [SerializeField] private Color playerNameColor = new Color(0.92f, 0.12f, 0.14f, 1f);
 
         [Tooltip("PersonalBestBadge: small 'PB' Text after the time, shown only for a new personal record.")]
-        [SerializeField] private TMP_Text personalBestBadge;
+        [SerializeField] private Text personalBestBadge;
 
         [Tooltip("DayBestBadge: small 'DB' Text after the time, shown only for the player's best of today.")]
-        [SerializeField] private TMP_Text dayBestBadge;
+        [SerializeField] private Text dayBestBadge;
 
         [Tooltip("Flag: the runner's country flag between the place and the name. Hidden without a sprite.")]
         [SerializeField] private Image flagImage;
@@ -117,7 +116,7 @@ namespace SpeedStars.UI.Race
         private void OnDisable() => KillReveal();
 
         /// <summary>Visible only when true; a small punch plays when it turns on.</summary>
-        private static void SetBadge(TMP_Text badge, bool visible, UiMotionConfig motion)
+        private static void SetBadge(Text badge, bool visible, UiMotionConfig motion)
         {
             if (badge == null) return;
             badge.gameObject.SetActive(visible);

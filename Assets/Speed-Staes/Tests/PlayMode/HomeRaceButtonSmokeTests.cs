@@ -10,7 +10,6 @@ using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Race;
-using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -308,7 +307,7 @@ namespace SpeedStars.PlayTests
 
             yield return Tap(RequireField<Button>(home, "playButton"), "Play button");
             yield return WaitOpen(gate, "entry gate");
-            Assert.AreEqual("TICKETS STORE", RequireField<TMP_Text>(gate, "titleText").text);
+            Assert.AreEqual("TICKETS STORE", RequireField<Text>(gate, "titleText").text);
             Assert.IsFalse(RequireField<Button>(gate, "useTicketButton").gameObject.activeSelf);
             Assert.AreEqual(HomeScene, UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, "no ticket: Play must not leave Home");
 
@@ -328,7 +327,7 @@ namespace SpeedStars.PlayTests
                 System.DateTime.UtcNow.AddMinutes(15).Ticks;
             HomeScreenView home = Require<HomeScreenView>();
             Button play = RequireField<Button>(home, "playButton");
-            TMP_Text cost = play.transform.Find("Entry Cost").GetComponent<TMP_Text>();
+            Text cost = play.transform.Find("Entry Cost").GetComponent<Text>();
             yield return WaitUntil(() => cost.text.StartsWith("VIP FREE"), "VIP Play style");
 
             yield return Tap(play, "VIP Play");
@@ -586,7 +585,7 @@ namespace SpeedStars.PlayTests
             Assert.AreEqual(Vector3.Dot(startPosition, body.transform.forward), Vector3.Dot(body.transform.position, body.transform.forward), 0.001f);
             Assert.IsFalse((bool)body.GetType().GetField("acceptInput").GetValue(body));
             yield return null;
-            Assert.AreEqual("0.00", RequireField<TMP_Text>(hud, "timeText").text);
+            Assert.AreEqual("0.00", RequireField<Text>(hud, "timeText").text);
             var follow = Object.FindObjectsOfType<MonoBehaviour>().FirstOrDefault(c => c.GetType().Name == "SideFollowCamera");
             Assert.IsNotNull(follow);
             // The opening camera frames the runner from close by: no flight back over the 240 m it was away.
@@ -634,10 +633,9 @@ namespace SpeedStars.PlayTests
             }
 
             Button play = RequireField<Button>(home, "playButton");
-            TMP_Text entryCost = play.transform.Find("Entry Cost").GetComponent<TMP_Text>();
-            entryCost.ForceMeshUpdate();
-            Assert.AreEqual("x1", entryCost.GetParsedText());
-            Assert.Less(entryCost.textInfo.characterInfo[0].pointSize, entryCost.textInfo.characterInfo[1].pointSize);
+            Text entryCost = play.transform.Find("Entry Cost").GetComponent<Text>();
+            Assert.IsTrue(entryCost.supportRichText);
+            Assert.AreEqual($"<size={Mathf.Max(1, Mathf.RoundToInt(entryCost.fontSize * 0.72f))}>x</size>1", entryCost.text);
             int ticketsBefore = Container.Resolve<IEntryTickets>().Count;
             yield return Tap(play, "Play button");
             Assert.IsFalse(gate.IsVisible, "the ticket store is only used when short of tickets");

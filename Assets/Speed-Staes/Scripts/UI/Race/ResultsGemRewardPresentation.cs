@@ -2,7 +2,6 @@ using System;
 using System.Globalization;
 using DG.Tweening;
 using SpeedStars.UI.Rewards;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,10 +15,10 @@ namespace SpeedStars.UI.Race
         private readonly Rect _gemUv;
         private readonly Sprite _counterBackground;
         private readonly RectTransform _badgeIcon;
-        private readonly TMP_FontAsset _font;
+        private readonly Font _font;
         private Sequence _settlement;
 
-        public ResultsGemRewardPresentation(RectTransform screen, TMP_Text rewardText, Texture2D gem, Rect gemUv, Sprite counterBackground)
+        public ResultsGemRewardPresentation(RectTransform screen, Text rewardText, Texture2D gem, Rect gemUv, Sprite counterBackground)
         {
             _screen = screen;
             _gem = gem;
@@ -32,7 +31,7 @@ namespace SpeedStars.UI.Race
             Place(_badgeIcon, new Vector2(0.5f, 0.5f), new Vector2(-163f, 0f), _badgeIcon.sizeDelta);
             RectTransform label = rewardText.rectTransform;
             Place(label, new Vector2(0.5f, 0.5f), new Vector2(52f, 0f), new Vector2(360f, 72f));
-            rewardText.alignment = TextAlignmentOptions.MidlineLeft;
+            rewardText.alignment = TextAnchor.MiddleLeft;
         }
 
         public void Play(int amount, int balance, RectTransform cashBox, Action settled)
@@ -66,16 +65,16 @@ namespace SpeedStars.UI.Race
 
             RectTransform destination = MakeGem("Counter Icon", counter, 47f);
             Place(destination, new Vector2(0.5f, 0.5f), new Vector2(-56f, 0f), destination.sizeDelta);
-            var valueObject = new GameObject("Balance", typeof(RectTransform), typeof(TextMeshProUGUI));
-            var value = valueObject.GetComponent<TextMeshProUGUI>();
+            var valueObject = new GameObject("Balance", typeof(RectTransform), typeof(Text));
+            var value = valueObject.GetComponent<Text>();
             value.rectTransform.SetParent(counter, false);
             Place(value.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(26f, 0f), new Vector2(128f, 58f));
             value.font = _font;
-            value.fontSize = value.fontSizeMax = 39f;
-            value.fontSizeMin = 20f;
-            value.enableAutoSizing = true;
+            value.fontSize = value.resizeTextMaxSize = 39;
+            value.resizeTextMinSize = 20;
+            value.resizeTextForBestFit = true;
             value.color = new Color32(10, 31, 74, 255);
-            value.alignment = TextAlignmentOptions.Midline;
+            value.alignment = TextAnchor.MiddleCenter;
             value.raycastTarget = false;
 
             balance = Mathf.Max(0, balance);

@@ -45,7 +45,6 @@ namespace SpeedStars.Tools.Builders
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
-            HandEditGuard.ConvertPending();
         }
 
         /// <summary>Adds the Emote button and its name label under the HUD root (when missing) and binds them on the view.</summary>

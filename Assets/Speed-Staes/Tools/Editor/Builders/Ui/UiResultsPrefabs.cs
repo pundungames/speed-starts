@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using TMPro;
 using SpeedStars.UI.Race;
 using SpeedStars.UI.Rewards;
 using UnityEditor;
@@ -351,7 +350,6 @@ namespace SpeedStars.Tools.Builders
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
-            HandEditGuard.ConvertPending();
         }
 
         /// <summary>Writes the breakdown box, row heights and text size ranges; true when anything differed. Text may be TMP or legacy.</summary>
@@ -402,8 +400,6 @@ namespace SpeedStars.Tools.Builders
 
         private static Color TextColor(Transform node)
         {
-            var tmp = node.GetComponent<TMP_Text>();
-            if (tmp != null) return tmp.color;
             var legacy = node.GetComponent<Text>();
             if (legacy != null) return legacy.color;
             throw new InvalidOperationException($"UiResultsPrefabs: '{node.name}' has no text to read the ink from.");
@@ -449,39 +445,8 @@ namespace SpeedStars.Tools.Builders
 
             Transform value = row.Find("Value");
             if (value == null) throw new InvalidOperationException($"UiResultsPrefabs: '{row.name}' has no 'Value' text.");
-            var tmp = value.GetComponent<TMP_Text>();
-            if (tmp != null)
-            {
-                // Serialized fields: m_fontSize is rewritten by auto size at run time, so base / min / max decide "changed".
-                var so = new SerializedObject(tmp);
-                SerializedProperty min = so.FindProperty("m_fontSizeMin");
-                SerializedProperty max = so.FindProperty("m_fontSizeMax");
-                SerializedProperty auto = so.FindProperty("m_enableAutoSizing");
-                SerializedProperty baseSize = so.FindProperty("m_fontSizeBase");
-                if (!Mathf.Approximately(min.floatValue, minSize) || !Mathf.Approximately(max.floatValue, maxSize)
-                    || !auto.boolValue || !Mathf.Approximately(baseSize.floatValue, maxSize))
-                {
-                    min.floatValue = minSize;
-                    max.floatValue = maxSize;
-                    auto.boolValue = true;
-                    baseSize.floatValue = maxSize;
-                    so.FindProperty("m_fontSize").floatValue = maxSize;
-                    so.ApplyModifiedPropertiesWithoutUndo();
-                    changed = true;
-                }
-
-                // Plain base material (no outline preset), card ink, one line without wrapping.
-                var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(UiFontPaths.AmericanCaptainSdf);
-                if (font == null) throw new InvalidOperationException($"UiResultsPrefabs: font asset '{UiFontPaths.AmericanCaptainSdf}' not found.");
-                if (tmp.font != font) { tmp.font = font; changed = true; }
-                if (tmp.fontSharedMaterial != font.material) { tmp.fontSharedMaterial = font.material; changed = true; }
-                if (tmp.color != ink) { tmp.color = ink; changed = true; }
-                if (tmp.enableWordWrapping) { tmp.enableWordWrapping = false; changed = true; }
-                return changed;
-            }
-
             var legacy = value.GetComponent<Text>();
-            if (legacy == null) throw new InvalidOperationException($"UiResultsPrefabs: '{row.name}/Value' has neither TMP_Text nor Text.");
+            if (legacy == null) throw new InvalidOperationException($"UiResultsPrefabs: '{row.name}/Value' has no Text component.");
             if (legacy.resizeTextMinSize != Mathf.RoundToInt(minSize) || legacy.resizeTextMaxSize != Mathf.RoundToInt(maxSize) || !legacy.resizeTextForBestFit)
             {
                 legacy.resizeTextForBestFit = true;

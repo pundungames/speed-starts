@@ -1,6 +1,6 @@
+using UnityEngine.UI;
 using NUnit.Framework;
 using SpeedStars.UI.Home;
-using TMPro;
 using UnityEditor;
 using UnityEngine;
 
@@ -92,8 +92,8 @@ namespace SpeedStars.Tests.UI.Builders
 
         private static void AssertText(string path, string expected)
         {
-            var text = Find(path).GetComponent<TMP_Text>();
-            Assert.IsNotNull(text, path + " has no TMP_Text");
+            var text = Find(path).GetComponent<Text>();
+            Assert.IsNotNull(text, path + " has no Text");
             Assert.AreEqual(expected, text.text, path);
         }
     }

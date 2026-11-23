@@ -3,7 +3,6 @@ using DG.Tweening;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Costume;
 using SpeedStars.UI.Framework;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -47,13 +46,13 @@ namespace SpeedStars.UI.Emotes
         [SerializeField] private Button equipButton;
 
         [Tooltip("Equip/Label: 'Equip' or 'Equipped'.")]
-        [SerializeField] private TMP_Text equipLabel;
+        [SerializeField] private Text equipLabel;
 
         [Tooltip("Purchase: buys the selected locked emote. Shown only while it is locked.")]
         [SerializeField] private Button purchaseButton;
 
         [Tooltip("Purchase/Price: the price of the selected emote.")]
-        [SerializeField] private TMP_Text purchasePriceText;
+        [SerializeField] private Text purchasePriceText;
 
         [Tooltip("Purchase background: flashes when the player cannot afford the emote.")]
         [SerializeField] private Graphic purchaseBackground;

@@ -6,7 +6,6 @@ using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Rewards;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -27,34 +26,34 @@ namespace SpeedStars.UI.Home
         [SerializeField] private RectTransform window;
 
         [Tooltip("Window/Title: GET CASH on the header.")]
-        [SerializeField] private TMP_Text titleText;
+        [SerializeField] private Text titleText;
 
         [Tooltip("Window/Balance/Value: the player's Cash.")]
-        [SerializeField] private TMP_Text balanceText;
+        [SerializeField] private Text balanceText;
 
         [Tooltip("Window/Balance: the Cash row; the flying diamond lands here and it punches.")]
         [SerializeField] private RectTransform balanceBox;
 
         [Tooltip("Window/Offer/Amount: '+200'.")]
-        [SerializeField] private TMP_Text amountText;
+        [SerializeField] private Text amountText;
 
         [Tooltip("Window/Offer/Caption: 'Watch an ad'.")]
-        [SerializeField] private TMP_Text captionText;
+        [SerializeField] private Text captionText;
 
         [Tooltip("Window/Offer/Counter: 'ads watched today / daily limit', e.g. 0/3.")]
-        [SerializeField] private TMP_Text counterText;
+        [SerializeField] private Text counterText;
 
         [Tooltip("Window/WatchAd: not interactable while the offer is closed or an ad runs.")]
         [SerializeField] private Button watchAdButton;
 
         [Tooltip("Window/WatchAd/Label: WATCH AD; hidden while the spinner shows.")]
-        [SerializeField] private TMP_Text watchAdLabel;
+        [SerializeField] private Text watchAdLabel;
 
         [Tooltip("Window/WatchAd/Spinner: turns while an ad runs; inactive otherwise.")]
         [SerializeField] private RectTransform watchAdSpinner;
 
         [Tooltip("Window/Note: why the button is closed (limit reached, no ad); hidden while it works.")]
-        [SerializeField] private TMP_Text noteText;
+        [SerializeField] private Text noteText;
 
         [Tooltip("CashFlight: the diamond that flies from the offer to the Cash value after a granted ad.")]
         [SerializeField] private CashFlightIcon flight;

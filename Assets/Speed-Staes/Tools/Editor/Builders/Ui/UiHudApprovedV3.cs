@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using SpeedStars.UI.Race;
-using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,7 +14,7 @@ namespace SpeedStars.Tools.Builders
         const string Art = "Assets/Speed-Staes/UI/Art/RaceHudApprovedV3/";
         const string Hud = "Assets/Speed-Staes/UI/Screens/RaceHud.prefab";
         const float Scale = 2400f / 1853f;
-        static TMP_FontAsset Font;
+        static Font Font;
 
         [MenuItem("Tools/Speed Stars/Apply approved HUD v3")]
         public static void Apply()
@@ -48,7 +47,7 @@ namespace SpeedStars.Tools.Builders
                 }
                 importer.SaveAndReimport();
             }
-            Font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Speed-Staes/UI/Fonts/Kanit/Kanit-BlackItalic SDF.asset");
+            Font = AssetDatabase.LoadAssetAtPath<Font>("Assets/Speed-Staes/UI/Fonts/Kanit/Kanit-BlackItalic.ttf");
             if (!Font) throw new InvalidOperationException("HUD font is missing.");
             var root = PrefabUtility.LoadPrefabContents(Hud);
             try
@@ -73,17 +72,17 @@ namespace SpeedStars.Tools.Builders
                 Icon(perf,"TimeIcon","stopwatch_icon"); Icon(perf,"SpeedIcon","speedometer_icon");
                 Icon(energy,"Icon","energy_icon"); Icon(cadence,"Icon","cadence_icon");
                 var dark = new Color32(30,38,47,255);
-                Text(exit,"Label",118,6,170,76,44,dark,TextAlignmentOptions.Center);
-                Text(restart,"Label",116,3,158,77,39,dark,TextAlignmentOptions.Center);
-                Text(currency,"Value",108,1,143,75,48,dark,TextAlignmentOptions.Center);
-                Text(perf,"Time",104,1,165,78,64,Color.white,TextAlignmentOptions.MidlineRight);
-                Text(perf,"Seconds",273,9,42,66,50,Color.white,TextAlignmentOptions.MidlineLeft);
-                Text(perf,"Speed",105,75,293,83,62,new Color32(244,173,177,255),TextAlignmentOptions.MidlineRight);
-                Text(energy,"Label",93,3,188,44,29,Color.white,TextAlignmentOptions.MidlineLeft);
-                Text(energy,"Value",291,2,84,44,33,Color.white,TextAlignmentOptions.MidlineRight);
-                Text(cadence,"Label",93,0,188,43,29,Color.white,TextAlignmentOptions.MidlineLeft);
-                Text(cadence,"Value",291,0,84,43,33,Color.white,TextAlignmentOptions.MidlineRight);
-                Text(place,"Label",24,0,159,98,76,Color.white,TextAlignmentOptions.Center);
+                Text(exit,"Label",118,6,170,76,44,dark,TextAnchor.MiddleCenter);
+                Text(restart,"Label",116,3,158,77,39,dark,TextAnchor.MiddleCenter);
+                Text(currency,"Value",108,1,143,75,48,dark,TextAnchor.MiddleCenter);
+                Text(perf,"Time",104,1,165,78,64,Color.white,TextAnchor.MiddleRight);
+                Text(perf,"Seconds",273,9,42,66,50,Color.white,TextAnchor.MiddleLeft);
+                Text(perf,"Speed",105,75,293,83,62,new Color32(244,173,177,255),TextAnchor.MiddleRight);
+                Text(energy,"Label",93,3,188,44,29,Color.white,TextAnchor.MiddleLeft);
+                Text(energy,"Value",291,2,84,44,33,Color.white,TextAnchor.MiddleRight);
+                Text(cadence,"Label",93,0,188,43,29,Color.white,TextAnchor.MiddleLeft);
+                Text(cadence,"Value",291,0,84,43,33,Color.white,TextAnchor.MiddleRight);
+                Text(place,"Label",24,0,159,98,76,Color.white,TextAnchor.MiddleCenter);
                 Icon(energy,"Empty","energy_bar_empty"); Icon(cadence,"Empty","cadence_bar_empty");
                 Fill(energy,"energy_bar_fill",52); Fill(cadence,"cadence_bar_fill",47);
                 view.FindProperty("approvedHudV3").boolValue = true;
@@ -92,7 +91,6 @@ namespace SpeedStars.Tools.Builders
                 HandEditGuard.SavePatchedPrefab(root,Hud);
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
-            HandEditGuard.ConvertPending();
             AssetDatabase.SaveAssets();
             Debug.Log("Approved HUD v3 applied: seven widgets, cropped live bars and wallet gems.");
         }
@@ -129,14 +127,14 @@ namespace SpeedStars.Tools.Builders
             image.type=Image.Type.Filled;image.fillMethod=Image.FillMethod.Horizontal;
             image.fillOrigin=0;image.fillAmount=1;image.raycastTarget=false;
         }
-        static void Text(Transform panel,string name,float x,float y,float w,float h,float size,Color color,TextAlignmentOptions alignment)
+        static void Text(Transform panel,string name,float x,float y,float w,float h,float size,Color color,TextAnchor alignment)
         {
-            var text=panel.Find(name).GetComponent<TMP_Text>();
+            var text=panel.Find(name).GetComponent<Text>();
             Rect(text.rectTransform,new Vector2(0,1),new Vector2(0,1),x,-y,w,h);
-            text.font=Font;text.fontSharedMaterial=Font.material;text.fontStyle=FontStyles.Normal;
-            text.color=color;text.fontSize=size*Scale;text.enableAutoSizing=true;
-            text.fontSizeMin=size*Scale*.65f;text.fontSizeMax=size*Scale;
-            text.enableWordWrapping=false;text.alignment=alignment;text.margin=Vector4.zero;
+            text.font=Font;text.fontStyle=FontStyle.Normal;
+            text.color=color;text.fontSize=Mathf.RoundToInt(size*Scale);text.resizeTextForBestFit=true;
+            text.resizeTextMinSize=Mathf.RoundToInt(size*Scale*.65f);text.resizeTextMaxSize=Mathf.RoundToInt(size*Scale);
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;text.alignment=alignment;
         }
     }
 }

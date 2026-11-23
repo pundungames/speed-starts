@@ -6,7 +6,6 @@ using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -25,17 +24,17 @@ namespace SpeedStars.UI.Leaderboard
     {
         [Header("Header")]
         [Tooltip("Diamond/Value: the player's Cash.")]
-        [SerializeField] private TMP_Text cashText;
+        [SerializeField] private Text cashText;
 
         [Tooltip("Title/Label: 'LEADERBOARD'.")]
-        [SerializeField] private TMP_Text titleText;
+        [SerializeField] private Text titleText;
 
         [Header("Filter fields")]
         [Tooltip("Region field button.")]
         [SerializeField] private Button regionButton;
 
         [Tooltip("Region field label: GLOBAL or the country name.")]
-        [SerializeField] private TMP_Text regionLabel;
+        [SerializeField] private Text regionLabel;
 
         [Tooltip("Region field: globe layer, shown while Global.")]
         [SerializeField] private GameObject regionGlobe;
@@ -47,13 +46,13 @@ namespace SpeedStars.UI.Leaderboard
         [SerializeField] private Button periodButton;
 
         [Tooltip("Period field label.")]
-        [SerializeField] private TMP_Text periodLabel;
+        [SerializeField] private Text periodLabel;
 
         [Tooltip("Event field button.")]
         [SerializeField] private Button eventButton;
 
         [Tooltip("Event field label: 'SPRINTS . 100m'.")]
-        [SerializeField] private TMP_Text eventLabel;
+        [SerializeField] private Text eventLabel;
 
         [Header("Table")]
         [Tooltip("Table ScrollRect (rows).")]
@@ -119,10 +118,10 @@ namespace SpeedStars.UI.Leaderboard
         [SerializeField] private LeaderboardChoiceView countryRowPrefab;
 
         [Tooltip("'NO COUNTRIES FOUND' text.")]
-        [SerializeField] private TMP_Text noCountriesText;
+        [SerializeField] private Text noCountriesText;
 
         [Tooltip("RegionPopup header text ('REGION').")]
-        [SerializeField] private TMP_Text regionHeaderText;
+        [SerializeField] private Text regionHeaderText;
 
         [Header("Period window")]
         [Tooltip("PeriodPopup: the window.")]
@@ -132,10 +131,10 @@ namespace SpeedStars.UI.Leaderboard
         [SerializeField] private LeaderboardChoiceView[] periodRows = new LeaderboardChoiceView[0];
 
         [Tooltip("PeriodPopup header text ('PERIOD').")]
-        [SerializeField] private TMP_Text periodHeaderText;
+        [SerializeField] private Text periodHeaderText;
 
         [Tooltip("Hint line under the period list.")]
-        [SerializeField] private TMP_Text periodHintText;
+        [SerializeField] private Text periodHintText;
 
         [Header("Event window")]
         [Tooltip("EventModal: the modal (a popup of the navigator).")]
@@ -151,7 +150,7 @@ namespace SpeedStars.UI.Leaderboard
         [SerializeField] private LeaderboardChoiceView distanceOptionPrefab;
 
         [Tooltip("'NO EVENTS AVAILABLE' text.")]
-        [SerializeField] private TMP_Text noEventsText;
+        [SerializeField] private Text noEventsText;
 
         [Tooltip("APPLY button (disabled until a race of the shown category is chosen).")]
         [SerializeField] private Button applyButton;
@@ -163,10 +162,10 @@ namespace SpeedStars.UI.Leaderboard
         [SerializeField] private Button modalCloseButton;
 
         [Tooltip("EventModal header text ('EVENT').")]
-        [SerializeField] private TMP_Text eventHeaderText;
+        [SerializeField] private Text eventHeaderText;
 
         [Tooltip("Labels of APPLY / CANCEL / RETRY / FIND ME, in that order.")]
-        [SerializeField] private TMP_Text[] buttonLabels = new TMP_Text[0];
+        [SerializeField] private Text[] buttonLabels = new Text[0];
 
         [Header("Content and art")]
         [Tooltip("Which race sits behind which category tab (the event select screen's content asset).")]

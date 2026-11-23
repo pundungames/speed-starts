@@ -3,7 +3,6 @@ using DG.Tweening;
 using SpeedStars.Meta.Config;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Framework;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -60,7 +59,7 @@ namespace SpeedStars.UI.Costume
 
         [Header("Price (shown only while the item is locked and has a price)")]
         [Tooltip("Price/Text: the price of the item. Optional: a card without it just shows no price.")]
-        [SerializeField] private TMP_Text priceText;
+        [SerializeField] private Text priceText;
 
         [Tooltip("Price/CashIcon: currency icon beside the price of a Cash item. Optional.")]
         [SerializeField] private GameObject priceCashIcon;

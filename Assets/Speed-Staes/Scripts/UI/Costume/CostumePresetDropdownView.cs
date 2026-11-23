@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -19,7 +18,7 @@ namespace SpeedStars.UI.Costume
         [SerializeField] private Button bar;
 
         [Tooltip("Bar/Label: name of the chosen preset.")]
-        [SerializeField] private TMP_Text barLabel;
+        [SerializeField] private Text barLabel;
 
         [Tooltip("Bar/Chevron: turned upside down while the list is open.")]
         [SerializeField] private RectTransform chevron;

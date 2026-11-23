@@ -1,6 +1,5 @@
 using System;
 using SpeedStars.UI.Home;
-using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -42,7 +41,6 @@ namespace SpeedStars.Tools.Builders
             {
                 PrefabUtility.UnloadPrefabContents(root);
             }
-            HandEditGuard.ConvertPending();
         }
 
         internal static void AddRow(GameObject homeRoot)
@@ -72,8 +70,8 @@ namespace SpeedStars.Tools.Builders
             Transform back = Required(row.transform, "Previous");
             Transform forward = Required(row.transform, "Next");
 
-            TMP_Text label = pill.GetComponentInChildren<TMP_Text>(true)
-                ?? throw new InvalidOperationException("UiHomeRelayRow: the card's name pill has no TMP_Text to copy.");
+            Text label = pill.GetComponentInChildren<Text>(true)
+                ?? throw new InvalidOperationException("UiHomeRelayRow: the card's name pill has no Text to copy.");
             label.text = HomeTexts.RelayLeg(0);
 
             var so = new SerializedObject(view);

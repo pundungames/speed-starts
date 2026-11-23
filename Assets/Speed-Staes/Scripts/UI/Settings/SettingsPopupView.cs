@@ -6,7 +6,6 @@ using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Settings;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -25,22 +24,22 @@ namespace SpeedStars.UI.Settings
     {
         [Header("Texts")]
         [Tooltip("Header/Title.")]
-        [SerializeField] private TMP_Text titleText;
+        [SerializeField] private Text titleText;
 
         [Tooltip("Label of the Music row.")]
-        [SerializeField] private TMP_Text musicLabel;
+        [SerializeField] private Text musicLabel;
 
         [Tooltip("Label of the Language row.")]
-        [SerializeField] private TMP_Text languageLabel;
+        [SerializeField] private Text languageLabel;
 
         [Tooltip("Label of the Flag row.")]
-        [SerializeField] private TMP_Text flagLabel;
+        [SerializeField] private Text flagLabel;
 
         [Tooltip("Label of the Player Name row.")]
-        [SerializeField] private TMP_Text nameLabel;
+        [SerializeField] private Text nameLabel;
 
         [Tooltip("Label of the Done button.")]
-        [SerializeField] private TMP_Text doneLabel;
+        [SerializeField] private Text doneLabel;
 
         [Header("Music")]
         [Tooltip("Switch in the Music row.")]
@@ -48,7 +47,7 @@ namespace SpeedStars.UI.Settings
 
         [Header("Camera")]
         [Tooltip("Label of the Camera Distance row.")]
-        [SerializeField] private TMP_Text cameraDistanceLabel;
+        [SerializeField] private Text cameraDistanceLabel;
 
         [Tooltip("Slider in the Camera Distance row.")]
         [SerializeField] private Slider cameraDistanceSlider;
@@ -62,7 +61,7 @@ namespace SpeedStars.UI.Settings
         [SerializeField] private Button languageButton;
 
         [Tooltip("Closed Language field: shows the chosen language's name.")]
-        [SerializeField] private TMP_Text languageValueText;
+        [SerializeField] private Text languageValueText;
 
         [Tooltip("Arrow of the Language field (down while closed, up while open).")]
         [SerializeField] private Image languageArrow;
@@ -118,7 +117,7 @@ namespace SpeedStars.UI.Settings
         [SerializeField] private Text namePlaceholder;
 
         [Tooltip("Body/ErrorText: the reason a name was refused.")]
-        [SerializeField] private TMP_Text nameErrorText;
+        [SerializeField] private Text nameErrorText;
 
         [Tooltip("Field rect that shakes when a name is refused.")]
         [SerializeField] private RectTransform nameShakeTarget;

@@ -64,37 +64,6 @@ namespace SpeedStars.Tools.Migration
             }
         }
 
-        [MenuItem("Tools/Speed Stars/Convert UI Text to TMP (American Captain)")]
-        public static void RunFromMenu()
-        {
-            if (EditorIsBusy(out string why))
-            {
-                Debug.LogWarning($"TMP migration not started: {why}");
-                EditorUtility.DisplayDialog("Convert UI Text to TMP", $"Not started: {why}", "OK");
-                return;
-            }
-
-            string report;
-            try
-            {
-                report = Execute(null);
-                Debug.Log(report);
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"{FailedMarker} {e}");
-                report = $"{FailedMarker}\n{e.Message}";
-            }
-
-            EditorUtility.DisplayDialog("Convert UI Text to TMP", report, "OK");
-        }
-
-        /// <summary>Converts only the given asset paths (builders call it on prefabs / scenes they just created).</summary>
-        public static void ConvertPaths(IEnumerable<string> assetPaths)
-        {
-            Debug.Log(Execute(new HashSet<string>(assetPaths)));
-        }
-
         private static bool EditorIsBusy(out string why)
         {
             why = null;

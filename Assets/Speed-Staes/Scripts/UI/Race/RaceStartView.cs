@@ -1,7 +1,6 @@
 using SpeedStars.Core.Audio;
 using SpeedStars.Core.Race;
 using SpeedStars.UI.Framework;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -45,8 +44,8 @@ namespace SpeedStars.UI.Race
         [Tooltip("Group/TextRoot: the word's box (700x200); slide, squash and shake act on it.")]
         [SerializeField] private RectTransform textRoot;
 
-        [Tooltip("Group/TextRoot/Word: the READY / SET / GO! text (TextMeshPro; its outline is set on the TMP material).")]
-        [SerializeField] private TMP_Text wordText;
+        [Tooltip("Group/TextRoot/Word: the READY / SET / GO! text (UI Text with an outline).")]
+        [SerializeField] private Text wordText;
 
         [Tooltip("impact_01..03: the lines under READY when it lands.")]
         [SerializeField] private Image[] impactImages;
@@ -135,21 +134,13 @@ namespace SpeedStars.UI.Race
             MusicFor(_signal.StartPhase);
         }
 
-        /// <summary>
-        /// Outline width and colour from the config (set on the word's own TMP material instance, never on the shared preset) and the
-        /// three words' glyphs asked from the font asset now, so the very first frame of READY is drawn with its letters.
-        /// </summary>
         private void PrepareWord()
         {
             if (wordText == null) return;
-            // Centre the visible glyphs, independent of font bearings and baseline metrics.
-            wordText.horizontalAlignment = HorizontalAlignmentOptions.Geometry;
-            wordText.verticalAlignment = VerticalAlignmentOptions.Geometry;
-            wordText.fontMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline); // fontMaterial is this word's instance
-            wordText.outlineWidth = config.OutlineWidth;
-            wordText.outlineColor = config.OutlineColor;
-            if (wordText.font != null && wordText.font.atlasPopulationMode == AtlasPopulationMode.Dynamic)
-                wordText.font.TryAddCharacters(ReadyWord + SetWord + GoWord + FalseStartWord);
+            wordText.alignment = TextAnchor.MiddleCenter;
+            wordText.alignByGeometry = true;
+            var outline = wordText.GetComponent<ThickOutline>() ?? wordText.gameObject.AddComponent<ThickOutline>();
+            outline.Configure(config.OutlineWidth * wordText.fontSize * 0.08f, config.OutlineColor);
         }
 
         private void Unsubscribe()
@@ -163,8 +154,6 @@ namespace SpeedStars.UI.Race
         private void OnFinished(RaceOutcome outcome)
         {
             _finishWord = RaceStandingsFormat.FinishWord(outcome.Rank, outcome.RunnerCount);
-            if (wordText != null && wordText.font != null && wordText.font.atlasPopulationMode == AtlasPopulationMode.Dynamic)
-                wordText.font.TryAddCharacters(_finishWord);
             ShowPhase(RaceStartPhase.Finish);
             if (_sfx == null) return;
             _sfx.Play(RaceSfxRules.FinishFor(outcome.Rank, outcome.RunnerCount));
@@ -274,7 +263,7 @@ namespace SpeedStars.UI.Race
             outline.a *= pose.TextAlpha;
             // Navy words on cream need no outline (the approved art has none); stacked navy copies would only fatten the letters.
             if (!red && !config.ReadySetOutline) outline.a = 0f;
-            wordText.outlineColor = outline;
+            wordText.GetComponent<ThickOutline>()?.SetColor(outline);
 
             ApplyDim();
 

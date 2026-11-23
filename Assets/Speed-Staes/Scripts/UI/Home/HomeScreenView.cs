@@ -6,7 +6,6 @@ using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Rewards;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -28,7 +27,7 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Button eventSelectButton;
 
         [Tooltip("RaceSelect/Label: shows the selected event's name.")]
-        [SerializeField] private TMP_Text eventNameText;
+        [SerializeField] private Text eventNameText;
 
         [Tooltip("EditRacer: opens the cosmetics screen.")]
         [SerializeField] private Button editRacerButton;
@@ -68,7 +67,7 @@ namespace SpeedStars.UI.Home
 
         [Header("Character card")]
         [Tooltip("CharacterCard/Select/Name: racer preset name.")]
-        [SerializeField] private TMP_Text racerNameText;
+        [SerializeField] private Text racerNameText;
 
         [Tooltip("CharacterCard/PowerBar/Fill: Filled image; the stat system is not built, the builder sets the look.")]
         [SerializeField] private Image powerFill;
@@ -77,18 +76,18 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Image staminaFill;
 
         [Tooltip("CharacterCard/HeightField/Label.")]
-        [SerializeField] private TMP_Text heightText;
+        [SerializeField] private Text heightText;
         [SerializeField] private SpeedStars.UI.Costume.CostumeEditorConfig statsConfig;
 
         [Tooltip("CharacterCard/PlayerName: the player's name from Settings, under the Edit racer and Emote buttons; empty when no name is set. Optional.")]
-        [SerializeField] private TMP_Text playerNameText;
+        [SerializeField] private Text playerNameText;
 
         [Header("Relay team")]
         [Tooltip("CharacterCard/RelayLeg: the leg row (label and arrows), shown only while a relay event is selected. Optional.")]
         [SerializeField] private GameObject relayLegRoot;
 
         [Tooltip("CharacterCard/RelayLeg/Label: '1st leg' ... '4th leg', the leg the card edits. Optional.")]
-        [SerializeField] private TMP_Text relayLegText;
+        [SerializeField] private Text relayLegText;
 
         [Tooltip("CharacterCard/RelayLeg/Previous: edits the previous leg (wraps around). Optional.")]
         [SerializeField] private Button previousLegButton;
@@ -134,8 +133,8 @@ namespace SpeedStars.UI.Home
         private ResourceBarView _resourceBar;
         private Image _playBackground;
         private Image _playFlag;
-        private TMP_Text _playLabel;
-        private TMP_Text _playFare;
+        private Text _playLabel;
+        private Text _playFare;
         private Image _playFareIcon;
         [SerializeField] private Sprite ticketPlaySprite;
         [SerializeField] private Sprite vipPlaySprite;
@@ -626,12 +625,12 @@ namespace SpeedStars.UI.Home
             _playBackground.sprite = ticketed && paidSprite ? paidSprite : _freePlaySprite;
             _playBackground.color = _freePlayColor;
             _playFare.color = _playLabel.color;
-            _playFare.fontSize = _playLabel.fontSize * (vip ? 0.44f : 1f);
+            _playFare.fontSize = Mathf.RoundToInt(_playLabel.fontSize * (vip ? 0.44f : 1f));
             Place(_playFare.rectTransform, new Vector2(vip ? 0.66f : 0.63f, 0.08f), new Vector2(vip ? 0.97f : 0.93f, 0.92f));
             _playFareIcon.sprite = source ? source.sprite : null;
             _playFare.text = vip && _wallet.TimedAccessEndsUtc.HasValue
                 ? $"VIP FREE\n{CountdownFormatter.Format(_wallet.TimedAccessEndsUtc.Value - _clock.UtcNow)}"
-                : "<size=72%>x</size>1";
+                : $"<size={Mathf.Max(1, Mathf.RoundToInt(_playFare.fontSize * 0.72f))}>x</size>1";
         }
 
         private bool CachePlayGraphics()
@@ -639,7 +638,7 @@ namespace SpeedStars.UI.Home
             Transform root = playButton.transform;
             _playBackground = playButton.GetComponent<Image>();
             _playFlag = root.Find("Icon")?.GetComponent<Image>();
-            _playLabel = root.Find("Label")?.GetComponent<TMP_Text>();
+            _playLabel = root.Find("Label")?.GetComponent<Text>();
             if (!_playBackground || !_playFlag || !_playLabel)
             {
                 _playBackground = null;
@@ -654,8 +653,8 @@ namespace SpeedStars.UI.Home
             _playFare = Instantiate(_playLabel, root);
             _playFare.name = "Entry Cost";
             _playFare.raycastTarget = false;
-            _playFare.enableAutoSizing = false;
-            _playFare.alignment = TextAlignmentOptions.Center;
+            _playFare.resizeTextForBestFit = false;
+            _playFare.alignment = TextAnchor.MiddleCenter;
             _playFareIcon = MakeImage("Entry Ticket", root);
             Place(_playFareIcon.rectTransform, new Vector2(0.44f, 0.10f), new Vector2(0.73f, 0.90f));
             return true;
@@ -760,10 +759,10 @@ namespace SpeedStars.UI.Home
 
         private void ShowLoading(RectTransform area)
         {
-            TMP_Text loading = Instantiate(_playLabel, area);
+            Text loading = Instantiate(_playLabel, area);
             loading.name = "Loading";
             loading.text = "LOADING…";
-            loading.alignment = TextAlignmentOptions.Center;
+            loading.alignment = TextAnchor.MiddleCenter;
             loading.color = Color.white;
             loading.raycastTarget = false;
             Place(loading.rectTransform, new Vector2(0.25f, 0.04f), new Vector2(0.75f, 0.14f));

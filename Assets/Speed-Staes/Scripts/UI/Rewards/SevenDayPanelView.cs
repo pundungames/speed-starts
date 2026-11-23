@@ -5,7 +5,6 @@ using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Costume;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -24,7 +23,7 @@ namespace SpeedStars.UI.Rewards
     public sealed class SevenDayPanelView : UiPopup
     {
         [Tooltip("Window/Title: 7 DAY REWARDS.")]
-        [SerializeField] private TMP_Text titleText;
+        [SerializeField] private Text titleText;
 
         [Tooltip("The seven day cards, element 0 = day 1 ... element 6 = day 7 (the big premium card).")]
         [SerializeField] private RewardDayCardView[] dayCards = new RewardDayCardView[0];
@@ -34,7 +33,7 @@ namespace SpeedStars.UI.Rewards
         [SerializeField] private Button claimButton;
 
         [Tooltip("Window/Claim/Label: CLAIM.")]
-        [SerializeField] private TMP_Text claimLabel;
+        [SerializeField] private Text claimLabel;
 
         [Header("Items")]
         [Tooltip("The wardrobe's content asset: cosmetic id to picture (the same mapping the costume screen uses).")]

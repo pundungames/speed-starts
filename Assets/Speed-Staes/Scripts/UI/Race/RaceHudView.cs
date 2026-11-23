@@ -3,7 +3,6 @@ using SpeedStars.Core.Race;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Emotes;
 using SpeedStars.UI.Framework;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -19,13 +18,13 @@ namespace SpeedStars.UI.Race
     public sealed class RaceHudView : UiScreen
     {
         [Tooltip("Telemetry/Time: the race clock text.")]
-        [SerializeField] private TMP_Text timeText;
+        [SerializeField] private Text timeText;
 
         [Tooltip("Telemetry/Speed: speed text, e.g. '7.4 m/s'.")]
-        [SerializeField] private TMP_Text speedText;
+        [SerializeField] private Text speedText;
 
         [Tooltip("Cash/Value: the player's Cash.")]
-        [SerializeField] private TMP_Text cashText;
+        [SerializeField] private Text cashText;
 
         [Tooltip("Cash/Plus: shown, not interactable (no shop yet).")]
         [SerializeField] private Button cashPlusButton;
@@ -46,8 +45,8 @@ namespace SpeedStars.UI.Race
         [Header("Reference HUD")]
         [SerializeField] private bool referenceHud;
         [SerializeField] private bool approvedHudV3;
-        [SerializeField] private TMP_Text energyValueText;
-        [SerializeField] private TMP_Text cadenceValueText;
+        [SerializeField] private Text energyValueText;
+        [SerializeField] private Text cadenceValueText;
         [SerializeField] private Image cadenceFill;
 
         [Tooltip("Exit: back to the main menu (no ticket refund).")]
@@ -61,21 +60,21 @@ namespace SpeedStars.UI.Race
         [SerializeField] private Image progressFill;
 
         [Tooltip("Progress/Distance: meters run, e.g. '37 m'. May stay empty.")]
-        [SerializeField] private TMP_Text distanceText;
+        [SerializeField] private Text distanceText;
 
         [Header("Place (opponents)")]
         [Tooltip("Place: the panel that holds the player's place; hidden while nobody else runs.")]
         [SerializeField] private GameObject placeRoot;
 
         [Tooltip("Place/Label: the player's place, e.g. '3rd'.")]
-        [SerializeField] private TMP_Text placeText;
+        [SerializeField] private Text placeText;
 
         [Header("Emote (T-089)")]
         [Tooltip("Emote: the button that plays the equipped emote on the player's runner. Hidden when the player turned it off, when no emote is equipped, or when no emote control is bound.")]
         [SerializeField] private Button emoteButton;
 
         [Tooltip("Emote/Name: the equipped emote's name, shown for a moment after a press. May stay empty.")]
-        [SerializeField] private TMP_Text emoteNameText;
+        [SerializeField] private Text emoteNameText;
 
         [Tooltip("Seconds the emote name stays on screen after a press.")]
         [Min(0.1f)]
@@ -217,7 +216,7 @@ namespace SpeedStars.UI.Race
             if (placeText != null)
             {
                 if (referenceHud && _standings != null && text.Length > 0)
-                    placeText.text = $"<color=#FFBD12>{_standings.PlayerRank}</color><size=60%>{text.Substring(_standings.PlayerRank.ToString().Length)}</size>";
+                    placeText.text = $"<color=#FFBD12>{_standings.PlayerRank}</color><size={Mathf.Max(1, Mathf.RoundToInt(placeText.fontSize * 0.6f))}>{text.Substring(_standings.PlayerRank.ToString().Length)}</size>";
                 else placeText.text = text;
             }
             if (punch && hadPlace && text.Length > 0) PunchPlace();

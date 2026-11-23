@@ -77,7 +77,6 @@ namespace SpeedStars.Tools.Builders
             finally
             {
                 EditorSceneManager.ClosePreviewScene(scene);
-                HandEditGuard.ConvertPending(); // a fresh panel holds legacy Text: TextMeshPro like the other prefabs (T-100)
             }
         }
 

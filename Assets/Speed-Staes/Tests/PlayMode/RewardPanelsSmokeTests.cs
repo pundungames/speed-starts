@@ -1,6 +1,5 @@
 using System.Collections;
 using NUnit.Framework;
-using TMPro;
 using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Home;
@@ -80,7 +79,7 @@ namespace SpeedStars.PlayTests
             yield return WaitOpen(popup, "daily gift popup (opens by itself on Home)");
             Assert.IsNull(Field<Button>(popup, "closeButton"), "the claimable gift has no X");
 
-            TMP_Text ticketCounter = RequireField<TMP_Text>(Require<ResourceBarView>(), "entryTicketText");
+            Text ticketCounter = RequireField<Text>(Require<ResourceBarView>(), "entryTicketText");
             string beforeLabel = ticketCounter.text;
             yield return Tap(RequireField<Button>(popup, "actionButton"), "daily gift CLAIM");
             Assert.AreEqual(beforeLabel, ticketCounter.text, "the ticket is still flying");
@@ -112,7 +111,7 @@ namespace SpeedStars.PlayTests
             {
                 HomeScreenView home = Require<HomeScreenView>();
                 SevenDayPanelView panel = Require<SevenDayPanelView>();
-                TMP_Text counter = RequireField<TMP_Text>(Require<ResourceBarView>(), "cashText");
+                Text counter = RequireField<Text>(Require<ResourceBarView>(), "cashText");
                 IWallet wallet = Container.Resolve<IWallet>();
                 yield return Tap(RequireField<Button>(home, "sevenDayButton"), "7-day button");
                 yield return WaitOpen(panel, "7-day panel");

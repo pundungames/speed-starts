@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -21,8 +20,7 @@ namespace SpeedStars.Tools.Builders
     /// The only place under Tools/Editor/Builders that writes prefab and scene files (T-102; a test scans for stray raw saves).
     /// The user hand-edits the UI prefabs, Home and Race (commit 4f38e016), so a builder must never replace an existing file by
     /// accident: a full rebuild needs overwrite AND the command-line force flag, and patches only add what is missing (they check
-    /// first and never delete and rebuild). Every saved file is converted to TextMeshPro afterwards (T-100), deferred to
-    /// <see cref="ConvertPending"/> because the converter edits the YAML text and the scene or prefab must not be loaded then.
+    /// first and never delete and rebuild).
     /// Exception, by design: <c>ProjectContextBuilder</c> writes its own raw prefab (composition root, no text, never hand-edited).
     /// </summary>
     public static class HandEditGuard
@@ -30,7 +28,6 @@ namespace SpeedStars.Tools.Builders
         /// <summary>Command-line flag (without the dash) that lets overwrite rebuild hand-edited prefabs and scenes.</summary>
         public const string ForceFlag = "forceOverwriteHandEdits";
 
-        private static readonly List<string> Pending = new List<string>();
 
         public static bool ForceOverwriteHandEdits => Array.IndexOf(Environment.GetCommandLineArgs(), "-" + ForceFlag) >= 0;
 
@@ -64,7 +61,6 @@ namespace SpeedStars.Tools.Builders
             }
             GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, path, out bool success);
             if (!success || saved == null) throw new InvalidOperationException($"Could not save prefab '{path}'.");
-            Pending.Add(path);
             return saved;
         }
 
@@ -73,7 +69,6 @@ namespace SpeedStars.Tools.Builders
         {
             PrefabUtility.SaveAsPrefabAsset(contentsRoot, path, out bool success);
             if (!success) throw new InvalidOperationException($"Could not save prefab '{path}'.");
-            Pending.Add(path);
         }
 
         /// <summary>
@@ -85,16 +80,7 @@ namespace SpeedStars.Tools.Builders
             EditorSceneManager.MarkSceneDirty(scene);
             if (!EditorSceneManager.SaveScene(scene, path))
                 throw new InvalidOperationException($"Could not save scene '{path}'.");
-            Pending.Add(path);
         }
 
-        /// <summary>Converts everything saved since the last call to TextMeshPro (T-100). Call once the saved files are no longer loaded.</summary>
-        public static void ConvertPending()
-        {
-            if (Pending.Count == 0) return;
-            var paths = new List<string>(new HashSet<string>(Pending));
-            Pending.Clear();
-            SpeedStars.Tools.Migration.TmpMigration.ConvertPaths(paths);
-        }
     }
 }

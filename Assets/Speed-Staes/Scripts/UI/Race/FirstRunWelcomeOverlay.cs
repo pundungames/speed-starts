@@ -1,6 +1,5 @@
 using System;
 using DG.Tweening;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -42,18 +41,18 @@ namespace SpeedStars.UI.Race
             button.transition = Selectable.Transition.None;
             button.targetGraphic = mask;
 
-            var labelObject = new GameObject("Welcome Message", typeof(RectTransform), typeof(TextMeshProUGUI));
-            var label = labelObject.GetComponent<TextMeshProUGUI>();
+            var labelObject = new GameObject("Welcome Message", typeof(RectTransform), typeof(Text));
+            var label = labelObject.GetComponent<Text>();
             label.rectTransform.SetParent(rect, false);
             label.rectTransform.anchorMin = new Vector2(0.13f, 0.29f);
             label.rectTransform.anchorMax = new Vector2(0.87f, 0.71f);
             label.rectTransform.offsetMin = label.rectTransform.offsetMax = Vector2.zero;
-            label.font = results.GetComponentInChildren<TMP_Text>(true)?.font;
+            label.font = results.GetComponentInChildren<Text>(true)?.font;
             label.text = "Welcome to Speed Stars! Let’s start your racing game!";
-            label.alignment = TextAlignmentOptions.Center;
-            label.enableAutoSizing = true;
-            label.fontSizeMax = 82f;
-            label.fontSizeMin = 28f;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.resizeTextForBestFit = true;
+            label.fontSize = label.resizeTextMaxSize = 82;
+            label.resizeTextMinSize = 28;
             label.raycastTarget = false;
 
             var controller = overlay.GetComponent<FirstRunWelcomeOverlay>();

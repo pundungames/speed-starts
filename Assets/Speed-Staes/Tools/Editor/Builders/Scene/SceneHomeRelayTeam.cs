@@ -55,7 +55,6 @@ namespace SpeedStars.Tools.Builders
             finally
             {
                 Restore(before);
-                HandEditGuard.ConvertPending();
             }
         }
 

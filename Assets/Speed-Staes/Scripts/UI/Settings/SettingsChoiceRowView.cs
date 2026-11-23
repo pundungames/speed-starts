@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using SpeedStars.UI.Home;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,13 +13,13 @@ namespace SpeedStars.UI.Settings
     public sealed class SettingsChoiceRowView : MonoBehaviour
     {
         [Tooltip("Row caption.")]
-        [SerializeField] private TMP_Text label;
+        [SerializeField] private Text label;
 
         [Tooltip("The field button in the row's control slot.")]
         [SerializeField] private Button button;
 
         [Tooltip("Name of the current option, shown in the field.")]
-        [SerializeField] private TMP_Text valueText;
+        [SerializeField] private Text valueText;
 
         private IReadOnlyList<string> _options = Array.Empty<string>();
         private int _index;

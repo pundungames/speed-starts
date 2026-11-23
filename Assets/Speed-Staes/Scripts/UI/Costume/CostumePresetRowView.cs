@@ -1,5 +1,4 @@
 using System;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,7 +14,7 @@ namespace SpeedStars.UI.Costume
         [SerializeField] private GameObject selectedBackground;
 
         [Tooltip("Row/Label: preset name.")]
-        [SerializeField] private TMP_Text label;
+        [SerializeField] private Text label;
 
         private int _index;
 

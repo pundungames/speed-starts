@@ -6,7 +6,6 @@ using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Costume;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
-using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -64,7 +63,7 @@ namespace SpeedStars.PlayTests
             yield return WaitUntil(() => purchase.gameObject.activeSelf, "the purchase button to open on a locked normal item");
             Assert.IsTrue(RequireField<GameObject>(screen, "purchaseCashIcon").activeSelf, "a Cash price wears the Cash icon");
             Assert.IsFalse(RequireField<GameObject>(screen, "purchaseGemIcon").activeSelf, "a Cash price never wears the gem");
-            Assert.AreEqual(item.Price.ToString(), RequireField<TMP_Text>(screen, "purchasePriceText").text);
+            Assert.AreEqual(item.Price.ToString(), RequireField<Text>(screen, "purchasePriceText").text);
 
             // Too little Cash: the refusal changes nothing.
             yield return Tap(purchase, "purchase with too little Cash");
@@ -101,7 +100,7 @@ namespace SpeedStars.PlayTests
             yield return WaitUntil(() => purchase.gameObject.activeSelf, "the purchase button to open on a locked premium item");
             Assert.IsTrue(RequireField<GameObject>(screen, "purchaseGemIcon").activeSelf);
             Assert.IsFalse(RequireField<GameObject>(screen, "purchaseCashIcon").activeSelf);
-            Assert.AreEqual(item.Price.ToString(), RequireField<TMP_Text>(screen, "purchasePriceText").text);
+            Assert.AreEqual(item.Price.ToString(), RequireField<Text>(screen, "purchasePriceText").text);
         }
 
         [UnityTest]
@@ -149,7 +148,7 @@ namespace SpeedStars.PlayTests
         private static void AssertCardPrice(CostumeItemCardView card, CosmeticItemInfo item, bool cashIcon)
         {
             Assert.IsTrue(RequireField<GameObject>(card, "priceGroup").activeSelf, "a locked priced card shows its price");
-            Assert.AreEqual(item.Price.ToString(), RequireField<TMP_Text>(card, "priceText").text);
+            Assert.AreEqual(item.Price.ToString(), RequireField<Text>(card, "priceText").text);
             Assert.AreEqual(cashIcon, RequireField<GameObject>(card, "priceCashIcon").activeSelf, "Cash icon");
             Assert.AreEqual(!cashIcon, RequireField<GameObject>(card, "priceGemIcon").activeSelf, "gem icon");
         }

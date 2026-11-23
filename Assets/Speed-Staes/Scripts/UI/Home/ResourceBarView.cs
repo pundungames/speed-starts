@@ -7,7 +7,6 @@ using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Rewards;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -24,22 +23,22 @@ namespace SpeedStars.UI.Home
     public sealed class ResourceBarView : MonoBehaviour
     {
         [Tooltip("PurpleGem/Value.")]
-        [SerializeField] private TMP_Text purpleGemText;
+        [SerializeField] private Text purpleGemText;
 
         [Tooltip("EntryTicket/Value: 'count/cap'.")]
-        [SerializeField] private TMP_Text entryTicketText;
+        [SerializeField] private Text entryTicketText;
 
         [Tooltip("TicketTimer (whole chip): hidden when the tickets are full.")]
         [SerializeField] private GameObject entryTimerRoot;
 
         [Tooltip("TicketTimer/Value: time to the next ticket.")]
-        [SerializeField] private TMP_Text entryTimerText;
+        [SerializeField] private Text entryTimerText;
 
         [Tooltip("TimedTicket/Value: unused Timed Tickets, or the time left while the window runs.")]
-        [SerializeField] private TMP_Text timedTicketText;
+        [SerializeField] private Text timedTicketText;
 
         [Tooltip("Cash/Value.")]
-        [SerializeField] private TMP_Text cashText;
+        [SerializeField] private Text cashText;
 
         [Tooltip("Cash/Plus: opens the Cash offer window (watch an ad for Cash). Not interactable while no window is bound. May stay empty (old prefab).")]
         [SerializeField] private Button cashPlusButton;
@@ -173,7 +172,7 @@ namespace SpeedStars.UI.Home
             _inFlight.Clear();
         }
 
-        private static Image CounterBackground(TMP_Text value) =>
+        private static Image CounterBackground(Text value) =>
             value ? value.transform.parent.GetComponent<Image>() : null;
 
         private void ApplyBackgroundOpacity()
@@ -327,7 +326,7 @@ namespace SpeedStars.UI.Home
         internal void FlyReward(SevenDayRewardKind kind, int previousBalance, RectTransform source)
         {
             int amount = Balance(kind) - previousBalance;
-            TMP_Text label = RewardLabel(kind);
+            Text label = RewardLabel(kind);
             if (amount <= 0 || !source || !label || !isActiveAndEnabled || _group.alpha <= 0f) return;
 
             RectTransform box = label.rectTransform.parent as RectTransform;
@@ -382,7 +381,7 @@ namespace SpeedStars.UI.Home
             });
         }
 
-        private TMP_Text RewardLabel(SevenDayRewardKind kind)
+        private Text RewardLabel(SevenDayRewardKind kind)
         {
             switch (kind)
             {
@@ -395,7 +394,7 @@ namespace SpeedStars.UI.Home
 
         internal void SlideCounter(SevenDayRewardKind kind) => SlideCounter(RewardLabel(kind));
 
-        private void SlideCounter(TMP_Text label)
+        private void SlideCounter(Text label)
         {
             if (!label || DOTween.IsTweening(label.rectTransform)) return;
             RectTransform rect = label.rectTransform;

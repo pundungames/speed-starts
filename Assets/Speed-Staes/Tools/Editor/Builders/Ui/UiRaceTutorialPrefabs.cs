@@ -2,7 +2,6 @@ using System;
 using SpeedStars.Bridge;
 using SpeedStars.Core.Race;
 using SpeedStars.UI.Race;
-using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -97,10 +96,10 @@ namespace SpeedStars.Tools.Builders
             if (banner == null) throw new InvalidOperationException($"{Source}: sprite '{bannerPath}' not found or not imported as a Sprite.");
             UiArt.Layer(box, "Banner", banner);
             RectTransform sentenceRt = Kit.Stretch(Kit.Node(box, "Sentence"), SentenceInset.x, SentenceInset.x, SentenceInset.y, SentenceInset.y);
-            TextMeshProUGUI sentence = Label(sentenceRt, RaceTutorialTexts.WaitForGo, SentenceFontSize, look.ReadySetColor);
-            sentence.enableAutoSizing = true;
-            sentence.fontSizeMin = SentenceFontSize * 0.5f;
-            sentence.fontSizeMax = SentenceFontSize;
+            Text sentence = Label(sentenceRt, RaceTutorialTexts.WaitForGo, SentenceFontSize, look.ReadySetColor);
+            sentence.resizeTextForBestFit = true;
+            sentence.resizeTextMinSize = Mathf.RoundToInt(SentenceFontSize * 0.5f);
+            sentence.resizeTextMaxSize = Mathf.RoundToInt(SentenceFontSize);
 
             leftShade.gameObject.SetActive(false);
             rightShade.gameObject.SetActive(false);
@@ -132,17 +131,17 @@ namespace SpeedStars.Tools.Builders
             return hint;
         }
 
-        private static TextMeshProUGUI Label(RectTransform rt, string text, float size, Color color)
+        private static Text Label(RectTransform rt, string text, float size, Color color)
         {
-            var label = rt.gameObject.AddComponent<TextMeshProUGUI>();
-            var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(UiFontPaths.AmericanCaptainSdf);
+            var label = rt.gameObject.AddComponent<Text>();
+            var font = AssetDatabase.LoadAssetAtPath<Font>(UiFontPaths.AmericanCaptainTtf);
             if (font != null) label.font = font;
-            else Warn(Source, $"'{UiFontPaths.AmericanCaptainSdf}' not found: the tutorial falls back to the default TMP font.");
+            else Warn(Source, $"'{UiFontPaths.AmericanCaptainTtf}' not found: the tutorial falls back to the default TMP font.");
             label.text = text;
-            label.fontSize = size;
+            label.fontSize = Mathf.RoundToInt(size);
             label.color = color;
-            label.alignment = TextAlignmentOptions.Center;
-            label.enableWordWrapping = false;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
             label.raycastTarget = false;
             return label;
         }

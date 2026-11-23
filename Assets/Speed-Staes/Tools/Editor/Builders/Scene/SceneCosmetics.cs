@@ -87,7 +87,6 @@ namespace SpeedStars.Tools.Builders
             finally
             {
                 RestoreSetup(before);
-                HandEditGuard.ConvertPending(); // after the restore: the converter edits the scene file as text
             }
         }
 

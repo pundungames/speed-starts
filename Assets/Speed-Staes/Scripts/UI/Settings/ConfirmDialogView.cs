@@ -1,6 +1,5 @@
 using System;
 using DG.Tweening;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,16 +16,16 @@ namespace SpeedStars.UI.Settings
         [SerializeField] private RectTransform panel;
 
         [Tooltip("Question.")]
-        [SerializeField] private TMP_Text titleText;
+        [SerializeField] private Text titleText;
 
         [Tooltip("Explanation under the question.")]
-        [SerializeField] private TMP_Text bodyText;
+        [SerializeField] private Text bodyText;
 
         [Tooltip("Left button: say no.")]
         [SerializeField] private Button cancelButton;
 
         [Tooltip("Left button caption.")]
-        [SerializeField] private TMP_Text cancelLabel;
+        [SerializeField] private Text cancelLabel;
 
         [Tooltip("Right button: say yes.")]
         [SerializeField] private Button confirmButton;
@@ -35,7 +34,7 @@ namespace SpeedStars.UI.Settings
         [SerializeField] private Image confirmImage;
 
         [Tooltip("Right button caption.")]
-        [SerializeField] private TMP_Text confirmLabel;
+        [SerializeField] private Text confirmLabel;
 
         [Tooltip("Right button background for a normal yes.")]
         [SerializeField] private Sprite normalConfirmSprite;

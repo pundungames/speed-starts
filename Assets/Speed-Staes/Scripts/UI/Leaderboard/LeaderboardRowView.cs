@@ -1,4 +1,3 @@
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,16 +11,16 @@ namespace SpeedStars.UI.Leaderboard
     public sealed class LeaderboardRowView : MonoBehaviour
     {
         [Tooltip("Rank text (RANK column).")]
-        [SerializeField] private TMP_Text rankText;
+        [SerializeField] private Text rankText;
 
         [Tooltip("Player name text (PLAYER column, right of the flag).")]
-        [SerializeField] private TMP_Text nameText;
+        [SerializeField] private Text nameText;
 
         [Tooltip("Time text (TIME column).")]
-        [SerializeField] private TMP_Text timeText;
+        [SerializeField] private Text timeText;
 
         [Tooltip("Date text (SET ON column).")]
-        [SerializeField] private TMP_Text dateText;
+        [SerializeField] private Text dateText;
 
         [Tooltip("FlagLayer: full-row canvas Image; its sprite is the row art with this player's flag. Hidden when there is no flag.")]
         [SerializeField] private Image flagLayer;

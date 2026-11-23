@@ -104,7 +104,6 @@ namespace SpeedStars.Tools.Builders
                     Warn(Source, $"Home build failed after the copy; '{HomeScenePath}' now holds a bare theme-scene copy. Fix the error and rebuild with overwrite.");
             }
             // A fresh Home holds legacy Text (the loading label): convert it like the prefabs (TMP migration, T-100).
-            HandEditGuard.ConvertPending();
             Log(Source, $"Wrote {HomeScenePath} (copy of {ThemeTemplateScenePath} + runner prefab + UI).");
         }
 
@@ -171,7 +170,6 @@ namespace SpeedStars.Tools.Builders
                 else if (!done && copied)
                     Warn(Source, $"Race build failed after the copy; '{RaceScenePath}' now holds a bare PhysicalTest copy. Fix the error and rebuild with overwrite.");
             }
-            HandEditGuard.ConvertPending();
             Log(Source, $"Wrote {RaceScenePath} (copy of {PhysicalTestScenePath} + theme worlds + UI).");
         }
 

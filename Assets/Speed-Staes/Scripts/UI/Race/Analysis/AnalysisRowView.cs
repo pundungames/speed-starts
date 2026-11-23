@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,13 +13,13 @@ namespace SpeedStars.UI.Race
     public sealed class AnalysisRowView : MonoBehaviour
     {
         [Tooltip("Pos: place number ('--' without one).")]
-        [SerializeField] private TMP_Text rankText;
+        [SerializeField] private Text rankText;
 
         [Tooltip("Name: runner name.")]
-        [SerializeField] private TMP_Text nameText;
+        [SerializeField] private Text nameText;
 
         [Tooltip("Time: finish time, or DNF.")]
-        [SerializeField] private TMP_Text timeText;
+        [SerializeField] private Text timeText;
 
         [Tooltip("YouHighlight: the outline shown only on the local player's line.")]
         [SerializeField] private GameObject youHighlight;

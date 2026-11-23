@@ -7,7 +7,6 @@ using SpeedStars.Meta.Contracts;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Leaderboard;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -25,39 +24,39 @@ namespace SpeedStars.UI.Race
     {
         [Header("Cash")]
         [Tooltip("Diamond/Value: the player's Cash.")]
-        [SerializeField] private TMP_Text cashText;
+        [SerializeField] private Text cashText;
 
         [Header("Cards")]
         [Tooltip("TopCards/PersonalBest: the card that punches on a new record.")]
         [SerializeField] private RectTransform personalBestCard;
 
         [Tooltip("PersonalBest/Title: 'PERSONAL BEST', or 'NEW RECORD' after an improvement.")]
-        [SerializeField] private TMP_Text personalBestTitleText;
+        [SerializeField] private Text personalBestTitleText;
 
         [Tooltip("PersonalBest/Value: the best time.")]
-        [SerializeField] private TMP_Text personalBestValueText;
+        [SerializeField] private Text personalBestValueText;
 
         [Tooltip("PersonalBest/Event: event name.")]
-        [SerializeField] private TMP_Text personalBestEventText;
+        [SerializeField] private Text personalBestEventText;
 
         [Tooltip("Title colour while the card says NEW RECORD.")]
         [SerializeField] private Color newRecordColor = new Color(0.92f, 0.12f, 0.14f, 1f);
 
         [Tooltip("WorldPosition/Title: 'WORLD POSITION', or 'DAILY WORLD RECORD' in a Race of the Day. Optional (the title then stays as built).")]
-        [SerializeField] private TMP_Text worldPositionTitleText;
+        [SerializeField] private Text worldPositionTitleText;
 
         [Tooltip("WorldPosition/Value: '#rank' on the leaderboard, a dash without a record. In a Race of the Day: the day's world record.")]
-        [SerializeField] private TMP_Text worldPositionText;
+        [SerializeField] private Text worldPositionText;
 
         [Tooltip("TopCards/Percentile: the whole card, switched off in a Race of the Day (a percentile over races of changing length means nothing). Optional.")]
         [SerializeField] private GameObject percentileCard;
 
         [Tooltip("Percentile/Value: 'TOP n%' on the leaderboard, a dash without a record.")]
-        [SerializeField] private TMP_Text percentileText;
+        [SerializeField] private Text percentileText;
 
         [Header("Results table")]
         [Tooltip("ResultsPanel/Header/Title: event name.")]
-        [SerializeField] private TMP_Text eventTitleText;
+        [SerializeField] private Text eventTitleText;
 
         [Tooltip("ResultsPanel/RowsScroll/Viewport/Rows: parent the row prefabs are created under (the scrolling content).")]
         [SerializeField] private Transform rowsContent;
@@ -76,14 +75,14 @@ namespace SpeedStars.UI.Race
 
         [Header("Best of the day")]
         [Tooltip("DailyBest/Row/Label: today's best (name and time) from the leaderboard, an empty-state text without data.")]
-        [SerializeField] private TMP_Text dailyBestText;
+        [SerializeField] private Text dailyBestText;
 
         [Header("Gem reward")]
         [Tooltip("GemReward: the gem icon and amount, visible only when the race paid Purple Gems.")]
         [SerializeField] private GameObject gemRewardRoot;
 
         [Tooltip("GemReward/Label.")]
-        [SerializeField] private TMP_Text gemRewardText;
+        [SerializeField] private Text gemRewardText;
         [SerializeField] private Texture2D purpleGemTexture;
         [SerializeField] private Rect purpleGemUv;
         [SerializeField] private Sprite purpleGemCounterBackground;

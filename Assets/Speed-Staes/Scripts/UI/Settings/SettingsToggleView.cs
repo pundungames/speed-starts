@@ -1,6 +1,5 @@
 using System;
 using DG.Tweening;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -24,7 +23,7 @@ namespace SpeedStars.UI.Settings
         [SerializeField] private RectTransform thumb;
 
         [Tooltip("ON / OFF word on the track.")]
-        [SerializeField] private TMP_Text stateLabel;
+        [SerializeField] private Text stateLabel;
 
         [Tooltip("Track sprite while on.")]
         [SerializeField] private Sprite onTrack;
@@ -102,7 +101,7 @@ namespace SpeedStars.UI.Settings
             if (stateLabel != null)
             {
                 stateLabel.text = SettingsTexts.OnOff(on);
-                stateLabel.alignment = on ? TextAlignmentOptions.MidlineLeft : TextAlignmentOptions.MidlineRight;
+                stateLabel.alignment = on ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
                 RectTransform rt = stateLabel.rectTransform;
                 rt.offsetMin = new Vector2(on ? labelInset : 0f, rt.offsetMin.y);
                 rt.offsetMax = new Vector2(on ? 0f : -labelInset, rt.offsetMax.y);

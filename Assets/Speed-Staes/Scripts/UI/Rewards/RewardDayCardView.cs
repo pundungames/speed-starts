@@ -1,6 +1,5 @@
 using DG.Tweening;
 using SpeedStars.UI.Framework;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -47,13 +46,13 @@ namespace SpeedStars.UI.Rewards
 
         [Header("Texts")]
         [Tooltip("Card/Day: 'DAY 3'.")]
-        [SerializeField] private TMP_Text dayText;
+        [SerializeField] private Text dayText;
 
         [Tooltip("Card/Amount: '100' or 'x1'. Empty on the premium card.")]
-        [SerializeField] private TMP_Text amountText;
+        [SerializeField] private Text amountText;
 
         [Tooltip("Card/Caption: the wearable's name (premium card only); hidden once the day is claimed (the tick row takes its place).")]
-        [SerializeField] private TMP_Text captionText;
+        [SerializeField] private Text captionText;
 
         private Tween _punch;
         private Vector3 _baseScale = Vector3.one;

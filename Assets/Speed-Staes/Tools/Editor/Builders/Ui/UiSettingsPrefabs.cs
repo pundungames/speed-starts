@@ -641,7 +641,6 @@ namespace SpeedStars.Tools.Builders
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
-                HandEditGuard.ConvertPending();
             }
         }
 
@@ -668,7 +667,6 @@ namespace SpeedStars.Tools.Builders
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
-                HandEditGuard.ConvertPending();
             }
         }
 
@@ -709,7 +707,6 @@ namespace SpeedStars.Tools.Builders
             finally
             {
                 PrefabUtility.UnloadPrefabContents(root);
-                HandEditGuard.ConvertPending();
             }
         }
 

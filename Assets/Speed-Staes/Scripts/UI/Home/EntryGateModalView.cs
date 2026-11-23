@@ -8,7 +8,6 @@ using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Framework;
 using SpeedStars.UI.Rewards;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -31,25 +30,25 @@ namespace SpeedStars.UI.Home
         [SerializeField] private RectTransform window;
 
         [Tooltip("Window/Title: RACE ENTRY on the header.")]
-        [SerializeField] private TMP_Text titleText;
+        [SerializeField] private Text titleText;
 
         [Tooltip("Window/EventName.")]
-        [SerializeField] private TMP_Text eventNameText;
+        [SerializeField] private Text eventNameText;
 
         [Tooltip("Window/TicketCount: 'Tickets 2/3' next to the ticket icon.")]
-        [SerializeField] private TMP_Text ticketCountText;
+        [SerializeField] private Text ticketCountText;
 
         [Tooltip("Window/TicketIcon: the red Entry Ticket; punched when a ticket arrives from an ad.")]
         [SerializeField] private RectTransform ticketIcon;
 
         [Tooltip("Window/Refill: 'Next ticket in mm:ss'; hidden when the inventory is full.")]
-        [SerializeField] private TMP_Text refillText;
+        [SerializeField] private Text refillText;
 
         [Tooltip("Window/Actions/UseEntryTicket: confirm button; hidden while Timed access is active, not interactable with no ticket.")]
         [SerializeField] private Button useTicketButton;
 
         [Tooltip("Window/Actions/UseEntryTicket/Label.")]
-        [SerializeField] private TMP_Text useTicketLabel;
+        [SerializeField] private Text useTicketLabel;
 
         [Tooltip("USE TICKET label colour while the button works (white on the red art).")]
         [SerializeField] private Color useTicketLabelReady = Color.white;
@@ -58,19 +57,19 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Color useTicketLabelDisabled = new Color(0.38f, 0.44f, 0.56f, 1f);
 
         [Tooltip("Window/Remaining: the refusal warning only; hidden the rest of the time (the ticket count already shows what is left).")]
-        [SerializeField] private TMP_Text remainingText;
+        [SerializeField] private Text remainingText;
 
         [Tooltip("Window/TimedTicketStatus/Label: 'Timed Ticket' or 'Timed Ticket active'.")]
-        [SerializeField] private TMP_Text timedLabel;
+        [SerializeField] private Text timedLabel;
 
         [Tooltip("Window/TimedTicketStatus/Value: Timed Ticket stock.")]
-        [SerializeField] private TMP_Text timedValue;
+        [SerializeField] private Text timedValue;
 
         [Tooltip("Window/Actions/UseTimedTicket: starts the Timed Ticket window; shown only with a ticket in stock and no window running.")]
         [SerializeField] private Button useTimedButton;
 
         [Tooltip("Window/Actions/UseTimedTicket/Label.")]
-        [SerializeField] private TMP_Text useTimedLabel;
+        [SerializeField] private Text useTimedLabel;
 
         [Tooltip("Window/TimedTicketStatus: punched when a Timed Ticket window starts.")]
         [SerializeField] private RectTransform timedStatus;
@@ -79,25 +78,25 @@ namespace SpeedStars.UI.Home
         [SerializeField] private Button useTimedCashButton;
 
         [Tooltip("Window/Actions/UnlockWithCash/Label.")]
-        [SerializeField] private TMP_Text useTimedCashLabel;
+        [SerializeField] private Text useTimedCashLabel;
 
         [Tooltip("Window/GetTickets/Caption: 'GET TICKETS', or 'TICKETS FULL' while the inventory is full.")]
-        [SerializeField] private TMP_Text offersCaption;
+        [SerializeField] private Text offersCaption;
 
         [Tooltip("Window/GetTickets/BuyWithCash: not interactable while full, without a Cash price or without enough Cash.")]
         [SerializeField] private Button buyWithCashButton;
 
         [Tooltip("Window/GetTickets/BuyWithCash/Label: BUY WITH CASH.")]
-        [SerializeField] private TMP_Text buyWithCashLabel;
+        [SerializeField] private Text buyWithCashLabel;
 
         [Tooltip("Window/GetTickets/BuyWithCash/Price: the Cash price (empty when there is none).")]
-        [SerializeField] private TMP_Text cashPriceText;
+        [SerializeField] private Text cashPriceText;
 
         [Tooltip("Window/GetTickets/WatchAd: not interactable while the ad offer is closed (full inventory, no ad service, ad off in the config) or an ad runs.")]
         [SerializeField] private Button watchAdButton;
 
         [Tooltip("Window/GetTickets/WatchAd/Label: WATCH AD; hidden while the spinner shows.")]
-        [SerializeField] private TMP_Text watchAdLabel;
+        [SerializeField] private Text watchAdLabel;
 
         [Tooltip("Window/GetTickets/WatchAd/Spinner: turns while an ad runs; inactive otherwise.")]
         [SerializeField] private RectTransform watchAdSpinner;
@@ -149,7 +148,7 @@ namespace SpeedStars.UI.Home
         private Button _vipAdOffer;
         private Button _vipCashOffer;
         private Button _activateVip;
-        private TMP_Text _vipAdLabel;
+        private Text _vipAdLabel;
         private bool _vipAdBusy;
         private IEconomyLedger _ledger;
         private Tween _shake;
@@ -265,8 +264,8 @@ namespace SpeedStars.UI.Home
             Image backdrop = StoreSurface("Background", _storePanel, 0f, -.04f, 1f, 1f, _storeFrameSprite, Color.white);
             backdrop.raycastTarget = true;
             RectTransform header = StoreSurface("Header", _storePanel, .045f, .865f, .955f, .962f, storeHeaderArt, Color.white).rectTransform;
-            TMP_Text heading = StoreText("TICKETS STORE", header, 0f, 0f, 1f, 1f, 60, Color.white);
-            heading.alignment = TextAlignmentOptions.CenterGeoAligned;
+            Text heading = StoreText("TICKETS STORE", header, 0f, 0f, 1f, 1f, 60, Color.white);
+            heading.alignByGeometry = true;
             StoreSection("RACE TICKETS", .81f, red, navy);
             StoreSection("TIMED VIP TICKET", .43f, gold, navy);
 
@@ -294,7 +293,7 @@ namespace SpeedStars.UI.Home
             _raceAdOffer = StoreCard("Race ad", .04f, .50f, race, navy, raceIcon ? raceIcon.sprite : null, $"x{raceAdCount}", "WATCH 1 AD", navy, Color.white, storeWatchIcon, OnWatchAd);
             _raceCashOffer = StoreCard("Race cash", .52f, .50f, race, navy, raceIcon ? raceIcon.sprite : null, "x1", racePrice.ToString(), blue, navy, _storeDiamondIcon ? _storeDiamondIcon : diamond, OnBuyWithCash);
             _vipAdOffer = StoreCard("VIP ad", .04f, .12f, vip, navy, _storeVipIcon, "x1", "WATCH 3 ADS", navy, Color.white, storeWatchIcon, OnWatchVipAd);
-            _vipAdLabel = _vipAdOffer.GetComponentInChildren<TMP_Text>();
+            _vipAdLabel = _vipAdOffer.GetComponentInChildren<Text>();
             _vipCashOffer = StoreCard("VIP cash", .52f, .12f, vip, navy, _storeVipIcon, "x1", vipPrice.ToString(), blue, navy, _storeDiamondIcon ? _storeDiamondIcon : diamond, OnBuyVipTicket);
             _activateVip = StoreButton("USE TIMED TICKET", _storePanel, .25f, .035f, .75f, .098f, gold, navy, null, OnUseTimed);
 
@@ -305,8 +304,8 @@ namespace SpeedStars.UI.Home
         private void StoreSection(string caption, float y, Color accent, Color ink)
         {
             StoreImage("Accent", _storePanel, .04f, y, .051f, y + .035f, accent);
-            TMP_Text label = StoreText(caption, _storePanel, .066f, y - .005f, .40f, y + .04f, 32, ink);
-            label.alignment = TextAlignmentOptions.MidlineLeft;
+            Text label = StoreText(caption, _storePanel, .066f, y - .005f, .40f, y + .04f, 32, ink);
+            label.alignment = TextAnchor.MiddleLeft;
             StoreImage("Rule", _storePanel, .42f, y + .016f, .96f, y + .018f, new Color32(209, 200, 187, 255));
         }
 
@@ -343,8 +342,8 @@ namespace SpeedStars.UI.Home
                 float groupLeft = caption.Length > 2 ? .27f : .30f;
                 float priceLeft = groupLeft + .21f;
                 StoreIcon(icon, rect, groupLeft, .12f, priceLeft - .02f, .88f);
-                TMP_Text price = StoreText(caption, rect, priceLeft, .06f, .81f, .94f, 48, ink);
-                price.alignment = TextAlignmentOptions.MidlineLeft;
+                Text price = StoreText(caption, rect, priceLeft, .06f, .81f, .94f, 48, ink);
+                price.alignment = TextAnchor.MiddleLeft;
             }
             else
             {
@@ -387,16 +386,16 @@ namespace SpeedStars.UI.Home
             icon.preserveAspect = true;
         }
 
-        private TMP_Text StoreText(string value, RectTransform parent, float left, float bottom, float right, float top, float size, Color color)
+        private Text StoreText(string value, RectTransform parent, float left, float bottom, float right, float top, float size, Color color)
         {
-            TextMeshProUGUI label = StoreRect(value, parent, left, bottom, right, top).gameObject.AddComponent<TextMeshProUGUI>();
+            Text label = StoreRect(value, parent, left, bottom, right, top).gameObject.AddComponent<Text>();
             label.font = titleText.font;
             label.text = value;
-            label.fontSize = size;
-            label.fontSizeMax = size;
-            label.fontSizeMin = size * .6f;
-            label.enableAutoSizing = true;
-            label.alignment = TextAlignmentOptions.Center;
+            label.fontSize = Mathf.RoundToInt(size);
+            label.resizeTextMaxSize = Mathf.RoundToInt(size);
+            label.resizeTextMinSize = Mathf.RoundToInt(size * .6f);
+            label.resizeTextForBestFit = true;
+            label.alignment = TextAnchor.MiddleCenter;
             label.color = color;
             label.raycastTarget = false;
             return label;

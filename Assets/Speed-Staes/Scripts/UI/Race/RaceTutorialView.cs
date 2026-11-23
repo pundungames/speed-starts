@@ -1,7 +1,7 @@
+using UnityEngine.UI;
 using DG.Tweening;
 using SpeedStars.Core.Race;
 using SpeedStars.UI.Framework;
-using TMPro;
 using UnityEngine;
 using Zenject;
 
@@ -63,8 +63,8 @@ namespace SpeedStars.UI.Race
         [Tooltip("The banner under the sentence; it shows and hides with it.")]
         [SerializeField] private RectTransform textBox;
 
-        [Tooltip("The sentence (TextMeshPro).")]
-        [SerializeField] private TMP_Text sentence;
+        [Tooltip("The sentence (UI Text).")]
+        [SerializeField] private Text sentence;
 
         private UiMotionConfig _motion;
         private Vector3 _boxScale = Vector3.one;
@@ -86,14 +86,13 @@ namespace SpeedStars.UI.Race
             Show(RaceTutorialStep.None, 0);
         }
 
-        /// <summary>The outline on the word's own material instance, never on the shared font material.</summary>
+        /// <summary>Configures the outline for the swipe or tap hint.</summary>
         private void Outline(RectTransform hint)
         {
-            TMP_Text word = hint != null ? hint.GetComponentInChildren<TMP_Text>(true) : null;
+            Text word = hint != null ? hint.GetComponentInChildren<Text>(true) : null;
             if (word == null || config == null) return;
-            word.fontMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline);
-            word.outlineWidth = config.HintOutlineWidth;
-            word.outlineColor = config.HintOutlineColor;
+            var outline = word.GetComponent<ThickOutline>() ?? word.gameObject.AddComponent<ThickOutline>();
+            outline.Configure(config.HintOutlineWidth * word.fontSize * 0.08f, config.HintOutlineColor);
         }
 
         private void OnDisable() => StopPulse();

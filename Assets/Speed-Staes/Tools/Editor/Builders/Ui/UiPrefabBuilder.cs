@@ -13,7 +13,7 @@ namespace SpeedStars.Tools.Builders
     /// overwrite == false: an existing prefab is kept as it is (the user may have edited it) and reused for nesting.
     /// overwrite == true: rebuilt and saved to the same path, which keeps its GUID and therefore every reference to it
     /// - but only with the explicit force flag (<see cref="ForceFlag"/>): the user hand-edits these prefabs (commit 4f38e016), so
-    /// without it an existing prefab is kept even when overwrite is true. New prefabs are converted to TextMeshPro right after the build (T-100).
+    /// without it an existing prefab is kept even when overwrite is true.
     /// </summary>
     public static class UiPrefabBuilder
     {
@@ -66,7 +66,6 @@ namespace SpeedStars.Tools.Builders
             }
 
             // Freshly built prefabs carry legacy Text: convert them in place (existing, already converted ones are untouched).
-            HandEditGuard.ConvertPending();
 
             UnityEngine.Debug.Log($"UI_PREFABS_OK built={run.Built} kept={run.Kept} (overwrite={overwrite})");
         }

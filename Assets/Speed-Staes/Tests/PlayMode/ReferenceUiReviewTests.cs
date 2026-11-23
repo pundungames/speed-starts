@@ -9,7 +9,6 @@ using SpeedStars.UI.Framework;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Race;
 using SpeedStars.UI.Settings;
-using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -49,23 +48,23 @@ namespace SpeedStars.PlayTests
             yield return LoadScene(RaceScene);
             yield return new WaitForSecondsRealtime(5f);
             var hud=Require<RaceHudView>();
-            Assert.IsTrue(RequireField<TMP_Text>(hud,"speedText").text.EndsWith("mph"));
-            Assert.IsNotEmpty(RequireField<TMP_Text>(hud,"energyValueText").text);
-            Assert.IsNotEmpty(RequireField<TMP_Text>(hud,"cadenceValueText").text);
+            Assert.IsTrue(RequireField<Text>(hud,"speedText").text.EndsWith("mph"));
+            Assert.IsNotEmpty(RequireField<Text>(hud,"energyValueText").text);
+            Assert.IsNotEmpty(RequireField<Text>(hud,"cadenceValueText").text);
             var energy = RequireField<Image>(hud,"energyFill");
             var cadence = RequireField<Image>(hud,"cadenceFill");
             Assert.AreEqual(281f,energy.sprite.rect.width,"Only the painted bar belongs to the fill image.");
             Assert.AreEqual(17f,energy.sprite.rect.height);
             Assert.AreEqual(energy.sprite.rect.size,cadence.sprite.rect.size);
             Assert.That(energy.fillAmount,Is.EqualTo(Mathf.Clamp01(RequireField<IRaceTelemetry>(hud,"_telemetry").Energy01)).Within(.001f));
-            Assert.AreEqual(container.Resolve<IWallet>().PurpleGems.ToString(),RequireField<TMP_Text>(hud,"cashText").text);
+            Assert.AreEqual(container.Resolve<IWallet>().PurpleGems.ToString(),RequireField<Text>(hud,"cashText").text);
             var exit=RequireField<Button>(hud,"exitButton");
             Assert.AreEqual(new Vector2(0,1),((RectTransform)exit.transform).anchorMin);
             var emote=RequireField<Button>(hud,"emoteButton");
             var rect=(RectTransform)emote.transform;
             Assert.AreEqual(rect.rect.width,rect.rect.height,.01f,"Emote is square.");
             Assert.AreEqual("emote_icon",emote.transform.Find("Icon").GetComponent<Image>().sprite.name);
-            Assert.AreEqual("Emote",emote.transform.Find("Label").GetComponent<TMP_Text>().text);
+            Assert.AreEqual("Emote",emote.transform.Find("Label").GetComponent<Text>().text);
             yield return Capture("race-hud");
         }
 
@@ -75,7 +74,7 @@ namespace SpeedStars.PlayTests
             yield return LoadScene(HomeScene);
             var home=Require<HomeScreenView>();
             yield return new WaitForSecondsRealtime(.6f);
-            Assert.IsTrue(RequireField<TMP_Text>(home,"racerNameText").gameObject.activeInHierarchy);
+            Assert.IsTrue(RequireField<Text>(home,"racerNameText").gameObject.activeInHierarchy);
             Assert.IsTrue(RequireField<Button>(home,"previousRacerButton").gameObject.activeInHierarchy);
             yield return Capture("home");
             yield return Tap(RequireField<Button>(home,"settingsButton"),"Settings");

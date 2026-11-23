@@ -6,7 +6,6 @@ using SpeedStars.Meta.Contracts;
 using SpeedStars.Meta.Persistence;
 using SpeedStars.UI.Flow;
 using SpeedStars.UI.Home;
-using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -98,13 +97,13 @@ namespace SpeedStars.PlayTests
             var flight = RequireField<SpeedStars.UI.Rewards.CashFlightIcon>(gate, "_ticketFlight");
             Assert.IsTrue(flight.IsFlying);
             Assert.That(flight.transform.childCount, Is.GreaterThanOrEqualTo(3), "the animation has several ticket icons");
-            var counter = RequireField<TMP_Text>(gate, "ticketCountText");
+            var counter = RequireField<Text>(gate, "ticketCountText");
             Assert.AreEqual(HomeTexts.TicketsHeld(HomeTexts.TicketCount(before, tickets.Cap)), counter.text);
             yield return WaitUntil(() => !flight.IsFlying, "the ticket icons to land");
             Assert.AreEqual(HomeTexts.TicketsHeld(HomeTexts.TicketCount(tickets.Count, tickets.Cap)), counter.text);
 
             Assert.IsFalse(spinner.gameObject.activeSelf, "the spinner goes away when the ad ended");
-            Assert.IsTrue(RequireField<TMP_Text>(gate, "watchAdLabel").gameObject.activeSelf, "the WATCH AD label is back");
+            Assert.IsTrue(RequireField<Text>(gate, "watchAdLabel").gameObject.activeSelf, "the WATCH AD label is back");
 
             yield return Tap(CloseButtonOf(gate), "entry gate Close");
             yield return WaitClosed(gate, "entry gate");

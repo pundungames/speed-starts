@@ -1,6 +1,5 @@
 using System.Linq;
 using SpeedStars.UI.Race;
-using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -41,12 +40,12 @@ namespace SpeedStars.Tools.Builders
                 SetPanel(root,"ReferencePlace",sprites["v2_position"],false);
                 SetPanel(root,"ReferenceEnergy",sprites["v2_energy"]);
                 SetPanel(root,"ReferenceCadence",sprites["v2_cadence"]);
-                var font=AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Speed-Staes/UI/Fonts/Kanit/Kanit-BlackItalic SDF.asset");
-                foreach(var t in root.GetComponentsInChildren<TMP_Text>(true))
+                var font=AssetDatabase.LoadAssetAtPath<Font>("Assets/Speed-Staes/UI/Fonts/Kanit/Kanit-BlackItalic.ttf");
+                foreach(var t in root.GetComponentsInChildren<Text>(true))
                 {
                     if(!t.gameObject.activeInHierarchy && t.transform.parent.name.StartsWith("Legacy"))continue;
                     if(font)t.font=font;
-                    t.fontStyle=FontStyles.Normal;t.enableAutoSizing=true;t.fontSizeMin=18;t.fontSizeMax=t.fontSize;
+                    t.fontStyle=FontStyle.Normal;t.resizeTextForBestFit=true;t.resizeTextMinSize=18;t.resizeTextMaxSize=t.fontSize;
                 }
                 // Keep the emote's square geometry, icon and caption from the approved version.
                 PrefabUtility.SaveAsPrefabAsset(root,path);

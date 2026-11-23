@@ -4,7 +4,6 @@ using SpeedStars.UI.Race;
 using SpeedStars.UI.Settings;
 using SpeedStars.UI.Home;
 using SpeedStars.UI.Costume;
-using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,7 +26,6 @@ namespace SpeedStars.Tools.Builders
             PatchHud();
             PatchSettings();
             PatchHome();
-            HandEditGuard.ConvertPending();
             AssetDatabase.SaveAssets();
             Debug.Log("Applied reference HUD and settings feedback.");
         }
@@ -63,13 +61,13 @@ namespace SpeedStars.Tools.Builders
             var r=Node(parent,name); Stretch(r); var image=r.gameObject.AddComponent<Image>();
             image.sprite=AssetDatabase.LoadAssetAtPath<Sprite>(Art+file+".png"); image.raycastTarget=false; return image;
         }
-        static TMP_Text Label(Transform parent,string name,string value,float size, Color color, Vector2 pos,Vector2 dimensions,TextAlignmentOptions align=TextAlignmentOptions.Center)
+        static Text Label(Transform parent,string name,string value,float size, Color color, Vector2 pos,Vector2 dimensions,TextAnchor align=TextAnchor.MiddleCenter)
         {
             var r=Node(parent,name); Place(r,new Vector2(0,1),new Vector2(0,1),pos*S,dimensions*S);
-            var t=r.gameObject.AddComponent<TextMeshProUGUI>();
-            t.font=AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Speed-Staes/UI/Fonts/AmericanCaptain/AmericanCaptain SDF.asset");
-            t.text=value; t.fontSize=size*S; t.fontStyle=FontStyles.Italic; t.color=color;
-            t.alignment=align; t.raycastTarget=false; t.enableWordWrapping=false; t.margin=Vector4.zero; return t;
+            var t=r.gameObject.AddComponent<Text>();
+            t.font=AssetDatabase.LoadAssetAtPath<Font>("Assets/Speed-Staes/UI/Fonts/AmericanCaptain/AmericanCaptain.ttf");
+            t.text=value; t.fontSize=Mathf.RoundToInt(size*S); t.fontStyle=FontStyle.Italic; t.color=color;
+            t.alignment=align; t.raycastTarget=false; t.horizontalOverflow = HorizontalWrapMode.Overflow;  return t;
         }
         static void Bind(SerializedObject so,string field,UnityEngine.Object value) => so.FindProperty(field).objectReferenceValue=value;
         static RectTransform Panel(Transform root,string name,string file,Vector2 anchor,Vector2 pivot,Vector2 pos,Vector2 size)
@@ -105,17 +103,17 @@ namespace SpeedStars.Tools.Builders
                 Layer(currency,"Icon","currency_icon"); var cash=Label(currency,"Value","0",25,Navy,new Vector2(48,-1),new Vector2(72,34));
                 var perf=Panel(root.transform,"Telemetry","performance_background",tr,tr,new Vector2(-15,-52),new Vector2(204,82));
                 Layer(perf,"TimeIcon","stopwatch_icon");Layer(perf,"SpeedIcon","speed_icon");
-                var time=Label(perf,"Time","0.00",32,Color.white,new Vector2(48,-1),new Vector2(105,39),TextAlignmentOptions.MidlineRight);
+                var time=Label(perf,"Time","0.00",32,Color.white,new Vector2(48,-1),new Vector2(105,39),TextAnchor.MiddleRight);
                 Label(perf,"Seconds","s",31,Color.white,new Vector2(157,-1),new Vector2(25,39));
-                var speed=Label(perf,"Speed","0.0 mph",31,new Color32(244,173,177,255),new Vector2(49,-39),new Vector2(145,39),TextAlignmentOptions.MidlineRight);
+                var speed=Label(perf,"Speed","0.0 mph",31,new Color32(244,173,177,255),new Vector2(49,-39),new Vector2(145,39),TextAnchor.MiddleRight);
                 var energy=Panel(root.transform,"ReferenceEnergy","energy_background",tr,tr,new Vector2(-16,-137),new Vector2(203,43));
                 Layer(energy,"Icon","energy_icon");Layer(energy,"Empty","energy_bar_empty");var energyFill=Bar(energy,"Fill","energy_bar_fill");
-                Label(energy,"Label","Energy",16,Color.white,new Vector2(43,-2),new Vector2(95,21),TextAlignmentOptions.MidlineLeft);
-                var energyValue=Label(energy,"Value","100",17,Color.white,new Vector2(151,-2),new Vector2(40,21),TextAlignmentOptions.MidlineRight);
+                Label(energy,"Label","Energy",16,Color.white,new Vector2(43,-2),new Vector2(95,21),TextAnchor.MiddleLeft);
+                var energyValue=Label(energy,"Value","100",17,Color.white,new Vector2(151,-2),new Vector2(40,21),TextAnchor.MiddleRight);
                 var cadence=Panel(root.transform,"ReferenceCadence","cadence_background",tr,tr,new Vector2(-16,-181),new Vector2(203,43));
                 Layer(cadence,"Icon","cadence_icon");Layer(cadence,"Empty","cadence_bar_empty");var cadenceFill=Bar(cadence,"Fill","cadence_bar_fill");
-                Label(cadence,"Label","Cadence",16,Color.white,new Vector2(43,-2),new Vector2(95,21),TextAlignmentOptions.MidlineLeft);
-                var cadenceValue=Label(cadence,"Value","0.0",17,Color.white,new Vector2(151,-2),new Vector2(40,21),TextAlignmentOptions.MidlineRight);
+                Label(cadence,"Label","Cadence",16,Color.white,new Vector2(43,-2),new Vector2(95,21),TextAnchor.MiddleLeft);
+                var cadenceValue=Label(cadence,"Value","0.0",17,Color.white,new Vector2(151,-2),new Vector2(40,21),TextAnchor.MiddleRight);
                 var place=Panel(root.transform,"ReferencePlace","position_background",Vector2.zero,Vector2.zero,new Vector2(15,6),new Vector2(98,49));
                 var rank=Label(place,"Label","1<size=60%>st</size>",42,Color.white,new Vector2(9,-1),new Vector2(80,44));
                 Bind(so,"exitButton",exitButton);Bind(so,"restartButton",restartButton);Bind(so,"cashText",cash);Bind(so,"cashPlusButton",null);
@@ -128,7 +126,7 @@ namespace SpeedStars.Tools.Builders
                     Place((RectTransform)emote,new Vector2(1,0),new Vector2(1,0),new Vector2(-35,25),new Vector2(150,150));
                     var icon=AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Speed-Staes/UI/Art/Home/emote_icon.png");
                     FitVisibleIcon(emote,"Icon",icon,new Vector2(75,-51),new Vector2(76,76));
-                    var caption=emote.Find("Label").GetComponent<TMP_Text>();caption.text="Emote";caption.fontSize=28;caption.alignment=TextAlignmentOptions.Center;
+                    var caption=emote.Find("Label").GetComponent<Text>();caption.text="Emote";caption.fontSize=28;caption.alignment=TextAnchor.MiddleCenter;
                     Place(caption.rectTransform,new Vector2(0,0),Vector2.zero,new Vector2(8,10),new Vector2(134,38));
                     var name=emote.Find("Name") as RectTransform;
                     if(name)Place(name,Vector2.one,new Vector2(1,0),new Vector2(0,8),new Vector2(320,44));
@@ -172,9 +170,9 @@ namespace SpeedStars.Tools.Builders
                 if(!pencil){var r=Node(input.transform,"Pencil");Place(r,new Vector2(0,.5f),new Vector2(0,.5f),new Vector2(22,0),new Vector2(40,40));var g=r.gameObject.AddComponent<PencilIconGraphic>();g.color=Navy;g.raycastTarget=false;}
                 input.textComponent.rectTransform.offsetMin=new Vector2(76,input.textComponent.rectTransform.offsetMin.y);
                 if(input.placeholder is Graphic placeholder) placeholder.rectTransform.offsetMin=new Vector2(76,placeholder.rectTransform.offsetMin.y);
-                Transform content=((TMP_Text)so.FindProperty("musicLabel").objectReferenceValue).transform.parent.parent;
+                Transform content=((Text)so.FindProperty("musicLabel").objectReferenceValue).transform.parent.parent;
                 string[] fields={"musicLabel","languageLabel","flagLabel","nameLabel"};
-                for(int i=0;i<fields.Length;i++)((TMP_Text)so.FindProperty(fields[i]).objectReferenceValue).transform.parent.SetSiblingIndex(i);
+                for(int i=0;i<fields.Length;i++)((Text)so.FindProperty(fields[i]).objectReferenceValue).transform.parent.SetSiblingIndex(i);
                 foreach(var t in root.GetComponentsInChildren<RectTransform>(true))if(PrefabUtility.IsPartOfPrefabInstance(t))PrefabUtility.RecordPrefabInstancePropertyModifications(t);
                 HandEditGuard.SavePatchedPrefab(root,SettingsPath);
             }
@@ -183,7 +181,7 @@ namespace SpeedStars.Tools.Builders
 
         static void ColorIcon(SerializedObject so,string labelField,Material material,Color color,bool outline)
         {
-            var label=(TMP_Text)so.FindProperty(labelField).objectReferenceValue;
+            var label=(Text)so.FindProperty(labelField).objectReferenceValue;
             var icon=label.transform.parent.Find("Icon").GetComponent<Image>();
             string path="Assets/Speed-Staes/UI/Art/Settings/"+labelField+"Tint.mat";
             var tint=AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -223,9 +221,9 @@ namespace SpeedStars.Tools.Builders
                     if(select.Find("Portrait"))select.Find("Portrait").gameObject.SetActive(false);
                     var portrait=AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Speed-Staes/UI/Art/Home/character_select_icon.png");
                     FitVisibleIcon(select,"Icon",portrait,new Vector2(135,-50),new Vector2(100,90));
-                    var name=(TMP_Text)so.FindProperty("racerNameText").objectReferenceValue;
+                    var name=(Text)so.FindProperty("racerNameText").objectReferenceValue;
                     Place(name.rectTransform,new Vector2(0,1),new Vector2(0,1),new Vector2(205,0),new Vector2(select.rect.width-285,100));
-                    name.fontSize=42;name.alignment=TextAlignmentOptions.MidlineLeft;
+                    name.fontSize=42;name.alignment=TextAnchor.MiddleLeft;
                     select.Find("Plate").SetAsFirstSibling();
                     foreach(string field in new[]{"previousRacerButton","nextRacerButton"})
                     {
@@ -237,7 +235,7 @@ namespace SpeedStars.Tools.Builders
                 var stats=card.Find("StatsStrip"); if(stats)stats.gameObject.SetActive(false);
                 var power=(Image)so.FindProperty("powerFill").objectReferenceValue;
                 var stamina=(Image)so.FindProperty("staminaFill").objectReferenceValue;
-                var height=(TMP_Text)so.FindProperty("heightText").objectReferenceValue;
+                var height=(Text)so.FindProperty("heightText").objectReferenceValue;
                 Transform oldGroup=power.transform.parent.parent;
                 if(oldGroup!=card)oldGroup.gameObject.SetActive(false);
                 power.transform.SetParent(card,false);stamina.transform.SetParent(card,false);height.transform.SetParent(card,false);
@@ -253,7 +251,7 @@ namespace SpeedStars.Tools.Builders
                     FitVisibleIcon(row,"Icon",sprite,new Vector2(58,-57),new Vector2(72,85));
                     if(i<2)
                     {
-                        var text=Label(row,"Label",names[i],17,Navy,Vector2.zero,Vector2.one,TextAlignmentOptions.MidlineLeft);
+                        var text=Label(row,"Label",names[i],17,Navy,Vector2.zero,Vector2.one,TextAnchor.MiddleLeft);
                         Place(text.rectTransform,new Vector2(0,1),new Vector2(0,1),new Vector2(122,-5),new Vector2(400,49));
                         Image fill=i==0?power:stamina;
                         var bar=Node(row,"Bar");Place(bar,new Vector2(0,0),new Vector2(0,0),new Vector2(122,17),new Vector2(card.sizeDelta.x-200,35));
@@ -267,7 +265,7 @@ namespace SpeedStars.Tools.Builders
                     {
                         height.transform.SetParent(row,false);height.gameObject.SetActive(true);
                         Place(height.rectTransform,new Vector2(0,1),new Vector2(0,1),new Vector2(122,0),new Vector2(card.sizeDelta.x-200,114));
-                        height.fontSize=40;height.alignment=TextAlignmentOptions.MidlineLeft;
+                        height.fontSize=40;height.alignment=TextAnchor.MiddleLeft;
                     }
                 }
                 foreach(var field in new[]{"editRacerButton","emoteButton"})
@@ -277,25 +275,17 @@ namespace SpeedStars.Tools.Builders
                     Place((RectTransform)button.transform,new Vector2(0,0),Vector2.zero,new Vector2(edit?30:card.sizeDelta.x*.5f+7,35),new Vector2(card.sizeDelta.x*.5f-37,156));
                     var icon=button.transform.Find("Icon").GetComponent<Image>();
                     FitVisibleIcon(button.transform,"Icon",icon.sprite,new Vector2(((RectTransform)button.transform).sizeDelta.x*.5f,-48),new Vector2(78,72));
-                    var caption=button.transform.Find("Label")?.GetComponent<TMP_Text>();
+                    var caption=button.transform.Find("Label")?.GetComponent<Text>();
                     if(!caption)caption=Label(button.transform,"Label",edit?"Edit Racer":"Emote",17,Navy,Vector2.zero,Vector2.one);
-                    caption.text=edit?"Edit Racer":"Emote";caption.fontSize=38;caption.color=Navy;caption.fontStyle=FontStyles.Italic;
+                    caption.text=edit?"Edit Racer":"Emote";caption.fontSize=38;caption.color=Navy;caption.fontStyle=FontStyle.Italic;
                     Place(caption.rectTransform,new Vector2(0,0),Vector2.zero,new Vector2(7,8),new Vector2(((RectTransform)button.transform).sizeDelta.x-14,48));
-                    caption.alignment=TextAlignmentOptions.Center;
+                    caption.alignment=TextAnchor.MiddleCenter;
                 }
-                var player=so.FindProperty("playerNameText").objectReferenceValue as TMP_Text;
+                var player=so.FindProperty("playerNameText").objectReferenceValue as Text;
                 if(player){Place(player.rectTransform,new Vector2(.5f,0),new Vector2(.5f,0),new Vector2(0,4),new Vector2(card.sizeDelta.x-50,28));player.fontSize=22;}
-                const string fontPath="Assets/Speed-Staes/UI/Fonts/Kanit/Kanit-BlackItalic SDF.asset";
-                var font=AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(fontPath);
-                if(!font)
-                {
-                    font=TMP_FontAsset.CreateFontAsset(AssetDatabase.LoadAssetAtPath<Font>("Assets/Speed-Staes/UI/Fonts/Kanit/Kanit-BlackItalic.ttf"));
-                    AssetDatabase.CreateAsset(font,fontPath);
-                    AssetDatabase.AddObjectToAsset(font.material,font);
-                    foreach(var atlas in font.atlasTextures)AssetDatabase.AddObjectToAsset(atlas,font);
-                }
-                foreach(var text in card.GetComponentsInChildren<TMP_Text>(true))
-                {text.font=font;text.fontStyle=FontStyles.Normal;text.enableAutoSizing=true;text.fontSizeMin=20;text.fontSizeMax=text.fontSize;}
+                var font=AssetDatabase.LoadAssetAtPath<Font>("Assets/Speed-Staes/UI/Fonts/Kanit/Kanit-BlackItalic.ttf");
+                foreach(var text in card.GetComponentsInChildren<Text>(true))
+                {text.font=font;text.fontStyle=FontStyle.Normal;text.resizeTextForBestFit=true;text.resizeTextMinSize=20;text.resizeTextMaxSize=text.fontSize;}
                 // The newly labelled rows follow the same Race of the Day visibility rule as the old stats.
                 var hidden=so.FindProperty("hiddenForRacerOfTheDay"); bool found=false;
                 for(int i=0;i<hidden.arraySize;i++)if(hidden.GetArrayElementAtIndex(i).objectReferenceValue==group.gameObject)found=true;
