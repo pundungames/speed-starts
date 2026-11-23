@@ -113,7 +113,7 @@ namespace SpeedStars.Physical
             b.label = text.AddComponent<TextMesh>();
             b.label.text = "PERFECT";
             b.label.fontSize = 48;
-            b.label.characterSize = 0.035f;
+            b.label.characterSize = 0.048f;
             b.label.anchor = TextAnchor.MiddleCenter;
             b.label.fontStyle = FontStyle.Bold;
             b.root.SetActive(false);
@@ -153,7 +153,7 @@ namespace SpeedStars.Physical
                 b.showLabel = _pendingLabel;
                 b.recovery = _pendingRecovery;
                 b.label.text = b.recovery ? "RECOVER!" : "PERFECT";
-                b.label.characterSize = b.recovery ? 0.026f : 0.024f;
+                b.label.characterSize = b.recovery ? 0.052f : 0.048f;
                 b.flash.gameObject.SetActive(!b.recovery);
                 foreach (var spark in b.sparks) spark.gameObject.SetActive(!b.recovery);
                 foreach (var trail in b.trails) trail.gameObject.SetActive(!b.recovery);
@@ -194,18 +194,15 @@ namespace SpeedStars.Physical
                 }
                 if (b.showLabel)
                 {
-                    float labelT = b.age / lifetime;
-                    {
-                        Vector3 right = _camera ? _camera.transform.right : transform.forward;
-                        float side = Vector3.Dot(transform.forward, right) < 0 ? -1 : 1;
-                        Vector3 chest = _head ? _head.position - Vector3.up * 0.28f
-                            : transform.position + Vector3.up * 1.3f;
-                        b.label.transform.position = chest - right * (side * (b.recovery ? 0.9f : 0.75f))
-                            + Vector3.up * (0.28f + labelT * 0.14f);
-                    }
+                    float enter = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.18f, t));
+                    float exit = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.62f, 1f, t));
+                    Vector3 head = _head ? _head.position : transform.position + Vector3.up * 1.65f;
+                    b.label.transform.position = head + Vector3.up * (0.30f + 0.18f * enter + 0.19f * exit);
+                    if (!_camera) _camera = Camera.main;
                     if (_camera) b.label.transform.rotation = _camera.transform.rotation;
-                    b.label.color = b.recovery ? new Color(0.2f, 1, 0.8f, fade)
-                        : new Color(0.65f, 1, 0.96f, fade);
+                    float alpha = 1f - exit;
+                    b.label.color = b.recovery ? new Color(0.2f, 1, 0.8f, alpha)
+                        : new Color(0.65f, 1, 0.96f, alpha);
                 }
                 b.age += Time.deltaTime;
             }

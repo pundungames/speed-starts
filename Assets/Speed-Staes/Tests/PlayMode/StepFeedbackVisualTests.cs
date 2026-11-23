@@ -59,7 +59,7 @@ namespace SpeedStars.PlayTests
             Assert.GreaterOrEqual((float)contactSim.GetType().GetProperty("LastEfficiency").GetValue(contactSim), 0.7f,
                 "A good press below the efficiency bar shows no PERFECT label.");
             Capture("contact");
-            AssertLabelBehind(body.transform, "PERFECT");
+            AssertLabelAbove(body.transform, "PERFECT", 0.048f);
             foreach (var line in UnityEngine.Object.FindObjectsOfType<LineRenderer>())
                 if (line.name == "Contact Ring") Debug.Log($"VFX CONTACT position={line.transform.position} width={line.widthMultiplier} color={line.startColor} shader={line.sharedMaterial.shader.name} supported={line.sharedMaterial.shader.isSupported}");
             var tuning = type.GetField("tuning").GetValue(body);
@@ -103,7 +103,7 @@ namespace SpeedStars.PlayTests
             tap(1, false);
             yield return null;
             Capture("late");
-            AssertLabelBehind(body.transform, "LATE");
+            AssertLabelAbove(body.transform, "LATE", 0.048f);
             deadline = Time.time + 2;
             while (!airborne() && Time.time < deadline) yield return null;
             Assert.IsTrue(airborne());
@@ -113,20 +113,22 @@ namespace SpeedStars.PlayTests
             tap(0, false);
             yield return null;
             Capture("recovery");
-            AssertLabelBehind(body.transform, "RECOVER!");
+            AssertLabelAbove(body.transform, "RECOVER!", 0.052f);
             Assert.IsFalse(UnityEngine.Object.FindObjectsOfType<TextMesh>().Any(t => t.text == "LATE"),
                 "Recovery must replace the late warning without overlapping text.");
         }
-        static void AssertLabelBehind(Transform runner, string text)
+        static void AssertLabelAbove(Transform runner, string text, float expectedSize)
         {
-            var label = UnityEngine.Object.FindObjectsOfType<TextMesh>().FirstOrDefault(t => t.text == text);
+            var label = UnityEngine.Object.FindObjectsOfType<TextMesh>().FirstOrDefault(t => t.text == text && t.name != "Late Step Text Shadow");
             Assert.IsNotNull(label, text + " label must be visible.");
+            Assert.Greater(label.color.a, 0.5f, text + " must be readable at the start of its slide.");
             Vector3 head = runner.GetComponentsInChildren<Transform>(true).First(t => t.name == "B-head").position;
-            Vector3 right = Camera.main.transform.right;
-            float side = Vector3.Dot(runner.forward, right) < 0 ? -1 : 1;
-            Assert.Less(Vector3.Dot(label.transform.position - head, right) * side, -0.5f);
-            Assert.Greater(label.transform.position.y, head.y - 0.05f,
-                "Text must clear the chest-height wind ribbon.");
+            // The coroutine can sample the moving runner before the next LateUpdate refreshes the label.
+            Vector3 offset = label.transform.position - head;
+            Assert.AreEqual(expectedSize, label.characterSize, 0.0001f, text + " must use the requested size.");
+            Assert.AreEqual(0f, offset.x, 0.15f, text + " must be centered over the runner's head.");
+            Assert.AreEqual(0f, offset.z, 0.15f, text + " must be centered over the runner's head.");
+            Assert.GreaterOrEqual(offset.y, 0.22f, text + " must clear the runner's head.");
         }
         static void Capture(string name)
         {

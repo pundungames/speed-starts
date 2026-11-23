@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 
 namespace SpeedStars.Physical
 {
-    /// <summary>A readable chest-height label for late presses. Presentation only.</summary>
+    /// <summary>A readable label above the runner for late presses. Presentation only.</summary>
     [DefaultExecutionOrder(1200)]
     public sealed class LateStepFeedback : MonoBehaviour
     {
@@ -47,7 +47,7 @@ namespace SpeedStars.Physical
             text.anchor = TextAnchor.MiddleCenter;
             text.fontStyle = FontStyle.Bold;
             text.fontSize = 64;
-            text.characterSize = 0.024f;
+            text.characterSize = 0.048f;
             var renderer = go.GetComponent<MeshRenderer>();
             renderer.sortingOrder = order;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -80,16 +80,13 @@ namespace SpeedStars.Physical
             if (!_root.activeSelf) return;
             if (_age >= Duration) { _root.SetActive(false); return; }
             if (!_camera) _camera = Camera.main;
-            Vector3 right = _camera ? _camera.transform.right : transform.forward;
-            Vector3 up = _camera ? _camera.transform.up : Vector3.up;
-            float side = Vector3.Dot(transform.forward, right) < 0 ? -1 : 1;
-            Vector3 chest = _head ? _head.position - Vector3.up * 0.28f
-                : transform.position + Vector3.up * 1.3f;
+            Vector3 head = _head ? _head.position : transform.position + Vector3.up * 1.65f;
             float t = _age / Duration;
-            _root.transform.position = chest - right * (side * 0.7f) + up * (0.28f + t * 0.12f);
+            float enter = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.18f, t));
+            float exit = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.62f, 1f, t));
+            _root.transform.position = head + Vector3.up * (0.30f + 0.18f * enter + 0.19f * exit);
             _root.transform.rotation = _camera ? _camera.transform.rotation : Quaternion.identity;
-            // Keep the first part fully readable, then fade smoothly.
-            float alpha = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.3f, 1f, t));
+            float alpha = 1f - exit;
             _label.color = new Color(0.86f, 0.25f, 0.27f, alpha * 0.8f);
             _shadow.color = new Color(0.12f, 0.02f, 0.03f, alpha * 0.5f);
             _age += Time.deltaTime;
