@@ -16,7 +16,7 @@ namespace SpeedStars.Tools.Builders
     {
         // Text slots as fractions of their art canvas (min, max; y from the bottom).
         private static readonly Vector2 PillValueMin = new Vector2(0.42f, 0.05f), PillValueMax = new Vector2(0.93f, 0.95f);
-        private static readonly Vector2 CashValueMax = new Vector2(0.78f, 0.95f); // leaves room for the "+" at the right end
+        private static readonly Vector2 CashValueMax = new Vector2(0.72f, 0.95f); // leaves room for the "+" at the right end
         private const float PlusTapSize = 64f; // canvas units
         private static readonly Vector2 TimerValueMin = new Vector2(0.08f, 0.05f), TimerValueMax = new Vector2(0.92f, 0.95f);
         private static readonly Vector2 RaceLabelMin = new Vector2(0.36f, 0.08f), RaceLabelMax = new Vector2(0.80f, 0.92f);
@@ -303,8 +303,14 @@ namespace SpeedStars.Tools.Builders
         /// </summary>
         private static void CashPlus(RectTransform cashBox)
         {
-            RectTransform tap = Kit.Node(cashBox, "Plus");
             var rightMiddle = new Vector2(1f, 0.5f);
+            RectTransform divider = Kit.Node(cashBox, "PlusDivider");
+            Kit.Anchor(divider, rightMiddle, new Vector2(0.5f, 0.5f), new Vector2(-73f, 0f), new Vector2(5f, 56f));
+            Color dividerColor = UiArt.Navy;
+            dividerColor.a = 0.5f;
+            Kit.Fill(divider.gameObject, dividerColor, raycast: false);
+
+            RectTransform tap = Kit.Node(cashBox, "Plus");
             Kit.Anchor(tap, rightMiddle, rightMiddle, new Vector2(-6f, 0f), new Vector2(PlusTapSize, PlusTapSize));
             Image area = Kit.Fill(tap.gameObject, new Color(1f, 1f, 1f, 0f), raycast: true);
             Sprite icon = UiArt.RaceHud("plus_icon");

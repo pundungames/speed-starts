@@ -25,6 +25,8 @@ namespace SpeedStars.UI.Framework
         /// <summary>Raised after the visible screen changed (Push, Pop, Replace, unwind), with the new top screen.</summary>
         public event Action<IUiView> CurrentScreenChanged;
 
+        public event Action PopupStackChanged;
+
         public int ScreenCount => _screens.Count;
         public int PopupCount => _popups.Count;
 
@@ -91,6 +93,7 @@ namespace SpeedStars.UI.Framework
 
             _popups.Add(popup);
             popup.Show();
+            PopupStackChanged?.Invoke();
             return true;
         }
 
@@ -101,6 +104,7 @@ namespace SpeedStars.UI.Framework
             if (!_popups.Remove(popup)) return false;
 
             popup.Hide();
+            PopupStackChanged?.Invoke();
             return true;
         }
 

@@ -64,6 +64,7 @@ namespace SpeedStars.UI.Home
         private IClock _clock;
         private ScreenNavigator _navigator;
         private CanvasGroup _group;
+        private Image[] _backgrounds;
         private float _elapsed;
         private readonly Dictionary<SevenDayRewardKind, int> _inFlight = new Dictionary<SevenDayRewardKind, int>();
         private UiScreen _wardrobeOwner;
@@ -109,10 +110,37 @@ namespace SpeedStars.UI.Home
             _navigator = navigator;
         }
 
+        private void Awake()
+        {
+            _backgrounds = new[]
+            {
+                CounterBackground(purpleGemText),
+                CounterBackground(entryTicketText),
+                entryTimerRoot ? entryTimerRoot.GetComponent<Image>() : null,
+                CounterBackground(timedTicketText)
+            };
+
+            var rect = (RectTransform)transform;
+            // The simulator can carry a driven, bottom-edge anchor into Play mode.
+            // Restore this widget's authored corner before fitting it to the safe area.
+            if (rect.anchorMin.y == 1f && rect.anchorMax.y == 1f) return;
+
+            var fitter = GetComponent<SafeAreaFitter>();
+            if (fitter) fitter.Configure(SafeAreaMode.Self, vertical: false);
+            Vector2 offset = rect.anchoredPosition;
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.anchoredPosition = offset;
+        }
+
         private void OnEnable()
         {
             if (_group == null) _group = GetComponent<CanvasGroup>();
-            if (_navigator != null) _navigator.CurrentScreenChanged += OnScreenChanged;
+            if (_navigator != null)
+            {
+                _navigator.CurrentScreenChanged += OnScreenChanged;
+                _navigator.PopupStackChanged += ApplyBackgroundOpacity;
+            }
+            ApplyBackgroundOpacity();
             if (cashPlusButton != null)
             {
                 cashPlusButton.interactable = cashOfferModal != null;
@@ -128,12 +156,31 @@ namespace SpeedStars.UI.Home
 
         private void OnDisable()
         {
-            if (_navigator != null) _navigator.CurrentScreenChanged -= OnScreenChanged;
+            if (_navigator != null)
+            {
+                _navigator.CurrentScreenChanged -= OnScreenChanged;
+                _navigator.PopupStackChanged -= ApplyBackgroundOpacity;
+            }
             if (cashPlusButton != null) cashPlusButton.onClick.RemoveListener(OnCashPlus);
             _wallet.Changed -= Redraw;
             _tickets.Changed -= Redraw;
             DOTween.Kill(this);
             _inFlight.Clear();
+        }
+
+        private static Image CounterBackground(TMP_Text value) =>
+            value ? value.transform.parent.GetComponent<Image>() : null;
+
+        private void ApplyBackgroundOpacity()
+        {
+            float opacity = _navigator?.TopPopup != null ? 0.62f : 1f;
+            foreach (Image background in _backgrounds)
+            {
+                if (!background) continue;
+                Color tint = background.color;
+                tint.a = opacity;
+                background.color = tint;
+            }
         }
 
         private void OnScreenChanged(IUiView top) => ApplyVisibility();
