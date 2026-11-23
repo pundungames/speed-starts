@@ -55,12 +55,20 @@ namespace SpeedStars.Physical
         public void Play()
         {
             if (_clip || clips == null || clips.Length == 0) return;
+            _next %= clips.Length;
             var clip = clips[_next];
             _next = (_next + 1) % clips.Length;
-            if (!clip || clip.FrameCount == 0) return;
+            TryPlay(clip);
+        }
+
+        /// <summary>Plays the specified clip without changing the runner's manual emote list.</summary>
+        public bool TryPlay(RunnerEmoteData clip)
+        {
+            if (_clip || !isActiveAndEnabled || !clip || clip.FrameCount == 0) return false;
             Bind(clip);
             _clock = 0f;
             _playing = true;
+            return true;
         }
 
         public bool PlayVictoryIdle(RunnerEmoteData clip)

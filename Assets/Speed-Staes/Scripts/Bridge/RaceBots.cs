@@ -151,6 +151,48 @@ namespace SpeedStars.Bridge
                 if (_bots[i].Body == body) return _bots[i].Plan != null ? _bots[i].Plan.Name : _bots[i].Root.name;
             return null;
         }
+        internal readonly struct EmoteParticipant
+        {
+            public readonly int Slot;
+            public readonly bool IsPlayer;
+            public readonly Transform Root;
+            public readonly float Distance;
+            public readonly bool Finished;
+
+            public EmoteParticipant(int slot, bool isPlayer, Transform root, float distance, bool finished)
+            {
+                Slot = slot;
+                IsPlayer = isPlayer;
+                Root = root;
+                Distance = distance;
+                Finished = finished;
+            }
+        }
+
+        internal void CollectEmoteParticipants(List<EmoteParticipant> participants)
+        {
+            participants.Clear();
+            if (!_racing) return;
+            if (RelayActive)
+            {
+                _relay.CollectEmoteParticipants(participants);
+                return;
+            }
+
+            if (player && player.Sim != null)
+            {
+                float distance = player.Sim.Distance;
+                participants.Add(new EmoteParticipant(0, true, player.transform, distance, _playerFinished || distance >= RaceDistance));
+            }
+            for (int i = 0; i < _bots.Count; i++)
+            {
+                Bot bot = _bots[i];
+                if (!bot.Active || !bot.Body || bot.Body.Sim == null) continue;
+                float distance = bot.Body.Sim.Distance;
+                participants.Add(new EmoteParticipant(i + 1, false, bot.Root.transform, distance, bot.Finished || distance >= RaceDistance));
+            }
+        }
+
         public BotRaceConfig Config => config;
         public RunnerBody Player => player;
 

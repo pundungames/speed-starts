@@ -60,10 +60,10 @@ namespace SpeedStars.Meta.Contracts
         /// <summary>The emote button is on the race HUD.</summary>
         bool ShowEmoteButton { get; }
 
-        /// <summary>The player's runner plays the equipped emote by itself when the race is finished.</summary>
+        /// <summary>The player's runner automatically plays the equipped emote on overtakes and at the finish.</summary>
         bool AutoEmoteSelf { get; }
 
-        /// <summary>The opponents play an emote when they cross the line.</summary>
+        /// <summary>The opponents automatically emote on overtakes and when they cross the line.</summary>
         bool AutoEmoteCompetitors { get; }
 
         /// <summary>Raised after any of the switches changed.</summary>

@@ -105,7 +105,7 @@ namespace SpeedStars.Meta.Settings
         [SerializeField] private bool defaultAutoEmoteSelf = true;
 
         [Tooltip("The competitors emote by themselves, for a new player.")]
-        [SerializeField] private bool defaultAutoEmoteCompetitors;
+        [SerializeField] private bool defaultAutoEmoteCompetitors = true;
 
         [Header("Player name rules")]
         [Tooltip("Fewest characters a name may have after trimming.")]

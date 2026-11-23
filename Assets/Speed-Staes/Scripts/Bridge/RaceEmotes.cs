@@ -14,11 +14,8 @@ namespace SpeedStars.Bridge
     /// run; its key and his play-next rule stay as they are). This component only chooses WHICH clip it plays: it hands the
     /// runner's <c>clips</c> list the one equipped clip (none = empty list, so the key does nothing), and only from GO on, so
     /// the emote key, the HUD button (<see cref="IRaceEmoteControl"/>) and the automatic emote all play the equipped emote and
-    /// never before the start. With <see cref="IEmoteRaceOptions.AutoEmoteSelf"/> the player's runner plays it in the finish sequence
-    /// (<see cref="PlayFinishEmote"/>); with <see cref="IEmoteRaceOptions.AutoEmoteCompetitors"/> each opponent
-    /// plays one of the clips when it crosses the line (read from his runner body, no change in RaceBots). Decisions are in
-    /// <c>RaceEmoteRules</c> (pure, tested). Added to the player's runner by the Race scene builder; every dependency is optional,
-    /// without them the runner keeps its prefab list.
+    /// never before the start. Automatic emotes respect the player and competitor switches. The player uses the equipped clip;
+    /// each AI picks one clip per round for overtakes and its finish.
     /// </summary>
     [DefaultExecutionOrder(20)]
     public sealed class RaceEmotes : MonoBehaviour, IRaceEmoteControl
@@ -32,13 +29,10 @@ namespace SpeedStars.Bridge
         [SerializeField, Tooltip("Show the playing emote's name on screen (RunnerEmote.showName). Off: the clip asset name is a file name, the HUD shows the display name.")]
         bool showClipName;
 
-        sealed class Opponent
-        {
-            public RunnerBody Body;
-            public RunnerEmote Emote;
-            public RunnerEmoteData[] Clips;
-            public bool Done;
-        }
+        [SerializeField, Min(0f), Tooltip("Race seconds after GO before passing another runner can play an emote.")]
+        float overtakeDelaySeconds = 3f;
+
+        const float ConfirmedLeadMeters = 0.45f;
 
         IEmoteService _emotes;
         EmoteCatalog _catalog;
@@ -54,9 +48,13 @@ namespace SpeedStars.Bridge
         bool _clipsOpen;
         bool _lastCan;
         float _busyUntil;
-        int _round;
-        readonly List<Opponent> _opponents = new List<Opponent>();
-        int _opponentRoots = -1;
+        readonly System.Random _clipRandom = new System.Random();
+        readonly List<RunnerEmoteData> _botLibrary = new List<RunnerEmoteData>();
+        readonly List<RaceBots.EmoteParticipant> _participants = new List<RaceBots.EmoteParticipant>();
+        readonly Dictionary<Transform, RunnerEmote> _runnerEmotes = new Dictionary<Transform, RunnerEmote>();
+        readonly Dictionary<int, RunnerEmoteData> _roundClips = new Dictionary<int, RunnerEmoteData>();
+        readonly Dictionary<(int First, int Second), bool> _pairLeaders = new Dictionary<(int, int), bool>();
+        readonly HashSet<int> _finishEmotes = new HashSet<int>();
         static readonly RunnerEmoteData[] NoClips = new RunnerEmoteData[0];
 
         public event Action Changed;
@@ -120,6 +118,8 @@ namespace SpeedStars.Bridge
             if (!playerEmote) return;
             _initialized = true;
             _allClips = playerEmote.clips ?? NoClips;
+            foreach (RunnerEmoteData clip in _allClips)
+                if (clip && clip.FrameCount > 0) _botLibrary.Add(clip);
             playerEmote.showName = showClipName;
             ReadEquipped();
             ApplyPlayerClips(force: true);
@@ -184,10 +184,11 @@ namespace SpeedStars.Bridge
 
         void OnPhaseChanged(RaceStartPhase phase)
         {
-            if (phase == RaceStartPhase.Go) return;
-            // A new race is being prepared: opponents may emote again, and each round starts their clips from another place.
-            _round++;
-            foreach (Opponent opponent in _opponents) opponent.Done = false;
+            if (phase != RaceStartPhase.Ready) return;
+            _pairLeaders.Clear();
+            _roundClips.Clear();
+            _finishEmotes.Clear();
+            _runnerEmotes.Clear();
             _busyUntil = 0f;
         }
 
@@ -236,42 +237,71 @@ namespace SpeedStars.Bridge
                 Changed?.Invoke();
             }
 
-            if (_options.AutoEmoteCompetitors && bots != null && _session != null) UpdateOpponents();
+            if (bots && _session != null) UpdateRaceEmotes();
         }
 
-        void UpdateOpponents()
+        void UpdateRaceEmotes()
         {
             if (PhaseOrNull() != null && PhaseOrNull() != RaceStartPhase.Go) return;
-            IReadOnlyList<Transform> roots = bots.RunnerRoots;
-            if (roots.Count != _opponentRoots) CollectOpponents(roots);
+            bots.CollectEmoteParticipants(_participants);
 
-            float target = _session.TargetDistance;
-            for (int i = 0; i < _opponents.Count; i++)
+            foreach (RaceBots.EmoteParticipant runner in _participants)
             {
-                Opponent opponent = _opponents[i];
-                if (opponent.Done || opponent.Body == null || opponent.Body.Sim == null) continue;
-                if (!RaceEmoteRules.CrossedLine(opponent.Body.Sim.Distance, target)) continue;
-                opponent.Done = true;
-                int pick = RaceEmoteRules.BotClipIndex(i, _round, opponent.Clips.Length);
-                if (pick < 0 || opponent.Clips[pick] == null) continue;
-                opponent.Emote.clips = new[] { opponent.Clips[pick] };
-                opponent.Emote.Play();
+                if (runner.IsPlayer) continue;
+                if (!_roundClips.ContainsKey(runner.Slot) && _botLibrary.Count > 0)
+                    _roundClips.Add(runner.Slot, _botLibrary[_clipRandom.Next(_botLibrary.Count)]);
+                if (runner.Finished && _options.AutoEmoteCompetitors && _finishEmotes.Add(runner.Slot))
+                    PlayAutomaticEmote(runner);
+            }
+
+            if (_session.State != RaceSessionState.Running || _session.RaceTime < overtakeDelaySeconds) return;
+            UpdateOvertakes();
+        }
+
+        void UpdateOvertakes()
+        {
+            for (int i = 0; i < _participants.Count; i++)
+            {
+                RaceBots.EmoteParticipant first = _participants[i];
+                if (first.Finished) continue;
+                for (int j = i + 1; j < _participants.Count; j++)
+                {
+                    RaceBots.EmoteParticipant second = _participants[j];
+                    if (second.Finished) continue;
+                    float gap = first.Distance - second.Distance;
+                    if (Mathf.Abs(gap) < ConfirmedLeadMeters) continue;
+
+                    var pair = (first.Slot, second.Slot);
+                    bool firstLeads = gap > 0f;
+                    bool changed = _pairLeaders.TryGetValue(pair, out bool ledBefore) && ledBefore != firstLeads;
+                    _pairLeaders[pair] = firstLeads;
+                    if (changed) PlayAutomaticEmote(firstLeads ? first : second);
+                }
             }
         }
 
-        // Runs when the bots are built (their count changes), never per frame.
-        void CollectOpponents(IReadOnlyList<Transform> roots)
+        void PlayAutomaticEmote(RaceBots.EmoteParticipant runner)
         {
-            _opponentRoots = roots.Count;
-            _opponents.Clear();
-            foreach (Transform root in roots)
+            RunnerEmoteData clip;
+            if (runner.IsPlayer)
             {
-                var body = root.GetComponentInChildren<RunnerBody>(true);
-                var emote = root.GetComponentInChildren<RunnerEmote>(true);
-                if (body == null || emote == null || emote.clips == null || emote.clips.Length == 0) continue;
-                emote.showName = showClipName;
-                _opponents.Add(new Opponent { Body = body, Emote = emote, Clips = emote.clips });
+                if (!RaceEmoteRules.AutoSelfWanted(_options.AutoEmoteSelf, _equippedClip != null)) return;
+                clip = _equippedClip;
             }
+            else
+            {
+                if (!_options.AutoEmoteCompetitors || !_roundClips.TryGetValue(runner.Slot, out clip)) return;
+            }
+
+            if (!_runnerEmotes.TryGetValue(runner.Root, out RunnerEmote emote))
+            {
+                emote = runner.Root.GetComponentInChildren<RunnerEmote>(true);
+                if (emote) emote.showName = showClipName;
+                _runnerEmotes.Add(runner.Root, emote);
+            }
+            if (!emote || !emote.TryPlay(clip) || !runner.IsPlayer) return;
+            MarkBusy();
+            Changed?.Invoke();
         }
     }
 }

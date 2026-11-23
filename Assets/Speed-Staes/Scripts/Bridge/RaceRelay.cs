@@ -296,6 +296,19 @@ namespace SpeedStars.Bridge
             }
         }
 
+        internal void CollectEmoteParticipants(List<RaceBots.EmoteParticipant> participants)
+        {
+            for (int i = 0; i < _teams.Count; i++)
+            {
+                Team team = _teams[i];
+                if (team.Plan == null) continue;
+                Leg holder = Baton(team);
+                if (!holder.Root || !holder.Body || holder.Body.Sim == null) continue;
+                participants.Add(new RaceBots.EmoteParticipant(i, team.IsPlayer, holder.Root.transform, holder.Position,
+                    team.Finished || holder.Position >= _raceMeters));
+            }
+        }
+
         /// <summary>The distance marker over the player's next runner: where, how many metres the incoming runner is behind, which leg.</summary>
         public bool TryGetMarker(out Vector3 world, out float meters, out int leg)
         {
