@@ -78,11 +78,14 @@ namespace SpeedStars.UI.Race
         [SerializeField] private TMP_Text dailyBestText;
 
         [Header("Gem reward")]
-        [Tooltip("GemReward: the '+N Purple Gems' line, visible only when the race paid Purple Gems.")]
+        [Tooltip("GemReward: the gem icon and amount, visible only when the race paid Purple Gems.")]
         [SerializeField] private GameObject gemRewardRoot;
 
         [Tooltip("GemReward/Label.")]
         [SerializeField] private TMP_Text gemRewardText;
+        [SerializeField] private Texture2D purpleGemTexture;
+        [SerializeField] private Rect purpleGemUv;
+        [SerializeField] private Sprite purpleGemCounterBackground;
 
         [Header("Cash breakdown")]
         [Tooltip("CashBreakdown: the '+30' total and its lines under the Cash counter (economy v2). May stay empty: then no breakdown shows.")]
@@ -137,7 +140,9 @@ namespace SpeedStars.UI.Race
         private Tween _denied;
         private Vector3 _deniedBase;
         private bool _punchRecord;
-        private bool _punchGems;
+        private int _pendingGemFlight;
+        private IWallet _resultsWallet;
+        private ResultsGemRewardPresentation _gemPresentation;
         private bool _practiceAvailable;
         private ISfx _sfx;
 
@@ -162,9 +167,10 @@ namespace SpeedStars.UI.Race
 
         /// <summary>Optional: without a bound sound system the record punch is silent.</summary>
         [Inject]
-        public void InjectAudio([InjectOptional] ISfx sfx)
+        public void InjectAudio([InjectOptional] ISfx sfx, [InjectOptional] IWallet wallet)
         {
             _sfx = sfx;
+            _resultsWallet = wallet;
         }
 
         /// <summary>Optional: without opponents (no standings) the table shows the player's own race as before.</summary>
@@ -246,6 +252,8 @@ namespace SpeedStars.UI.Race
             base.OnDisable();
             KillDenied();
             KillReveal();
+            _pendingGemFlight = 0;
+            _gemPresentation?.Stop();
             RestoreItems();
         }
 
@@ -254,6 +262,7 @@ namespace SpeedStars.UI.Race
             base.OnDestroy();
             KillDenied();
             KillReveal();
+            _gemPresentation?.Stop();
             if (highScoresButton != null) highScoresButton.onClick.RemoveListener(OnHighScoresClicked);
             if (practiceButton != null) practiceButton.onClick.RemoveListener(OnPracticeClicked);
             if (raceAgainButton != null) raceAgainButton.onClick.RemoveListener(OnRaceAgainClicked);
@@ -313,10 +322,18 @@ namespace SpeedStars.UI.Race
 
         public void ShowGemReward(int gems)
         {
+            _gemPresentation?.Stop();
             bool paid = gems > 0;
             if (gemRewardRoot != null) gemRewardRoot.SetActive(paid);
-            if (paid && gemRewardText != null) gemRewardText.text = ResultsTexts.GemReward(gems);
-            _punchGems = paid;
+            if (paid && gemRewardText != null)
+            {
+                gemRewardText.text = ResultsTexts.GemReward(gems);
+                if (_gemPresentation == null && purpleGemTexture && purpleGemUv.width > 0f && purpleGemUv.height > 0f)
+                    _gemPresentation = new ResultsGemRewardPresentation((RectTransform)transform, gemRewardText,
+                        purpleGemTexture, purpleGemUv, purpleGemCounterBackground);
+            }
+            _pendingGemFlight = paid ? gems : 0;
+            if (isActiveAndEnabled) PlayGemReward();
         }
 
         /// <summary>The Cash the race paid, split into lines under the counter. Empty (free event, solo run) hides the block.</summary>
@@ -447,6 +464,7 @@ namespace SpeedStars.UI.Race
             {
                 RestoreItems();
                 if (cashBreakdown != null) cashBreakdown.Play();
+                PlayGemReward();
                 return;
             }
             if (_baseScales == null) CaptureScales();
@@ -481,16 +499,23 @@ namespace SpeedStars.UI.Race
                 seq.Insert(end, personalBestCard.DOPunchScale(Vector3.one * _resultsMotion.ButtonPunchScale, _resultsMotion.ButtonPunchDuration, _resultsMotion.ButtonPunchVibrato));
                 seq.InsertCallback(end, () => _sfx?.Play(SfxId.NewRecord)); // with the punch, once per presented result
             }
-            if (_punchGems && gemRewardRoot != null)
-                seq.Insert(end, gemRewardRoot.transform.DOPunchScale(Vector3.one * _resultsMotion.ButtonPunchScale, _resultsMotion.ButtonPunchDuration, _resultsMotion.ButtonPunchVibrato));
+            if (_pendingGemFlight > 0) seq.InsertCallback(end, PlayGemReward);
 
             if (cashBreakdown != null) seq.InsertCallback(end, cashBreakdown.Play); // the Cash lines follow the cards
 
             _punchRecord = false; // once per presented result
-            _punchGems = false;
             seq.SetUpdate(true);
             seq.SetLink(gameObject);
             _reveal = seq;
+        }
+
+        private void PlayGemReward()
+        {
+            int gems = _pendingGemFlight;
+            _pendingGemFlight = 0;
+            if (gems <= 0 || _gemPresentation == null || _resultsWallet == null) return;
+            RectTransform cashBox = cashText ? cashText.rectTransform.parent as RectTransform : null;
+            _gemPresentation.Play(gems, _resultsWallet.PurpleGems, cashBox, () => _sfx?.Play(SfxId.Reward));
         }
 
         private void KillReveal()

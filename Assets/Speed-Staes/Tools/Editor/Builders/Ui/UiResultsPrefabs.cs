@@ -39,7 +39,7 @@ namespace SpeedStars.Tools.Builders
         private const float RowSize = 44f;
         private const float DailyHeaderSize = 38f;
         private const float DailyRowSize = 42f;
-        private const float GemSize = 40f;
+        private const float GemSize = 48f;
         // Cash breakdown (T-106), all in canvas units (2400x1080): the box is the free area right of the Cash box, left of the
         // top cards (x 789) and above Race Again (y 210). Total + three lines (66 + 3 x 34 = 168) must fit its height.
         // The box sits on the same card art as the TopCards beside it; padding keeps the texts inside the frame:
@@ -247,8 +247,8 @@ namespace SpeedStars.Tools.Builders
             Text dailyText = UiArt.Slot(dailyRow, "Label", "No races today", DailyRowSize, DailyRowMin, DailyRowMax);
 
             RectTransform gem = Inside(column, "GemReward", layout, new[] { (int)columnBounds.x, (int)gemTop, (int)(columnBounds.z - columnBounds.x), (int)gemHeight }, originX, originY);
-            Text gemText = UiArt.Slot(gem, "Label", "+3 Purple Gems", GemSize, new Vector2(0f, 0f), new Vector2(1f, 1f), TextAnchor.MiddleCenter, White);
-            Kit.Frame(gemText.gameObject, 3f); // white text over the scenery: navy outline keeps it readable
+            Text gemText = UiArt.Slot(gem, "Label", "+2 Purple Gems", GemSize, new Vector2(0f, 0f), new Vector2(1f, 1f), TextAnchor.MiddleCenter, White);
+            gemText.horizontalOverflow = HorizontalWrapMode.Overflow;
             reveal.Add(Reveal(gem));
             gem.gameObject.SetActive(false); // the view shows it only when the race paid Purple Gems
 
@@ -271,6 +271,10 @@ namespace SpeedStars.Tools.Builders
             Ref(so, "dailyBestText", dailyText);
             Ref(so, "gemRewardRoot", gem.gameObject);
             Ref(so, "gemRewardText", gemText);
+            Ref(so, "purpleGemTexture", AssetDatabase.LoadAssetAtPath<Texture2D>(UiArt.PurpleGemPath));
+            Vector4 gemBounds = UiArt.AlphaBounds(UiArt.PurpleGemPath);
+            so.FindProperty("purpleGemUv").rectValue = Rect.MinMaxRect(gemBounds.x, gemBounds.y, gemBounds.z, gemBounds.w);
+            Ref(so, "purpleGemCounterBackground", UiArt.Home("purple_gem_background"));
             Ref(so, "cashBreakdown", breakdown);
             Ref(so, "raceAgainButton", raceAgain);
             Ref(so, "mainMenuButton", mainMenu);
