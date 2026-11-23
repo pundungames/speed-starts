@@ -17,6 +17,8 @@ namespace SpeedStars.UI.Race
         public const string TapRight = "RIGHT!";
         public const string KeepGoing = "KEEP GOING: LEFT, RIGHT, LEFT, RIGHT";
         public const string Rhythm = "DON'T MASH! TAP IN RHYTHM";
+        public const string HurdleSwipe = "SWIPE UP TO JUMP OVER A HURDLE";
+        public const string RelaySwipe = "SWIPE UP IN THE EXCHANGE ZONE TO PASS THE BATON";
 
         /// <summary>The sentence of a step; empty when the step has none. The first prompt of each side explains, the others only name it.</summary>
         public static string For(RaceTutorialStep step, int promptIndex)
@@ -28,6 +30,8 @@ namespace SpeedStars.UI.Race
                 case RaceTutorialStep.TapRight: return promptIndex == 1 ? TapRightFirst : TapRight;
                 case RaceTutorialStep.KeepGoing: return KeepGoing;
                 case RaceTutorialStep.Rhythm: return Rhythm;
+                case RaceTutorialStep.HurdleSwipe: return HurdleSwipe;
+                case RaceTutorialStep.RelaySwipe: return RelaySwipe;
                 default: return string.Empty;
             }
         }
@@ -66,6 +70,8 @@ namespace SpeedStars.UI.Race
         private Vector3 _boxScale = Vector3.one;
         private Vector3 _hintScale = Vector3.one;
         private RectTransform _pulsing;
+        private SwipeUpChevron _swipeArrow;
+        private float _swipeStartedAt;
 
         /// <summary>Optional: without the motion config the banner changes without its pop.</summary>
         [Inject]
@@ -100,6 +106,7 @@ namespace SpeedStars.UI.Race
             if (leftShade != null) leftShade.SetActive(right);
             if (rightShade != null) rightShade.SetActive(left);
             Pulse(left ? leftHint : right ? rightHint : null);
+            ShowSwipeArrow(step == RaceTutorialStep.HurdleSwipe || step == RaceTutorialStep.RelaySwipe);
 
             if (step == RaceTutorialStep.Stride || textBox == null || sentence == null) return;
             string text = RaceTutorialTexts.For(step, promptIndex);
@@ -107,6 +114,37 @@ namespace SpeedStars.UI.Race
             if (text.Length == 0 || text == sentence.text) return;
             sentence.text = text;
             UiPunch.Play(textBox, _boxScale, _motion, gameObject);
+        }
+
+        private void ShowSwipeArrow(bool show)
+        {
+            if (show && _swipeArrow == null)
+            {
+                var arrow = new GameObject("SwipeUpArrow", typeof(RectTransform), typeof(CanvasRenderer), typeof(SwipeUpChevron));
+                _swipeArrow = arrow.GetComponent<SwipeUpChevron>();
+                _swipeArrow.raycastTarget = false;
+                var rect = _swipeArrow.rectTransform;
+                rect.SetParent(transform, false);
+                rect.anchorMin = rect.anchorMax = new Vector2(0.25f, 0.5f);
+                rect.sizeDelta = new Vector2(92f, 54f);
+            }
+
+            if (_swipeArrow == null) return;
+            _swipeArrow.gameObject.SetActive(show);
+            if (!show) return;
+            _swipeStartedAt = Time.unscaledTime;
+            Update();
+        }
+
+        private void Update()
+        {
+            if (_swipeArrow == null || !_swipeArrow.gameObject.activeInHierarchy) return;
+            const float swipeCycleSeconds = 1.1f;
+            float phase = Mathf.Repeat((Time.unscaledTime - _swipeStartedAt) / swipeCycleSeconds, 1f);
+            float rise = Mathf.SmoothStep(0f, 1f, phase);
+            float fade = Mathf.Clamp01(phase / 0.14f) * Mathf.Clamp01((1f - phase) / 0.22f);
+            _swipeArrow.rectTransform.anchoredPosition = new Vector2(0f, Mathf.Lerp(-115f, 115f, rise));
+            _swipeArrow.canvasRenderer.SetAlpha(fade);
         }
 
         private void Pulse(RectTransform hint)

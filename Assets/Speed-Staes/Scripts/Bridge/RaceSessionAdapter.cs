@@ -152,6 +152,7 @@ namespace SpeedStars.Bridge
 
         /// <summary>The current race is a relay: the player's own runner does not run.</summary>
         public bool IsRelay => Relay;
+        internal RaceRelay PlayerRelay => bots ? bots.Relay : null;
 
         /// <summary>The race ends now, before anybody hears Finished: whoever holds the game speed gives it back here.</summary>
         public event Action Completing;

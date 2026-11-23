@@ -18,7 +18,9 @@ namespace SpeedStars.Core.Race
         KeepGoing,
         /// <summary>The last hint: the rhythm counts, not the speed of the fingers.</summary>
         Rhythm,
-        Done
+        Done,
+        HurdleSwipe,
+        RelaySwipe
     }
 
     /// <summary>
