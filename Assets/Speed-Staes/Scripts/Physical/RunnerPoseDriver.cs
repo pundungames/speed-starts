@@ -1456,6 +1456,8 @@ namespace SpeedStars.Physical
         void OnTapped(int leg, bool pressed, double time)
         {
             Bind();
+            if (_wasInJump && body && body.Sim != null && !body.Sim.InJump)
+                StepJumpLanding(body.Sim, time);
             TickLegs(time);
             var l = Legs(leg);
             if (!pressed)
@@ -3027,8 +3029,8 @@ namespace SpeedStars.Physical
             UpdateStart(sim, dt);
 
             // 2. Legs: phases → angles → knee and ankle points (a planted foot's legs are solved after the height).
-            TickLegs(now);
             if (!preview) StepJumpLanding(sim, now);
+            TickLegs(now);
             if (_jumping)
             {
                 leftLeg.grounded = rightLeg.grounded = leftLeg.needLock = rightLeg.needLock = false;
@@ -3427,18 +3429,25 @@ namespace SpeedStars.Physical
             bool inJump = sim.InJump;
             if (_wasInJump && !inJump)
             {
-                Leg lead = sim.JumpLeg == 0 ? leftLeg : rightLeg, trail = sim.JumpLeg == 0 ? rightLeg : leftLeg;
+                _jumping = false;
                 float home = frontHomeTime * SpeedUp();
-                lead.angles.thigh = jumpLandThigh;
-                lead.angles.knee = jumpLandKnee;
-                lead.follow = 0f;
-                Enter(lead, LegPhase.Rest, now, home);
-                trail.angles.thigh = jumpLeadThigh;
-                trail.angles.knee = jumpLeadKnee;
-                trail.follow = 0f;
-                Enter(trail, LegPhase.Rest, now, home);
+                ResumeLegAfterJump(leftLeg, now, home);
+                ResumeLegAfterJump(rightLeg, now, home);
             }
             _wasInJump = inJump;
+        }
+
+        static void ResumeLegAfterJump(Leg leg, double now, float home)
+        {
+            // The jump overrides the visible angles after the gait trackers run. Seed the trackers
+            // from that pose so the first running frame cannot pull the leg back to its old gait.
+            leg.angles.thigh = leg.thighWorld;
+            leg.follow = 0f;
+            leg.thighRate = leg.kneeRate = 0f;
+            leg.thighT.Seed(leg.angles.thigh, 0f);
+            leg.kneeT.Seed(leg.angles.knee, 0f);
+            leg.haveGaitAnkle = false; // the airborne sample cannot tell whether the foot is sliding on the ground
+            Enter(leg, LegPhase.Rest, now, home);
         }
 
         /// <summary>Where a thigh at this angle points (x = out to its side, y = up, z = forward), in the leg's plane.</summary>
