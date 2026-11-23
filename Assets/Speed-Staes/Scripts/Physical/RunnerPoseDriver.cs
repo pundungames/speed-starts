@@ -1036,11 +1036,11 @@ namespace SpeedStars.Physical
                  "side between the points, never under the body.")]
         public Vector3[] jumpTrailPath =
         {
-            new Vector3(0.26f, -0.67f, -0.69f), new Vector3(0.71f, -0.14f, -0.69f), new Vector3(0.29f, -0.14f, 0.95f),
+            new Vector3(0.26f, -0.67f, -0.55f), new Vector3(0.44f, -0.31f, -0.50f), new Vector3(0.22f, -0.14f, 0.95f),
             new Vector3(0f, 0.12f, 0.99f),
         };
         [Tooltip("How far through the air (0..1) the thigh reaches each point of jumpTrailPath.")]
-        public float[] jumpTrailTimes = { 0f, 0.35f, 0.7f, 1f };
+        public float[] jumpTrailTimes = { 0f, 0.28f, 0.79f, 1f };
         [Tooltip("The trailing knee behind the body (180 = straight); it ends at jumpLeadKnee, in the front pose.")]
         public float jumpTrailKnee = 105f;
         [Tooltip("The leading leg as its foot comes to the ground, where the input takes it over.")]
