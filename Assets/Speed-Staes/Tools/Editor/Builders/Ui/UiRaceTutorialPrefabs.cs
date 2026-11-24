@@ -97,6 +97,8 @@ namespace SpeedStars.Tools.Builders
             UiArt.Layer(box, "Banner", banner);
             RectTransform sentenceRt = Kit.Stretch(Kit.Node(box, "Sentence"), SentenceInset.x, SentenceInset.x, SentenceInset.y, SentenceInset.y);
             Text sentence = Label(sentenceRt, RaceTutorialTexts.WaitForGo, SentenceFontSize, look.ReadySetColor);
+            sentence.horizontalOverflow = HorizontalWrapMode.Wrap;
+            sentence.verticalOverflow = VerticalWrapMode.Truncate;
             sentence.resizeTextForBestFit = true;
             sentence.resizeTextMinSize = Mathf.RoundToInt(SentenceFontSize * 0.5f);
             sentence.resizeTextMaxSize = Mathf.RoundToInt(SentenceFontSize);
